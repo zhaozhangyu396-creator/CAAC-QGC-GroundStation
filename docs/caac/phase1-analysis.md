@@ -3,6 +3,10 @@
 日期：2026-10-09（Asia/Shanghai）。目标平台：Windows 64 位。
 本次交付为源码分析、设计和当前机器验证记录；没有实现 CAAC 功能。
 
+**更新说明：** 下文环境和资料状态保留首轮检查时的记录。
+后续 Qt/系统依赖处理及实际构建结果见 [cloud-validation.md](cloud-validation.md)；
+新取得的 10 段视频与《航点.ld》分析见 [reference-review.md](reference-review.md)。
+
 ## 1. 基线与开发环境
 
 仓库：`zhaozhangyu396-creator/CAAC-QGC-GroundStation`。
