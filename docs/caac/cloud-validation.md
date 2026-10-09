@@ -1,6 +1,7 @@
 # 云环境补充验证记录
 
-日期：2026-10-09（Asia/Shanghai）。本记录更新阶段一报告中的历史环境阻塞。
+首次验证：2026-10-09；恢复验收：2026-10-10（Asia/Shanghai）。
+本记录更新阶段一报告中的历史环境阻塞。
 当前机器为 Debian Linux；最终产品目标仍为 Windows 64 位。
 
 ## 已解决的安装阻塞
@@ -95,7 +96,7 @@ CTest 使用 `CI=1` 启用仓库已有的 CI 等待时间：例如 `TestTimeout:
 完整套件注册 431 项，默认过滤排除了 3 项 Network 测试：
 `QGCCachedFileDownloadTest`、`QGCFileDownloadTest`、`QGCNetworkHelperTest`。
 
-本轮仓库修改仅有 3 份文档：更新 `phase1-analysis.md`，新增本文件与
+首次验证的仓库修改仅有 3 份文档：更新 `phase1-analysis.md`，新增本文件与
 `reference-review.md`。应用源码、测试、构建版本声明和锁文件未修改。
 辅助脚本保留在 checkout 外，并在环境安装脚本中完整保存。
 
@@ -106,8 +107,13 @@ Xvfb/软件图形路径不等同于物理 GPU 视频性能验证。
 当前阶段没有实现新的 CAAC 航点编辑功能，也没有运行 PX4 SITL 或真实飞控。
 新增视频与 `.ld` 分析见 [reference-review.md](reference-review.md)。
 
-完整安装脚本与启动说明已由配置工具确认保存到环境草稿，返回 `status=saved`、
-`requires_publish=true`。用户需在环境设置审阅、保存并发布。
+首次验证时，完整安装脚本与启动说明由配置工具确认保存到环境草稿，返回 `status=saved`、
+`requires_publish=true`。当时需要用户在环境设置审阅、保存并发布。
 保存时只更新这两个字段，保留用户当前的网络配置及仓库成员设置。
 草稿保存、当前实例验证、发布以及新任务恢复是不同状态；不能相互替代。
-尚未验证发布后的新任务恢复，阶段一文档提交与分支目前保留在本地，没有推送。
+本次已在新启动环境实际核对分支、两次文档提交、Qt SDK和辅助脚本，
+并重新配置、增量编译和启动原版QGC成功，重点回归6/6通过。
+环境配置读取结果没有待发布草稿；当前安装与启动说明无需再次修改。
+这证明本次恢复可用，不等同于未来所有机器或Windows构建已经验证。
+为验证Windows元数据修复，阶段一分支已推送；主分支与远端标签未修改。
+恢复和Windows工作流验证细节见 [phase1-issues.md](phase1-issues.md)。
