@@ -125,6 +125,15 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Fetch upstream development version marker
+        if: github.repository == 'zhaozhangyu396-creator/CAAC-QGC-GroundStation'
+        shell: bash
+        run: |
+          git fetch --no-tags https://github.com/mavlink/qgroundcontrol.git refs/tags/v5.2.0-dev:refs/tags/v5.2.0-dev
+          test "$(git rev-parse 'v5.2.0-dev^{commit}')" = '995174437e2d6bf0a9923e32b09db11925b3f9b6'
+          git merge-base --is-ancestor v5.2.0-dev HEAD
+          git describe --tags --always
+
       - name: Install Visual Studio Build Tools
         if: github.repository_owner == 'mavlink' && matrix.variant != 'arm64'
         uses: ./.github/actions/install-dependencies
