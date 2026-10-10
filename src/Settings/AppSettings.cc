@@ -35,28 +35,27 @@ QList<QLocale::Language> AppSettings::_rgPartialLanguages = {
 };
 
 AppSettings::LanguageInfo_t AppSettings::_rgLanguageInfo[] = {
-    { QLocale::AnyLanguage,     "System" },                     // Must be first
-    { QLocale::Azerbaijani,     "Azerbaijani (Azerbaijani)" },
-    { QLocale::Bulgarian,       "български (Bulgarian)" },
-    { QLocale::Chinese,         "中文 (Chinese)" },
-    { QLocale::Dutch,           "Nederlands (Dutch)" },
-    { QLocale::English,         "English" },
-    { QLocale::Finnish,         "Suomi (Finnish)" },
-    { QLocale::French,          "Français (French)" },
-    { QLocale::German,          "Deutsche (German)" },
-    { QLocale::Greek,           "Ελληνικά (Greek)" },
-    { QLocale::Hebrew,          "עברית (Hebrew)" },
-    { QLocale::Italian,         "Italiano (Italian)" },
-    { QLocale::Japanese,        "日本語 (Japanese)" },
-    { QLocale::Korean,          "한국어 (Korean)" },
-    { QLocale::NorwegianBokmal, "Norsk (Norwegian)" },
-    { QLocale::Polish,          "Polskie (Polish)" },
-    { QLocale::Portuguese,      "Português (Portuguese)" },
-    { QLocale::Russian,         "Pусский (Russian)" },
-    { QLocale::Spanish,         "Español (Spanish)" },
-    { QLocale::Swedish,         "Svenska (Swedish)" },
-    { QLocale::Turkish,         "Türk (Turkish)" }
-};
+    {QLocale::AnyLanguage, QT_TR_NOOP("System")},  // Must be first
+    {QLocale::Azerbaijani, QT_TR_NOOP("Azerbaijani (Azerbaijani)")},
+    {QLocale::Bulgarian, QT_TR_NOOP("български (Bulgarian)")},
+    {QLocale::Chinese, QT_TR_NOOP("中文 (Chinese)")},
+    {QLocale::Dutch, QT_TR_NOOP("Nederlands (Dutch)")},
+    {QLocale::English, QT_TR_NOOP("English")},
+    {QLocale::Finnish, QT_TR_NOOP("Suomi (Finnish)")},
+    {QLocale::French, QT_TR_NOOP("Français (French)")},
+    {QLocale::German, QT_TR_NOOP("Deutsche (German)")},
+    {QLocale::Greek, QT_TR_NOOP("Ελληνικά (Greek)")},
+    {QLocale::Hebrew, QT_TR_NOOP("עברית (Hebrew)")},
+    {QLocale::Italian, QT_TR_NOOP("Italiano (Italian)")},
+    {QLocale::Japanese, QT_TR_NOOP("日本語 (Japanese)")},
+    {QLocale::Korean, QT_TR_NOOP("한국어 (Korean)")},
+    {QLocale::NorwegianBokmal, QT_TR_NOOP("Norsk (Norwegian)")},
+    {QLocale::Polish, QT_TR_NOOP("Polskie (Polish)")},
+    {QLocale::Portuguese, QT_TR_NOOP("Português (Portuguese)")},
+    {QLocale::Russian, QT_TR_NOOP("Pусский (Russian)")},
+    {QLocale::Spanish, QT_TR_NOOP("Español (Spanish)")},
+    {QLocale::Swedish, QT_TR_NOOP("Svenska (Swedish)")},
+    {QLocale::Turkish, QT_TR_NOOP("Türk (Turkish)")}};
 
 DECLARE_SETTINGGROUP(App, "")
 {
@@ -237,18 +236,18 @@ DECLARE_SETTINGSFACT_NO_FUNC(AppSettings, qLocaleLanguage)
         QVariantList    rgEnumValues;
 
         // System is always an available selection
-        rgEnumStrings.append(_rgLanguageInfo[0].languageName);
+        rgEnumStrings.append(tr(_rgLanguageInfo[0].languageName));
         rgEnumValues.append(_rgLanguageInfo[0].languageId);
 
         for (const auto& languageInfo: _rgLanguageInfo) {
             if (_rgReleaseLanguages.contains(languageInfo.languageId)) {
-                rgEnumStrings.append(languageInfo.languageName);
+                rgEnumStrings.append(tr(languageInfo.languageName));
                 rgEnumValues.append(languageInfo.languageId);
             }
         }
         for (const auto& languageInfo: _rgLanguageInfo) {
             if (_rgPartialLanguages.contains(languageInfo.languageId)) {
-                rgEnumStrings.append(QString(languageInfo.languageName) + AppSettings::tr(" (Partial)"));
+                rgEnumStrings.append(tr(languageInfo.languageName) + AppSettings::tr(" (Partial)"));
                 rgEnumValues.append(languageInfo.languageId);
             }
         }
@@ -256,7 +255,7 @@ DECLARE_SETTINGSFACT_NO_FUNC(AppSettings, qLocaleLanguage)
         // Only daily builds include full set of languages for testing purposes
         for (const auto& languageInfo: _rgLanguageInfo) {
             if (!_rgReleaseLanguages.contains(languageInfo.languageId) && !_rgPartialLanguages.contains(languageInfo.languageId)) {
-                rgEnumStrings.append(QString(languageInfo.languageName) + AppSettings::tr(" (Test Only)"));
+                rgEnumStrings.append(tr(languageInfo.languageName) + AppSettings::tr(" (Test Only)"));
                 rgEnumValues.append(languageInfo.languageId);
             }
         }

@@ -141,15 +141,15 @@ Rectangle {
                 anchors.horizontalCenter: parent.horizontalCenter
                 QGCRadioButton {
                     id:     _jsonButton
-                    text:   "Json"
+                    text:   qsTr("Json")
                     onClicked: exportTheme()
                 }
                 QGCRadioButton {
-                    text: "QGC"
+                    text: qsTr("QGC")
                     onClicked: exportThemeCPP()
                 }
                 QGCRadioButton {
-                    text: "Custom Plugin"
+                    text: qsTr("Custom Plugin")
                     onClicked: exportThemePlugin()
                 }
             }
@@ -195,14 +195,14 @@ Rectangle {
                 anchors.horizontalCenter: parent.horizontalCenter
                 QGCButton {
                     id:         importButton
-                    text:       "Import (Json Only)"
+                    text:       qsTr("Import (Json Only)")
                     enabled:    themeImportExportEdit.text[0] === "{" && _jsonButton.checked
                     onClicked: {
                         importTheme(themeImportExportEdit.text);
                     }
                 }
                 QGCButton {
-                    text:       "Close"
+                    text:       qsTr("Close")
                     onClicked: {
                         paletteImportExportPopup.close()
                     }
@@ -267,7 +267,7 @@ Rectangle {
                 spacing: 30
                 // Edit theme GroupBox
                 GroupBox {
-                    title: "Preview and edit theme"
+                    title: qsTr("Preview and edit theme")
                 Column {
                     id: editRoot
                     spacing: 5
@@ -360,10 +360,10 @@ Rectangle {
                         }
                     }
                 } // Column
-                } // GroupBox { title: "Preview and edit theme"
+                } // GroupBox { title: qsTr("Preview and edit theme")
 
                 // QGC controls preview
-                GroupBox { title: "Controls preview"
+                GroupBox { title: qsTr("Controls preview")
                 Column {
                     id: ctlPrevColumn
                     property real _colWidth: ScreenTools.defaultFontPointSize * 18
@@ -402,7 +402,7 @@ Rectangle {
                         // QGCLabel
                         Loader {
                             sourceComponent: ctlRowHeader
-                            property string text: "QGCLabel"
+                            property string text: qsTr("QGCLabel")
                         }
                         Rectangle {
                             width: ctlPrevColumn._colWidth
@@ -429,7 +429,7 @@ Rectangle {
                         // QGCButton
                         Loader {
                             sourceComponent: ctlRowHeader
-                            property string text: "QGCButton"
+                            property string text: qsTr("QGCButton")
                         }
                         QGCButton {
                             width: ctlPrevColumn._colWidth
@@ -446,7 +446,7 @@ Rectangle {
                         // QGCButton - primary
                         Loader {
                             sourceComponent: ctlRowHeader
-                            property string text: "QGCButton(primary)"
+                            property string text: qsTr("QGCButton(primary)")
                         }
                         QGCButton {
                             width: ctlPrevColumn._colWidth
@@ -465,7 +465,7 @@ Rectangle {
                         // ToolStripHoverButton
                         Loader {
                             sourceComponent: ctlRowHeader
-                            property string text: "ToolStripHoverButton"
+                            property string text: qsTr("ToolStripHoverButton")
                         }
                         ToolStripHoverButton {
                             width:  ctlPrevColumn._colWidth
@@ -486,7 +486,7 @@ Rectangle {
                         // QGCButton - menu
                         Loader {
                             sourceComponent: ctlRowHeader
-                            property string text: "QGCButton(menu)"
+                            property string text: qsTr("QGCButton(menu)")
                         }
                         Menu {
                             id: buttonMenu
@@ -517,7 +517,7 @@ Rectangle {
                         // QGCRadioButton
                         Loader {
                             sourceComponent: ctlRowHeader
-                            property string text: "QGCRadioButton"
+                            property string text: qsTr("QGCRadioButton")
                         }
                         Rectangle {
                             width: ctlPrevColumn._colWidth
@@ -544,7 +544,7 @@ Rectangle {
                         // QGCCheckBox
                         Loader {
                             sourceComponent: ctlRowHeader
-                            property string text: "QGCCheckBox"
+                            property string text: qsTr("QGCCheckBox")
                         }
                         Rectangle {
                             width: ctlPrevColumn._colWidth
@@ -571,7 +571,7 @@ Rectangle {
                         // QGCCheckBoxSlider
                         Loader {
                             sourceComponent: ctlRowHeader
-                            property string text: "QGCCheckBoxSlider"
+                            property string text: qsTr("QGCCheckBoxSlider")
                         }
                         Rectangle {
                             width: ctlPrevColumn._colWidth
@@ -598,24 +598,24 @@ Rectangle {
                         // QGCTextField
                         Loader {
                             sourceComponent: ctlRowHeader
-                            property string text: "QGCTextField"
+                            property string text: qsTr("QGCTextField")
                         }
                         QGCTextField {
                             width: ctlPrevColumn._colWidth
                             height: ctlPrevColumn._height
-                            text: "QGCTextField"
+                            text: qsTr("QGCTextField")
                         }
                         QGCTextField {
                             width: ctlPrevColumn._colWidth
                             height: ctlPrevColumn._height
-                            text: "QGCTextField"
+                            text: qsTr("QGCTextField")
                             enabled: false
                         }
 
                         // QGCComboBox
                         Loader {
                             sourceComponent: ctlRowHeader
-                            property string text: "QGCComboBox"
+                            property string text: qsTr("QGCComboBox")
                         }
                         QGCComboBox {
                             width: ctlPrevColumn._colWidth
@@ -632,7 +632,7 @@ Rectangle {
                         // SubMenuButton
                         Loader {
                             sourceComponent: ctlRowHeader
-                            property string text: "SubMenuButton"
+                            property string text: qsTr("SubMenuButton")
                         }
                         SubMenuButton {
                             width: ctlPrevColumn._colWidth
@@ -655,13 +655,13 @@ Rectangle {
                         border.width: 1
                         anchors.horizontalCenter: parent.horizontalCenter
                         Label {
-                            text: "Alert Message"
+                            text: qsTr("Alert Message")
                             color: qgcPal.alertText
                             anchors.centerIn: parent
                         }
                     }
                 } // Column
-                } // GroupBox { title: "Controls preview"
+                } // GroupBox { title: qsTr("Controls preview")
             }
 
             Item{
@@ -693,7 +693,7 @@ Rectangle {
 
             // SettingsGroupLayout Test
             GroupBox {
-                title: "SettingsGroupLayout Test"
+                title: qsTr("SettingsGroupLayout Test")
                 anchors.horizontalCenter: parent.horizontalCenter
 
                 background: Rectangle {
@@ -711,25 +711,25 @@ Rectangle {
 
                         QGCCheckBox {
                             id: showBorderCheck
-                            text: "showBorder"
+                            text: qsTr("showBorder")
                             checked: true
                         }
 
                         QGCCheckBox {
                             id: showDividersCheck
-                            text: "showDividers"
+                            text: qsTr("showDividers")
                             checked: true
                         }
 
                         QGCCheckBox {
                             id: showHeadingCheck
-                            text: "Show Heading"
+                            text: qsTr("Show Heading")
                             checked: true
                         }
 
                         QGCCheckBox {
                             id: showDescriptionCheck
-                            text: "Show Description"
+                            text: qsTr("Show Description")
                             checked: true
                         }
                     }
@@ -737,29 +737,29 @@ Rectangle {
                     Row {
                         spacing: ScreenTools.defaultFontPixelWidth * 2
 
-                        QGCLabel { text: "Visibility toggles:"; font.bold: true }
+                        QGCLabel { text: qsTr("Visibility toggles:"); font.bold: true }
 
                         QGCCheckBox {
                             id: item1Visible
-                            text: "Item 1"
+                            text: qsTr("Item 1")
                             checked: true
                         }
 
                         QGCCheckBox {
                             id: item2Visible
-                            text: "Item 2"
+                            text: qsTr("Item 2")
                             checked: true
                         }
 
                         QGCCheckBox {
                             id: item3Visible
-                            text: "Item 3"
+                            text: qsTr("Item 3")
                             checked: true
                         }
 
                         QGCCheckBox {
                             id: item4Visible
-                            text: "Item 4"
+                            text: qsTr("Item 4")
                             checked: true
                         }
                     }
@@ -767,41 +767,41 @@ Rectangle {
                     Row {
                         spacing: ScreenTools.defaultFontPixelWidth * 2
 
-                        QGCLabel { text: "Repeater toggles:"; font.bold: true }
+                        QGCLabel { text: qsTr("Repeater toggles:"); font.bold: true }
 
                         QGCCheckBox {
                             id: repeaterShowDividers
-                            text: "Dividers"
+                            text: qsTr("Dividers")
                             checked: true
                         }
 
                         QGCCheckBox {
                             id: repeater1Visible
-                            text: "Rep 1"
+                            text: qsTr("Rep 1")
                             checked: true
                         }
 
                         QGCCheckBox {
                             id: repeater2Visible
-                            text: "Rep 2"
+                            text: qsTr("Rep 2")
                             checked: true
                         }
 
                         QGCCheckBox {
                             id: repeater3Visible
-                            text: "Rep 3"
+                            text: qsTr("Rep 3")
                             checked: true
                         }
 
                         QGCCheckBox {
                             id: repeater4Visible
-                            text: "Rep 4"
+                            text: qsTr("Rep 4")
                             checked: true
                         }
 
                         QGCCheckBox {
                             id: repeater5Visible
-                            text: "Rep 5"
+                            text: qsTr("Rep 5")
                             checked: true
                         }
                     }
@@ -819,11 +819,11 @@ Rectangle {
                             visible: item1Visible.checked
 
                             QGCLabel {
-                                text: "Setting 1:"
+                                text: qsTr("Setting 1:")
                                 Layout.fillWidth: true
                             }
                             QGCTextField {
-                                text: "Value 1"
+                                text: qsTr("Value 1")
                                 Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 15
                             }
                         }
@@ -833,7 +833,7 @@ Rectangle {
                             visible: item2Visible.checked
 
                             QGCLabel {
-                                text: "Setting 2:"
+                                text: qsTr("Setting 2:")
                                 Layout.fillWidth: true
                             }
                             QGCComboBox {
@@ -847,7 +847,7 @@ Rectangle {
                             visible: item3Visible.checked
 
                             QGCCheckBox {
-                                text: "Enable feature"
+                                text: qsTr("Enable feature")
                                 Layout.fillWidth: true
                             }
                         }
@@ -857,18 +857,18 @@ Rectangle {
                             visible: item4Visible.checked
 
                             QGCLabel {
-                                text: "Setting 4:"
+                                text: qsTr("Setting 4:")
                                 Layout.fillWidth: true
                             }
                             QGCButton {
-                                text: "Configure"
+                                text: qsTr("Configure")
                             }
                         }
                     }
 
                     // Nested SettingsGroupLayout test
                     QGCLabel {
-                        text: "Nested SettingsGroupLayout:"
+                        text: qsTr("Nested SettingsGroupLayout:")
                         font.bold: true
                     }
 
@@ -880,8 +880,8 @@ Rectangle {
 
                         RowLayout {
                             Layout.fillWidth: true
-                            QGCLabel { text: "Outer setting"; Layout.fillWidth: true }
-                            QGCTextField { text: "Value" }
+                            QGCLabel { text: qsTr("Outer setting"); Layout.fillWidth: true }
+                            QGCTextField { text: qsTr("Value") }
                         }
 
                         SettingsGroupLayout {
@@ -892,26 +892,26 @@ Rectangle {
                             showDividers: false
 
                             QGCCheckBox {
-                                text: "Inner checkbox 1"
+                                text: qsTr("Inner checkbox 1")
                                 Layout.fillWidth: true
                             }
 
                             QGCCheckBox {
-                                text: "Inner checkbox 2"
+                                text: qsTr("Inner checkbox 2")
                                 Layout.fillWidth: true
                             }
                         }
 
                         RowLayout {
                             Layout.fillWidth: true
-                            QGCLabel { text: "Another outer setting"; Layout.fillWidth: true }
+                            QGCLabel { text: qsTr("Another outer setting"); Layout.fillWidth: true }
                             QGCComboBox { model: ["A", "B", "C"] }
                         }
                     }
 
                     // Test with Repeater
                     QGCLabel {
-                        text: "SettingsGroupLayout with Repeater:"
+                        text: qsTr("SettingsGroupLayout with Repeater:")
                         font.bold: true
                     }
 
@@ -936,11 +936,11 @@ Rectangle {
                                     }
                                 }
                                 QGCLabel {
-                                    text: "Repeated Item " + (index + 1) + ":"
+                                    text: qsTr("Repeated Item ") + (index + 1) + ":"
                                     Layout.fillWidth: true
                                 }
                                 QGCTextField {
-                                    text: "Value " + (index + 1)
+                                    text: qsTr("Value ") + (index + 1)
                                     Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 15
                                 }
                             }
@@ -992,7 +992,7 @@ Rectangle {
                     fillMode:                   Image.PreserveAspectFit
                     source:                     "/qmlimages/Gears.svg"
                 }
-                Label { text: "colorGreen"; color: qgcPal.colorGreen; }
+                Label { text: qsTr("colorGreen"); color: qgcPal.colorGreen; }
                 QGCColoredImage {
                     color:                      qgcPal.colorOrange
                     width:                      ScreenTools.defaultFontPixelWidth * 2
@@ -1002,7 +1002,7 @@ Rectangle {
                     fillMode:                   Image.PreserveAspectFit
                     source:                     "/qmlimages/Gears.svg"
                 }
-                Label { text: "colorOrange"; color: qgcPal.colorOrange; }
+                Label { text: qsTr("colorOrange"); color: qgcPal.colorOrange; }
                 QGCColoredImage {
                     color:                      qgcPal.colorRed
                     width:                      ScreenTools.defaultFontPixelWidth * 2
@@ -1012,7 +1012,7 @@ Rectangle {
                     fillMode:                   Image.PreserveAspectFit
                     source:                     "/qmlimages/Gears.svg"
                 }
-                Label { text: "colorRed"; color: qgcPal.colorRed; }
+                Label { text: qsTr("colorRed"); color: qgcPal.colorRed; }
                 QGCColoredImage {
                     color:                      qgcPal.colorGrey
                     width:                      ScreenTools.defaultFontPixelWidth * 2
@@ -1022,7 +1022,7 @@ Rectangle {
                     fillMode:                   Image.PreserveAspectFit
                     source:                     "/qmlimages/Gears.svg"
                 }
-                Label { text: "colorGrey"; color: qgcPal.colorGrey;  }
+                Label { text: qsTr("colorGrey"); color: qgcPal.colorGrey;  }
                 QGCColoredImage {
                     color:                      qgcPal.colorBlue
                     width:                      ScreenTools.defaultFontPixelWidth * 2
@@ -1032,7 +1032,7 @@ Rectangle {
                     fillMode:                   Image.PreserveAspectFit
                     source:                     "/qmlimages/Gears.svg"
                 }
-                Label { text: "colorBlue"; color: qgcPal.colorBlue; }
+                Label { text: qsTr("colorBlue"); color: qgcPal.colorBlue; }
             }
         }
     }

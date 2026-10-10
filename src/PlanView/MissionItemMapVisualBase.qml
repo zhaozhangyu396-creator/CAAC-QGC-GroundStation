@@ -134,7 +134,17 @@ Item {
             visible: control.interactive && itemVisualLoader.item && itemVisualLoader.item.visible
             editOnRightClick: control.map.directMissionItemEditing
             onRightClicked: control.map.missionItemEditRequested(control._missionItem)
-            onDragStart: control.clicked(control._missionItem.sequenceNumber)
+            onDragStart: {
+                if (control.map.directMissionItemEditing) {
+                    control.map.missionItemDragStarted(control._missionItem)
+                }
+                control.clicked(control._missionItem.sequenceNumber)
+            }
+            onDragStop: {
+                if (control.map.directMissionItemEditing) {
+                    control.map.missionItemDragFinished(control._missionItem)
+                }
+            }
             onClicked: {
                 const indicator = itemVisualLoader.item
                 if (indicator && indicator.activate) {

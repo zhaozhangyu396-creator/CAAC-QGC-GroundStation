@@ -174,6 +174,11 @@ void QGCApplication::setLanguage()
                                                                                 : "None");
 
     QLocale::Language possibleLocale = AppSettings::_qLocaleLanguageEarlyAccess();
+    if (possibleLocale == QLocale::AnyLanguage) {
+        // Regression fixtures use a deterministic locale; localization tests select Chinese explicitly.
+        possibleLocale = _runningUnitTests ? QLocale(qEnvironmentVariable("QGC_TEST_LOCALE", "en_US")).language()
+                                           : QGCCorePlugin::instance()->defaultLanguage();
+    }
     if (possibleLocale != QLocale::AnyLanguage) {
         _locale = QLocale(possibleLocale);
     }

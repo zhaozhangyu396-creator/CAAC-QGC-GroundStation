@@ -46,6 +46,21 @@ set(CPACK_PACKAGE_EXECUTABLES "")
 set(CPACK_NSIS_INSTALL_ROOT "$PROGRAMFILES64")
 set(CPACK_NSIS_MUI_ICON "${QGC_WINDOWS_ICON_PATH}")
 set(CPACK_NSIS_MUI_UNIICON "${QGC_WINDOWS_ICON_PATH}")
+if(QGC_CAAC_BUILD)
+    # MUI invokes these callbacks before showing its pages. 2052 is the Windows Simplified Chinese locale.
+    set(CPACK_NSIS_DEFINES
+        [=[
+!define MUI_CUSTOMFUNCTION_GUIINIT CaacChineseGuiInit
+!define MUI_CUSTOMFUNCTION_UNGUIINIT un.CaacChineseGuiInit
+Function CaacChineseGuiInit
+    StrCpy $LANGUAGE 2052
+FunctionEnd
+Function un.CaacChineseGuiInit
+    StrCpy $LANGUAGE 2052
+FunctionEnd
+]=]
+    )
+endif()
 
 # ----------------------------------------------------------------------------
 # Install/Uninstall Commands
@@ -108,6 +123,20 @@ qgc_uninstall_failed:
 qgc_install_continue:
 ]=]
 )
+if(QGC_CAAC_BUILD)
+    string(REPLACE "Checking for previous @CMAKE_PROJECT_NAME@ installation" "正在检查已有安装" _qgc_nsis_extra_preinstall
+                   "${_qgc_nsis_extra_preinstall}"
+    )
+    string(REPLACE "Previous uninstaller not found; cleaning orphaned registry entries" "未找到旧版卸载程序，正在清理遗留注册表项"
+                   _qgc_nsis_extra_preinstall "${_qgc_nsis_extra_preinstall}"
+    )
+    string(REPLACE "Uninstalling previous @CMAKE_PROJECT_NAME@ version" "正在卸载旧版本" _qgc_nsis_extra_preinstall
+                   "${_qgc_nsis_extra_preinstall}"
+    )
+    string(REPLACE "Could not remove the previously installed @CMAKE_PROJECT_NAME@ version." "无法卸载已安装的旧版本。"
+                   _qgc_nsis_extra_preinstall "${_qgc_nsis_extra_preinstall}"
+    )
+endif()
 string(CONFIGURE "${_qgc_nsis_extra_preinstall}" CPACK_NSIS_EXTRA_PREINSTALL_COMMANDS @ONLY)
 
 set(_qgc_nsis_extra_install
@@ -216,6 +245,9 @@ set(_qgc_nsis_create_icons
         "$SMPROGRAMS\$STARTMENU_FOLDER\@CMAKE_PROJECT_NAME@ (GPU Safe Mode).lnk"
 ]=]
 )
+if(QGC_CAAC_BUILD)
+    string(REPLACE "GPU Safe Mode" "显卡兼容模式" _qgc_nsis_create_icons "${_qgc_nsis_create_icons}")
+endif()
 string(CONFIGURE "${_qgc_nsis_create_icons}" CPACK_NSIS_CREATE_ICONS_EXTRA @ONLY)
 
 set(_qgc_nsis_delete_icons
@@ -224,6 +256,9 @@ set(_qgc_nsis_delete_icons
     Delete "$SMPROGRAMS\$MUI_TEMP\@CMAKE_PROJECT_NAME@ (GPU Safe Mode).lnk"
 ]=]
 )
+if(QGC_CAAC_BUILD)
+    string(REPLACE "GPU Safe Mode" "显卡兼容模式" _qgc_nsis_delete_icons "${_qgc_nsis_delete_icons}")
+endif()
 string(CONFIGURE "${_qgc_nsis_delete_icons}" CPACK_NSIS_DELETE_ICONS_EXTRA @ONLY)
 
 # ----------------------------------------------------------------------------
@@ -246,5 +281,49 @@ set(CPACK_NSIS_UNINSTALL_NAME "${CMAKE_PROJECT_NAME}-Uninstall")
 set(CPACK_NSIS_MUI_HEADERIMAGE "${QGC_WINDOWS_INSTALL_HEADER_PATH}")
 set(CPACK_NSIS_MANIFEST_DPI_AWARE ON)
 set(CPACK_NSIS_IGNORE_LICENSE_PAGE ON)
+
+if(QGC_CAAC_BUILD)
+    # Localize CPack's hard-coded labels while retaining its current installer logic.
+    set(_caac_nsis_templates "${CMAKE_BINARY_DIR}/caac-nsis-templates")
+    file(MAKE_DIRECTORY "${_caac_nsis_templates}")
+    file(READ "${CMAKE_ROOT}/Modules/Internal/CPack/NSIS.template.in" _caac_nsis_template)
+    foreach(
+        _pair
+        "Selected environment for all users|已选择所有用户的环境"
+        "Selected environment for current user only.|已选择当前用户的环境。"
+        "Warning! PATH too long installer unable to modify PATH!|PATH 过长，安装程序无法修改环境变量。"
+        "Set install registry entry:|设置安装注册表项："
+        "Download failed:|下载失败："
+        "Install Options|安装选项"
+        "Choose options for installing @CPACK_NSIS_PACKAGE_NAME@|选择 @CPACK_NSIS_PACKAGE_NAME@ 的安装选项"
+        "@CPACK_NSIS_PACKAGE_NAME@ is already installed.|已安装 @CPACK_NSIS_PACKAGE_NAME@。"
+        "Do you want to uninstall the old version before installing the new one?|是否先卸载旧版本再安装新版本？"
+        "Uninstall failed.|卸载失败。"
+    )
+        string(REPLACE "|" ";" _labels "${_pair}")
+        list(GET _labels 0 _english)
+        list(GET _labels 1 _chinese)
+        string(REPLACE "${_english}" "${_chinese}" _caac_nsis_template "${_caac_nsis_template}")
+    endforeach()
+    file(WRITE "${_caac_nsis_templates}/NSIS.template.in" "${_caac_nsis_template}")
+    file(READ "${CMAKE_ROOT}/Modules/Internal/CPack/NSIS.InstallOptions.ini.in" _caac_nsis_options)
+    string(REPLACE "By default @CPACK_PACKAGE_INSTALL_DIRECTORY@ does not add its directory to the system PATH."
+                   "默认不将 @CPACK_PACKAGE_INSTALL_DIRECTORY@ 目录添加到系统 PATH。" _caac_nsis_options "${_caac_nsis_options}"
+    )
+    foreach(
+        _pair
+        "Do not add @CPACK_PACKAGE_NAME@ to the system PATH|不将 @CPACK_PACKAGE_NAME@ 添加到系统 PATH"
+        "Add @CPACK_PACKAGE_NAME@ to the system PATH for all users|为所有用户将 @CPACK_PACKAGE_NAME@ 添加到系统 PATH"
+        "Add @CPACK_PACKAGE_NAME@ to the system PATH for current user|为当前用户将 @CPACK_PACKAGE_NAME@ 添加到系统 PATH"
+        "Create @CPACK_PACKAGE_NAME@ Desktop Icon|创建 @CPACK_PACKAGE_NAME@ 桌面图标"
+    )
+        string(REPLACE "|" ";" _labels "${_pair}")
+        list(GET _labels 0 _english)
+        list(GET _labels 1 _chinese)
+        string(REPLACE "${_english}" "${_chinese}" _caac_nsis_options "${_caac_nsis_options}")
+    endforeach()
+    file(WRITE "${_caac_nsis_templates}/NSIS.InstallOptions.ini.in" "${_caac_nsis_options}")
+    set(CPACK_MODULE_PATH "${_caac_nsis_templates};${CMAKE_MODULE_PATH}")
+endif()
 
 include(CPack)

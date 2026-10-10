@@ -11,7 +11,7 @@ Item {
 
     Text {
         id:             _textMeasure
-        text:           "X"
+        text:           qsTr("X")
         color:          qgcPal.window
         font.family:    ScreenTools.normalFontFamily
     }
@@ -272,7 +272,7 @@ Item {
         anchors.bottom:     parent.bottom
         anchors.margins:    10
         Text {
-            text: "100x100"
+            text: qsTr("100x100")
             anchors.centerIn: parent
             color:  qgcPal.window
         }

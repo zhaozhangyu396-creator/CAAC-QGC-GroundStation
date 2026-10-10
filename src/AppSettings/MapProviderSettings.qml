@@ -33,6 +33,7 @@ SettingsGroupLayout {
     LabelledComboBox {
         label: qsTr("Type")
         model: _mapEngineManager.mapTypeList(_mapProviderFact.rawValue)
+        textTransform: (value) => MapNames.displayName(value)
 
         onActivated: (index) => { _mapTypeFact.rawValue = comboBox.textAt(index) }
 

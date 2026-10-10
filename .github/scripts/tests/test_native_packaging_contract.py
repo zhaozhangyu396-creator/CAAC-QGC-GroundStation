@@ -147,6 +147,7 @@ def test_windows_installer_uses_only_the_cpack_nsis_path() -> None:
 def test_windows_nsis_module_generates_cpack_config(tmp_path) -> None:
     architectures = (
         ("amd64", "FALSE", "AMD64", "AMD64", "AMD64"),
+        ("caac-amd64", "FALSE", "AMD64", "AMD64", "AMD64"),
         ("arm64", "FALSE", "ARM64", "arm64", "ARM64"),
         ("arm64-cross", "TRUE", "AMD64", "arm64", "AMD64-ARM64"),
         ("aarch64-cross", "TRUE", "x86_64", "aarch64", "AMD64-ARM64"),
@@ -168,6 +169,7 @@ set(CMAKE_CROSSCOMPILING {cross_compiling})
 set(CMAKE_HOST_SYSTEM_PROCESSOR {host_processor})
 set(CMAKE_SYSTEM_PROCESSOR {target_processor})
 set(QGC_ORG_NAME QGroundControl)
+set(QGC_CAAC_BUILD {"TRUE" if case == "caac-amd64" else "FALSE"})
 set(QGC_WINDOWS_ICON_PATH "{(REPO_ROOT / "deploy/windows/WindowsQGC.ico").as_posix()}")
 set(QGC_WINDOWS_INSTALL_HEADER_PATH "{(REPO_ROOT / "deploy/windows/installheader.bmp").as_posix()}")
 install(FILES payload.txt DESTINATION . COMPONENT Runtime)
@@ -190,7 +192,25 @@ include(CreateCPackNSIS)
         assert "DisableX64FSRedirection" in config
         assert "EnableX64FSRedirection" in config
         assert "QGCCrashDumps" in config
-        assert "GPU Safe Mode" in config
+        if case == "caac-amd64":
+            assert "显卡兼容模式" in config
+            assert "GPU Safe Mode" not in config
+            assert "MUI_CUSTOMFUNCTION_GUIINIT CaacChineseGuiInit" in config
+            assert "MUI_CUSTOMFUNCTION_UNGUIINIT un.CaacChineseGuiInit" in config
+            assert r"StrCpy \$LANGUAGE 2052" in config
+            assert "正在卸载旧版本" in config
+            assert "Could not remove the previously installed" not in config
+            templates = build_dir / "caac-nsis-templates"
+            script = (templates / "NSIS.template.in").read_text(encoding="utf-8-sig")
+            options = (templates / "NSIS.InstallOptions.ini.in").read_text()
+            assert "安装选项" in script
+            assert "Install Options" not in script
+            assert "MUI_PAGE_DIRECTORY" in script
+            assert "创建 @CPACK_PACKAGE_NAME@ 桌面图标" in options
+            assert "CPACK_MODULE_PATH" in config and templates.as_posix() in config
+        else:
+            assert "GPU Safe Mode" in config
+            assert "CaacChineseGuiInit" not in config
 
 
 def test_docker_workflow_requires_and_validates_native_packages() -> None:

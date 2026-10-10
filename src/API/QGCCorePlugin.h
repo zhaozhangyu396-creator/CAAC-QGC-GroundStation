@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QtCore/QLocale>
 #include <QtCore/QObject>
 #include <QtCore/QUrl>
 #include <QtCore/QVariantList>
@@ -77,6 +78,9 @@ public:
     /// The default settings panel to show
     /// @return The settings index
     virtual int defaultSettings() { return 0; }
+
+    /// Used when the user has selected the system language; stock builds follow the OS.
+    virtual QLocale::Language defaultLanguage() const { return QLocale::AnyLanguage; }
 
     /// Global options
     /// @return An instance of QGCOptions

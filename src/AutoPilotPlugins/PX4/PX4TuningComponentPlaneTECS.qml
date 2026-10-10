@@ -35,7 +35,7 @@ ColumnLayout {
             }
             // TODO: add other params
         }
-        title: "TECS"
+        title: qsTr("TECS")
         tuningMode: Vehicle.ModeAltitudeAndAirspeed
         unit: ""
         axis: [ data ]

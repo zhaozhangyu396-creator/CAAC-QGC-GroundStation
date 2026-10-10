@@ -169,7 +169,7 @@ ColumnLayout {
         QGCCheckBoxSlider {
             id: cameraHasVideoStream
             Layout.fillWidth: true
-            text: "CAMERA_CAP_FLAGS_HAS_VIDEO_STREAM"
+            text: qsTr("CAMERA_CAP_FLAGS_HAS_VIDEO_STREAM")
             checked: subEditConfig.cameraHasVideoStream
             visible: enableCamera.checked
         }
@@ -192,7 +192,7 @@ ColumnLayout {
         QGCCheckBoxSlider {
             id: cameraCaptureVideo
             Layout.fillWidth: true
-            text: "CAMERA_CAP_FLAGS_CAPTURE_VIDEO"
+            text: qsTr("CAMERA_CAP_FLAGS_CAPTURE_VIDEO")
             checked: subEditConfig.cameraCaptureVideo
             visible: enableCamera.checked
         }
@@ -200,7 +200,7 @@ ColumnLayout {
         QGCCheckBoxSlider {
             id: cameraCaptureImage
             Layout.fillWidth: true
-            text: "CAMERA_CAP_FLAGS_CAPTURE_IMAGE"
+            text: qsTr("CAMERA_CAP_FLAGS_CAPTURE_IMAGE")
             checked: subEditConfig.cameraCaptureImage
             visible: enableCamera.checked
         }
@@ -208,7 +208,7 @@ ColumnLayout {
         QGCCheckBoxSlider {
             id: cameraHasModes
             Layout.fillWidth: true
-            text: "CAMERA_CAP_FLAGS_HAS_MODES"
+            text: qsTr("CAMERA_CAP_FLAGS_HAS_MODES")
             checked: subEditConfig.cameraHasModes
             visible: enableCamera.checked
         }
@@ -216,7 +216,7 @@ ColumnLayout {
         QGCCheckBoxSlider {
             id: cameraCanCaptureImageInVideoMode
             Layout.fillWidth: true
-            text: "CAMERA_CAP_FLAGS_CAN_CAPTURE_IMAGE_IN_VIDEO_MODE"
+            text: qsTr("CAMERA_CAP_FLAGS_CAN_CAPTURE_IMAGE_IN_VIDEO_MODE")
             checked: subEditConfig.cameraCanCaptureImageInVideoMode
             visible: enableCamera.checked
         }
@@ -224,7 +224,7 @@ ColumnLayout {
         QGCCheckBoxSlider {
             id: cameraCanCaptureVideoInImageMode
             Layout.fillWidth: true
-            text: "CAMERA_CAP_FLAGS_CAN_CAPTURE_VIDEO_IN_IMAGE_MODE"
+            text: qsTr("CAMERA_CAP_FLAGS_CAN_CAPTURE_VIDEO_IN_IMAGE_MODE")
             checked: subEditConfig.cameraCanCaptureVideoInImageMode
             visible: enableCamera.checked
         }
@@ -232,7 +232,7 @@ ColumnLayout {
         QGCCheckBoxSlider {
             id: cameraHasBasicZoom
             Layout.fillWidth: true
-            text: "CAMERA_CAP_FLAGS_HAS_BASIC_ZOOM"
+            text: qsTr("CAMERA_CAP_FLAGS_HAS_BASIC_ZOOM")
             checked: subEditConfig.cameraHasBasicZoom
             visible: enableCamera.checked
         }
@@ -240,7 +240,7 @@ ColumnLayout {
         QGCCheckBoxSlider {
             id: cameraHasTrackingPoint
             Layout.fillWidth: true
-            text: "CAMERA_CAP_FLAGS_HAS_TRACKING_POINT"
+            text: qsTr("CAMERA_CAP_FLAGS_HAS_TRACKING_POINT")
             checked: subEditConfig.cameraHasTrackingPoint
             visible: enableCamera.checked
         }
@@ -248,7 +248,7 @@ ColumnLayout {
         QGCCheckBoxSlider {
             id: cameraHasTrackingRectangle
             Layout.fillWidth: true
-            text: "CAMERA_CAP_FLAGS_HAS_TRACKING_RECTANGLE"
+            text: qsTr("CAMERA_CAP_FLAGS_HAS_TRACKING_RECTANGLE")
             checked: subEditConfig.cameraHasTrackingRectangle
             visible: enableCamera.checked
         }
@@ -262,7 +262,7 @@ ColumnLayout {
         QGCCheckBoxSlider {
             id: gimbalHasRollAxis
             Layout.fillWidth: true
-            text: "GIMBAL_MANAGER_CAP_FLAGS_HAS_ROLL_AXIS"
+            text: qsTr("GIMBAL_MANAGER_CAP_FLAGS_HAS_ROLL_AXIS")
             checked: subEditConfig.gimbalHasRollAxis
             visible: enableGimbal.checked
         }
@@ -270,7 +270,7 @@ ColumnLayout {
         QGCCheckBoxSlider {
             id: gimbalHasPitchAxis
             Layout.fillWidth: true
-            text: "GIMBAL_MANAGER_CAP_FLAGS_HAS_PITCH_AXIS"
+            text: qsTr("GIMBAL_MANAGER_CAP_FLAGS_HAS_PITCH_AXIS")
             checked: subEditConfig.gimbalHasPitchAxis
             visible: enableGimbal.checked
         }
@@ -278,7 +278,7 @@ ColumnLayout {
         QGCCheckBoxSlider {
             id: gimbalHasYawAxis
             Layout.fillWidth: true
-            text: "GIMBAL_MANAGER_CAP_FLAGS_HAS_YAW_AXIS"
+            text: qsTr("GIMBAL_MANAGER_CAP_FLAGS_HAS_YAW_AXIS")
             checked: subEditConfig.gimbalHasYawAxis
             visible: enableGimbal.checked
         }
@@ -286,7 +286,7 @@ ColumnLayout {
         QGCCheckBoxSlider {
             id: gimbalHasYawFollow
             Layout.fillWidth: true
-            text: "GIMBAL_MANAGER_CAP_FLAGS_HAS_YAW_FOLLOW"
+            text: qsTr("GIMBAL_MANAGER_CAP_FLAGS_HAS_YAW_FOLLOW")
             checked: subEditConfig.gimbalHasYawFollow
             visible: enableGimbal.checked
         }
@@ -294,7 +294,7 @@ ColumnLayout {
         QGCCheckBoxSlider {
             id: gimbalHasYawLock
             Layout.fillWidth: true
-            text: "GIMBAL_MANAGER_CAP_FLAGS_HAS_YAW_LOCK"
+            text: qsTr("GIMBAL_MANAGER_CAP_FLAGS_HAS_YAW_LOCK")
             checked: subEditConfig.gimbalHasYawLock
             visible: enableGimbal.checked
         }
@@ -302,7 +302,7 @@ ColumnLayout {
         QGCCheckBoxSlider {
             id: gimbalHasRetract
             Layout.fillWidth: true
-            text: "GIMBAL_MANAGER_CAP_FLAGS_HAS_RETRACT"
+            text: qsTr("GIMBAL_MANAGER_CAP_FLAGS_HAS_RETRACT")
             checked: subEditConfig.gimbalHasRetract
             visible: enableGimbal.checked
         }
@@ -310,7 +310,7 @@ ColumnLayout {
         QGCCheckBoxSlider {
             id: gimbalHasNeutral
             Layout.fillWidth: true
-            text: "GIMBAL_MANAGER_CAP_FLAGS_HAS_NEUTRAL"
+            text: qsTr("GIMBAL_MANAGER_CAP_FLAGS_HAS_NEUTRAL")
             checked: subEditConfig.gimbalHasNeutral
             visible: enableGimbal.checked
         }

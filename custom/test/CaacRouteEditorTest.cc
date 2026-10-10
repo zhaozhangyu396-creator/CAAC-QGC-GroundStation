@@ -8,11 +8,13 @@
 #include <QtTest/QTest>
 
 #include "CaacRouteEditorController.h"
+#include "CaacRouteGeometry.h"
 #include "FlightPathSegment.h"
 #include "MissionController.h"
 #include "MissionItem.h"
 #include "MissionTest.h"
 #include "PlanMasterController.h"
+#include "QGCGeo.h"
 #include "QmlObjectTreeModel.h"
 #include "SimpleMissionItem.h"
 #include "SpeedSection.h"
@@ -30,7 +32,199 @@ private slots:
     void _testOrderConstraints();
     void _testStaleItem();
     void _testUnknownTerrainProfile();
+    void _testGeodesicGeometry_data();
+    void _testGeodesicGeometry();
+    void _testRelativeAngles();
+    void _testRotatePreservesMission();
+    void _testHistoryTransactions();
+    void _testRelativeInsertion();
+    void _testCenterFileRoundtrip();
 };
+
+void CaacRouteEditorTest::_testGeodesicGeometry_data()
+{
+    QTest::addColumn<QGeoCoordinate>("center");
+    QTest::addColumn<double>("angle");
+    for (const auto& center :
+         {QGeoCoordinate(0, 0), QGeoCoordinate(30, 120), QGeoCoordinate(85, 179.999), QGeoCoordinate(-80, -179.999)}) {
+        for (double angle : {90.0, -90.0, 123.456, 360.0, -810.0}) {
+            const QByteArray name =
+                QStringLiteral("%1/%2/%3").arg(center.latitude()).arg(center.longitude()).arg(angle).toUtf8();
+            QTest::newRow(name.constData()) << center << angle;
+        }
+    }
+}
+
+void CaacRouteEditorTest::_testGeodesicGeometry()
+{
+    QFETCH(QGeoCoordinate, center);
+    QFETCH(double, angle);
+    auto a = QGCGeo::geodesicDestination(center, 0, 100);
+    a.setAltitude(123.45);
+    const auto result = CaacRouteGeometry::rotate({center, a}, center, angle);
+    QVERIFY(result);
+    QCOMPARE(result->at(0), center);
+    QCOMPARE(result->at(1).altitude(), 123.45);
+    QVERIFY(std::abs(QGCGeo::geodesicDistance(center, result->at(1)) - 100.0) < 1e-6);
+    QVERIFY(std::abs(std::remainder(QGCGeo::geodesicAzimuth(center, result->at(1)) - angle, 360.0)) < 1e-7);
+    const auto restored = CaacRouteGeometry::rotate(*result, center, -angle);
+    QVERIFY(restored);
+    QVERIFY(QGCGeo::geodesicDistance(restored->at(1), a) < 1e-6);
+    const auto b = QGCGeo::geodesicDestination(a, 37, 500);
+    const auto alignedAngle = CaacRouteGeometry::alignmentAngle(a, b, center, 123);
+    QVERIFY(alignedAngle);
+    const auto aligned = CaacRouteGeometry::rotate({a, b}, center, *alignedAngle);
+    QVERIFY(aligned);
+    QVERIFY(std::abs(QGCGeo::geodesicAzimuth(aligned->at(0), aligned->at(1)) - 123) < 1e-7);
+}
+
+void CaacRouteEditorTest::_testRelativeAngles()
+{
+    const QGeoCoordinate origin(0, 0, 25);
+    const auto north = CaacRouteGeometry::relativePoint(origin, 0, 100);
+    const auto east = CaacRouteGeometry::relativePoint(origin, 90, 100);
+    QVERIFY(north && east);
+    // Independent WGS84 reference values for a 100 m meridian/equator segment.
+    QVERIFY(std::abs(north->latitude() - 0.0009043694770496278) < 1e-12);
+    QVERIFY(std::abs(east->longitude() - 0.0008983152841195215) < 1e-12);
+    QCOMPARE(north->altitude(), 25.0);
+    for (const auto& pair : {std::pair{90.0, 270.0}, std::pair{180.0, 0.0}, std::pair{-90.0, 90.0}}) {
+        const auto point = CaacRouteGeometry::interiorAnglePoint(origin, *north, pair.first, 100);
+        QVERIFY(point);
+        QVERIFY(std::abs(std::remainder(QGCGeo::geodesicAzimuth(*north, *point) - pair.second, 360.0)) < 1e-7);
+    }
+    QVERIFY(!CaacRouteGeometry::relativePoint(origin, 0, -1));
+    QVERIFY(!CaacRouteGeometry::relativePoint(origin, std::numeric_limits<double>::infinity(), 100));
+    QVERIFY(!CaacRouteGeometry::interiorAnglePoint(origin, origin, 90, 100));
+    QVERIFY(!CaacRouteGeometry::rotate({origin, QGeoCoordinate()}, origin, 90));
+    QVERIFY(!CaacRouteGeometry::alignmentAngle(origin, origin, origin, 90));
+}
+
+void CaacRouteEditorTest::_testRotatePreservesMission()
+{
+    CaacRouteEditorController editor;
+    editor.setPlanMasterController(planController());
+    const QGeoCoordinate home(30, 120, 50);
+    missionController()->setHomePosition(home);
+    auto* takeoff = missionController()->insertTakeoffItem(QGeoCoordinate(30.001, 120), 1);
+    QVERIFY(editor.addWaypoint(QGeoCoordinate(30.002, 120)));
+    auto* point = editor.currentItem();
+    QVERIFY(editor.updateWaypoint(point, 30.002, 120, 123.45, true, 9));
+    point->missionItem().setParam1(7);
+    point->missionItem().setParam2(3);
+    point->missionItem().setParam4(42);
+    auto* land =
+        qobject_cast<SimpleMissionItem*>(missionController()->insertSimpleMissionItem(QGeoCoordinate(30.003, 120), -1));
+    QVERIFY(land);
+    land->setCommand(MAV_CMD_NAV_LAND);
+    const auto original = planController()->saveToJson();
+    const auto pivot = point->coordinate();
+    const auto originalTakeoff = takeoff->coordinate();
+    const auto originalLand = land->coordinate();
+    const int command = point->command();
+    const auto frame = point->altitudeFrame();
+    QVERIFY(editor.rotateRouteAround(pivot, 90));
+    QCOMPARE(point->coordinate(), pivot);
+    QCOMPARE(point->command(), command);
+    QCOMPARE(point->altitudeFrame(), frame);
+    QCOMPARE(point->altitude()->rawValue().toDouble(), 123.45);
+    QCOMPARE(point->speedSection()->specifiedFlightSpeed(), 9.0);
+    QCOMPARE(point->missionItem().param1(), 7.0);
+    QCOMPARE(point->missionItem().param2(), 3.0);
+    QCOMPARE(point->missionItem().param4(), 42.0);
+    QVERIFY(takeoff->coordinate().distanceTo(originalTakeoff) > 1);
+    QVERIFY(land->coordinate().distanceTo(originalLand) > 1);
+    QVERIFY(missionController()->plannedHomePosition().distanceTo(home) > 1);
+    QVERIFY(editor.undo());
+    QCOMPARE(planController()->saveToJson(), original);
+    QVERIFY(editor.redo());
+    const auto rotated = planController()->saveToJson();
+    QVERIFY(!editor.rotateRouteAround(QGeoCoordinate(), 90));
+    QCOMPARE(planController()->saveToJson(), rotated);
+}
+
+void CaacRouteEditorTest::_testHistoryTransactions()
+{
+    CaacRouteEditorController editor;
+    editor.setPlanMasterController(planController());
+    const auto empty = planController()->saveToJson();
+    QVERIFY(editor.addWaypoint(QGeoCoordinate(30, 120)));
+    const auto added = planController()->saveToJson();
+    QVERIFY(editor.updateWaypoint(editor.currentItem(), 30, 120, 123, true, 9));
+    const auto updated = planController()->saveToJson();
+    editor.beginEdit();
+    for (int i = 1; i <= 5; ++i) {
+        editor.currentItem()->setCoordinate(QGeoCoordinate(30 + i * 0.001, 120));
+        QCoreApplication::processEvents();
+    }
+    editor.endEdit();
+    const auto dragged = planController()->saveToJson();
+    QVERIFY(editor.undo());
+    QCOMPARE(planController()->saveToJson(), updated);
+    QVERIFY(editor.undo());
+    QCOMPARE(planController()->saveToJson(), added);
+    QVERIFY(editor.undo());
+    QCOMPARE(planController()->saveToJson(), empty);
+    QVERIFY(!editor.canUndo());
+    QVERIFY(editor.redo());
+    QVERIFY(editor.redo());
+    QVERIFY(editor.redo());
+    QCOMPARE(planController()->saveToJson(), dragged);
+    QVERIFY(!editor.canRedo());
+    QVERIFY(editor.undo());
+    QVERIFY(editor.addWaypoint(QGeoCoordinate(31, 121)));
+    QVERIFY(!editor.canRedo());
+    // Native QGC property edits are captured even when the mission is already dirty.
+    auto* item = editor.currentItem();
+    const auto beforeNative = planController()->saveToJson();
+    item->altitude()->setRawValue(140);
+    QVERIFY(editor.undo());
+    QCOMPARE(planController()->saveToJson(), beforeNative);
+    QVERIFY(planController()->dirtyForSave());
+}
+
+void CaacRouteEditorTest::_testRelativeInsertion()
+{
+    CaacRouteEditorController editor;
+    editor.setPlanMasterController(planController());
+    missionController()->setHomePosition(QGeoCoordinate(0, 0, 25));
+    const auto initial = planController()->saveToJson();
+    QVERIFY(!editor.insertRelativeWaypoint(0, 0, 90, 100, true));
+    QCOMPARE(planController()->saveToJson(), initial);
+    QVERIFY(editor.insertRelativeWaypoint(0, 0, 0, 100, false));
+    QVERIFY(editor.insertRelativeWaypoint(1, 1, 90, 100, true));
+    auto* reference = missionController()->visualItems()->value<VisualMissionItem*>(1);
+    auto* added = missionController()->visualItems()->value<VisualMissionItem*>(2);
+    QVERIFY(std::abs(QGCGeo::geodesicAzimuth(reference->coordinate(), added->coordinate()) - 270) < 1e-7);
+    const auto saved = planController()->saveToJson();
+    QVERIFY(!editor.insertRelativeWaypoint(1, 999, 90, 100, false));
+    QCOMPARE(planController()->saveToJson(), saved);
+}
+
+void CaacRouteEditorTest::_testCenterFileRoundtrip()
+{
+    CaacRouteEditorController editor;
+    editor.setPlanMasterController(planController());
+    missionController()->setHomePosition(QGeoCoordinate(30, 120, 50));
+    QVERIFY(editor.addWaypoint(QGeoCoordinate(30.001, 120)));
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+    const auto legacyFile = directory.filePath(QStringLiteral("legacy.plan"));
+    QVERIFY(planController()->saveToFile(legacyFile));
+    const QGeoCoordinate center(30.1234567890123, 120.9876543210987);
+    QVERIFY(editor.setRotationCenter(center));
+    const auto file = directory.filePath(QStringLiteral("center.plan"));
+    QVERIFY(planController()->saveToFile(file));
+    const auto saved = planController()->saveToJson();
+    planController()->removeAll();
+    planController()->loadFromFile(file);
+    QCOMPARE(editor.rotationCenter(), center);
+    QCOMPARE(planController()->saveToJson(), saved);
+    QVERIFY(!editor.canUndo());
+    planController()->loadFromFile(legacyFile);
+    QVERIFY(!editor.rotationCenter().isValid());
+    QVERIFY(!editor.canUndo());
+}
 
 void CaacRouteEditorTest::_testInsertReorderDelete()
 {

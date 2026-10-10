@@ -1,0 +1,142 @@
+[
+  {
+    "context": "APMFlightSafetyComponentSub",
+    "source": "EKF",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "GPSCorrectionManager",
+    "source": "NTRIP",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "GPSCorrectionManager",
+    "source": "UDP",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "GPSIndicator",
+    "source": "RTK",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "GPSIndicatorPage",
+    "source": "NTRIP",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "GeoTagPage",
+    "source": "ULog (*.ulg)",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "LinkManager",
+    "source": "UDP",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "LinkManager",
+    "source": "TCP",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "MainStatusIndicatorOfflinePage",
+    "source": "UDP",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "MockLink",
+    "source": "RTP/UDP H.264",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "MockLink",
+    "source": "RTP/UDP H.265",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "MockLink",
+    "source": "RTSP (H.264)",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "MockLink",
+    "source": "MPEG-TS (UDP)",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "MockLink",
+    "source": "MPEG-TS (TCP)",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "MockLinkSettings",
+    "source": "RTP/UDP H.264",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "MockLinkSettings",
+    "source": "RTP/UDP H.265",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "MockLinkSettings",
+    "source": "RTSP (H.264)",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "MockLinkSettings",
+    "source": "MPEG-TS (UDP)",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "MockLinkSettings",
+    "source": "MPEG-TS (TCP)",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "NTRIPHttpDecoder",
+    "source": "HTTP %1: %2",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "App.SettingsGroup.json",
+    "source": "ArduPilot,PX4 Pro,MAVLink",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "FirmwareUpgrade.SettingsGroup.json",
+    "source": "ChibiOS,NuttX",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "FirmwareUpgrade.SettingsGroup.json",
+    "source": "apmChibiOS",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "Video.SettingsGroup.json",
+    "source": "mp4,mov,mkv",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "GPSFact.json",
+    "source": "VDOP",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "HygrometerFact.json",
+    "source": "ID",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "LocalPositionFact.json",
+    "source": "VX",
+    "reason": "标准协议、格式、产品名或遥测符号"
+  },
+  {
+    "context": "GuidedActionsController",
+    "source": "_activeVehicle(%1) _vehicleArmed(%2) guidedModeSupported(%3) _vehicleUnderway(%4) _vehicleWasUnderway(%5) _vehicleInRTLMode(%6) pauseVehicleSupported(%7) _vehiclePaused(%8) _flightMode(%9) _visualItemsCount(%10) roiSupported(%11) orbitSupported(%12) _missionActive(%13) _hideROI(%14) _hideOrbit(%15)",
+    "reason": "仅用于内部调试日志，保留诊断字段及占位符"
+  }
+]

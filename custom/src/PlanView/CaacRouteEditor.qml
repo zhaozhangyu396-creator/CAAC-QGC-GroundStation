@@ -16,6 +16,18 @@ Column {
     property var editorMap: null
     property var planMasterController: null
     readonly property var currentItem: editorController.currentItem
+    readonly property var routeController: editorController
+    property bool _pickingCenter: false
+    property int _pendingOperation: 0
+
+    function pickRotationCenter(operation) {
+        _pendingOperation = operation
+        _pickingCenter = true
+    }
+
+    function openGeometry(operation) {
+        geometryDialogFactory.open({operation: operation})
+    }
 
     function editWaypoint(item) {
         if (editorController.selectWaypoint(item)) {
@@ -84,6 +96,30 @@ Column {
         }
     }
 
+    QGCLabel {
+        width: root.width
+        text: qsTr("CAAC route workbench")
+        font.bold: true
+    }
+
+    RowLayout {
+        width: root.width
+        QGCButton {
+            objectName: "caacUndo"
+            Layout.fillWidth: true
+            text: qsTr("Undo")
+            enabled: editorController.canUndo
+            onClicked: editorController.undo()
+        }
+        QGCButton {
+            objectName: "caacRedo"
+            Layout.fillWidth: true
+            text: qsTr("Redo")
+            enabled: editorController.canRedo
+            onClicked: editorController.redo()
+        }
+    }
+
     GridLayout {
         id: controls
         width: root.width
@@ -119,6 +155,18 @@ Column {
             enabled: root.currentItem !== null
             onClicked: editorController.moveCurrentWaypoint(1)
         }
+        QGCButton {
+            objectName: "caacRotateRoute"
+            Layout.fillWidth: true
+            text: qsTr("Rotate / align")
+            onClicked: root.openGeometry(0)
+        }
+        QGCButton {
+            objectName: "caacRelativePoint"
+            Layout.fillWidth: true
+            text: qsTr("Relative point")
+            onClicked: root.openGeometry(2)
+        }
     }
 
     QGCLabel {
@@ -126,7 +174,8 @@ Column {
         width: root.width
         wrapMode: Text.WordWrap
         font.pointSize: ScreenTools.smallFontPointSize
-        text: editorController.lastError || qsTr("Double-click empty map to insert after selection. Drag with left button; right-click a waypoint to edit. Save/load in Plan File.")
+        text: root._pickingCenter ? qsTr("Click the map to choose a rotation centre. Esc cancels.")
+            : editorController.lastError || qsTr("Double-click to add · Drag to move · Right-click to edit")
     }
 
     QGCPopupDialogFactory {
@@ -138,14 +187,40 @@ Column {
         }
     }
 
+    QGCPopupDialogFactory {
+        id: geometryDialogFactory
+        dialogComponent: Component {
+            CaacGeometryDialog {
+                routeController: editorController
+                editor: root
+            }
+        }
+    }
+
+    Shortcut {
+        sequence: "Esc"
+        enabled: root._pickingCenter
+        onActivated: root._pickingCenter = false
+    }
+
     Connections {
         target: root.editorMap
 
         function onMapDoubleClicked(position) {
-            if (root.enabled && root.visible && root.editorMap.directMissionItemEditing) {
+            if (root.enabled && root.visible && root.editorMap.directMissionItemEditing && !root._pickingCenter) {
                 editorController.addWaypoint(root.editorMap.toCoordinate(position, false))
             }
         }
+        function onMapClicked(position) {
+            if (root._pickingCenter) {
+                if (editorController.setRotationCenter(root.editorMap.toCoordinate(position, false))) {
+                    root._pickingCenter = false
+                    root.openGeometry(root._pendingOperation)
+                }
+            }
+        }
+        function onMissionItemDragStarted(item) { editorController.beginEdit() }
+        function onMissionItemDragFinished(item) { editorController.endEdit() }
         function onMissionItemEditRequested(item) {
             if (root.enabled && root.visible && root.editorMap.directMissionItemEditing) {
                 root.editWaypoint(item)

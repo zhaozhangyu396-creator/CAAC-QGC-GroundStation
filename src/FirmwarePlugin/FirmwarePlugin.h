@@ -394,7 +394,11 @@ public:
     virtual void sendGCSMotionReport(Vehicle *vehicle, const FollowMe::GCSMotionReport &motionReport, uint8_t estimationCapabilities) const;
 
     /// gets hobbs meter from autopilot. This should be reimplmeented for each firmware
-    virtual QString getHobbsMeter(Vehicle *vehicle) const { Q_UNUSED(vehicle); return QStringLiteral("Not Supported"); }
+    virtual QString getHobbsMeter(Vehicle* vehicle) const
+    {
+        Q_UNUSED(vehicle);
+        return tr("Not Supported");
+    }
 
     /// Creates Autotune object.
     virtual Autotune *createAutotune(Vehicle *vehicle) const;

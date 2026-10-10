@@ -476,6 +476,7 @@ FlightMap {
                                 anchors.left: parent.left
                                 anchors.right: parent.right
                                 model: QGroundControl.mapEngineManager.mapList
+                                textTransform: (value) => MapNames.displayName(value)
                                 onActivated: (index) => {
                                     mapType = textAt(index)
                                 }

@@ -100,7 +100,7 @@ ColumnLayout {
         }
         Repeater {
             model: buttonAssignmentRow._assignedButtonModel
-            QGCLabel { text: repeat ? "Repeat" : "" }
+            QGCLabel { text: repeat ? qsTr("Repeat") : "" }
         }
     }
 

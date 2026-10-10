@@ -95,9 +95,13 @@ if ($Phase -eq 'Install') {
     }
     $startMenuRoot = Join-Path $env:ProgramData "Microsoft\Windows\Start Menu\Programs"
     $startMenuDir = Join-Path $startMenuRoot $uninstallProperties.StartMenu
+    $safeModeName = "QGroundControl (GPU Safe Mode).lnk"
+    if ($env:CAAC_CHINESE_INSTALLER -eq "true") {
+      $safeModeName = "QGroundControl (显卡兼容模式).lnk"
+    }
     $shortcuts = @(
       (Join-Path $startMenuDir "QGroundControl.lnk"),
-      (Join-Path $startMenuDir "QGroundControl (GPU Safe Mode).lnk")
+      (Join-Path $startMenuDir $safeModeName)
     )
     foreach ($shortcut in $shortcuts) {
       if (-not (Test-Path -LiteralPath $shortcut -PathType Leaf)) {

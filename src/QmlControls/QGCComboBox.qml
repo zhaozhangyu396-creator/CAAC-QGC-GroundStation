@@ -9,6 +9,11 @@ import QGroundControl.Controls
 T.ComboBox {
     property bool sizeToContents: false
     property string alternateText: ""
+    property var textTransform: null
+
+    function displayString(value) {
+        return textTransform ? textTransform(value) : value
+    }
 
     id: control
     padding: ScreenTools.comboBoxPadding
@@ -48,7 +53,7 @@ T.ComboBox {
         if (_onCompleted && sizeToContents && control.count > 0) {
             _largestTextWidth = 0
             for (let i = 0; i < control.count; i++) {
-                textMetrics.text = control.textAt(i)
+                textMetrics.text = control.displayString(control.textAt(i))
                 _largestTextWidth = Math.max(textMetrics.width, _largestTextWidth)
             }
             _popupWidth = _largestTextWidth + itemDelegateMetrics.leftPadding + itemDelegateMetrics.rightPadding
@@ -57,6 +62,7 @@ T.ComboBox {
 
     onModelChanged: _calcPopupWidth()
     onCountChanged: _calcPopupWidth()
+    onTextTransformChanged: _calcPopupWidth()
 
     Component.onCompleted: {
         _onCompleted = true
@@ -75,11 +81,11 @@ T.ComboBox {
         TextMetrics {
             id: popupItemMetrics
             font: control.font
-            text: _text
+            text: control.displayString(_text)
         }
 
         contentItem: Text {
-            text: _text
+            text: control.displayString(_text)
             font: control.font
             color: control.currentIndex === index ? qgcPal.buttonHighlightText : qgcPal.buttonText
             verticalAlignment: Text.AlignVCenter
@@ -105,7 +111,7 @@ T.ComboBox {
     // The label of the button
     contentItem: QGCLabel {
         id: text
-        text: control.alternateText === "" ? control.currentText : control.alternateText
+        text: control.alternateText === "" ? control.displayString(control.currentText) : control.alternateText
         font: control.font
         color: qgcPal.buttonText
         elide: Text.ElideRight

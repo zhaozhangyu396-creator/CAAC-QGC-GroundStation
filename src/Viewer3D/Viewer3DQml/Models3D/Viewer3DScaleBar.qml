@@ -145,7 +145,7 @@ Item {
         anchors.right: rightEnd.right
         font.bold: true
         horizontalAlignment: Text.AlignRight
-        text: "0 m"
+        text: qsTr("0 m")
     }
 
     Rectangle {

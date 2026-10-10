@@ -111,6 +111,8 @@ Map {
     signal mapPressAndHold(var position)
     signal mapDoubleClicked(var position)
     signal missionItemEditRequested(var item)
+    signal missionItemDragStarted(var item)
+    signal missionItemDragFinished(var item)
 
     PinchHandler {
         id:      pinchHandler

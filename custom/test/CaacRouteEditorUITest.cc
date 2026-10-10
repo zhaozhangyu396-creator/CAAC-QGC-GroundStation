@@ -17,10 +17,16 @@
 #include <QtQuick/QQuickWindow>
 #include <QtTest/QTest>
 
+#include "AppSettings.h"
+#include "CaacRouteEditorController.h"
+#include "Fact.h"
 #include "MissionController.h"
 #include "PlanMasterController.h"
+#include "QGCApplication.h"
 #include "QGCFileDialogController.h"
+#include "QGCMapEngineManager.h"
 #include "QmlUITestBase.h"
+#include "SettingsManager.h"
 #include "SimpleMissionItem.h"
 
 namespace {
@@ -115,11 +121,23 @@ class CaacRouteEditorUITest : public QmlUITestBase
     Q_OBJECT
 
 private slots:
+    void _testMouseEditing_data();
     void _testMouseEditing();
 };
 
+void CaacRouteEditorUITest::_testMouseEditing_data()
+{
+    QTest::addColumn<bool>("chinese");
+    if (inherits("CaacChineseUITest")) {
+        QTest::newRow("Simplified-Chinese") << true;
+    } else {
+        QTest::newRow("English-regression") << false;
+    }
+}
+
 void CaacRouteEditorUITest::_testMouseEditing()
 {
+    QFETCH(bool, chinese);
 #ifdef Q_OS_WIN
     previousMessageHandler = qInstallMessageHandler(reportFatalStack);
     const auto restoreHandler = qScopeGuard([] { qInstallMessageHandler(previousMessageHandler); });
@@ -134,6 +152,32 @@ void CaacRouteEditorUITest::_testMouseEditing()
     startUI();
     if (QTest::currentTestFailed()) {
         return;
+    }
+    step("map display names preserve provider identifiers");
+    {
+        QQmlComponent component(_engine);
+        component.setData(R"(
+            import QtQuick
+            import QGroundControl.Controls
+            QGCComboBox {
+                textTransform: (value) => MapNames.displayName(value)
+            }
+        )",
+                          QUrl(QStringLiteral("qrc:/qml/CAAC/Plan/MapTranslationTest.qml")));
+        const std::unique_ptr<QObject> combo(component.create());
+        QVERIFY2(combo, qPrintable(component.errorString()));
+        for (const auto& key : QGCMapEngineManager::mapList()) {
+            combo->setProperty("model", QStringList{key});
+            combo->setProperty("currentIndex", 0);
+            QCOMPARE(combo->property("currentText").toString(), key);
+            auto* content = combo->property("contentItem").value<QObject*>();
+            QVERIFY(content);
+            const QString label = content->property("text").toString();
+            if (chinese) {
+                QVERIFY2(label.contains(QRegularExpression(QStringLiteral("[\\x{4e00}-\\x{9fff}]"))),
+                         qPrintable(QStringLiteral("Untranslated map type: %1 → %2").arg(key, label)));
+            }
+        }
     }
     step("check empty and scrolling indicators");
     {
@@ -258,7 +302,8 @@ void CaacRouteEditorUITest::_testMouseEditing()
     const QPoint marker = dragger->mapToScene(QPointF(dragger->width() / 2, dragger->height() / 2)).toPoint();
     step("right-click first waypoint");
     QTest::mouseClick(_window, Qt::RightButton, Qt::NoModifier, marker);
-    QVERIFY(waitForDialog(QStringLiteral("Waypoint properties"), TestTimeout::mediumMs()));
+    QVERIFY(waitForDialog(QCoreApplication::translate("CaacWaypointDialog", "Waypoint properties"),
+                          TestTimeout::mediumMs()));
     auto* latitude = findVisibleItem(_rootItem, QStringLiteral("caacWaypointLatitude"));
     auto* altitude = findVisibleItem(_rootItem, QStringLiteral("caacWaypointAltitude"));
     QVERIFY(latitude);
@@ -272,12 +317,13 @@ void CaacRouteEditorUITest::_testMouseEditing()
     latitude->setProperty("text", QStringLiteral("30.12345678"));
     altitude->setProperty("text", QStringLiteral("NaN"));
     QVERIFY(acceptDialog());
-    QVERIFY(dialogVisible(QStringLiteral("Waypoint properties")));
+    QVERIFY(dialogVisible(QCoreApplication::translate("CaacWaypointDialog", "Waypoint properties")));
     QCOMPARE(first->coordinate(), oldCoordinate);
     step("accept valid properties");
     altitude->setProperty("text", QStringLiteral("123.45"));
     QVERIFY(acceptDialog());
-    QTRY_VERIFY_WITH_TIMEOUT(!dialogVisible(QStringLiteral("Waypoint properties")), TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(!dialogVisible(QCoreApplication::translate("CaacWaypointDialog", "Waypoint properties")),
+                             TestTimeout::mediumMs());
     QCOMPARE(first->coordinate().latitude(), 30.12345678);
     QCOMPARE(first->altitude()->rawValue().toDouble(), 123.45);
     QCOMPARE(other->coordinate(), otherCoordinate);
@@ -359,14 +405,61 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QCOMPARE(master->saveToJson(), saved);
     QCOMPARE(mission->visualItems()->count(), 3);
 
+    step("rotate and undo through native controls");
+    auto* editorPanel = findVisibleItem(_rootItem, QStringLiteral("caacRouteEditor"));
+    QVERIFY(editorPanel);
+    auto* editor = editorPanel->property("routeController").value<CaacRouteEditorController*>();
+    QVERIFY(editor);
+    const auto beforeRotation = master->saveToJson();
+    QVERIFY(clickButton(QStringLiteral("caacRotateRoute")));
+    QVERIFY(waitForDialog(QCoreApplication::translate("CaacGeometryDialog", "Route rotation")));
+    auto* rotationLatitude = findVisibleItem(_rootItem, QStringLiteral("caacRotationLatitude"));
+    auto* rotationLongitude = findVisibleItem(_rootItem, QStringLiteral("caacRotationLongitude"));
+    auto* rotationAngle = findVisibleItem(_rootItem, QStringLiteral("caacRotationAngle"));
+    QVERIFY(rotationLatitude && rotationLongitude && rotationAngle);
+    rotationLatitude->setProperty("text", QStringLiteral("30"));
+    rotationLongitude->setProperty("text", QStringLiteral("120"));
+    rotationAngle->setProperty("text", QStringLiteral("90"));
+    QVERIFY(acceptDialog());
+    QVERIFY(editor->canUndo());
+    QVERIFY(master->saveToJson() != beforeRotation);
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QCOMPARE(master->saveToJson(), beforeRotation);
+    QVERIFY(clickButton(QStringLiteral("caacRedo")));
+    QVERIFY(master->saveToJson() != beforeRotation);
+
+    step("relative point through native controls");
+    QVERIFY(clickButton(QStringLiteral("caacRelativePoint")));
+    QVERIFY(waitForDialog(QCoreApplication::translate("CaacGeometryDialog", "Relative coordinate editor")));
+    auto* relativeDistance = findVisibleItem(_rootItem, QStringLiteral("caacRelativeDistance"));
+    QVERIFY(relativeDistance);
+    relativeDistance->setProperty("text", QStringLiteral("100"));
+    const int beforeInsert = mission->visualItems()->count();
+    QVERIFY(acceptDialog());
+    QCOMPARE(mission->visualItems()->count(), beforeInsert + 1);
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QCOMPARE(mission->visualItems()->count(), beforeInsert);
+    if (chinese) {
+        const auto* rotateButton = findVisibleItem(_rootItem, QStringLiteral("caacRotateRoute"));
+        QVERIFY(rotateButton);
+        QCOMPARE(rotateButton->property("text").toString(), QStringLiteral("旋转 / 定向"));
+        QCOMPARE(QCoreApplication::translate("CaacWaypointDialog", "Waypoint properties"), QStringLiteral("航点属性"));
+    }
     step("complete");
     const QString screenshot = qEnvironmentVariable("CAAC_UI_SCREENSHOT");
-    if (!screenshot.isEmpty()) {
+    if (!screenshot.isEmpty() && chinese) {
         QVERIFY(_window->grabWindow().save(screenshot));
     }
     master->removeAll();
 }
 
 UT_REGISTER_TEST(CaacRouteEditorUITest, TestLabel::Integration, TestLabel::MissionManager)
+
+class CaacChineseUITest : public CaacRouteEditorUITest
+{
+    Q_OBJECT
+};
+
+UT_REGISTER_TEST(CaacChineseUITest, TestLabel::Integration, TestLabel::MissionManager)
 
 #include "CaacRouteEditorUITest.moc"

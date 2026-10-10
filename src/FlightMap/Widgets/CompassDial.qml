@@ -20,7 +20,7 @@ Item {
 
     QGCLabel {
         anchors.centerIn:   parent
-        text:               "N"
+        text:               qsTr("N")
         rotation:           _lockNoseUpCompass ? _heading : 0
 
         transform: Translate {
@@ -31,7 +31,7 @@ Item {
 
     QGCLabel {
         anchors.centerIn:   parent
-        text:               "E"
+        text:               qsTr("E")
         rotation:           _lockNoseUpCompass ? _heading : 0
 
         transform: Translate {
@@ -42,7 +42,7 @@ Item {
 
     QGCLabel {
         anchors.centerIn:   parent
-        text:               "S"
+        text:               qsTr("S")
         rotation:           _lockNoseUpCompass ? _heading : 0
 
         transform: Translate {
@@ -53,7 +53,7 @@ Item {
 
     QGCLabel {
         anchors.centerIn:   parent
-        text:               "W"
+        text:               qsTr("W")
         rotation:           _lockNoseUpCompass ? _heading : 0
 
         transform: Translate {

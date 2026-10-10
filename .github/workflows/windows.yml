@@ -152,6 +152,13 @@ jobs:
           aqt-source: ${{ env.AQT_SOURCE }}
           build-type: ${{ matrix.build_type }}
 
+      - name: Audit CAAC Chinese translations
+        if: github.repository == 'zhaozhangyu396-creator/CAAC-QGC-GroundStation'
+        shell: bash
+        env:
+          CAAC_AUDIT_OUTPUT: ${{ runner.temp }}/caac-chinese-audit.json
+        run: python3 custom/tools/check_chinese_translations.py --output "$CAAC_AUDIT_OUTPUT"
+
       - name: Configure
         uses: ./.github/actions/cmake-configure
         with:
@@ -250,7 +257,7 @@ jobs:
         with:
           build-dir: ${{ runner.temp }}/build
           build-type: ${{ matrix.build_type }}
-          tests-regex: '^CaacRouteEditor(Test|UITest)$'
+          tests-regex: '^Caac(RouteEditor(Test|UITest)|ChineseUITest)$'
           include-labels: 'Unit|Integration'
           parallel: '1'
           junit-output: junit-caac.xml
@@ -332,6 +339,7 @@ jobs:
           OLD_INSTALL_DIR: ${{ runner.temp }}\qgc-install-old
           INSTALL_DIR: ${{ runner.temp }}\qgc-install-test
           EXPECT_GSTREAMER: ${{ matrix.gstreamer }}
+          CAAC_CHINESE_INSTALLER: 'true'
         run: ./deploy/windows/verify-installer.ps1 -Phase Install
 
       - name: Remove build SDK from PATH for installed verification
@@ -381,6 +389,8 @@ jobs:
             ${{ runner.temp }}/build/${{ matrix.package }}.exe
             ${{ runner.temp }}/build/${{ matrix.package }}.exe.sha256
             ${{ runner.temp }}/build/${{ matrix.package }}.exe.build.json
+            ${{ runner.temp }}/caac-chinese-audit.json
+            ${{ runner.temp }}/build/_CPack_Packages/**/*.nsi
           if-no-files-found: error
           retention-days: 14
 
