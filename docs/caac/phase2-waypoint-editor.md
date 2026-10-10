@@ -2,6 +2,8 @@
 
 日期：2026-10-10（Asia/Shanghai）。分支：`phase2/caac-waypoint-editor`。
 源码沿用阶段一验证的 QGC 开发基线；这是开发验证版本，不是正式 Windows 发布版。
+阶段二的原生航点编辑实现和自动验证已完成；最终实现提交为 `dcc1a55915`。
+Windows x64 安装包、校验和及实际验证记录见下文。人工操作及实机验收仍属后续工作。
 
 ## 本轮续接验证
 
@@ -9,18 +11,21 @@
 Windows 原生 UI 测试环境修复：`58424cf2c7`；调用栈诊断：`c23cf73ee7` / `c706c845c9`；
 对应 Qt PDB 符号诊断：`eee025c6eb`。
 空滚动区域的尺寸修复及回归：`5ea303c92b`。
+避开底部覆盖控件并检查鼠标抓取对象的 UI 测试调整：`01939dea28`。
+空航线 / 等高航点的图表范围修复：`0f18e1517f`。
+未知海拔下的缺失地形提示线保护及回归：`dcc1a55915`。
 以下内容记录暂停后继续开发的结果；后面的“暂停保存记录”保留历史失败和续接依据。
 
 | 检查 | 当前结果 |
 | --- | --- |
 | Linux Debug 增量编译 | 通过 |
-| CAAC 模型及原生 UI 专项 | 2/2 通过，4.90 秒；包含空滚动区域及正常滚动比例检查 |
-| 完整 Unit / Integration 回归 | 前轮 425/425 通过，481.07 秒；空滚动区域修复后正在重新执行 |
+| CAAC 模型及原生 UI 专项 | `dcc1a55915` 2/2 通过，2.95 秒；新增未知海拔、提示线断点、单位缩放与航线数据不变检查 |
+| 完整 Unit / Integration 回归 | 最终 `dcc1a55915` 425/425 通过，515.02 秒（341 Unit、84 Integration） |
 | 原生程序启动检查 | 通过；使用仓库 `run_tests.py --verify-only`，退出码 0 |
-| 最新相关文件 lint | 全部适用检查通过；相对于阶段一检查全部 23 个修改文件 |
+| 最新相关文件 lint | 最终 26 个修改文件全部适用检查通过 |
 | 与 Windows 配置及 Qt 安装相关的 Python 测试 | 77/77 通过 |
-| Windows x64 Release | `ed59ccfe50` 版本全部验证通过；`5ea303c92b` 修复后的安装包正在重新构建 |
-| Windows x64 Debug | 模型测试通过；原生 UI 仍触发 Qt 数值断言；正在执行调用栈诊断，未通过验收 |
+| Windows x64 Release | 最终 `dcc1a55915` 编译、Portable 10/10、启动、安装/升级、移除 SDK PATH 后启动、卸载清理全部通过 |
+| Windows x64 Debug | 最终 `dcc1a55915` 编译、模型及原生 UI 2/2 通过，43.69 秒；严格日志检查通过 |
 
 专项 UI 测试通过真实 MainWindow 验证双击加点、单击不加点、右键属性、
 不部分提交无效属性、弹窗目标固定、直接拖点保留高度、左键拖图不加点、
@@ -58,6 +63,11 @@ Debug 上传还引用了只在 Release 校验步骤中产生的空路径，已�
 - [本轮 Windows Release](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38037038524)
 - [空滚动区域修复后的 Windows Debug](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38042520212)
 - [空滚动区域修复后的 Windows Release](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38042641594)
+- [避开底部覆盖控件后的 Windows Debug UI 复测](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38043745780)
+- [图表范围修复后的 Windows Debug](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38045068279)
+- [图表范围修复后的 Windows Release，随后被最终版本构建取代](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38045176986)
+- [未知海拔保护后的 Windows Debug](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38045921605)
+- [未知海拔保护后的 Windows Release](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38046017262)
 
 第一次 Debug 诊断及 Release 针对 `ed59ccfe50a554a2f35754068ccf2986b27b4097`。
 Debug 诊断已通过模型测试，但无界面插件未找到字体，UI 触发
@@ -88,7 +98,69 @@ DbgHelp 返回的最近导出函数名及大偏移不能作为真实函数名或
 这次已改变应用源码，因此重新执行完整 Linux 回归及 Windows Debug / Release；
 尚不将旧安装包的通过结果当作 `5ea303c92b` 的验证结果。
 
-Release 的三个 Windows 架构任务均已成功；当前交付优先使用 x64 产物。
+`5ea303c92b` 的 Windows 原生 UI 不再触发数值断言，已实际执行双击加点、属性校验、
+弹窗目标固定和直接拖点；空内容与正常滚动比例检查也通过。
+该次 UI 在拖图处失败（32.75 秒），原测试点位于地图高度 75% 处，可能落入底部图表覆盖区域。
+`01939dea28` 将取点移到地图高度 40%、宽度 20% 处，并明确检查鼠标抓取对象为 CAAC 地图 MouseArea，
+仍要求地图中心移动超过 1 米且不增加航点。此次仅修改测试，应用功能源码与 `5ea303c92b` 一致。
+本机专项重跑 2/2 通过；当时 Windows 全流程复测尚未完成，未认定阶段二已验收。
+该次 Windows 日志还出现 `QPainterPath::moveTo` 无效坐标警告；未添加忽略规则或宣称无警告。
+
+`01939dea28` 的 Windows UI 已完成全部操作断言（含拖图、排序、取消保存、保存和加载），
+但严格日志检查因 6 条 `QPainterPath::moveTo` 警告判为失败（24.03 秒），没有标记通过。
+`0f18e1517f` 保证原 TerrainStatus 图表的轴范围有限且非零：
+空航线的距离轴采用一个显示用米的最小范围，等高航点的高度轴至少保留一个显示用米的跨度，
+再转换为当前单位；这是显示范围，航线数据仍由原任务模型提供。
+新增检查覆盖空航线、单点、等高点及清空后的有效轴范围；本机专项 2/2 通过。
+Windows handler 只为首条相同绘制警告增加符号调用栈，原警告仍转发给严格检查，未加入忽略规则。
+该次 Linux 完整回归 425/425 通过（523.46 秒），启动验证通过；Windows Debug 模型与原生 UI
+2/2 通过（模型 17.63 秒、UI 28.03 秒），严格日志检查也通过。
+这证明坐标轴范围修复消除了实际流程中的绘制警告；没有屏蔽警告或改变断言。
+该 Debug 任务后续打包被最终版本任务取消；仅将已经完成的专项测试记为通过，
+不将整项被取消的任务记为成功。中间 Release 任务也被最终版本构建取代。
+
+随后补充未知海拔边界测试，修复前实际失败于缺失地形提示线的首点不有限。
+Qt 6.11.1 `PointRenderer::updateLineSeries` 支持内部无效点断线，但初始 `moveTo` 不检查首点。
+`dcc1a55915` 将未知海拔时的黄色缺失提示线基准回落到图表已有的零基准。
+测试确认内部断点保留、未知飞行高度不产生飞行曲线、已知负海拔和单位缩放仍正确，
+完整计划 JSON 未改变；修复后本机专项 2/2 通过（2.82 秒）。
+此项是追加的边界保护，不将它认定为前次 Windows 警告的已证实原因。
+最终源码的完整 Linux 回归已通过（425/425，515.02 秒），原生启动检查退出码 0；
+保存截图的专项复跑也为 2/2 通过（2.95 秒）。Windows Debug 专项 2/2 通过（43.69 秒），
+模型 17.86 秒，原生 UI 25.77 秒；严格日志检查通过。Release x64 任务全部通过。
+
+### 最终 Windows x64 产物
+
+实现提交：`dcc1a5591591ce695b337829ae937fec9b26c9cc`。
+Release x64 任务：`114195726548`；Debug x64 任务：`114195440383`。
+采用 Qt 6.11.1、MSVC 19.44.35229.0、GStreamer 1.28.4，保留 QGC 原生运行库及打包机制。
+
+安装包：`/workspace/caac-phase2-windows-x64-dcc1a55915/QGroundControl-installer-AMD64.exe`。
+大小：135140342 字节。SHA256：
+`6591217328993f6da8a7199462499780727f72ee48150e14f83ac04c928e1e70`。
+本地计算与 CI 校验和文件一致；同目录保存 `使用说明.txt`、校验和及 `validation-provenance.json`。
+产物 ID：`11666649773`，名称 `caac-validation-amd64-Release`。
+本地验证记录区分实现提交、工作流、具体 x64 任务、归档摘要和安装包摘要。
+
+Release Portable 10/10 通过（0.89 秒）。x64 安装、升级、清除 Qt/GStreamer SDK PATH 后
+启动已安装程序、卸载并检查清理均通过。这些验证在 Windows 原生 runner 上实际运行。
+当前产品仍使用 QGC 名称；正式品牌、签名和发布按阶段六完成。
+
+源码已推送到阶段二分支。完整阶段二验证资料另存于
+`/workspace/caac-phase2-validation-dcc1a55915/`，并打包为
+`/workspace/caac-phase2-validation-final.zip`；安装程序独立提供。
+
+### 历史安装包
+
+中间 x64 安装包已单独保留，源提交 `5ea303c92b1d5b41b795af647427d4398ec3857a`。
+路径：`/workspace/caac-phase2-windows-x64-5ea303c92b/QGroundControl-installer-AMD64.exe`。
+大小 135134891 字节，SHA256：
+`4a469295d46c0d540502ed67f3fe64d77035b6a86260ba1c83f4f068bf5fa82b`。
+本地计算与 CI 校验和一致；同目录保存校验和及 `validation-provenance.json`。
+Release Portable 为 10/10 通过，0.97 秒；x64 安装、升级、清除 SDK PATH 后启动及卸载步骤均通过。
+
+早期提交 `ed59ccfe50` 的三个 Windows 架构任务均成功。
+本段记录该早期验证安装包，最终版本见前文。
 x64 安装验证包括升级、移除 Qt/GStreamer SDK 搜索路径后启动已安装程序、卸载并检查清理。
 安装包保存到 `/workspace/caac-phase2-windows-x64-release/QGroundControl-installer-AMD64.exe`，
 大小 135124572 字节，SHA256：
@@ -96,7 +168,8 @@ x64 安装验证包括升级、移除 Qt/GStreamer SDK 搜索路径后启动已�
 本地计算与 CI 校验和文件一致；验证记录为同目录的 `validation-provenance.json`。
 它是航点编辑验证版；尚未实现阶段三至六，也未完成实机飞行及 Windows 人工操作验收。
 
-专项截图保存为 `/workspace/caac-phase2-editor.png`。
+最终源码的专项截图保存为 `/workspace/caac-phase2-editor-dcc1a55915.png`；
+旧专项截图为 `/workspace/caac-phase2-editor.png`。
 自动测试截图中的底图显示 `Tile Fetch Error` 占位图，原因是仓库既有
 `UnitTestTileGenerator::generateTile` 使用 `:/res/notile.png` 替代网络地图，
 `UnitTestList.cc` 在测试入口安装此生成器；本轮没有替换测试底图或用其代替正式地图功能。
@@ -108,6 +181,9 @@ x64 安装验证包括升级、移除 Qt/GStreamer SDK 搜索路径后启动已�
 保留原 Qt/sysroot 安装流程，增加经过官方 SHA256 校验的 Go 安装及 lint 激活脚本，
 并更新为本轮通过的两进程回归命令。新 Go 解压和已安装工具复用均实际验证。
 草稿保存成功，尚未发布新的环境快照；不将保存视为发布或新任务恢复验证。
+
+下次继续先读取本报告和 `AGENTS.md`，检查阶段二分支及保留的验证记录。
+阶段三再实现旋转、相对坐标和撤销/恢复；几何接口与 QGC 模型分离，并保留任务属性及顺序。
 
 ## 实现与操作
 
@@ -150,6 +226,8 @@ x64 安装验证包括升级、移除 Qt/GStreamer SDK 搜索路径后启动已�
 | `src/PlanView/PlanView.qml`、`PlanViewRightPanel.qml` | 面板 Loader、定制编辑时避免原单击加点 |
 | `src/FlightMap/FlightMap.qml` | 定制模式事件信号，暂停原鼠标处理；原触摸逻辑保留 |
 | `src/QmlControls/QGCFlickableScrollIndicator.qml` | 空列表 / 空滚动区域使用 Qt 原生可视比例，避免除零产生无限尺寸 |
+| `src/PlanView/TerrainStatus.qml` | 空航线 / 等高航点保留有限、非零的图表轴范围 |
+| `src/QmlControls/TerrainProfile.cc` | 未知海拔时缺失地形提示线保留有限显示基准；内部断线及飞行数据语义保持 |
 | `src/PlanView/MissionItemMapVisualBase.qml`、`src/FlightMap/MapItems/MissionItemIndicatorDrag.qml` | 可见航点的直接拖动和右键事件 |
 | `src/MissionManager/MissionController.h/.cc` | 经校验的普通航点移动接口，同步任务树和序号 |
 | `custom/test/CMakeLists.txt`、`CaacRouteEditorTest.cc`、`CaacRouteEditorUITest.cc` | 模型、文件、失败路径及完整 MainWindow 鼠标测试 |
@@ -177,6 +255,24 @@ CI=1 python /workspace/CAAC-QGC-GroundStation/.github/scripts/cmake_helper.py ct
 完整 `.plan` 重载、排序边界和旧任务项引用。UI 测试启动真实 QGC MainWindow，
 实际发送鼠标事件验证单击不加点、双击加点、右键弹窗、直接拖点与左键拖图。
 
+完整回归及启动命令：
+
+```sh
+cd /workspace/build/qgc-baseline
+CI=1 python /workspace/CAAC-QGC-GroundStation/.github/scripts/cmake_helper.py ctest \
+  --build-type Debug --jobs 2 --include-labels 'Unit|Integration' \
+  --exclude-labels 'Flaky|Network|StockUI' \
+  --junit-output phase2-final-regression-junit.xml --ctest-output phase2-final-regression-output.txt
+cd /workspace/CAAC-QGC-GroundStation
+python tools/run_tests.py -B /workspace/build/qgc-baseline -t Debug --verify-only --headless
+```
+
+`StockUI` 仅标记原版的单击加点 / 添加模式交互测试；定制版用上述原生 CAAC UI 测试验证新习惯，
+其他 UI 回归继续执行。保留 `Flaky|Network` 的仓库既有筛选，不将这些未运行测试计入通过数量。
+Linux 应用为 Debug，现有 Qt SDK 的库为 Release；Windows Debug 同时验证 Qt Debug 图形路径。
+Windows 构建及原生安装验证由本分支 `.github/workflows/windows.yml` 执行。
+手动触发 `build_type=Debug` 和 `build_type=Release` 时，两次之间等待第一项 Detect Changes 完成。
+
 ### 暂停保存记录
 
 用户要求暂停并保存工作；阶段二尚未完成验收。
@@ -202,7 +298,7 @@ Windows 验证任务使用提交 `4b4aa2e0a7e456a78bcabeedfd1d7248da03294a`，
 - [Debug 验证任务](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38024915730)
 - [Release 验证任务](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38024765242)
 
-### 下次继续的位置
+### 当时记录的续接步骤（历史）
 
 1. 检出 `phase2/caac-waypoint-editor` 并拉取最新保存提交；先读取本报告和 `AGENTS.md`。
 2. 若云工作区仍在，执行上述激活、编译和专项测试命令，首先复测修正后的真实鼠标交互。
@@ -243,4 +339,6 @@ JUnit 和测试输出位于构建目录。
 本轮不实现任意中心旋转、两点定向、相对坐标和撤销/重做，按阶段三继续。
 `.caacroute` 版本封装与 `.ld` 兼容导入尚未实现；当前只使用已有 `.plan` 格式。
 考试计时、日志、评分、培训管理和正式品牌安装发布按后续阶段进行。
+新增面板使用可翻译字符串，中文译文尚待补齐。Windows 人工操作、硬件图形驱动、
+PX4 SITL 和实机飞行尚未在本阶段验收。
 没有使用凌动专有代码、资源或 V1 几何模块的未确认许可证代码。
