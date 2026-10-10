@@ -49,7 +49,10 @@ Item {
     }
 
     function updateDragArea() {
-        if (_missionItem.isCurrentItem && map.planView && _missionItem.specifiesCoordinate && itemVisualLoader.item) {
+        const directDrag = map.directMissionItemEditing && _missionItem.isSimpleItem
+                           && !_missionItem.isStandaloneCoordinate
+        if ((_missionItem.isCurrentItem || directDrag) && map.planView
+            && _missionItem.specifiesCoordinate && itemVisualLoader.item) {
             showDragArea()
         } else {
             hideDragArea()
@@ -73,6 +76,11 @@ Item {
     Component.onCompleted: {
         showItemVisuals()
         updateDragArea()
+    }
+
+    Connections {
+        target: control.map
+        function onDirectMissionItemEditingChanged() { control.updateDragArea() }
     }
 
     Connections {
@@ -119,10 +127,14 @@ Item {
         id: dragAreaComponent
 
         MissionItemIndicatorDrag {
+            objectName: "missionItemDrag_" + control._missionItem.sequenceNumber
             mapControl: control.map
             itemIndicator: itemVisualLoader.item
             itemCoordinate: _missionItem.coordinate
-            visible: control.interactive
+            visible: control.interactive && itemVisualLoader.item && itemVisualLoader.item.visible
+            editOnRightClick: control.map.directMissionItemEditing
+            onRightClicked: control.map.missionItemEditRequested(control._missionItem)
+            onDragStart: control.clicked(control._missionItem.sequenceNumber)
             onClicked: {
                 const indicator = itemVisualLoader.item
                 if (indicator && indicator.activate) {

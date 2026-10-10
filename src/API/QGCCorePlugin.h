@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QtCore/QObject>
+#include <QtCore/QUrl>
 #include <QtCore/QVariantList>
 #include <QtQmlIntegration/QtQmlIntegration>
 
@@ -54,6 +55,8 @@ class QGCCorePlugin : public QObject
     Q_PROPERTY(QString stableDownloadUrl                READ stableDownloadUrl                                              CONSTANT)
     Q_PROPERTY(QVariantList analyzePages                READ analyzePages                                                   CONSTANT)
     Q_PROPERTY(QVariantList toolBarIndicators           READ toolBarIndicators                                              CONSTANT)
+    Q_PROPERTY(QUrl planViewEditor READ planViewEditor CONSTANT)
+    Q_PROPERTY(bool directMissionItemEditing READ directMissionItemEditing CONSTANT)
 
 public:
     explicit QGCCorePlugin(QObject *parent = nullptr);
@@ -143,6 +146,10 @@ public:
     /// contract; each component is created in the map with its customMapObject, scene and surfaceModel properties set,
     /// so its root should be a GeoMapItem (or declare those properties and pass scene/surfaceModel on to GeoMap items).
     virtual const QmlObjectListModel* customGeoMapItems();
+
+    /// Optional editor above the plan tree; receives editorMap and planMasterController properties.
+    virtual QUrl planViewEditor() const { return {}; }
+    virtual bool directMissionItemEditing() const { return false; }
 
     /// Allows custom builds to add custom items to the plan file before the document is created.
     virtual void preSaveToJson(PlanMasterController *pController, QJsonObject &json) { Q_UNUSED(pController); Q_UNUSED(json); }

@@ -503,6 +503,35 @@ int MissionController::visualItemIndexForObject(QObject* object) const
     return _visualItems ? _visualItems->indexOf(object) : -1;
 }
 
+bool MissionController::moveVisualItem(int fromIndex, int toIndex)
+{
+    if (_flyView || !_visualItems || _masterController->syncInProgress()
+        || fromIndex < 1 || toIndex < 1 || fromIndex >= _visualItems->count() || toIndex >= _visualItems->count()) {
+        return false;
+    }
+    for (int i = 1; i < _visualItems->count(); ++i) {
+        const auto* item = _visualItems->value<SimpleMissionItem*>(i);
+        if (item && item->command() == MAV_CMD_DO_JUMP) {
+            return false;
+        }
+        if (i >= qMin(fromIndex, toIndex) && i <= qMax(fromIndex, toIndex)
+            && (!item || item->command() != MAV_CMD_NAV_WAYPOINT)) {
+            return false;
+        }
+    }
+    if (fromIndex == toIndex) {
+        return true;
+    }
+    auto* item = _visualItems->value<VisualMissionItem*>(fromIndex);
+    // Row remove/insert also updates the plan tree, retaining the item's sections and signal connections.
+    _visualItems->removeAt(fromIndex);
+    _visualItems->insert(toIndex, item);
+    _recalcAll();
+    setCurrentPlanViewSeqNum(item->sequenceNumber(), true);
+    setDirty(true);
+    return true;
+}
+
 void MissionController::removeVisualItem(int viIndex)
 {
     if (viIndex <= 0 || viIndex >= _visualItems->count()) {

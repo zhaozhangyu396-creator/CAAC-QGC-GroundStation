@@ -98,6 +98,9 @@ public:
 
     Q_INVOKABLE void removeVisualItem(int viIndex);
 
+    /// Reorders ordinary waypoints without crossing takeoff, landing, action or complex items.
+    Q_INVOKABLE bool moveVisualItem(int fromIndex, int toIndex);
+
     /// Returns the visual item index for the given VisualMissionItem object, or -1 if not found
     Q_INVOKABLE int visualItemIndexForObject(QObject* object) const;
 

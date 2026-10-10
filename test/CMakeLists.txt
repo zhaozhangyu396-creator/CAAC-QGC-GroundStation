@@ -89,3 +89,7 @@ add_subdirectory(Utilities)
 add_subdirectory(Viewer3D)
 add_subdirectory(Vehicle)
 add_subdirectory(QmlUITests)
+
+if(QGC_CUSTOM_BUILD AND EXISTS "${CMAKE_SOURCE_DIR}/${QGC_CUSTOM_DIR}/test/CMakeLists.txt")
+    add_subdirectory("${CMAKE_SOURCE_DIR}/${QGC_CUSTOM_DIR}/test" "custom-tests")
+endif()

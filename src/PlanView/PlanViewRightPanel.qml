@@ -93,10 +93,28 @@ Item {
         PlanTreeView {
             id:                     planTreeView
             objectName:             "planView_planTree"
-            anchors.fill:           parent
+            anchors.top:            customEditor.bottom
+            anchors.left:           parent.left
+            anchors.right:          parent.right
+            anchors.bottom:         parent.bottom
             editorMap:              root.editorMap
             planMasterController:   root.planMasterController
             onEditingLayerChangeRequested: (layer) => root.editingLayerChangeRequested(layer)
+        }
+
+        Loader {
+            id: customEditor
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            source: QGroundControl.corePlugin.planViewEditor
+            readonly property var editorItem: item
+            height: editorItem ? editorItem.implicitHeight : 0
+            enabled: root.editorMap.directMissionItemEditing
+            onLoaded: {
+                item.editorMap = root.editorMap
+                item.planMasterController = root.planMasterController
+            }
         }
     }
 

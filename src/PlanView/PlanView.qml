@@ -261,6 +261,8 @@ Item {
             allowGCSLocationCenter: true
             allowVehicleLocationCenter: true
             planView: true
+            directMissionItemEditing: QGroundControl.corePlugin.directMissionItemEditing
+                                      && _editingLayer === _layerMission && !_addROIOnClick
 
             zoomLevel: QGroundControl.flightMapZoom
             center: QGroundControl.flightMapPosition
@@ -300,6 +302,9 @@ Item {
 
                 switch (_editingLayer) {
                 case _layerMission:
+                    if (editorMap.directMissionItemEditing) {
+                        break
+                    }
                     if (_planMasterController.showCreateFromTemplate) {
                         _missionController.setHomePosition(coordinate)
                     } else if (_addROIOnClick) {

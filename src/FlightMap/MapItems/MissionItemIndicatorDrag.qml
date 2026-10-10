@@ -18,8 +18,10 @@ Rectangle {
     property var mapControl     ///< Map control which contains this item
     property var itemIndicator  ///< The mission item indicator to drag around
     property var itemCoordinate ///< Coordinate we are updating during drag
+    property bool editOnRightClick: false
 
     signal clicked
+    signal rightClicked
     signal dragStart
     signal dragStop
 
@@ -55,7 +57,8 @@ Rectangle {
     QGCMouseArea {
         id:                 itemDrag
         anchors.fill:       parent
-        drag.target:        parent
+        drag.target:        (pressedButtons & Qt.LeftButton) ? parent : null
+        acceptedButtons:    itemDragger.editOnRightClick ? Qt.LeftButton | Qt.RightButton : Qt.LeftButton
         drag.minimumX:      0
         drag.minimumY:      0
         drag.maximumX:      itemDragger.parent.width - parent.width
@@ -64,9 +67,13 @@ Rectangle {
         enabled:            itemDragger.visible
         cursorShape:        drag.active ? Qt.ClosedHandCursor : Qt.OpenHandCursor
 
-        onClicked: {
+        onClicked: (mouse) => {
             focus = true
-            itemDragger.clicked()
+            if (mouse.button === Qt.RightButton) {
+                itemDragger.rightClicked()
+            } else {
+                itemDragger.clicked()
+            }
         }
 
         property bool dragActive: drag.active

@@ -23,6 +23,7 @@ Map {
     property alias  firstVehiclePositionReceived:   _positionTracker.firstVehiclePositionReceived ///< true: first vehicle position update was responded to
     property alias  positionTracker:                _positionTracker                            ///< Auto-centering policy, for derived maps to layer follow behavior on
     property bool   planView:                       false   ///< true: map being using for Plan view, items should be draggable
+    property bool   directMissionItemEditing:       false
     property bool   pinchZoomDisabledByVirtualJoysticks: false ///< true: disable pinch-to-zoom while virtual joystick thumbs are down
 
     property var    _activeVehicle:             QGroundControl.multiVehicleManager.activeVehicle
@@ -108,6 +109,8 @@ Map {
     signal mapClicked(var position)
     signal mapRightClicked(var position)
     signal mapPressAndHold(var position)
+    signal mapDoubleClicked(var position)
+    signal missionItemEditRequested(var item)
 
     PinchHandler {
         id:      pinchHandler
@@ -166,7 +169,7 @@ Map {
         id: multiTouchArea
         anchors.fill: parent
         maximumTouchPoints: 1
-        mouseEnabled: true
+        mouseEnabled: !_map.directMissionItemEditing
 
         property bool dragActive: false
         property real lastMouseX
