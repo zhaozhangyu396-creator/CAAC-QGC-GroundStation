@@ -149,6 +149,7 @@ public:
 
     /// Optional editor above the plan tree; receives editorMap and planMasterController properties.
     virtual QUrl planViewEditor() const { return {}; }
+
     virtual bool directMissionItemEditing() const { return false; }
 
     /// Allows custom builds to add custom items to the plan file before the document is created.

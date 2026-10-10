@@ -143,12 +143,16 @@ void CaacRouteEditorTest::_testOrderConstraints()
     const auto withJump = planController()->saveToJson();
     QVERIFY(!editor.addWaypoint(QGeoCoordinate(30.1, 120)));
     QVERIFY(!editor.removeCurrentWaypoint());
+    QVERIFY(!editor.updateWaypoint(waypoint, 31, 121, 100, true, 9));
     QCOMPARE(planController()->saveToJson(), withJump);
 }
 
 void CaacRouteEditorTest::_testStaleItem()
 {
     CaacRouteEditorController editor;
+    QVERIFY(!editor.addWaypoint(QGeoCoordinate(30, 120)));
+    PlanMasterController unstarted;
+    editor.setPlanMasterController(&unstarted);
     QVERIFY(!editor.addWaypoint(QGeoCoordinate(30, 120)));
     editor.setPlanMasterController(planController());
     QVERIFY(editor.addWaypoint(QGeoCoordinate(30, 120)));

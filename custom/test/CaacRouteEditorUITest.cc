@@ -1,4 +1,5 @@
 #include <QtCore/QPointer>
+#include <QtGui/QImage>
 #include <QtQuick/QQuickItem>
 #include <QtQuick/QQuickWindow>
 #include <QtTest/QTest>
@@ -40,11 +41,9 @@ void CaacRouteEditorUITest::_testMouseEditing()
     const QPoint b = a + QPoint(100, 50);
     QTest::mouseClick(_window, Qt::LeftButton, Qt::NoModifier, a);
     QCOMPARE(mission->visualItems()->count(), 1);
-    // The second click within the platform double-click interval creates exactly one waypoint.
-    QTest::mouseClick(_window, Qt::LeftButton, Qt::NoModifier, a);
+    QTest::mouseDClick(_window, Qt::LeftButton, Qt::NoModifier, a);
     QTRY_COMPARE_WITH_TIMEOUT(mission->visualItems()->count(), 2, TestTimeout::mediumMs());
-    QTest::mouseClick(_window, Qt::LeftButton, Qt::NoModifier, b);
-    QTest::mouseClick(_window, Qt::LeftButton, Qt::NoModifier, b);
+    QTest::mouseDClick(_window, Qt::LeftButton, Qt::NoModifier, b);
     QTRY_COMPARE_WITH_TIMEOUT(mission->visualItems()->count(), 3, TestTimeout::mediumMs());
     QPointer<SimpleMissionItem> first = mission->visualItems()->value<SimpleMissionItem*>(1);
     QVERIFY(first);
@@ -58,6 +57,10 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QVERIFY(latitude);
     QVERIFY(altitude);
     const auto oldCoordinate = first->coordinate();
+    auto* other = mission->visualItems()->value<SimpleMissionItem*>(2);
+    QVERIFY(other);
+    const auto otherCoordinate = other->coordinate();
+    mission->setCurrentPlanViewSeqNum(other->sequenceNumber(), true);
     latitude->setProperty("text", QStringLiteral("30.12345678"));
     altitude->setProperty("text", QStringLiteral("NaN"));
     QVERIFY(acceptDialog());
@@ -68,6 +71,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QTRY_VERIFY_WITH_TIMEOUT(!dialogVisible(QStringLiteral("Waypoint properties")), TestTimeout::mediumMs());
     QCOMPARE(first->coordinate().latitude(), 30.12345678);
     QCOMPARE(first->altitude()->rawValue().toDouble(), 123.45);
+    QCOMPARE(other->coordinate(), otherCoordinate);
 
     // Bring the edited waypoint back into view and select the other waypoint before dragging it.
     first->setCoordinate(oldCoordinate);

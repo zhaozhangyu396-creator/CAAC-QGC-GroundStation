@@ -20,7 +20,7 @@ ColumnLayout {
 
     function editWaypoint(item) {
         if (editorController.selectWaypoint(item)) {
-            waypointDialogFactory.open()
+            waypointDialogFactory.open({ waypoint: item })
         }
     }
 
@@ -130,7 +130,6 @@ ColumnLayout {
         dialogComponent: Component {
             CaacWaypointDialog {
                 routeController: editorController
-                waypoint: root.currentItem
             }
         }
     }

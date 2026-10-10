@@ -69,7 +69,8 @@ void CaacRouteEditorController::_clearError()
 bool CaacRouteEditorController::_canEdit()
 {
     _clearError();
-    if (!_masterController || !_missionController() || !_missionController()->visualItems()) {
+    if (!_masterController || !_missionController() || !_missionController()->visualItems() ||
+        _missionController()->visualItems()->count() < 1) {
         return _fail(tr("No plan is available."));
     }
     if (_masterController->syncInProgress()) {
@@ -144,6 +145,10 @@ bool CaacRouteEditorController::updateWaypoint(QObject* object, double latitude,
                          speed < speedSection->flightSpeed()->rawMin().toDouble() ||
                          speed > speedSection->flightSpeed()->rawMax().toDouble())) {
         return _fail(tr("Flight speed is invalid or unavailable for this mission item."));
+    }
+    if (speedSection && speedSection->available() && specifySpeed != speedSection->specifyFlightSpeed() &&
+        !_canChangeOrder()) {
+        return false;
     }
     // Validate every input before changing any Fact; preserve command, frame and other MAVLink parameters.
     item->setCoordinate(coordinate);

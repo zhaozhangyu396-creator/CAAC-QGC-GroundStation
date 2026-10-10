@@ -505,8 +505,8 @@ int MissionController::visualItemIndexForObject(QObject* object) const
 
 bool MissionController::moveVisualItem(int fromIndex, int toIndex)
 {
-    if (_flyView || !_visualItems || _masterController->syncInProgress()
-        || fromIndex < 1 || toIndex < 1 || fromIndex >= _visualItems->count() || toIndex >= _visualItems->count()) {
+    if (_flyView || !_visualItems || _masterController->syncInProgress() || fromIndex < 1 || toIndex < 1 ||
+        fromIndex >= _visualItems->count() || toIndex >= _visualItems->count()) {
         return false;
     }
     for (int i = 1; i < _visualItems->count(); ++i) {
@@ -514,8 +514,8 @@ bool MissionController::moveVisualItem(int fromIndex, int toIndex)
         if (item && item->command() == MAV_CMD_DO_JUMP) {
             return false;
         }
-        if (i >= qMin(fromIndex, toIndex) && i <= qMax(fromIndex, toIndex)
-            && (!item || item->command() != MAV_CMD_NAV_WAYPOINT)) {
+        if (i >= qMin(fromIndex, toIndex) && i <= qMax(fromIndex, toIndex) &&
+            (!item || item->command() != MAV_CMD_NAV_WAYPOINT)) {
             return false;
         }
     }
