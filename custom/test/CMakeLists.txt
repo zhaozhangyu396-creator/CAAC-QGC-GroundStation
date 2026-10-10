@@ -3,6 +3,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/CaacRou
 )
 add_qgc_test(CaacRouteEditorTest LABELS Unit MissionManager)
 if(WIN32)
+    target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE dbghelp)
     # The Windows offscreen plugin has no system font database; use the native platform for real UI geometry.
     set(_caac_ui_env ENV_MODIFICATION "QT_QPA_PLATFORM=set:windows")
 endif()
