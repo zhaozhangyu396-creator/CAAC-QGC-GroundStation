@@ -6,18 +6,20 @@
 ## 本轮续接验证
 
 实现提交：`9bcb7fb286`；Windows 验证配置提交：`ed59ccfe50`；
-Windows 原生 UI 测试环境修复：`58424cf2c7`；调用栈诊断：`c23cf73ee7`。
+Windows 原生 UI 测试环境修复：`58424cf2c7`；调用栈诊断：`c23cf73ee7` / `c706c845c9`；
+对应 Qt PDB 符号诊断：`eee025c6eb`。
+空滚动区域的尺寸修复及回归：`5ea303c92b`。
 以下内容记录暂停后继续开发的结果；后面的“暂停保存记录”保留历史失败和续接依据。
 
 | 检查 | 当前结果 |
 | --- | --- |
 | Linux Debug 增量编译 | 通过 |
-| CAAC 模型及原生 UI 专项 | 2/2 通过；新增视口检查后再次运行通过，3.63 秒 |
-| 完整 Unit / Integration 回归 | 425/425 通过，481.07 秒；341 个 Unit、84 个 Integration |
+| CAAC 模型及原生 UI 专项 | 2/2 通过，4.90 秒；包含空滚动区域及正常滚动比例检查 |
+| 完整 Unit / Integration 回归 | 前轮 425/425 通过，481.07 秒；空滚动区域修复后正在重新执行 |
 | 原生程序启动检查 | 通过；使用仓库 `run_tests.py --verify-only`，退出码 0 |
 | 最新相关文件 lint | 全部适用检查通过；相对于阶段一检查全部 23 个修改文件 |
-| 与 Windows 配置相关的 Python 测试 | 38/38 通过 |
-| Windows x64 Release | 编译、Portable 10/10、安装/升级、启动、卸载全部通过；安装包已取回并校验 |
+| 与 Windows 配置及 Qt 安装相关的 Python 测试 | 77/77 通过 |
+| Windows x64 Release | `ed59ccfe50` 版本全部验证通过；`5ea303c92b` 修复后的安装包正在重新构建 |
 | Windows x64 Debug | 模型测试通过；原生 UI 仍触发 Qt 数值断言；正在执行调用栈诊断，未通过验收 |
 
 专项 UI 测试通过真实 MainWindow 验证双击加点、单击不加点、右键属性、
@@ -51,7 +53,11 @@ Debug 上传还引用了只在 Release 校验步骤中产生的空路径，已�
 - [本轮 Windows Debug 首次诊断](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38036924141)
 - [Windows 原生窗口 Debug 复测](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38038153729)
 - [Windows Debug 调用栈诊断](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38039945765)
+- [调用栈诊断头文件顺序修正后的 Debug 复测](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38040690410)
+- [补充对应 Qt PDB 的 Debug 诊断](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38041690429)
 - [本轮 Windows Release](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38037038524)
+- [空滚动区域修复后的 Windows Debug](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38042520212)
+- [空滚动区域修复后的 Windows Release](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38042641594)
 
 第一次 Debug 诊断及 Release 针对 `ed59ccfe50a554a2f35754068ccf2986b27b4097`。
 Debug 诊断已通过模型测试，但无界面插件未找到字体，UI 触发
@@ -60,8 +66,27 @@ Debug 诊断已通过模型测试，但无界面插件未找到字体，UI 触�
 改用 Windows 原生平台，继续使用软件渲染和原来的全部断言，并在发送鼠标前检查视口。
 原生窗口复测消除了缺字体警告，但相同数值断言仍出现，不能将缺字体认定为根因。
 `c23cf73ee7` 为该测试增加 Windows 调用栈和步骤日志，并保持原有断言。
-这些提交仅修改测试源与测试环境，Release 的应用源码与前次提交一致。
+该次 x64 编译因格式化后 `dbghelp.h` 位于 Win32 声明之前而失败，未进入 UI 测试；
+`c706c845c9` 将依赖头文件分成有明确注释的独立包含块，格式化复查通过，继续复测。
+该次 x64 编译及模型测试通过（8.73 秒）；UI 仍异常退出（10.14 秒）。
+步骤日志仅输出 `start UI`，确认失败发生在 MainWindow 初始化期间，尚未进入规划页或执行航点操作。
+调用栈经过 Qt Quick、Windows 平台插件和 COM 回调；未安装完整 Qt PDB 时，
+DbgHelp 返回的最近导出函数名及大偏移不能作为真实函数名或根因证据。
+`eee025c6eb` 从同版本官方 Qt 包安装 `qtbase` / `qtdeclarative` 调试符号到独立目录，
+以保持运行 SDK 不变，并将符号目录交给诊断 handler；配置 lint 与相关 Python 测试 38/38 通过。
+该次符号安装因包装脚本的 `--archives` 需要单个字符串参数而失败，未执行 UI；
+已改为 `--archives "qtbase qtdeclarative"`。符号是可选诊断依赖，下载失败不阻止实际 UI 测试。
+不将原规划页零范围图表假设当作本次原因。
+上述诊断提交仅修改测试源与测试环境，至 `eee025c6eb` 的应用源码与 `ed59ccfe50` 一致。
 源码和上述修复已推送；Linux 验证完成，阶段二验收仍需修复并通过 Windows UI 验证。
+
+本机主窗口几何诊断定位到 `QGCFlickableScrollIndicator.qml` 的独立缺陷：
+空列表 / 空滚动区域的内容尺寸为零时，手动除法生成无限宽或高，即使控件不可见也保留该值。
+`5ea303c92b` 仅将四处尺寸 / 位置计算改用 Qt 原生 `visibleArea` 比例，消除这些无限值。
+新增 UI 检查覆盖空内容、正常双向滚动（位置及半视口长度）、清空后的有限尺寸和隐藏状态。
+模型及完整航点 UI 流程仍为 2/2 通过；保留 Windows 辅助功能和全部原有断言。
+这次已改变应用源码，因此重新执行完整 Linux 回归及 Windows Debug / Release；
+尚不将旧安装包的通过结果当作 `5ea303c92b` 的验证结果。
 
 Release 的三个 Windows 架构任务均已成功；当前交付优先使用 x64 产物。
 x64 安装验证包括升级、移除 Qt/GStreamer SDK 搜索路径后启动已安装程序、卸载并检查清理。
@@ -124,6 +149,7 @@ x64 安装验证包括升级、移除 Qt/GStreamer SDK 搜索路径后启动已�
 | `src/API/QGCCorePlugin.h` | 默认关闭的通用规划页扩展接口 |
 | `src/PlanView/PlanView.qml`、`PlanViewRightPanel.qml` | 面板 Loader、定制编辑时避免原单击加点 |
 | `src/FlightMap/FlightMap.qml` | 定制模式事件信号，暂停原鼠标处理；原触摸逻辑保留 |
+| `src/QmlControls/QGCFlickableScrollIndicator.qml` | 空列表 / 空滚动区域使用 Qt 原生可视比例，避免除零产生无限尺寸 |
 | `src/PlanView/MissionItemMapVisualBase.qml`、`src/FlightMap/MapItems/MissionItemIndicatorDrag.qml` | 可见航点的直接拖动和右键事件 |
 | `src/MissionManager/MissionController.h/.cc` | 经校验的普通航点移动接口，同步任务树和序号 |
 | `custom/test/CMakeLists.txt`、`CaacRouteEditorTest.cc`、`CaacRouteEditorUITest.cc` | 模型、文件、失败路径及完整 MainWindow 鼠标测试 |
