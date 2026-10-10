@@ -32,9 +32,9 @@ Rectangle {
 
                 PropertyChanges {
                     target:         control
-                    y:              _flickable.height * (_flickable.contentY / _flickable.contentHeight)
+                    y:              _flickable.height * _flickable.visibleArea.yPosition
                     width:          ScreenTools.defaultFontPixelWidth / 2
-                    height:         _flickable.height * (_flickable.height / _flickable.contentHeight)
+                    height:         _flickable.height * _flickable.visibleArea.heightRatio
                     showIndicator:  (_flickable.flickableDirection === Flickable.AutoFlickDirection ||
                                         _flickable.flickableDirection === Flickable.VerticalFlick ||
                                         _flickable.flickableDirection === Flickable.HorizontalAndVerticalFlick) &&
@@ -51,9 +51,9 @@ Rectangle {
 
                 PropertyChanges {
                     target:         control
-                    x:              _flickable.width * (_flickable.contentX / _flickable.contentWidth)
+                    x:              _flickable.width * _flickable.visibleArea.xPosition
                     height:         ScreenTools.defaultFontPixelWidth / 2
-                    width:          _flickable.width * (_flickable.width / _flickable.contentWidth)
+                    width:          _flickable.width * _flickable.visibleArea.widthRatio
                     showIndicator:  (_flickable.flickableDirection === Flickable.AutoFlickDirection ||
                                         _flickable.flickableDirection === Flickable.HorizontalFlick ||
                                         _flickable.flickableDirection === Flickable.HorizontalAndVerticalFlick) &&

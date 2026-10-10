@@ -1,12 +1,17 @@
 #include <cmath>
 #include <cstdio>
+#include <limits>
+#include <memory>
 
 #include <QtCore/QByteArray>
 #include <QtCore/QFile>
 #include <QtCore/QPointer>
 #include <QtCore/QScopeGuard>
 #include <QtCore/QTemporaryDir>
+#include <QtGui/QGuiApplication>
 #include <QtGui/QImage>
+#include <QtQml/QQmlApplicationEngine>
+#include <QtQml/QQmlComponent>
 #include <QtQuick/QQuickItem>
 #include <QtQuick/QQuickWindow>
 #include <QtTest/QTest>
@@ -16,6 +21,34 @@
 #include "QGCFileDialogController.h"
 #include "QmlUITestBase.h"
 #include "SimpleMissionItem.h"
+
+namespace {
+void reportInvalidGeometry(QQuickItem* item, int& remaining)
+{
+    if (!item || remaining <= 0) {
+        return;
+    }
+    const QRectF bounds = item->mapRectToScene(item->boundingRect());
+    const auto outsideIntegerRange = [](double value) {
+        return !std::isfinite(value) || value <= std::numeric_limits<int>::min() ||
+               value >= std::numeric_limits<int>::max();
+    };
+    if (outsideIntegerRange(bounds.x()) || outsideIntegerRange(bounds.y()) || outsideIntegerRange(bounds.width()) ||
+        outsideIntegerRange(bounds.height())) {
+        --remaining;
+        std::fprintf(stderr, "CAAC invalid scene geometry: %s [%s] visible=%d rect=(%g,%g,%g,%g)\n",
+                     item->metaObject()->className(), qPrintable(item->objectName()), item->isVisible(), bounds.x(),
+                     bounds.y(), bounds.width(), bounds.height());
+        for (auto* parent = item->parentItem(); parent; parent = parent->parentItem()) {
+            std::fprintf(stderr, "  parent: %s [%s]\n", parent->metaObject()->className(),
+                         qPrintable(parent->objectName()));
+        }
+    }
+    for (auto* child : item->childItems()) {
+        reportInvalidGeometry(child, remaining);
+    }
+}
+}  // namespace
 
 #ifdef Q_OS_WIN
 #include <QtCore/qt_windows.h>
@@ -29,6 +62,12 @@ QtMessageHandler previousMessageHandler = nullptr;
 void reportFatalStack(QtMsgType type, const QMessageLogContext& context, const QString& message)
 {
     if (type == QtFatalMsg) {
+        int remaining = 20;
+        for (auto* window : QGuiApplication::allWindows()) {
+            if (auto* quickWindow = qobject_cast<QQuickWindow*>(window)) {
+                reportInvalidGeometry(quickWindow->contentItem(), remaining);
+            }
+        }
         const HANDLE process = GetCurrentProcess();
         SymSetOptions(SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS | SYMOPT_NO_PROMPTS | SYMOPT_FAIL_CRITICAL_ERRORS);
         const QByteArray symbolPath = qgetenv("CAAC_QT_SYMBOL_PATH");
@@ -89,6 +128,71 @@ void CaacRouteEditorUITest::_testMouseEditing()
     startUI();
     if (QTest::currentTestFailed()) {
         return;
+    }
+    step("check empty and scrolling indicators");
+    {
+        QQmlComponent component(_engine);
+        component.setData(R"(
+            import QtQuick
+            import QGroundControl
+            import QGroundControl.Controls
+            Item {
+                QGCPalette { id: qgcPal }
+                QGCFlickable {
+                    objectName: "scrollFixture"
+                    width: 200; height: 100
+                    contentWidth: 0; contentHeight: 0
+                    flickableDirection: Flickable.HorizontalAndVerticalFlick
+                }
+            }
+        )",
+                          QUrl(QStringLiteral("qrc:/qml/CAAC/Plan/ScrollIndicatorTest.qml")));
+        const std::unique_ptr<QObject> fixture(component.create());
+        QVERIFY2(fixture, qPrintable(component.errorString()));
+        auto* flickable = fixture->findChild<QQuickItem*>(QStringLiteral("scrollFixture"));
+        QVERIFY(flickable);
+        QList<QQuickItem*> indicators;
+        for (auto* child : flickable->childItems()) {
+            if (child->property("orientation").isValid() && child->property("showIndicator").isValid()) {
+                indicators.append(child);
+            }
+        }
+        QCOMPARE(indicators.size(), 2);
+        const auto finiteIndicators = [&] {
+            for (auto* indicator : indicators) {
+                if (!std::isfinite(indicator->x()) || !std::isfinite(indicator->y()) ||
+                    !std::isfinite(indicator->width()) || !std::isfinite(indicator->height())) {
+                    return false;
+                }
+            }
+            return true;
+        };
+        QVERIFY(finiteIndicators());
+        for (auto* indicator : indicators) {
+            QVERIFY(!indicator->property("showIndicator").toBool());
+        }
+        flickable->setProperty("contentWidth", 400);
+        flickable->setProperty("contentHeight", 200);
+        flickable->setProperty("contentX", 20);
+        flickable->setProperty("contentY", 30);
+        for (auto* indicator : indicators) {
+            const bool vertical = indicator->property("orientation").toInt() == 0;
+            QTRY_VERIFY_WITH_TIMEOUT(indicator->property("showIndicator").toBool(), TestTimeout::mediumMs());
+            QTRY_VERIFY_WITH_TIMEOUT(
+                std::abs((vertical ? indicator->height() : indicator->width()) - (vertical ? 50.0 : 100.0)) < 0.01,
+                TestTimeout::mediumMs());
+            QVERIFY(std::abs((vertical ? indicator->y() : indicator->x()) - (vertical ? 15.0 : 10.0)) < 0.01);
+        }
+        flickable->setProperty("contentWidth", 0);
+        flickable->setProperty("contentHeight", 0);
+        QVERIFY(finiteIndicators());
+        for (auto* indicator : indicators) {
+            QVERIFY(!indicator->property("showIndicator").toBool());
+        }
+    }
+    if (UnitTest::isVerbose()) {
+        int remaining = 20;
+        reportInvalidGeometry(_rootItem, remaining);
     }
     step("navigate to plan");
     QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewPlan")));

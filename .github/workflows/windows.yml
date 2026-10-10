@@ -194,6 +194,8 @@ jobs:
 
       - name: Install Qt symbols for Windows UI diagnostics
         id: caac-qt-symbols
+        # Symbols improve crash diagnostics; their availability must not prevent the actual UI regression.
+        continue-on-error: true
         if: matrix.variant == 'amd64' && matrix.build_type == 'Debug' && github.repository == 'zhaozhangyu396-creator/CAAC-QGC-GroundStation' && hashFiles('custom/test/CaacRouteEditorTest.cc') != ''
         shell: bash
         env:
@@ -203,7 +205,7 @@ jobs:
           python3 tools/setup/install_qt.py install \
             --host windows --arch win64_msvc2022_64 \
             --version "${QGC_QT_SYMBOL_VERSION}" --outdir "${QGC_QT_SYMBOL_ROOT}" \
-            --modules debug_info --archives qtbase qtdeclarative --aqt-source "${AQT_SOURCE}"
+            --modules debug_info --archives "qtbase qtdeclarative" --aqt-source "${AQT_SOURCE}"
           python3 - <<'PY'
           import os
           from pathlib import Path
