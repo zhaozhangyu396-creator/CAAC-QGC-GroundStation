@@ -1,3 +1,5 @@
+#include <cmath>
+
 #include <QtCore/QFile>
 #include <QtCore/QPointer>
 #include <QtCore/QTemporaryDir>
@@ -40,7 +42,10 @@ void CaacRouteEditorUITest::_testMouseEditing()
     map->setProperty("center", QVariant::fromValue(center));
     map->setProperty("zoomLevel", 16.0);
     QTRY_VERIFY_WITH_TIMEOUT(map->property("mapReady").toBool(), TestTimeout::mediumMs());
-    const QPoint a = map->mapToScene(QPointF(map->width() * 0.4, map->height() * 0.5)).toPoint();
+    const QPointF aScene = map->mapToScene(QPointF(map->width() * 0.4, map->height() * 0.5));
+    QVERIFY(std::isfinite(aScene.x()) && std::isfinite(aScene.y()));
+    QVERIFY(_rootItem->boundingRect().contains(aScene));
+    const QPoint a = aScene.toPoint();
     const QPoint b = a + QPoint(100, 50);
     QTest::mouseClick(_window, Qt::LeftButton, Qt::NoModifier, a);
     QCOMPARE(mission->visualItems()->count(), 1);
@@ -52,6 +57,9 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QVERIFY(first);
     auto* dragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_1"), TestTimeout::mediumMs());
     QVERIFY(dragger);
+    QTRY_VERIFY_WITH_TIMEOUT(
+        _rootItem->boundingRect().contains(dragger->mapToScene(QPointF(dragger->width() / 2, dragger->height() / 2))),
+        TestTimeout::mediumMs());
     const QPoint marker = dragger->mapToScene(QPointF(dragger->width() / 2, dragger->height() / 2)).toPoint();
     QTest::mouseClick(_window, Qt::RightButton, Qt::NoModifier, marker);
     QVERIFY(waitForDialog(QStringLiteral("Waypoint properties"), TestTimeout::mediumMs()));
