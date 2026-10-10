@@ -17,9 +17,10 @@
 #include "SimpleMissionItem.h"
 
 #ifdef Q_OS_WIN
-#include <dbghelp.h>
-
 #include <QtCore/qt_windows.h>
+
+// DbgHelp requires the Win32 declarations above; keep this include in a separate block.
+#include <dbghelp.h>
 
 namespace {
 QtMessageHandler previousMessageHandler = nullptr;
