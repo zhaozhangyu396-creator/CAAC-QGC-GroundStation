@@ -279,9 +279,17 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QCOMPARE(mission->visualItems()->count(), 3);
 
     step("pan map");
+    auto* background = findVisibleItem(_rootItem, QStringLiteral("caacMapMouseArea"));
+    QVERIFY(background);
     const auto beforePan = map->property("center").value<QGeoCoordinate>();
-    const QPoint blank = map->mapToScene(QPointF(map->width() * 0.35, map->height() * 0.75)).toPoint();
+    // Keep the drag above the terrain graph and away from the waypoint markers and tool strips.
+    const QPoint blank = map->mapToScene(QPointF(map->width() * 0.2, map->height() * 0.4)).toPoint();
     QTest::mousePress(_window, Qt::LeftButton, Qt::NoModifier, blank);
+    const bool backgroundGrabbed = _window->mouseGrabberItem() == background;
+    const QString grabber = _window->mouseGrabberItem()
+                                ? QString::fromLatin1(_window->mouseGrabberItem()->metaObject()->className()) +
+                                      QLatin1Char(':') + _window->mouseGrabberItem()->objectName()
+                                : QStringLiteral("none");
     for (int i = 1; i <= 5; ++i) {
         QTest::mouseMove(_window, blank + QPoint(i * 12, 0));
     }
@@ -289,6 +297,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
         waitForCondition([&] { return map->property("center").value<QGeoCoordinate>().distanceTo(beforePan) > 1; },
                          TestTimeout::mediumMs(), QStringLiteral("map pan"));
     QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, blank + QPoint(60, 0));
+    QVERIFY2(backgroundGrabbed, qPrintable(QStringLiteral("Map press intercepted by ") + grabber));
     QVERIFY(mapMoved);
     QCOMPARE(mission->visualItems()->count(), 3);
 
