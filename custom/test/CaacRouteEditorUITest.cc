@@ -1,3 +1,4 @@
+#include <atomic>
 #include <cmath>
 #include <cstdio>
 #include <limits>
@@ -61,6 +62,9 @@ QtMessageHandler previousMessageHandler = nullptr;
 
 void reportFatalStack(QtMsgType type, const QMessageLogContext& context, const QString& message)
 {
+    static std::atomic_bool reportedInvalidPath = false;
+    const bool invalidPath =
+        type == QtWarningMsg && message.startsWith(QStringLiteral("QPainterPath::moveTo: Adding point with invalid"));
     if (type == QtFatalMsg) {
         int remaining = 20;
         for (auto* window : QGuiApplication::allWindows()) {
@@ -68,6 +72,8 @@ void reportFatalStack(QtMsgType type, const QMessageLogContext& context, const Q
                 reportInvalidGeometry(quickWindow->contentItem(), remaining);
             }
         }
+    }
+    if (type == QtFatalMsg || (invalidPath && !reportedInvalidPath.exchange(true))) {
         const HANDLE process = GetCurrentProcess();
         SymSetOptions(SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS | SYMOPT_NO_PROMPTS | SYMOPT_FAIL_CRITICAL_ERRORS);
         const QByteArray symbolPath = qgetenv("CAAC_QT_SYMBOL_PATH");
@@ -78,7 +84,7 @@ void reportFatalStack(QtMsgType type, const QMessageLogContext& context, const Q
             auto* symbol = reinterpret_cast<SYMBOL_INFO*>(symbolBuffer);
             symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
             symbol->MaxNameLen = MAX_SYM_NAME;
-            std::fputs("CAAC fatal stack:\n", stderr);
+            std::fputs(type == QtFatalMsg ? "CAAC fatal stack:\n" : "CAAC invalid path stack:\n", stderr);
             for (USHORT i = 0; i < count; ++i) {
                 const auto address = reinterpret_cast<DWORD64>(frames[i]);
                 DWORD64 displacement = 0;
@@ -203,6 +209,23 @@ void CaacRouteEditorUITest::_testMouseEditing()
     auto* mission = master->missionController();
     auto* map = findVisibleItem(_rootItem, QStringLiteral("planView_map"));
     QVERIFY(map);
+    auto* terrainGraph = findVisibleItem(_rootItem, QStringLiteral("planTerrainGraph"));
+    QVERIFY(terrainGraph);
+    const auto graphDomainsValid = [&] {
+        for (const auto* name : {"axisX", "axisY"}) {
+            auto* axis = terrainGraph->property(name).value<QObject*>();
+            if (!axis) {
+                return false;
+            }
+            const double minimum = axis->property("min").toDouble();
+            const double maximum = axis->property("max").toDouble();
+            if (!std::isfinite(minimum) || !std::isfinite(maximum) || maximum <= minimum) {
+                return false;
+            }
+        }
+        return true;
+    };
+    QTRY_VERIFY_WITH_TIMEOUT(graphDomainsValid(), TestTimeout::mediumMs());
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacRouteEditor")));
     QVERIFY(map->property("directMissionItemEditing").toBool());
     step("center and zoom map");
@@ -220,9 +243,11 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QCOMPARE(mission->visualItems()->count(), 1);
     QTest::mouseDClick(_window, Qt::LeftButton, Qt::NoModifier, a);
     QTRY_COMPARE_WITH_TIMEOUT(mission->visualItems()->count(), 2, TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(graphDomainsValid(), TestTimeout::mediumMs());
     step("double-click second waypoint");
     QTest::mouseDClick(_window, Qt::LeftButton, Qt::NoModifier, b);
     QTRY_COMPARE_WITH_TIMEOUT(mission->visualItems()->count(), 3, TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(graphDomainsValid(), TestTimeout::mediumMs());
     QPointer<SimpleMissionItem> first = mission->visualItems()->value<SimpleMissionItem*>(1);
     QVERIFY(first);
     auto* dragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_1"), TestTimeout::mediumMs());
@@ -327,6 +352,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QVERIFY(clickButton(QStringLiteral("caacRemoveWaypoint")));
     QCOMPARE(mission->visualItems()->count(), 2);
     master->removeAll();
+    QTRY_VERIFY_WITH_TIMEOUT(graphDomainsValid(), TestTimeout::mediumMs());
     QGCFileDialogController::setTestNextFileForAccept(file);
     QVERIFY(clickButton(QStringLiteral("planToolbar_openButton")));
     QTRY_VERIFY_WITH_TIMEOUT(!QGCFileDialogController::testHookArmed(), TestTimeout::mediumMs());

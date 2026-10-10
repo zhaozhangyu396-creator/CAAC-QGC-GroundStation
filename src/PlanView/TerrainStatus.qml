@@ -52,6 +52,7 @@ Rectangle {
 
             GraphsView {
                 id:                 chart
+                objectName:         "planTerrainGraph"
                 anchors.fill:       parent
                 marginTop:          ScreenTools.defaultFontPixelHeight / 2  // Fixes top clipping problem
                 marginRight:        ScreenTools.defaultFontPixelWidth * 2   // Prevents clipping last tick mark
@@ -228,15 +229,21 @@ Rectangle {
     }
 
     function _axisXMax() {
-        return _unitsConversion.metersToAppSettingsHorizontalDistanceUnits(_missionTotalDistance)
+        const distance = _unitsConversion.metersToAppSettingsHorizontalDistanceUnits(_missionTotalDistance)
+        return Number.isFinite(distance) && distance > 0 ? distance
+            : _unitsConversion.metersToAppSettingsHorizontalDistanceUnits(1)
     }
 
     function _axisYMin() {
-        return _unitsConversion.metersToAppSettingsVerticalDistanceUnits(_minAMSLAltitude)
+        const altitude = _unitsConversion.metersToAppSettingsVerticalDistanceUnits(_minAMSLAltitude)
+        return Number.isFinite(altitude) ? altitude : 0
     }
 
     function _axisYMax() {
-        return _unitsConversion.metersToAppSettingsVerticalDistanceUnits(_maxAMSLAltitude)
+        const minimum = _axisYMin()
+        const maximum = _unitsConversion.metersToAppSettingsVerticalDistanceUnits(_maxAMSLAltitude)
+        const minimumSpan = _unitsConversion.metersToAppSettingsVerticalDistanceUnits(1)
+        return Number.isFinite(maximum) ? Math.max(maximum, minimum + minimumSpan) : minimum + minimumSpan
     }
 
     Connections {
