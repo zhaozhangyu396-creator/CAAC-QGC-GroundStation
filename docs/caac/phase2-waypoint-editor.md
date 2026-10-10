@@ -3,6 +3,87 @@
 日期：2026-10-10（Asia/Shanghai）。分支：`phase2/caac-waypoint-editor`。
 源码沿用阶段一验证的 QGC 开发基线；这是开发验证版本，不是正式 Windows 发布版。
 
+## 本轮续接验证
+
+实现提交：`9bcb7fb286`；Windows 验证配置提交：`ed59ccfe50`；
+Windows 原生 UI 测试环境修复：`58424cf2c7`；调用栈诊断：`c23cf73ee7`。
+以下内容记录暂停后继续开发的结果；后面的“暂停保存记录”保留历史失败和续接依据。
+
+| 检查 | 当前结果 |
+| --- | --- |
+| Linux Debug 增量编译 | 通过 |
+| CAAC 模型及原生 UI 专项 | 2/2 通过；新增视口检查后再次运行通过，3.63 秒 |
+| 完整 Unit / Integration 回归 | 425/425 通过，481.07 秒；341 个 Unit、84 个 Integration |
+| 原生程序启动检查 | 通过；使用仓库 `run_tests.py --verify-only`，退出码 0 |
+| 最新相关文件 lint | 全部适用检查通过；相对于阶段一检查全部 23 个修改文件 |
+| 与 Windows 配置相关的 Python 测试 | 38/38 通过 |
+| Windows x64 Release | 编译、Portable 10/10、安装/升级、启动、卸载全部通过；安装包已取回并校验 |
+| Windows x64 Debug | 模型测试通过；原生 UI 仍触发 Qt 数值断言；正在执行调用栈诊断，未通过验收 |
+
+专项 UI 测试通过真实 MainWindow 验证双击加点、单击不加点、右键属性、
+不部分提交无效属性、弹窗目标固定、直接拖点保留高度、左键拖图不加点、
+上下排序、删除、取消保存，以及经原工具栏保存后清空再加载的完整 JSON 一致性。
+保存路径包含中文文件名，用于检查原生文件通路。
+
+双击测试改用原生 `mouseDClick` 后，发现拖点模拟需要等待标记回到视口，
+并在按键仍按下时等待坐标移动，再释放按键；保留实际移动距离大于 1 米的断言。
+没有屏蔽断言或将失败改为跳过。
+窄侧栏的四个按钮已改为两列排列，并去除布局高度反馈引起的绑定循环；
+QML 严格日志检查通过后才记录专项通过。
+
+第一轮四进程 Unit 回归为 340/341：`QGCArchiveModelTest` 的 26 个 QtTest 项均通过，
+但进程退出超时。将该项单独运行后通过（0.38 秒）；没有改动其测试或超时配置。
+随后以两进程重新执行完整回归，425/425 全部通过，其中归档测试也正常通过。
+
+另有一个既有 CI 安全策略测试失败：依赖审查工作流已使用
+`gradle/actions/wrapper-validation@v6`，断言仍要求 `@v4`。
+已核对阶段一提交，这两个文件与该提交完全一致；此项不属于航点编辑修改。
+包含此文件的检查为 52 通过、1 失败；与本轮 Windows 改动相关的 38 项另行全部通过。
+
+旧 Windows Debug 已编译并通过模型及 Portable 测试，UI 进程异常退出；
+旧 Release 的 x64 编译失败原因是完整测试框架引用仅 Debug 提供的 `MockLink.h`。
+已将完整 CAAC 测试限制为 Debug；Release 保留 Portable、启动及安装回归。
+Debug 上传还引用了只在 Release 校验步骤中产生的空路径，已改为确定的安装包路径，
+并一起上传校验和。当前产物没有 CI 生成的 `.build.json`；
+另行保存了包含真实提交、任务和产物标识的本地验证记录，不能将其视为 CI 构建清单。
+新 Debug 任务保留 stderr 和详细测试诊断。
+
+- [本轮 Windows Debug 首次诊断](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38036924141)
+- [Windows 原生窗口 Debug 复测](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38038153729)
+- [Windows Debug 调用栈诊断](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38039945765)
+- [本轮 Windows Release](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38037038524)
+
+第一次 Debug 诊断及 Release 针对 `ed59ccfe50a554a2f35754068ccf2986b27b4097`。
+Debug 诊断已通过模型测试，但无界面插件未找到字体，UI 触发
+`qnumeric.h:523` 的浮点转整数断言并退出，错误码 `0xc0000409`。
+未将此运行记为通过。`58424cf2c781dcc31745fcc1717fc60b4fa72ea5` 将该项 UI 测试
+改用 Windows 原生平台，继续使用软件渲染和原来的全部断言，并在发送鼠标前检查视口。
+原生窗口复测消除了缺字体警告，但相同数值断言仍出现，不能将缺字体认定为根因。
+`c23cf73ee7` 为该测试增加 Windows 调用栈和步骤日志，并保持原有断言。
+这些提交仅修改测试源与测试环境，Release 的应用源码与前次提交一致。
+源码和上述修复已推送；Linux 验证完成，阶段二验收仍需修复并通过 Windows UI 验证。
+
+Release 的三个 Windows 架构任务均已成功；当前交付优先使用 x64 产物。
+x64 安装验证包括升级、移除 Qt/GStreamer SDK 搜索路径后启动已安装程序、卸载并检查清理。
+安装包保存到 `/workspace/caac-phase2-windows-x64-release/QGroundControl-installer-AMD64.exe`，
+大小 135124572 字节，SHA256：
+`26ee6f1fa33168213393c2d83dcaad57e040202bcf0924280925c286db3d93ae`。
+本地计算与 CI 校验和文件一致；验证记录为同目录的 `validation-provenance.json`。
+它是航点编辑验证版；尚未实现阶段三至六，也未完成实机飞行及 Windows 人工操作验收。
+
+专项截图保存为 `/workspace/caac-phase2-editor.png`。
+自动测试截图中的底图显示 `Tile Fetch Error` 占位图，原因是仓库既有
+`UnitTestTileGenerator::generateTile` 使用 `:/res/notile.png` 替代网络地图，
+`UnitTestList.cc` 在测试入口安装此生成器；本轮没有替换测试底图或用其代替正式地图功能。
+已验证坐标变换、航点连线和编辑，尚不以该截图认定在线底图下载正常。
+同一 Bing 瓦片的只读 HTTP/HTTPS 探针均返回 200、`image/jpeg`、21621 字节，
+这只证明下载端点可访问，不等同于 GUI 已完成在线地图验证。
+
+已按 cloud-environment-onboarding:setup 保存 `install_script` 和 `start_skill` 草稿：
+保留原 Qt/sysroot 安装流程，增加经过官方 SHA256 校验的 Go 安装及 lint 激活脚本，
+并更新为本轮通过的两进程回归命令。新 Go 解压和已安装工具复用均实际验证。
+草稿保存成功，尚未发布新的环境快照；不将保存视为发布或新任务恢复验证。
+
 ## 实现与操作
 
 `custom/` 通过官方 Custom Build 机制加载 `CaacCorePlugin` 和 `CAAC.Plan` QML 模块。
@@ -70,7 +151,7 @@ CI=1 python /workspace/CAAC-QGC-GroundStation/.github/scripts/cmake_helper.py ct
 完整 `.plan` 重载、排序边界和旧任务项引用。UI 测试启动真实 QGC MainWindow，
 实际发送鼠标事件验证单击不加点、双击加点、右键弹窗、直接拖点与左键拖图。
 
-### 本次保存时的实际结果
+### 暂停保存记录
 
 用户要求暂停并保存工作；阶段二尚未完成验收。
 
