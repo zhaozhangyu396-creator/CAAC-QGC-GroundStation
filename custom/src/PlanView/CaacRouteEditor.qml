@@ -8,10 +8,9 @@ import QGC
 import QGroundControl
 import QGroundControl.Controls
 
-ColumnLayout {
+Column {
     id: root
     objectName: "caacRouteEditor"
-    implicitHeight: controls.implicitHeight + helpLabel.implicitHeight + spacing
     spacing: ScreenTools.defaultFontPixelHeight * 0.25
 
     property var editorMap: null
@@ -85,10 +84,12 @@ ColumnLayout {
         }
     }
 
-    RowLayout {
+    GridLayout {
         id: controls
-        Layout.fillWidth: true
-        spacing: ScreenTools.defaultFontPixelWidth * 0.25
+        width: root.width
+        columns: 2
+        columnSpacing: ScreenTools.defaultFontPixelWidth * 0.25
+        rowSpacing: ScreenTools.defaultFontPixelHeight * 0.25
 
         QGCButton {
             objectName: "caacEditWaypoint"
@@ -98,28 +99,31 @@ ColumnLayout {
             onClicked: root.editWaypoint(root.currentItem)
         }
         QGCButton {
+            objectName: "caacRemoveWaypoint"
+            Layout.fillWidth: true
+            text: qsTr("Delete")
+            enabled: root.currentItem !== null
+            onClicked: editorController.removeCurrentWaypoint()
+        }
+        QGCButton {
             objectName: "caacMoveWaypointUp"
+            Layout.fillWidth: true
             text: qsTr("Up")
             enabled: root.currentItem !== null
             onClicked: editorController.moveCurrentWaypoint(-1)
         }
         QGCButton {
             objectName: "caacMoveWaypointDown"
+            Layout.fillWidth: true
             text: qsTr("Down")
             enabled: root.currentItem !== null
             onClicked: editorController.moveCurrentWaypoint(1)
-        }
-        QGCButton {
-            objectName: "caacRemoveWaypoint"
-            text: qsTr("Delete")
-            enabled: root.currentItem !== null
-            onClicked: editorController.removeCurrentWaypoint()
         }
     }
 
     QGCLabel {
         id: helpLabel
-        Layout.fillWidth: true
+        width: root.width
         wrapMode: Text.WordWrap
         font.pointSize: ScreenTools.smallFontPointSize
         text: editorController.lastError || qsTr("Double-click empty map to insert after selection. Drag with left button; right-click a waypoint to edit. Save/load in Plan File.")

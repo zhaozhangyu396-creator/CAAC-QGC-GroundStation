@@ -1,4 +1,6 @@
+#include <QtCore/QFile>
 #include <QtCore/QPointer>
+#include <QtCore/QTemporaryDir>
 #include <QtGui/QImage>
 #include <QtQuick/QQuickItem>
 #include <QtQuick/QQuickWindow>
@@ -6,6 +8,7 @@
 
 #include "MissionController.h"
 #include "PlanMasterController.h"
+#include "QGCFileDialogController.h"
 #include "QmlUITestBase.h"
 #include "SimpleMissionItem.h"
 
@@ -78,13 +81,18 @@ void CaacRouteEditorUITest::_testMouseEditing()
     mission->setCurrentPlanViewSeqNum(mission->visualItems()->value<VisualMissionItem*>(2)->sequenceNumber(), true);
     dragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_1"), TestTimeout::mediumMs());
     QVERIFY(dragger);
+    QTRY_VERIFY_WITH_TIMEOUT(
+        _rootItem->boundingRect().contains(dragger->mapToScene(QPointF(dragger->width() / 2, dragger->height() / 2))),
+        TestTimeout::mediumMs());
     const QPoint from = dragger->mapToScene(QPointF(dragger->width() / 2, dragger->height() / 2)).toPoint();
     QTest::mousePress(_window, Qt::LeftButton, Qt::NoModifier, from);
     for (int i = 1; i <= 5; ++i) {
         QTest::mouseMove(_window, from + QPoint(i * 8, -i * 5));
     }
+    const bool waypointMoved = waitForCondition([&] { return first->coordinate().distanceTo(oldCoordinate) > 1; },
+                                                TestTimeout::mediumMs(), QStringLiteral("waypoint drag"));
     QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, from + QPoint(40, -25));
-    QTRY_VERIFY_WITH_TIMEOUT(first->coordinate().distanceTo(oldCoordinate) > 1, TestTimeout::mediumMs());
+    QVERIFY(waypointMoved);
     QCOMPARE(first->altitude()->rawValue().toDouble(), 123.45);
     QCOMPARE(mission->visualItems()->count(), 3);
 
@@ -94,10 +102,41 @@ void CaacRouteEditorUITest::_testMouseEditing()
     for (int i = 1; i <= 5; ++i) {
         QTest::mouseMove(_window, blank + QPoint(i * 12, 0));
     }
+    const bool mapMoved =
+        waitForCondition([&] { return map->property("center").value<QGeoCoordinate>().distanceTo(beforePan) > 1; },
+                         TestTimeout::mediumMs(), QStringLiteral("map pan"));
     QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, blank + QPoint(60, 0));
-    QTRY_VERIFY_WITH_TIMEOUT(map->property("center").value<QGeoCoordinate>().distanceTo(beforePan) > 1,
-                             TestTimeout::mediumMs());
+    QVERIFY(mapMoved);
     QCOMPARE(mission->visualItems()->count(), 3);
+
+    QVERIFY(clickButton(QStringLiteral("caacMoveWaypointDown")));
+    QCOMPARE(mission->visualItems()->get(2), first.data());
+    QVERIFY(clickButton(QStringLiteral("caacMoveWaypointUp")));
+    QCOMPARE(mission->visualItems()->get(1), first.data());
+
+    QTemporaryDir temp;
+    QVERIFY(temp.isValid());
+    const QString file = temp.filePath(QStringLiteral("CAAC航点.plan"));
+    QGCFileDialogController::setTestRejectNext();
+    QVERIFY(clickButton(QStringLiteral("planToolbar_saveButton")));
+    QTRY_VERIFY_WITH_TIMEOUT(!QGCFileDialogController::testHookArmed(), TestTimeout::mediumMs());
+    QVERIFY(!QFile::exists(file));
+    QVERIFY(master->dirtyForSave());
+    QGCFileDialogController::setTestNextFileForAccept(file);
+    QVERIFY(clickButton(QStringLiteral("planToolbar_saveButton")));
+    QTRY_VERIFY_WITH_TIMEOUT(QFile::exists(file), TestTimeout::mediumMs());
+    QVERIFY(!QGCFileDialogController::testHookArmed());
+    QVERIFY(!master->dirtyForSave());
+    const auto saved = master->saveToJson();
+    QVERIFY(clickButton(QStringLiteral("caacRemoveWaypoint")));
+    QCOMPARE(mission->visualItems()->count(), 2);
+    master->removeAll();
+    QGCFileDialogController::setTestNextFileForAccept(file);
+    QVERIFY(clickButton(QStringLiteral("planToolbar_openButton")));
+    QTRY_VERIFY_WITH_TIMEOUT(!QGCFileDialogController::testHookArmed(), TestTimeout::mediumMs());
+    QCOMPARE(master->saveToJson(), saved);
+    QCOMPARE(mission->visualItems()->count(), 3);
+
     const QString screenshot = qEnvironmentVariable("CAAC_UI_SCREENSHOT");
     if (!screenshot.isEmpty()) {
         QVERIFY(_window->grabWindow().save(screenshot));
