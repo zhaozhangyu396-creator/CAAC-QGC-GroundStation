@@ -1,10 +1,14 @@
+#include <cmath>
 #include <limits>
 
 #include <QtCore/QJsonDocument>
+#include <QtCore/QScopeGuard>
 #include <QtCore/QTemporaryDir>
+#include <QtGraphs/QLineSeries>
 #include <QtTest/QTest>
 
 #include "CaacRouteEditorController.h"
+#include "FlightPathSegment.h"
 #include "MissionController.h"
 #include "MissionItem.h"
 #include "MissionTest.h"
@@ -12,6 +16,7 @@
 #include "QmlObjectTreeModel.h"
 #include "SimpleMissionItem.h"
 #include "SpeedSection.h"
+#include "TerrainProfile.h"
 
 class CaacRouteEditorTest : public OfflineMissionTest
 {
@@ -24,6 +29,7 @@ private slots:
     void _testPlanRoundtrip();
     void _testOrderConstraints();
     void _testStaleItem();
+    void _testUnknownTerrainProfile();
 };
 
 void CaacRouteEditorTest::_testInsertReorderDelete()
@@ -162,6 +168,56 @@ void CaacRouteEditorTest::_testStaleItem()
     editor.setPlanMasterController(nullptr);
     QVERIFY(!editor.currentItem());
     QVERIFY(!editor.removeCurrentWaypoint());
+}
+
+void CaacRouteEditorTest::_testUnknownTerrainProfile()
+{
+    CaacRouteEditorController editor;
+    editor.setPlanMasterController(planController());
+    const QGeoCoordinate a(30, 120);
+    const QGeoCoordinate b(30.001, 120);
+    const QGeoCoordinate c(30.002, 120);
+    QVERIFY(editor.addWaypoint(b));
+    auto* home = missionController()->visualItems()->value<VisualMissionItem*>(0);
+    auto* waypoint = editor.currentItem();
+    QVERIFY(home && waypoint);
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    FlightPathSegment first(FlightPathSegment::SegmentTypeGeneric, a, nan, b, nan, false, nullptr);
+    FlightPathSegment second(FlightPathSegment::SegmentTypeGeneric, b, nan, c, nan, false, nullptr);
+    auto* originalHomeSegment = home->simpleFlightPathSegment();
+    auto* originalWaypointSegment = waypoint->simpleFlightPathSegment();
+    const auto restoreSegments = qScopeGuard([&] {
+        home->setSimpleFlighPathSegment(originalHomeSegment);
+        waypoint->setSimpleFlighPathSegment(originalWaypointSegment);
+    });
+    home->setSimpleFlighPathSegment(&first);
+    waypoint->setSimpleFlighPathSegment(&second);
+    const auto saved = planController()->saveToJson();
+    TerrainProfile profile;
+    profile.setMissionController(missionController());
+    QVERIFY(profile.setProperty("minAMSLAlt", nan));
+    QLineSeries terrain;
+    QLineSeries flight;
+    QLineSeries missing;
+    QLineSeries collision;
+    profile.updateSeries(&terrain, &flight, &missing, &collision);
+    QCOMPARE(missing.count(), 5);
+    // The renderer can break a line at an interior NaN, but its initial moveTo needs a finite point.
+    QVERIFY(std::isfinite(missing.at(0).x()) && std::isfinite(missing.at(0).y()));
+    QCOMPARE(missing.at(0), QPointF(0, 0));
+    QCOMPARE(missing.at(1), QPointF(first.totalDistance(), 0));
+    QVERIFY(std::isnan(missing.at(2).y()));
+    QCOMPARE(missing.at(3), QPointF(first.totalDistance(), 0));
+    QCOMPARE(missing.at(4), QPointF(first.totalDistance() + second.totalDistance(), 0));
+    QVERIFY(terrain.points().isEmpty());
+    QVERIFY(flight.points().isEmpty());
+    QVERIFY(collision.points().isEmpty());
+    QVERIFY(profile.setProperty("minAMSLAlt", -20.0));
+    QVERIFY(profile.setProperty("verticalScale", 2.0));
+    profile.updateSeries(&terrain, &flight, &missing, &collision);
+    QCOMPARE(missing.at(0).y(), -40.0);
+    QVERIFY(std::isnan(missing.at(2).y()));
+    QCOMPARE(planController()->saveToJson(), saved);
 }
 
 UT_REGISTER_TEST(CaacRouteEditorTest, TestLabel::Unit, TestLabel::MissionManager)
