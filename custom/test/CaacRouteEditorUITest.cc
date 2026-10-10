@@ -1,6 +1,7 @@
 #include <cmath>
 #include <cstdio>
 
+#include <QtCore/QByteArray>
 #include <QtCore/QFile>
 #include <QtCore/QPointer>
 #include <QtCore/QScopeGuard>
@@ -30,7 +31,8 @@ void reportFatalStack(QtMsgType type, const QMessageLogContext& context, const Q
     if (type == QtFatalMsg) {
         const HANDLE process = GetCurrentProcess();
         SymSetOptions(SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS | SYMOPT_NO_PROMPTS | SYMOPT_FAIL_CRITICAL_ERRORS);
-        if (SymInitialize(process, nullptr, TRUE)) {
+        const QByteArray symbolPath = qgetenv("CAAC_QT_SYMBOL_PATH");
+        if (SymInitialize(process, symbolPath.isEmpty() ? nullptr : symbolPath.constData(), TRUE)) {
             void* frames[64] = {};
             const USHORT count = CaptureStackBackTrace(0, 64, frames, nullptr);
             alignas(SYMBOL_INFO) unsigned char symbolBuffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME] = {};

@@ -192,6 +192,30 @@ jobs:
           build-dir: ${{ runner.temp }}/build
           build-type: ${{ matrix.build_type }}
 
+      - name: Install Qt symbols for Windows UI diagnostics
+        id: caac-qt-symbols
+        if: matrix.variant == 'amd64' && matrix.build_type == 'Debug' && github.repository == 'zhaozhangyu396-creator/CAAC-QGC-GroundStation' && hashFiles('custom/test/CaacRouteEditorTest.cc') != ''
+        shell: bash
+        env:
+          QGC_QT_SYMBOL_ROOT: ${{ runner.temp }}/qt-symbols
+          QGC_QT_SYMBOL_VERSION: ${{ steps.build-setup.outputs.qt_version }}
+        run: |
+          python3 tools/setup/install_qt.py install \
+            --host windows --arch win64_msvc2022_64 \
+            --version "${QGC_QT_SYMBOL_VERSION}" --outdir "${QGC_QT_SYMBOL_ROOT}" \
+            --modules debug_info --archives qtbase qtdeclarative --aqt-source "${AQT_SOURCE}"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          root = Path(os.environ['QGC_QT_SYMBOL_ROOT'])
+          paths = sorted({str(path.parent) for path in root.rglob('*.pdb')})
+          if not paths:
+              raise SystemExit('Qt debug symbol installation produced no PDB files')
+          with Path(os.environ['GITHUB_OUTPUT']).open('a', encoding='utf-8') as output:
+              output.write('symbol_path=' + ';'.join(paths) + '\n')
+          print(f'Qt symbols found in {len(paths)} directories')
+          PY
+
       - name: Run portable tests
         id: portable
         if: ${{ !cancelled() && steps.build.outcome == 'success' && matrix.variant == 'amd64' }}
@@ -218,6 +242,7 @@ jobs:
         if: matrix.variant == 'amd64' && matrix.build_type == 'Debug' && hashFiles('custom/test/CaacRouteEditorTest.cc') != ''
         uses: ./.github/actions/run-unit-tests
         env:
+          CAAC_QT_SYMBOL_PATH: ${{ steps.caac-qt-symbols.outputs.symbol_path }}
           QT_FORCE_STDERR_LOGGING: '1'
           QGC_TEST_VERBOSE: '1'
         with:
