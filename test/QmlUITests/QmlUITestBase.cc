@@ -117,8 +117,13 @@ void QmlUITestBase::startUI()
     ignoreLogMessage("default", QtWarningMsg, QRegularExpression(QStringLiteral("QRhiGles2")));
     // Async QML incubation rides QQuickWindow's render-loop controller, which never pumps in
     // offscreen mode, so a component still incubating at engine teardown logs this.
+    const QString incubationMessage = QStringLiteral("Object or context destroyed during incubation");
+    const QString translatedIncubationMessage =
+        QCoreApplication::translate("QQmlComponent", "Object or context destroyed during incubation");
     ignoreLogMessage("default", QtInfoMsg,
-                     QRegularExpression(QStringLiteral("Object or context destroyed during incubation")));
+                     QRegularExpression(QStringLiteral("(?:%1|%2)")
+                                            .arg(QRegularExpression::escape(incubationMessage),
+                                                 QRegularExpression::escape(translatedIncubationMessage))));
     // Offscreen incubation can leave an item incubating at teardown; the drain is best-effort.
     ignoreLogMessage("default", QtWarningMsg,
                      QRegularExpression(QStringLiteral("in the process of being created at engine destruction")));

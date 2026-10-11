@@ -84,8 +84,35 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-ts", type=Path, action="append", default=[])
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--nsis-script", type=Path)
     args = parser.parse_args()
     result = audit(args.source_ts)
+    if args.nsis_script:
+        script = args.nsis_script.read_text(encoding="utf-8-sig")
+        required = (
+            "MUI_CUSTOMFUNCTION_GUIINIT CaacChineseGuiInit",
+            "MUI_CUSTOMFUNCTION_UNGUIINIT un.CaacChineseGuiInit",
+            "StrCpy $LANGUAGE 2052",
+            "显卡兼容模式",
+            "正在卸载旧版本",
+            "安装选项",
+            'Section "运行文件" Runtime',
+        )
+        result["errors"].extend(
+            f"Missing compiled NSIS localization: {label}"
+            for label in required
+            if label not in script
+        )
+        result["errors"].extend(
+            f"Untranslated NSIS label: {label}"
+            for label in (
+                'MUI_HEADER_TEXT "Install Options"',
+                'DetailPrint "Set install registry entry:',
+            )
+            if label in script
+        )
+        result["counts"]["errors"] = len(result["errors"])
+        result["nsis_script"] = str(args.nsis_script)
     output = json.dumps(result, ensure_ascii=False, indent=2) + "\n"
     if args.output:
         args.output.write_text(output, encoding="utf-8")

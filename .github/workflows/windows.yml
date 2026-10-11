@@ -289,6 +289,17 @@ jobs:
           target: qgc-package
           parallel: 'false'
 
+      - name: Verify CAAC installer Chinese
+        if: github.repository == 'zhaozhangyu396-creator/CAAC-QGC-GroundStation'
+        shell: pwsh
+        env:
+          CAAC_PACKAGE_BUILD: ${{ runner.temp }}/build
+          CAAC_INSTALLER_AUDIT: ${{ runner.temp }}/caac-installer-chinese-audit.json
+        run: |
+          $scripts = @(Get-ChildItem -LiteralPath "$env:CAAC_PACKAGE_BUILD/_CPack_Packages" -Filter project.nsi -Recurse)
+          if ($scripts.Count -ne 1) { throw "Expected one compiled NSIS script, got $($scripts.Count)" }
+          python custom/tools/check_chinese_translations.py --nsis-script $scripts[0].FullName --output $env:CAAC_INSTALLER_AUDIT
+
       - name: Verify installer checksum
         id: installer
         if: matrix.build_type == 'Release'
@@ -390,6 +401,7 @@ jobs:
             ${{ runner.temp }}/build/${{ matrix.package }}.exe.sha256
             ${{ runner.temp }}/build/${{ matrix.package }}.exe.build.json
             ${{ runner.temp }}/caac-chinese-audit.json
+            ${{ runner.temp }}/caac-installer-chinese-audit.json
             ${{ runner.temp }}/build/_CPack_Packages/**/*.nsi
           if-no-files-found: error
           retention-days: 14

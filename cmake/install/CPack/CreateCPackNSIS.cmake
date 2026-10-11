@@ -47,8 +47,10 @@ set(CPACK_NSIS_INSTALL_ROOT "$PROGRAMFILES64")
 set(CPACK_NSIS_MUI_ICON "${QGC_WINDOWS_ICON_PATH}")
 set(CPACK_NSIS_MUI_UNIICON "${QGC_WINDOWS_ICON_PATH}")
 if(QGC_CAAC_BUILD)
+    set(CPACK_COMPONENT_RUNTIME_DISPLAY_NAME "运行文件")
+    set(CPACK_COMPONENT_RUNTIME_DESCRIPTION "地面站程序及运行依赖")
     # MUI invokes these callbacks before showing its pages. 2052 is the Windows Simplified Chinese locale.
-    set(CPACK_NSIS_DEFINES
+    set(_caac_nsis_gui_callbacks
         [=[
 !define MUI_CUSTOMFUNCTION_GUIINIT CaacChineseGuiInit
 !define MUI_CUSTOMFUNCTION_UNGUIINIT un.CaacChineseGuiInit
@@ -287,6 +289,10 @@ if(QGC_CAAC_BUILD)
     set(_caac_nsis_templates "${CMAKE_BINARY_DIR}/caac-nsis-templates")
     file(MAKE_DIRECTORY "${_caac_nsis_templates}")
     file(READ "${CMAKE_ROOT}/Modules/Internal/CPack/NSIS.template.in" _caac_nsis_template)
+    # CPack replaces CPACK_NSIS_DEFINES with its component definitions during packaging.
+    string(REPLACE "@CPACK_NSIS_DEFINES@" "${_caac_nsis_gui_callbacks}\n@CPACK_NSIS_DEFINES@" _caac_nsis_template
+                   "${_caac_nsis_template}"
+    )
     foreach(
         _pair
         "Selected environment for all users|已选择所有用户的环境"
@@ -324,6 +330,10 @@ if(QGC_CAAC_BUILD)
     endforeach()
     file(WRITE "${_caac_nsis_templates}/NSIS.InstallOptions.ini.in" "${_caac_nsis_options}")
     set(CPACK_MODULE_PATH "${_caac_nsis_templates};${CMAKE_MODULE_PATH}")
+    # Deployment scripts may replace CMAKE_MODULE_PATH after CPack has loaded its configuration.
+    set(_caac_nsis_restore "${_caac_nsis_templates}/RestoreCaacNSISTemplates.cmake")
+    file(WRITE "${_caac_nsis_restore}" "list(PREPEND CMAKE_MODULE_PATH \"${_caac_nsis_templates}\")\n")
+    list(APPEND CPACK_PRE_BUILD_SCRIPTS "${_caac_nsis_restore}")
 endif()
 
 include(CPack)

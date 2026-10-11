@@ -160,6 +160,11 @@ def test_windows_nsis_module_generates_cpack_config(tmp_path) -> None:
         (source_dir / ".github/COPYING.md").write_text("license")
         (source_dir / "README.md").write_text("readme")
         (source_dir / "payload.txt").write_text("payload")
+        (source_dir / "cmake/install").mkdir(parents=True)
+        (source_dir / "cmake/install/ValidatePackageVersion.cmake").write_text(
+            (REPO_ROOT / "cmake/install/ValidatePackageVersion.cmake").read_text()
+        )
+        (source_dir / "reset-module-path.cmake").write_text('set(CMAKE_MODULE_PATH "")\n')
         (source_dir / "CMakeLists.txt").write_text(
             f"""
 cmake_minimum_required(VERSION 3.25)
@@ -170,6 +175,7 @@ set(CMAKE_HOST_SYSTEM_PROCESSOR {host_processor})
 set(CMAKE_SYSTEM_PROCESSOR {target_processor})
 set(QGC_ORG_NAME QGroundControl)
 set(QGC_CAAC_BUILD {"TRUE" if case == "caac-amd64" else "FALSE"})
+set(CPACK_INSTALL_SCRIPTS "{source_dir.as_posix()}/reset-module-path.cmake")
 set(QGC_WINDOWS_ICON_PATH "{(REPO_ROOT / "deploy/windows/WindowsQGC.ico").as_posix()}")
 set(QGC_WINDOWS_INSTALL_HEADER_PATH "{(REPO_ROOT / "deploy/windows/installheader.bmp").as_posix()}")
 install(FILES payload.txt DESTINATION . COMPONENT Runtime)
@@ -195,19 +201,56 @@ include(CreateCPackNSIS)
         if case == "caac-amd64":
             assert "显卡兼容模式" in config
             assert "GPU Safe Mode" not in config
-            assert "MUI_CUSTOMFUNCTION_GUIINIT CaacChineseGuiInit" in config
-            assert "MUI_CUSTOMFUNCTION_UNGUIINIT un.CaacChineseGuiInit" in config
-            assert r"StrCpy \$LANGUAGE 2052" in config
             assert "正在卸载旧版本" in config
             assert "Could not remove the previously installed" not in config
             templates = build_dir / "caac-nsis-templates"
             script = (templates / "NSIS.template.in").read_text(encoding="utf-8-sig")
+            assert "MUI_CUSTOMFUNCTION_GUIINIT CaacChineseGuiInit" in script
+            assert "MUI_CUSTOMFUNCTION_UNGUIINIT un.CaacChineseGuiInit" in script
+            assert "StrCpy $LANGUAGE 2052" in script
+            assert "@CPACK_NSIS_DEFINES@" in script
             options = (templates / "NSIS.InstallOptions.ini.in").read_text()
             assert "安装选项" in script
             assert "Install Options" not in script
             assert "MUI_PAGE_DIRECTORY" in script
             assert "创建 @CPACK_PACKAGE_NAME@ 桌面图标" in options
             assert "CPACK_MODULE_PATH" in config and templates.as_posix() in config
+            if os.name != "nt":
+                # Exercise CPack itself; the compiler stub only creates its output file.
+                # This catches definition replacement and deployment module-path changes.
+                compiler = source_dir / "fake-makensis"
+                compiler.write_text(
+                    f"#!{sys.executable}\n"
+                    "import pathlib, re, sys\n"
+                    "if '-VERSION' in sys.argv:\n"
+                    "    print('v3.10')\n"
+                    "else:\n"
+                    "    text = pathlib.Path(sys.argv[-1]).read_text(encoding='utf-8-sig')\n"
+                    '    output = pathlib.Path(re.search(r\'OutFile \\"([^\\"]+)\\"\', text)[1])\n'
+                    "    output.write_bytes(b'compiler stub, not an installer')\n"
+                )
+                compiler.chmod(0o755)
+                package = subprocess.run(
+                    [
+                        "cpack",
+                        "--config",
+                        str(build_dir / "CPackConfig.cmake"),
+                        "-D",
+                        f"CPACK_NSIS_EXECUTABLE={compiler}",
+                    ],
+                    cwd=build_dir,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                assert package.returncode == 0, package.stdout + package.stderr
+                generated = next((build_dir / "_CPack_Packages").rglob("project.nsi"))
+                final_script = generated.read_text(encoding="utf-8-sig")
+                assert "StrCpy $LANGUAGE 2052" in final_script
+                assert "安装选项" in final_script
+                assert "Set install registry entry:" not in final_script
+                assert "显卡兼容模式" in final_script
+                assert "Var Runtime_selected" in final_script
         else:
             assert "GPU Safe Mode" in config
             assert "CaacChineseGuiInit" not in config

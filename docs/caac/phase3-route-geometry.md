@@ -1,6 +1,6 @@
 # 阶段三：航线几何编辑与中文界面
 
-日期：2026-10-10（UTC）。分支：`phase3/caac-route-geometry`。
+更新日期：2026-10-11（Asia/Shanghai）。分支：`phase3/caac-route-geometry`。
 继承阶段二 `79046aac004bca22c60157e4a3a0e4d756c0f7a9`，沿用已验证的 QGC 开发基线。
 本报告记录实际实现和验证；Windows 产物信息在验证完成后更新。
 
@@ -96,6 +96,29 @@ CI=1 QGC_TEST_VERBOSE=1 python /workspace/CAAC-QGC-GroundStation/.github/scripts
 中文审计命令：`python custom/tools/check_chinese_translations.py`；
 加 `--source-ts` 可检查最新 Qt/JSON 提取目录的覆盖，加 `--output` 保存 JSON 证据。
 打包相关 Python 测试、完整回归、启动和 Windows Debug / Release 的最终结果待验证后补充。
+
+### 验证发现和修复
+
+首轮完整 Linux 回归为 424/426，487.47 秒，未标记全部通过。
+PX4 / ArduPilot 配置 UI 的语言切换测试将中文重启提示与固定英文匹配，导致两项失败。
+`VehicleConfigUITestBase.cc` 改为使用实际提示来源 `Fact` 的当前语言文本，并转义正则；
+仍要求真实弹窗出现、准确消息被捕获以及页面内容随语言变化。
+修复后配置 UI 和 CAAC 三类专项共 5/5 通过，59.40 秒。
+
+初次 Windows Debug（`38058082140`）的模型及英文 UI 通过；中文 UI 完成全部编辑操作，
+随后关闭窗口的正常异步清理信息未匹配已有英文规则，严格日志检查失败。
+通过官方 Qt 中文目录确定对应 `QQmlComponent` 消息，`QmlUITestBase.cc` 的既有关闭规则
+精确识别该同一消息的当前译文和英文；没有添加一般错误过滤或修改编辑断言。
+
+初次 Windows Release（`38058138103`）编译、Portable 10/10（1.13 秒）、启动、安装、升级、
+移除 SDK PATH 后启动和卸载均通过；但复核产物中的最终 `project.nsi` 发现中文 GUI 回调缺失。
+因此该安装包没有作为完成汉化的交付版本。
+CPack 在组装组件时覆盖 `CPACK_NSIS_DEFINES`，部署过程也可能改变模块搜索路径。
+修复改为将回调写入派生模板，并在打包前恢复模板搜索路径；保留 CPack 生成的组件定义。
+新增使用真实 CPack 和编译器桩的生成测试，验证部署路径被改变后最终安装脚本仍包含中文回调、
+中文安装提示及运行文件组件；桩输出明确不是安装程序，不当作 Windows 编译证据。
+Windows 工作流进一步检查真正编译过的 `project.nsi`，不再只检查配置变量。
+`--nsis-script` 可独立复核该产物；审计结果随安装包归档。
 
 ## 遗留事项
 
