@@ -5582,6 +5582,34 @@ Click Ok to start the auto-tuning process.
   <context>
     <name>CaacRouteEditor</name>
     <message>
+      <source>Global</source>
+      <translation>全局</translation>
+    </message>
+    <message>
+      <source>Relative</source>
+      <translation>相对</translation>
+    </message>
+    <message>
+      <source>Template</source>
+      <translation>模板</translation>
+    </message>
+    <message>
+      <source>Points</source>
+      <translation>航点</translation>
+    </message>
+    <message>
+      <source>Global settings</source>
+      <translation>全局设置</translation>
+    </message>
+    <message>
+      <source>Template editor</source>
+      <translation>模板编辑器</translation>
+    </message>
+    <message>
+      <source>Left-drag the route to move all points. Turn off route dragging to edit individual points.</source>
+      <translation>左键拖动整条航线，所有点随之移动。关闭航线拖拽后可编辑单个航点。</translation>
+    </message>
+    <message>
       <source>Relative coordinate editor</source>
       <translation>相对坐标编辑器</translation>
     </message>
@@ -5703,6 +5731,26 @@ Click Ok to start the auto-tuning process.
   </context>
   <context>
     <name>CaacRouteEditorController</name>
+    <message>
+      <source>Check the template anchor, dimensions and waypoint count (maximum 1000).</source>
+      <translation>请检查模板基准点、尺寸和航点数（最多 1000 个）。</translation>
+    </message>
+    <message>
+      <source>Enter valid reference and target coordinates.</source>
+      <translation>请输入有效的参考坐标和目标坐标。</translation>
+    </message>
+    <message>
+      <source>Unable to translate this route.</source>
+      <translation>无法平移此航线。</translation>
+    </message>
+    <message>
+      <source>Enter a valid bearing and positive distance.</source>
+      <translation>请输入有效的方位角和大于零的距离。</translation>
+    </message>
+    <message>
+      <source>Check the planned home coordinates and AMSL altitude.</source>
+      <translation>请检查计划起飞点经纬度和海拔高度。</translation>
+    </message>
     <message>
       <location filename="../custom/src/Route/CaacRouteEditorController.cc" line="106"/>
       <source>No plan is available.</source>
@@ -13592,12 +13640,12 @@ VTOL</source>
     <message>
       <location filename="../src/Toolbar/MainStatusIndicatorOfflinePage.qml" line="30"/>
       <source>Select Link to Connect</source>
-      <translation>选择要连接的链接</translation>
+      <translation>选择连接</translation>
     </message>
     <message>
       <location filename="../src/Toolbar/MainStatusIndicatorOfflinePage.qml" line="33"/>
       <source>No Links Configured</source>
-      <translation>没有配置链接</translation>
+      <translation>尚未配置连接</translation>
     </message>
     <message>
       <location filename="../src/Toolbar/MainStatusIndicatorOfflinePage.qml" line="42"/>
@@ -13607,7 +13655,7 @@ VTOL</source>
     <message>
       <location filename="../src/Toolbar/MainStatusIndicatorOfflinePage.qml" line="62"/>
       <source>Communication Links</source>
-      <translation>通讯链接</translation>
+      <translation>通信连接</translation>
     </message>
     <message>
       <location filename="../src/Toolbar/MainStatusIndicatorOfflinePage.qml" line="63"/>
@@ -13622,17 +13670,17 @@ VTOL</source>
     <message>
       <location filename="../src/Toolbar/MainStatusIndicatorOfflinePage.qml" line="87"/>
       <source>Pixhawk</source>
-      <translation>皮克斯霍克</translation>
+      <translation>Pixhawk</translation>
     </message>
     <message>
       <location filename="../src/Toolbar/MainStatusIndicatorOfflinePage.qml" line="87"/>
       <source>SiK Radio</source>
-      <translation>SiK 收音机</translation>
+      <translation>SiK 数传电台</translation>
     </message>
     <message>
       <location filename="../src/Toolbar/MainStatusIndicatorOfflinePage.qml" line="87"/>
       <source>LibrePilot</source>
-      <translation>自由飞行员</translation>
+      <translation>LibrePilot</translation>
     </message>
     <message>
       <location filename="../src/Toolbar/MainStatusIndicatorOfflinePage.qml" line="87"/>
@@ -24619,6 +24667,14 @@ If a vehicle still has this key configured, you will no longer be able to commun
 <context>
     <name>FlyViewCustomLayer</name>
     <message>
+      <source>Mission details</source>
+      <translation>任务详情</translation>
+    </message>
+    <message>
+      <source>Map settings</source>
+      <translation>地图设置</translation>
+    </message>
+    <message>
         <source>Flight data</source>
         <translation>飞行数据</translation>
     </message>
@@ -24627,4 +24683,307 @@ If a vehicle still has this key configured, you will no longer be able to commun
         <translation>无人机居中</translation>
     </message>
 </context>
+  <context>
+    <name>CaacRouteLegLabels</name>
+    <message>
+      <source>%1 m  %2°</source>
+      <translation>%1 m  %2°</translation>
+    </message>
+  </context>
+  <context>
+    <name>CaacMissionDetails</name>
+    <message>
+      <source>Unavailable</source>
+      <translation>未获取数据</translation>
+    </message>
+    <message>
+      <source>Mission details</source>
+      <translation>任务详情</translation>
+    </message>
+    <message>
+      <source>Target waypoint</source>
+      <translation>目标航点</translation>
+    </message>
+    <message>
+      <source>Waypoint speed</source>
+      <translation>航点速度</translation>
+    </message>
+    <message>
+      <source>Target altitude</source>
+      <translation>目标高度</translation>
+    </message>
+    <message>
+      <source>Route heading</source>
+      <translation>航线朝向</translation>
+    </message>
+    <message>
+      <source>Stay heading</source>
+      <translation>停留朝向</translation>
+    </message>
+    <message>
+      <source>Climb mode</source>
+      <translation>爬升方式</translation>
+    </message>
+    <message>
+      <source>Downloaded mission parameters; altitude uses its mission frame. Unreported fields are unavailable.</source>
+      <translation>显示已下载任务的参数，高度沿用任务高度基准。未提供的字段显示为未获取数据。</translation>
+    </message>
+  </context>
+  <context>
+    <name>CaacMapSettings</name>
+    <message>
+      <source>Map settings</source>
+      <translation>地图设置</translation>
+    </message>
+    <message>
+      <source>Type</source>
+      <translation>类型</translation>
+    </message>
+    <message>
+      <source>Lock aircraft</source>
+      <translation>锁定飞机</translation>
+    </message>
+    <message>
+      <source>No</source>
+      <translation>否</translation>
+    </message>
+    <message>
+      <source>Yes</source>
+      <translation>是</translation>
+    </message>
+    <message>
+      <source>Double-click to add</source>
+      <translation>双击加点</translation>
+    </message>
+    <message>
+      <source>Disabled</source>
+      <translation>禁用</translation>
+    </message>
+    <message>
+      <source>Enabled</source>
+      <translation>启用</translation>
+    </message>
+    <message>
+      <source>Drag waypoints</source>
+      <translation>拖拽航点</translation>
+    </message>
+    <message>
+      <source>Waypoint switches apply in Plan view. Flight view shows the downloaded mission.</source>
+      <translation>加点和拖拽开关用于航线规划页。飞行页显示已下载的任务。</translation>
+    </message>
+  </context>
+  <context>
+    <name>CaacTemplateEditor</name>
+    <message>
+      <source>Circle</source>
+      <translation>圆形</translation>
+    </message>
+    <message>
+      <source>Hexagon</source>
+      <translation>六边形</translation>
+    </message>
+    <message>
+      <source>Bow</source>
+      <translation>弓形</translation>
+    </message>
+    <message>
+      <source>Star</source>
+      <translation>星形</translation>
+    </message>
+    <message>
+      <source>Reference point</source>
+      <translation>基准点</translation>
+    </message>
+    <message>
+      <source>Diameter (m)</source>
+      <translation>直径（m）</translation>
+    </message>
+    <message>
+      <source>Length (m)</source>
+      <translation>长（m）</translation>
+    </message>
+    <message>
+      <source>Side length (m)</source>
+      <translation>边长（m）</translation>
+    </message>
+    <message>
+      <source>Width (m)</source>
+      <translation>宽（m）</translation>
+    </message>
+    <message>
+      <source>Waypoint count</source>
+      <translation>航点数量</translation>
+    </message>
+    <message>
+      <source>Direction</source>
+      <translation>生成方向</translation>
+    </message>
+    <message>
+      <source>Clockwise</source>
+      <translation>顺时针</translation>
+    </message>
+    <message>
+      <source>Counterclockwise</source>
+      <translation>逆时针</translation>
+    </message>
+    <message>
+      <source>Type</source>
+      <translation>类型</translation>
+    </message>
+    <message>
+      <source>Flat side on top</source>
+      <translation>横边置顶</translation>
+    </message>
+    <message>
+      <source>Vertex on top</source>
+      <translation>点置顶</translation>
+    </message>
+    <message>
+      <source>Start vertex</source>
+      <translation>起始点</translation>
+    </message>
+    <message>
+      <source>Point A</source>
+      <translation>点 A</translation>
+    </message>
+    <message>
+      <source>Point B</source>
+      <translation>点 B</translation>
+    </message>
+    <message>
+      <source>Point C</source>
+      <translation>点 C</translation>
+    </message>
+    <message>
+      <source>Point D</source>
+      <translation>点 D</translation>
+    </message>
+    <message>
+      <source>Point E</source>
+      <translation>点 E</translation>
+    </message>
+    <message>
+      <source>Point F</source>
+      <translation>点 F</translation>
+    </message>
+    <message>
+      <source>Start corner</source>
+      <translation>起始点</translation>
+    </message>
+    <message>
+      <source>Upper left</source>
+      <translation>左上</translation>
+    </message>
+    <message>
+      <source>Upper right</source>
+      <translation>右上</translation>
+    </message>
+    <message>
+      <source>Lower left</source>
+      <translation>左下</translation>
+    </message>
+    <message>
+      <source>Lower right</source>
+      <translation>右下</translation>
+    </message>
+    <message>
+      <source>Orientation (°)</source>
+      <translation>朝向（°）</translation>
+    </message>
+    <message>
+      <source>Close route with a final waypoint</source>
+      <translation>追加末尾航点闭合航线</translation>
+    </message>
+    <message>
+      <source>Circle: centre anchor. Other templates: existing first vertex, without a duplicate. Insert after the anchor. Orientation 0°: north up.</source>
+      <translation>圆形以圆心为基准，其余模板以已有的起始顶点为基准，不重复起点。新航点插在基准点之后。朝向 0° 时上方为北。</translation>
+    </message>
+    <message>
+      <source>Add</source>
+      <translation>添加</translation>
+    </message>
+  </context>
+  <context>
+    <name>CaacGlobalSettings</name>
+    <message>
+      <source>Planned home</source>
+      <translation>计划起飞点</translation>
+    </message>
+    <message>
+      <source>Longitude (°)</source>
+      <translation>经度（°）</translation>
+    </message>
+    <message>
+      <source>Latitude (°)</source>
+      <translation>纬度（°）</translation>
+    </message>
+    <message>
+      <source>Home AMSL altitude (m)</source>
+      <translation>起飞点海拔高度（m）</translation>
+    </message>
+    <message>
+      <source>Save home position</source>
+      <translation>保存起飞点</translation>
+    </message>
+    <message>
+      <source>Basic settings</source>
+      <translation>基础设置</translation>
+    </message>
+    <message>
+      <source>New waypoint altitude</source>
+      <translation>新航点高度</translation>
+    </message>
+    <message>
+      <source>Default height applies to new waypoints. Existing waypoint heights retain their mission frames.</source>
+      <translation>默认高度用于新建航点。已有航点保持原高度和高度基准。</translation>
+    </message>
+    <message>
+      <source>Route rotation</source>
+      <translation>航线旋转</translation>
+    </message>
+    <message>
+      <source>Rotate / align two points</source>
+      <translation>旋转 / 两点定向</translation>
+    </message>
+    <message>
+      <source>Route translation</source>
+      <translation>航线平移</translation>
+    </message>
+    <message>
+      <source>Translation method</source>
+      <translation>平移方式</translation>
+    </message>
+    <message>
+      <source>Specified coordinates</source>
+      <translation>指定经纬度</translation>
+    </message>
+    <message>
+      <source>Precise movement</source>
+      <translation>精准移动</translation>
+    </message>
+    <message>
+      <source>Reference point</source>
+      <translation>参考点</translation>
+    </message>
+    <message>
+      <source>Bearing (°)</source>
+      <translation>方位角（°）</translation>
+    </message>
+    <message>
+      <source>Distance (m)</source>
+      <translation>相对距离（m）</translation>
+    </message>
+    <message>
+      <source>Translate route</source>
+      <translation>平移航线</translation>
+    </message>
+    <message>
+      <source>Drag entire route</source>
+      <translation>启用航线拖拽</translation>
+    </message>
+    <message>
+      <source>Translation and route dragging include home, takeoff and landing points. Complex patterns must first be converted to simple items.</source>
+      <translation>平移和航线拖拽包含起飞点与降落点。复杂图形须先转换为简单航点。</translation>
+    </message>
+  </context>
 </TS>

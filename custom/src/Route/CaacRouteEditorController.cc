@@ -7,8 +7,10 @@
 #include <QtCore/QScopeGuard>
 
 #include "CaacRouteGeometry.h"
+#include "CaacRouteTemplates.h"
 #include "Fact.h"
 #include "MissionController.h"
+#include "MissionSettingsItem.h"
 #include "PlanMasterController.h"
 #include "QGCGeo.h"
 #include "SimpleMissionItem.h"
@@ -475,6 +477,121 @@ bool CaacRouteEditorController::insertRelativeWaypoint(int referenceIndex, int a
     const auto finish = qScopeGuard([this]() { endEdit(); });
     _masterController->setUserSelectedManualCreation(true);
     mission->insertSimpleMissionItem(*coordinate, afterIndex + 1, true);
+    return true;
+}
+
+QVariantList CaacRouteEditorController::templateCoordinates(int shape, int referenceIndex,
+                                                            const QVariantMap& options) const
+{
+    auto* mission = _missionController();
+    auto* model = mission ? mission->visualItems() : nullptr;
+    if (!model || referenceIndex < 0 || referenceIndex >= model->count()) {
+        return {};
+    }
+    auto* reference = model->value<VisualMissionItem*>(referenceIndex);
+    if (!reference || (referenceIndex > 0 && (!reference->isSimpleItem() || !reference->specifiesCoordinate() ||
+                                              reference->isStandaloneCoordinate()))) {
+        return {};
+    }
+    const double count = options.value(QStringLiteral("count"), 10).toDouble();
+    if (!std::isfinite(count) || count < 0 || count > 1000 || std::floor(count) != count) {
+        return {};
+    }
+    const CaacRouteTemplates::Options parameters{
+        .shape = static_cast<CaacRouteTemplates::Shape>(shape),
+        .size = options.value(QStringLiteral("size"), 100).toDouble(),
+        .width = options.value(QStringLiteral("width"), 50).toDouble(),
+        .count = static_cast<int>(count),
+        .clockwise = options.value(QStringLiteral("clockwise"), true).toBool(),
+        .vertexTop = options.value(QStringLiteral("vertexTop"), false).toBool(),
+        .start = options.value(QStringLiteral("start"), 0).toInt(),
+        .bearing = options.value(QStringLiteral("bearing"), 0).toDouble(),
+        .close = options.value(QStringLiteral("close"), false).toBool()};
+    const auto coordinates = CaacRouteTemplates::generate(reference->coordinate(), parameters);
+    QVariantList result;
+    if (coordinates) {
+        for (const auto& coordinate : *coordinates) {
+            result.append(QVariant::fromValue(coordinate));
+        }
+    }
+    return result;
+}
+
+bool CaacRouteEditorController::insertTemplate(int shape, int referenceIndex, const QVariantMap& options)
+{
+    if (!_canChangeOrder()) {
+        return false;
+    }
+    const auto coordinates = templateCoordinates(shape, referenceIndex, options);
+    if (coordinates.isEmpty()) {
+        return _fail(tr("Check the template anchor, dimensions and waypoint count (maximum 1000)."));
+    }
+    beginEdit();
+    const auto finish = qScopeGuard([this]() { endEdit(); });
+    _masterController->setUserSelectedManualCreation(true);
+    for (int i = 0; i < coordinates.size(); ++i) {
+        _missionController()->insertSimpleMissionItem(coordinates[i].value<QGeoCoordinate>(), referenceIndex + i + 1,
+                                                      i == coordinates.size() - 1);
+    }
+    return true;
+}
+
+bool CaacRouteEditorController::translateRoute(const QGeoCoordinate& reference, const QGeoCoordinate& target)
+{
+    QList<QGeoCoordinate> coordinates;
+    QList<QObject*> items;
+    if (!_rotationCoordinates(coordinates, items)) {
+        return false;
+    }
+    if (!reference.isValid() || !target.isValid()) {
+        return _fail(tr("Enter valid reference and target coordinates."));
+    }
+    QList<QGeoCoordinate> result;
+    for (const auto& coordinate : coordinates) {
+        auto shifted = QGCGeo::geodesicDestination(target, QGCGeo::geodesicAzimuth(reference, coordinate),
+                                                   QGCGeo::geodesicDistance(reference, coordinate));
+        shifted.setAltitude(coordinate.altitude());
+        if (!shifted.isValid()) {
+            return _fail(tr("Unable to translate this route."));
+        }
+        result.append(shifted);
+    }
+    beginEdit();
+    const auto finish = qScopeGuard([this]() { endEdit(); });
+    for (int i = 0; i < items.size(); ++i) {
+        qobject_cast<VisualMissionItem*>(items[i])->setCoordinate(result[i]);
+    }
+    _missionController()->setDirty(true);
+    return true;
+}
+
+bool CaacRouteEditorController::moveRouteBy(double bearing, double distance)
+{
+    auto* mission = _missionController();
+    if (!_canEdit() || !mission) {
+        return false;
+    }
+    const auto reference = mission->plannedHomePosition();
+    const auto target = CaacRouteGeometry::relativePoint(reference, bearing, distance);
+    return target ? translateRoute(reference, *target) : _fail(tr("Enter a valid bearing and positive distance."));
+}
+
+bool CaacRouteEditorController::updatePlannedHome(double latitude, double longitude, double amslAltitude)
+{
+    if (!_canEdit()) {
+        return false;
+    }
+    auto* home = _missionController()->visualItems()->value<MissionSettingsItem*>(0);
+    const QGeoCoordinate coordinate(latitude, longitude);
+    if (!home || !coordinate.isValid() || !std::isfinite(amslAltitude) ||
+        amslAltitude < home->plannedHomePositionAltitude()->rawMin().toDouble() ||
+        amslAltitude > home->plannedHomePositionAltitude()->rawMax().toDouble()) {
+        return _fail(tr("Check the planned home coordinates and AMSL altitude."));
+    }
+    beginEdit();
+    const auto finish = qScopeGuard([this]() { endEdit(); });
+    _missionController()->setHomePosition(coordinate);
+    home->plannedHomePositionAltitude()->setRawValue(amslAltitude);
     return true;
 }
 

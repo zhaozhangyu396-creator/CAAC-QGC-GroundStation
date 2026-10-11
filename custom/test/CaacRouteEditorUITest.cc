@@ -19,6 +19,7 @@
 #include <QtTest/QTest>
 
 #include "AppSettings.h"
+#include "CaacCorePlugin.h"
 #include "CaacRouteEditorController.h"
 #include "Fact.h"
 #include "MissionController.h"
@@ -299,6 +300,20 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QTRY_VERIFY_WITH_TIMEOUT(graphDomainsValid(), TestTimeout::mediumMs());
     QPointer<SimpleMissionItem> first = mission->visualItems()->value<SimpleMissionItem*>(1);
     QVERIFY(first);
+    auto* legLabel = findVisibleItem(_rootItem, QStringLiteral("caacRouteLegLabel_0"));
+    QVERIFY(legLabel);
+    const auto initialLegText = legLabel->property("legText").toString();
+    QVERIFY(initialLegText.contains(QStringLiteral(" m")) && initialLegText.contains(QChar(0x00b0)));
+    auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
+    QVERIFY(plugin);
+    const auto restoreMapPreferences = qScopeGuard([plugin]() {
+        plugin->setDoubleClickAddWaypoint(true);
+        plugin->setDragWaypoints(true);
+    });
+    plugin->setDoubleClickAddWaypoint(false);
+    QTest::mouseDClick(_window, Qt::LeftButton, Qt::NoModifier, b + QPoint(50, 0));
+    QCOMPARE(mission->visualItems()->count(), 3);
+    plugin->setDoubleClickAddWaypoint(true);
     auto* firstNumber = findVisibleItem(_rootItem, QStringLiteral("caacWaypointNumber_1"));
     QVERIFY(firstNumber);
     QCOMPARE(firstNumber->property("text").toString(), QStringLiteral("1"));
@@ -326,6 +341,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QTRY_VERIFY_WITH_TIMEOUT(QLineF(markerAnchor(), expectedMarker).length() < 1.0, TestTimeout::mediumMs());
     const QPoint marker = dragger->mapToScene(QPointF(dragger->width() / 2, dragger->height() / 2)).toPoint();
     step("right-click first waypoint");
+    plugin->setDragWaypoints(false);
     QTest::mousePress(_window, Qt::RightButton, Qt::NoModifier, marker);
     auto* rightClickGrabber = _window->mouseGrabberItem();
     const bool waypointGrabbed = rightClickGrabber && rightClickGrabber->parentItem() == dragger;
@@ -340,6 +356,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     auto* altitude = findVisibleItem(_rootItem, QStringLiteral("caacWaypointAltitude"));
     QVERIFY(latitude);
     QVERIFY(altitude);
+    plugin->setDragWaypoints(true);
     const auto oldCoordinate = first->coordinate();
     auto* other = mission->visualItems()->value<SimpleMissionItem*>(2);
     QVERIFY(other);
@@ -386,6 +403,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QVERIFY(waypointMoved);
     QVERIFY(dragValues);
     QVERIFY(feedbackChanged);
+    QTRY_VERIFY_WITH_TIMEOUT(legLabel->property("legText").toString() != initialLegText, TestTimeout::mediumMs());
     QTRY_VERIFY_WITH_TIMEOUT(!dragValues->isVisible(), TestTimeout::mediumMs());
     QCOMPARE(first->altitude()->rawValue().toDouble(), 123.45);
     QCOMPARE(mission->visualItems()->count(), 3);
@@ -454,6 +472,21 @@ void CaacRouteEditorUITest::_testMouseEditing()
     const auto beforeRotation = master->saveToJson();
     QVERIFY(clickButton(QStringLiteral("caacRotateRoute")));
     QVERIFY(waitForDialog(QCoreApplication::translate("CaacGeometryDialog", "Route rotation")));
+    auto* dialogHandle = findVisibleItem(_rootItem, QStringLiteral("popupDialog_dragHandle"));
+    auto* dialogFrame = findVisibleItem(_rootItem, QStringLiteral("popupDialog_frame"));
+    QVERIFY(dialogHandle && dialogFrame);
+    const auto beforeDialogDrag = dialogFrame->mapToScene(QPointF(0, 0));
+    const auto dialogPress =
+        dialogHandle->mapToScene(QPointF(dialogHandle->width() / 2, dialogHandle->height() / 2)).toPoint();
+    QTest::mousePress(_window, Qt::LeftButton, Qt::NoModifier, dialogPress);
+    for (int i = 1; i <= 4; ++i) {
+        QTest::mouseMove(_window, dialogPress + QPoint(i * 10, i * 4));
+    }
+    QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, dialogPress + QPoint(40, 16));
+    QTRY_VERIFY_WITH_TIMEOUT(dialogFrame->mapToScene(QPointF(0, 0)).x() > beforeDialogDrag.x() + 10,
+                             TestTimeout::mediumMs());
+    const auto draggedBounds = dialogFrame->mapRectToScene(dialogFrame->boundingRect());
+    QVERIFY(_rootItem->boundingRect().contains(draggedBounds));
     auto* rotationOperation = findVisibleItem(_rootItem, QStringLiteral("caacGeometryOperation"));
     QVERIFY(rotationOperation);
     QCOMPARE(rotationOperation->property("count").toInt(), 2);
@@ -546,6 +579,77 @@ void CaacRouteEditorUITest::_testMouseEditing()
         QCOMPARE(rotateButton->property("text").toString(), QStringLiteral("航线旋转"));
         QCOMPARE(QCoreApplication::translate("CaacWaypointDialog", "Waypoint properties"), QStringLiteral("航点属性"));
     }
+    step("generate template through native controls");
+    const auto beforeTemplate = master->saveToJson();
+    const int beforeTemplateCount = mission->visualItems()->count();
+    QVERIFY(clickButton(QStringLiteral("caacTemplateEditorButton")));
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacTemplateSize")));
+    QVERIFY(clickButton(QStringLiteral("caacTemplateAdd")));
+    QCOMPARE(mission->visualItems()->count(), beforeTemplateCount + 10);
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QCOMPARE(master->saveToJson(), beforeTemplate);
+
+    step("precise translation through native controls");
+    QVERIFY(clickButton(QStringLiteral("caacGlobalSettingsButton")));
+    auto* translateMethod = findVisibleItem(_rootItem, QStringLiteral("caacTranslateMethod"));
+    QVERIFY(translateMethod);
+    QVERIFY(scrollIntoView(translateMethod, QStringLiteral("caacGlobalSettingsScroller")));
+    translateMethod->setProperty("currentIndex", 1);
+    auto* translateBearing = findVisibleItem(_rootItem, QStringLiteral("caacTranslateBearing"));
+    auto* translateDistance = findVisibleItem(_rootItem, QStringLiteral("caacTranslateDistance"));
+    QVERIFY(translateBearing && translateDistance);
+    translateBearing->setProperty("text", QStringLiteral("45"));
+    translateDistance->setProperty("text", QStringLiteral("100"));
+    auto* translateApply = findVisibleItem(_rootItem, QStringLiteral("caacTranslateApply"));
+    QVERIFY(translateApply);
+    QVERIFY(scrollIntoView(translateApply, QStringLiteral("caacGlobalSettingsScroller")));
+    const auto beforeTranslation = master->saveToJson();
+    QVERIFY(clickButton(QStringLiteral("caacTranslateApply")));
+    QVERIFY(master->saveToJson() != beforeTranslation);
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QCOMPARE(master->saveToJson(), beforeTranslation);
+
+    step("drag entire route in one undo step");
+    auto* dragToggle = findVisibleItem(_rootItem, QStringLiteral("caacRouteDragToggle"));
+    QVERIFY(dragToggle);
+    QVERIFY(scrollIntoView(dragToggle, QStringLiteral("caacGlobalSettingsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacRouteDragToggle")));
+    QVERIFY(editorPanel->property("routeDragMode").toBool());
+    const auto beforeRouteDrag = master->saveToJson();
+    const auto mapCenterBeforeDrag = map->property("center").value<QGeoCoordinate>();
+    const auto routePress = map->mapToScene(QPointF(map->width() * 0.3, map->height() * 0.5)).toPoint();
+    QTest::mousePress(_window, Qt::LeftButton, Qt::NoModifier, routePress);
+    for (int i = 1; i <= 5; ++i) {
+        QTest::mouseMove(_window, routePress + QPoint(i * 10, i * 4));
+    }
+    QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, routePress + QPoint(50, 20));
+    QTRY_VERIFY_WITH_TIMEOUT(master->saveToJson() != beforeRouteDrag, TestTimeout::mediumMs());
+    QCOMPARE(map->property("center").value<QGeoCoordinate>(), mapCenterBeforeDrag);
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QCOMPARE(master->saveToJson(), beforeRouteDrag);
+    QVERIFY(scrollIntoView(dragToggle, QStringLiteral("caacGlobalSettingsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacRouteDragToggle")));
+    QVERIFY(!editorPanel->property("routeDragMode").toBool());
+
+    step("drag planning panel title");
+    auto* planningHandle = findVisibleItem(_rootItem, QStringLiteral("caacPlanningPanelDragHandle"));
+    QVERIFY(planningHandle);
+    const auto panelBeforeDrag = planningHandle->mapToScene(QPointF(0, 0));
+    const auto panelPress =
+        planningHandle->mapToScene(QPointF(planningHandle->width() / 2, planningHandle->height() / 2)).toPoint();
+    QTest::mousePress(_window, Qt::LeftButton, Qt::NoModifier, panelPress);
+    for (int i = 1; i <= 4; ++i) {
+        QTest::mouseMove(_window, panelPress - QPoint(i * 10, 0));
+    }
+    QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, panelPress - QPoint(40, 0));
+    QTRY_VERIFY_WITH_TIMEOUT(planningHandle->mapToScene(QPointF(0, 0)).x() < panelBeforeDrag.x() - 10,
+                             TestTimeout::mediumMs());
+    QVERIFY(clickButton(QStringLiteral("caacWaypointListButton")));
+    QCOMPARE(editorPanel->property("activePanel").toInt(), 3);
+    QVERIFY(clickButton(QStringLiteral("caacGlobalSettingsButton")));
+    QCOMPARE(editorPanel->property("activePanel").toInt(), 0);
+    QVERIFY(clickButton(QStringLiteral("caacWaypointListButton")));
+    QCOMPARE(editorPanel->property("activePanel").toInt(), 3);
     step("complete");
     const QString screenshot = qEnvironmentVariable("CAAC_UI_SCREENSHOT");
     if (!screenshot.isEmpty() && chinese) {

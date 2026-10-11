@@ -7,6 +7,7 @@ import QtQuick.Layouts
 import QGC
 import QGroundControl
 import QGroundControl.Controls
+import CAAC.Plan
 
 Column {
     id: root
@@ -16,7 +17,12 @@ Column {
     property var editorMap: null
     property var planMasterController: null
     property bool showMissionTree: false
-    property bool relativeEditorVisible: false
+    property int activePanel: 3
+    readonly property bool relativeEditorVisible: activePanel === 1
+    property bool routeDragMode: false
+    property point _panelDragOffset: Qt.point(0, 0)
+    transform: Translate { x: root._panelDragOffset.x; y: root._panelDragOffset.y }
+    onActivePanelChanged: showMissionTree = false
     readonly property var currentItem: editorController.currentItem
     readonly property var routeController: editorController
     property bool _pickingCenter: false
@@ -26,6 +32,38 @@ Column {
         ? editorController.waypointLeg(_draggedWaypoint) : ({})
 
     QGCPalette { id: dragPalette; colorGroupEnabled: root.enabled }
+
+    Rectangle {
+        parent: root.parent
+        x: root.x
+        y: root.y
+        width: root.width
+        height: root.height
+        transform: Translate { x: root._panelDragOffset.x; y: root._panelDragOffset.y }
+        z: -1
+        visible: root.enabled && root.visible && !root.showMissionTree
+        color: dragPalette.window
+        opacity: 0.85
+        DeadMouseArea { anchors.fill: parent }
+    }
+
+    function movePanel(delta) {
+        if (!editorMap) {
+            return
+        }
+        const position = mapToItem(editorMap, 0, 0)
+        const x = Math.max(0, Math.min(position.x + delta.x, editorMap.width - width))
+        const y = Math.max(0, Math.min(position.y + delta.y, editorMap.height - panelNavigation.height - listHeader.height))
+        _panelDragOffset = Qt.point(_panelDragOffset.x + x - position.x, _panelDragOffset.y + y - position.y)
+    }
+
+    CaacRouteLegLabels {
+        parent: root.editorMap
+        anchors.fill: parent
+        visible: root.enabled && root.visible
+        mapControl: root.editorMap
+        segments: root.planMasterController ? root.planMasterController.missionController.simpleFlightPathSegments : null
+    }
 
     Rectangle {
         parent: root.editorMap
@@ -89,16 +127,21 @@ Column {
         anchors.fill: parent
         enabled: root.enabled && root.visible && root.editorMap && root.editorMap.directMissionItemEditing
         acceptedButtons: Qt.LeftButton
+        z: root.routeDragMode ? QGroundControl.zOrderMapItems + 3 : 0
 
         property point _pressPosition
         property point _lastPosition
         property bool _dragged: false
+        property bool _routeDragging: false
+        property var _lastCoordinate
         readonly property var _styleHints: Qt.styleHints
 
         onPressed: (mouse) => {
             _pressPosition = Qt.point(mouse.x, mouse.y)
             _lastPosition = _pressPosition
             _dragged = false
+            _routeDragging = false
+            _lastCoordinate = root.editorMap.toCoordinate(_pressPosition, false)
         }
         onPositionChanged: (mouse) => {
             if (!pressed) {
@@ -107,21 +150,43 @@ Column {
             if (!_dragged && Math.hypot(mouse.x - _pressPosition.x, mouse.y - _pressPosition.y)
                 >= _styleHints.startDragDistance) {
                 _dragged = true
-                root.editorMap.mapPanStart()
+                if (root.routeDragMode) {
+                    _routeDragging = true
+                    editorController.beginEdit()
+                } else {
+                    root.editorMap.mapPanStart()
+                }
             }
             if (_dragged) {
-                root.editorMap.pan(_lastPosition.x - mouse.x, _lastPosition.y - mouse.y)
+                if (_routeDragging) {
+                    const coordinate = root.editorMap.toCoordinate(Qt.point(mouse.x, mouse.y), false)
+                    if (editorController.translateRoute(_lastCoordinate, coordinate)) {
+                        _lastCoordinate = coordinate
+                    }
+                } else {
+                    root.editorMap.pan(_lastPosition.x - mouse.x, _lastPosition.y - mouse.y)
+                }
                 _lastPosition = Qt.point(mouse.x, mouse.y)
             }
         }
         onReleased: {
             if (_dragged) {
-                root.editorMap.mapPanStop()
+                if (_routeDragging) {
+                    editorController.endEdit()
+                    _routeDragging = false
+                } else {
+                    root.editorMap.mapPanStop()
+                }
             }
         }
         onCanceled: {
             if (_dragged) {
-                root.editorMap.mapPanStop()
+                if (_routeDragging) {
+                    editorController.endEdit()
+                    _routeDragging = false
+                } else {
+                    root.editorMap.mapPanStop()
+                }
             }
             _dragged = false
         }
@@ -196,10 +261,29 @@ Column {
                 rightPadding: leftPadding
                 onClicked: {
                     root.showMissionTree = false
-                    root.relativeEditorVisible = true
+                    root.activePanel = 1
                 }
             }
         }
+    }
+
+    RowLayout {
+        id: panelNavigation
+        width: root.width
+        spacing: ScreenTools.defaultFontPixelWidth
+        component PanelButton: QGCButton {
+            required property int panelIndex
+            Layout.fillWidth: true
+            Layout.minimumWidth: 0
+            heightFactor: 0.5
+            pointSize: ScreenTools.menuFontPointSize
+            checked: root.activePanel === panelIndex
+            onClicked: root.activePanel = panelIndex
+        }
+        PanelButton { objectName: "caacGlobalSettingsButton"; panelIndex: 0; text: qsTr("Global") }
+        PanelButton { objectName: "caacRelativeEditorButton"; panelIndex: 1; text: qsTr("Relative") }
+        PanelButton { objectName: "caacTemplateEditorButton"; panelIndex: 2; text: qsTr("Template") }
+        PanelButton { objectName: "caacWaypointListButton"; panelIndex: 3; text: qsTr("Points") }
     }
 
     Rectangle {
@@ -209,6 +293,12 @@ Column {
         color: dragPalette.windowShade
         radius: ScreenTools.defaultBorderRadius
 
+        CaacPanelDragHandle {
+            objectName: "caacPlanningPanelDragHandle"
+            anchors.fill: parent
+            onMoved: (delta) => root.movePanel(delta)
+        }
+
         RowLayout {
             id: headerContent
             anchors.fill: parent
@@ -217,24 +307,44 @@ Column {
                 objectName: "caacPanelTitle"
                 font.pointSize: ScreenTools.menuFontPointSize
                 Layout.fillWidth: true
-                text: root.relativeEditorVisible ? qsTr("Relative coordinate editor")
+                text: root.activePanel === 0 ? qsTr("Global settings") : root.activePanel === 2 ? qsTr("Template editor")
+                    : root.relativeEditorVisible ? qsTr("Relative coordinate editor")
                     : root.showMissionTree ? qsTr("Mission settings") : qsTr("Waypoint list")
                 font.bold: true
                 wrapMode: Text.WordWrap
                 horizontalAlignment: Text.AlignHCenter
             }
             QGCLabel {
-                visible: !root.showMissionTree && !root.relativeEditorVisible
+                visible: !root.showMissionTree && root.activePanel === 3
                 text: qsTr("%1 points").arg(Math.max(0, editorController.coordinateItems.length - 1))
                 font.pointSize: ScreenTools.smallFontPointSize
             }
         }
     }
 
+    CaacGlobalSettings {
+        objectName: "caacGlobalSettingsPanel"
+        width: root.width
+        height: Math.max(ScreenTools.defaultFontPixelHeight * 8,
+            root.height - panelNavigation.height - listHeader.height - settingsButton.height - helpLabel.height - root.spacing * 4)
+        visible: root.activePanel === 0
+        routeController: editorController
+        editor: root
+    }
+
+    CaacTemplateEditor {
+        objectName: "caacTemplateEditorPanel"
+        width: root.width
+        height: Math.max(ScreenTools.defaultFontPixelHeight * 8,
+            root.height - panelNavigation.height - listHeader.height - settingsButton.height - helpLabel.height - root.spacing * 4)
+        visible: root.activePanel === 2
+        routeController: editorController
+    }
+
     CaacRelativeEditor {
         width: root.width
         height: Math.max(ScreenTools.defaultFontPixelHeight * 8,
-            root.height - listHeader.height - settingsButton.height - helpLabel.height - root.spacing * 3)
+            root.height - panelNavigation.height - listHeader.height - settingsButton.height - helpLabel.height - root.spacing * 4)
         visible: root.relativeEditorVisible
         routeController: editorController
     }
@@ -244,9 +354,9 @@ Column {
         objectName: "caacWaypointList"
         width: root.width
         height: Math.max(ScreenTools.defaultFontPixelHeight * 5,
-            root.height - listHeader.height - pointActions.height - settingsButton.height - helpLabel.height
-            - root.spacing * 4)
-        visible: !root.showMissionTree && !root.relativeEditorVisible
+            root.height - panelNavigation.height - listHeader.height - pointActions.height - settingsButton.height - helpLabel.height
+            - root.spacing * 5)
+        visible: !root.showMissionTree && root.activePanel === 3
         clip: true
         spacing: ScreenTools.defaultFontPixelHeight * 0.4
         model: root.planMasterController ? root.planMasterController.missionController.visualItems : null
@@ -336,7 +446,7 @@ Column {
 
     RowLayout {
         id: pointActions
-        visible: !root.relativeEditorVisible
+        visible: root.activePanel === 3
         width: root.width
         spacing: ScreenTools.defaultFontPixelWidth * 0.3
         QGCButton {
@@ -398,11 +508,11 @@ Column {
         objectName: "caacMissionSettings"
         pointSize: ScreenTools.menuFontPointSize
         width: root.width
-        text: root.relativeEditorVisible || root.showMissionTree ? qsTr("Waypoint list") : qsTr("Mission settings")
+        text: root.activePanel !== 3 || root.showMissionTree ? qsTr("Waypoint list") : qsTr("Mission settings")
         heightFactor: 0.25
         onClicked: {
-            if (root.relativeEditorVisible) {
-                root.relativeEditorVisible = false
+            if (root.activePanel !== 3) {
+                root.activePanel = 3
             } else {
                 root.showMissionTree = !root.showMissionTree
             }
@@ -415,7 +525,9 @@ Column {
         wrapMode: Text.WordWrap
         font.pointSize: ScreenTools.smallFontPointSize
         text: root._pickingCenter ? qsTr("Click the map to choose a rotation centre. Esc cancels.")
-            : editorController.lastError || qsTr("Double-click to add · Drag to move · Right-click to edit")
+            : editorController.lastError || (root.routeDragMode
+                ? qsTr("Left-drag the route to move all points. Turn off route dragging to edit individual points.")
+                : qsTr("Double-click to add · Drag to move · Right-click to edit"))
     }
 
     QGCPopupDialogFactory {
@@ -446,8 +558,12 @@ Column {
     Connections {
         target: root.editorMap
 
+        function onWidthChanged() { root.movePanel(Qt.point(0, 0)) }
+        function onHeightChanged() { root.movePanel(Qt.point(0, 0)) }
+
         function onMapDoubleClicked(position) {
-            if (root.enabled && root.visible && root.editorMap.directMissionItemEditing && !root._pickingCenter) {
+            if (root.enabled && root.visible && root.editorMap.directMissionItemEditing && !root._pickingCenter
+                && QGroundControl.corePlugin.doubleClickAddWaypoint) {
                 editorController.addWaypoint(root.editorMap.toCoordinate(position, false))
             }
         }

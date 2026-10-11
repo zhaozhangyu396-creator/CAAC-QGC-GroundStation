@@ -1,6 +1,8 @@
 #pragma once
 
 #include <QtCore/QHash>
+#include <QtCore/QVariantMap>
+#include <QtPositioning/QGeoCoordinate>
 
 #include "QGCCorePlugin.h"
 
@@ -14,6 +16,9 @@ class CaacCorePlugin : public QGCCorePlugin
     Q_MOC_INCLUDE("CaacFlightDistance.h")
     Q_MOC_INCLUDE("Vehicle.h")
     Q_PROPERTY(CaacFlightDistance* flightDistance READ flightDistance NOTIFY flightDistanceChanged)
+    Q_PROPERTY(bool doubleClickAddWaypoint READ doubleClickAddWaypoint WRITE setDoubleClickAddWaypoint NOTIFY
+                   mapPreferencesChanged)
+    Q_PROPERTY(bool dragWaypoints READ dragWaypoints WRITE setDragWaypoints NOTIFY mapPreferencesChanged)
 
 public:
     explicit CaacCorePlugin(QObject* parent = nullptr);
@@ -21,6 +26,14 @@ public:
     void init() override;
     CaacFlightDistance* flightDistance() const;
     Q_INVOKABLE void resetFlightDistanceForSimulationRestart(Vehicle* vehicle);
+
+    bool doubleClickAddWaypoint() const { return _doubleClickAddWaypoint; }
+
+    bool dragWaypoints() const { return _dragWaypoints; }
+
+    void setDoubleClickAddWaypoint(bool enabled);
+    void setDragWaypoints(bool enabled);
+    Q_INVOKABLE QVariantMap routeLegMetrics(const QGeoCoordinate& from, const QGeoCoordinate& to) const;
 
     QUrl planViewEditor() const override;
     QQmlApplicationEngine* createQmlApplicationEngine(QObject* parent) override;
@@ -37,10 +50,13 @@ public:
 
 signals:
     void flightDistanceChanged();
+    void mapPreferencesChanged();
 
 private:
     void _watchVehicle(Vehicle* vehicle);
     QHash<Vehicle*, CaacFlightDistance*> _flightDistances;
     QHash<QQmlApplicationEngine*, QQmlAbstractUrlInterceptor*> _flyInterceptors;
     bool _initialized = false;
+    bool _doubleClickAddWaypoint = true;
+    bool _dragWaypoints = true;
 };

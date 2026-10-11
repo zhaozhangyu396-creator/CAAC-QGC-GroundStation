@@ -11,14 +11,29 @@ qgc_set_qt_resource_alias(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacGeometryDialog.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacRelativeEditor.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacFlyDataPanel.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacMissionDetails.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacMapSettings.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacRouteLegLabels.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacTemplateEditor.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacGlobalSettings.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacPanelDragHandle.qml
 )
 qt_add_qml_module(
     CaacPlanModule
     URI CAAC.Plan
     VERSION 1.0
     RESOURCE_PREFIX /qml
-    QML_FILES src/PlanView/CaacRouteEditor.qml src/PlanView/CaacWaypointDialog.qml src/PlanView/CaacGeometryDialog.qml
-              src/PlanView/CaacRelativeEditor.qml src/Flight/CaacFlyDataPanel.qml
+    QML_FILES src/PlanView/CaacRouteEditor.qml
+              src/PlanView/CaacWaypointDialog.qml
+              src/PlanView/CaacGeometryDialog.qml
+              src/PlanView/CaacRelativeEditor.qml
+              src/Flight/CaacFlyDataPanel.qml
+              src/Flight/CaacMissionDetails.qml
+              src/Flight/CaacMapSettings.qml
+              src/PlanView/CaacRouteLegLabels.qml
+              src/PlanView/CaacTemplateEditor.qml
+              src/PlanView/CaacGlobalSettings.qml
+              src/PlanView/CaacPanelDragHandle.qml
     NO_PLUGIN
 )
 
@@ -38,6 +53,8 @@ set(CUSTOM_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Route/CaacRouteEditorController.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Route/CaacRouteGeometry.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Route/CaacRouteGeometry.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Route/CaacRouteTemplates.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Route/CaacRouteTemplates.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacDirectionalDistance.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacDirectionalDistance.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacFlightDistance.h

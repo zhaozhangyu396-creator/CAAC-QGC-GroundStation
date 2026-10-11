@@ -68,6 +68,11 @@ public:
     Q_INVOKABLE bool undo();
     Q_INVOKABLE bool redo();
     Q_INVOKABLE void clearHistory();
+    Q_INVOKABLE QVariantList templateCoordinates(int shape, int referenceIndex, const QVariantMap& options) const;
+    Q_INVOKABLE bool insertTemplate(int shape, int referenceIndex, const QVariantMap& options);
+    Q_INVOKABLE bool translateRoute(const QGeoCoordinate& reference, const QGeoCoordinate& target);
+    Q_INVOKABLE bool moveRouteBy(double bearing, double distance);
+    Q_INVOKABLE bool updatePlannedHome(double latitude, double longitude, double amslAltitude);
 
 signals:
     void planMasterControllerChanged();

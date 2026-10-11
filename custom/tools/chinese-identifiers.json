@@ -138,5 +138,20 @@
     "context": "GuidedActionsController",
     "source": "_activeVehicle(%1) _vehicleArmed(%2) guidedModeSupported(%3) _vehicleUnderway(%4) _vehicleWasUnderway(%5) _vehicleInRTLMode(%6) pauseVehicleSupported(%7) _vehiclePaused(%8) _flightMode(%9) _visualItemsCount(%10) roiSupported(%11) orbitSupported(%12) _missionActive(%13) _hideROI(%14) _hideOrbit(%15)",
     "reason": "仅用于内部调试日志，保留诊断字段及占位符"
+  },
+  {
+    "context": "MainStatusIndicatorOfflinePage",
+    "source": "Pixhawk",
+    "reason": "设备或固件项目名称，保留正式拼写"
+  },
+  {
+    "context": "MainStatusIndicatorOfflinePage",
+    "source": "LibrePilot",
+    "reason": "设备或固件项目名称，保留正式拼写"
+  },
+  {
+    "context": "CaacRouteLegLabels",
+    "source": "%1 m  %2°",
+    "reason": "数值占位符与标准米和角度单位"
   }
 ]

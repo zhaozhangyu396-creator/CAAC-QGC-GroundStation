@@ -2,6 +2,7 @@
 
 #include <QtCore/QApplicationStatic>
 #include <QtCore/QJsonObject>
+#include <QtCore/QSettings>
 #include <QtPositioning/QGeoCoordinate>
 #include <QtQml/QQmlAbstractUrlInterceptor>
 #include <QtQml/QQmlApplicationEngine>
@@ -9,6 +10,7 @@
 #include "CaacFlightDistance.h"
 #include "MultiVehicleManager.h"
 #include "PlanMasterController.h"
+#include "QGCGeo.h"
 #include "QmlObjectListModel.h"
 #include "Vehicle.h"
 
@@ -30,7 +32,43 @@ public:
 
 CaacCorePlugin::CaacCorePlugin(QObject* parent)
     : QGCCorePlugin(parent)
-{}
+{
+    const QSettings settings;
+    _doubleClickAddWaypoint = settings.value(QStringLiteral("CAAC/Map/DoubleClickAddWaypoint"), true).toBool();
+    _dragWaypoints = settings.value(QStringLiteral("CAAC/Map/DragWaypoints"), true).toBool();
+}
+
+void CaacCorePlugin::setDoubleClickAddWaypoint(bool enabled)
+{
+    if (_doubleClickAddWaypoint != enabled) {
+        _doubleClickAddWaypoint = enabled;
+        QSettings().setValue(QStringLiteral("CAAC/Map/DoubleClickAddWaypoint"), enabled);
+        emit mapPreferencesChanged();
+    }
+}
+
+void CaacCorePlugin::setDragWaypoints(bool enabled)
+{
+    if (_dragWaypoints != enabled) {
+        _dragWaypoints = enabled;
+        QSettings().setValue(QStringLiteral("CAAC/Map/DragWaypoints"), enabled);
+        emit mapPreferencesChanged();
+    }
+}
+
+QVariantMap CaacCorePlugin::routeLegMetrics(const QGeoCoordinate& from, const QGeoCoordinate& to) const
+{
+    if (!from.isValid() || !to.isValid()) {
+        return {};
+    }
+    const double distance = QGCGeo::geodesicDistance(from, to);
+    if (distance < 0.001) {
+        return {};
+    }
+    return {{QStringLiteral("distance"), distance},
+            {QStringLiteral("bearing"), QGCGeo::geodesicAzimuth(from, to)},
+            {QStringLiteral("midpoint"), QVariant::fromValue(QGCGeo::interpolateAtDistance(from, to, distance / 2))}};
+}
 
 QGCCorePlugin* CaacCorePlugin::instance()
 {

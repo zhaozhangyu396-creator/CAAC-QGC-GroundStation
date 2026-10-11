@@ -133,6 +133,7 @@ Item {
             itemCoordinate: _missionItem.coordinate
             visible: control.interactive && itemVisualLoader.item && itemVisualLoader.item.visible
             editOnRightClick: control.map.directMissionItemEditing
+            dragEnabled: !control.map.directMissionItemEditing || QGroundControl.corePlugin.dragWaypoints
             onRightClicked: control.map.missionItemEditRequested(control._missionItem)
             onDragStart: {
                 if (control.map.directMissionItemEditing) {

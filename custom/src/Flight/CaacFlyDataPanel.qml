@@ -15,6 +15,7 @@ Rectangle {
     property var vehicle: null
     property var distance: null
     property alias currentPage: pages.currentIndex
+    signal titleDragged(point delta)
 
     readonly property real _margin: ScreenTools.defaultFontPixelWidth * 2
     property string _messages: ""
@@ -42,6 +43,11 @@ Rectangle {
         width: parent.width
         height: ScreenTools.defaultFontPixelHeight * 2.5
         color: caacPalette.windowShade
+        CaacPanelDragHandle {
+            objectName: "caacFlightDataDragHandle"
+            anchors.fill: parent
+            onMoved: (delta) => root.titleDragged(delta)
+        }
         QGCLabel {
             anchors.centerIn: parent
             text: qsTr("Flight data")

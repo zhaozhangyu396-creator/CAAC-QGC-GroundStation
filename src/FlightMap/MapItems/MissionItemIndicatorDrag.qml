@@ -19,6 +19,7 @@ Rectangle {
     property var itemIndicator  ///< The mission item indicator to drag around
     property var itemCoordinate ///< Coordinate we are updating during drag
     property bool editOnRightClick: false
+    property bool dragEnabled: true
 
     signal clicked
     signal rightClicked
@@ -57,7 +58,7 @@ Rectangle {
     QGCMouseArea {
         id:                 itemDrag
         anchors.fill:       parent
-        drag.target:        (pressedButtons & Qt.LeftButton) ? parent : null
+        drag.target:        itemDragger.dragEnabled && (pressedButtons & Qt.LeftButton) ? parent : null
         acceptedButtons:    itemDragger.editOnRightClick ? Qt.LeftButton | Qt.RightButton : Qt.LeftButton
         drag.minimumX:      0
         drag.minimumY:      0

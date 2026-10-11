@@ -1,5 +1,6 @@
 #include <QtCore/QRegularExpression>
 #include <QtCore/QScopeGuard>
+#include <QtGui/QGuiApplication>
 #include <QtGui/QImage>
 #include <QtQuick/QQuickItem>
 #include <QtQuick/QQuickWindow>
@@ -27,9 +28,52 @@ void CaacFlightDataUITest::_liveFlightData()
         return;
     }
     QVERIFY(verifyEnabled(QStringLiteral("caacCenterVehicleButton"), false, QStringLiteral("no aircraft")));
+    QVERIFY(clickButton(QStringLiteral("caacMissionDetailsButton")));
+    QVERIFY(verifyVisibility(QStringLiteral("caacMissionDetailsPanel"), true, QStringLiteral("mission panel")));
+    QVERIFY(verifyText(QStringLiteral("caacMissionTarget"),
+                       QCoreApplication::translate("CaacMissionDetails", "Unavailable"),
+                       QStringLiteral("no target without aircraft")));
+    QVERIFY(clickButton(QStringLiteral("caacFlightDataButton")));
+    QVERIFY(
+        verifyVisibility(QStringLiteral("caacMissionDetailsPanel"), true, QStringLiteral("panels stay independent")));
+    QVERIFY(clickButton(QStringLiteral("caacMissionDetailsButton")));
+    QVERIFY(clickButton(QStringLiteral("caacMapSettingsButton")));
+    QVERIFY(clickButton(QStringLiteral("caacFlightDataButton")));
+    auto* mapSettings = findVisibleItem(_rootItem, QStringLiteral("caacMapSettingsPanel"));
+    QVERIFY(mapSettings);
+    auto* addCombo = findVisibleItem(_rootItem, QStringLiteral("caacMapDoubleClickAdd"));
+    QVERIFY(addCombo);
+    QVERIFY(scrollIntoView(addCombo, QStringLiteral("caacFlyPanelsScroller")));
+    if (QGuiApplication::platformName() != QStringLiteral("offscreen")) {
+        _window->requestActivate();
+        QVERIFY(QTest::qWaitForWindowActive(_window));
+    }
+    QVERIFY(clickButton(QStringLiteral("caacMapDoubleClickAdd")));
+    QTest::keyClick(_window, Qt::Key_Home);
+    QTest::keyClick(_window, Qt::Key_Return);
+    auto* preferences = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
+    QVERIFY(preferences);
+    const auto restorePreferences = qScopeGuard([preferences]() { preferences->setDoubleClickAddWaypoint(true); });
+    QTRY_VERIFY_WITH_TIMEOUT(!preferences->doubleClickAddWaypoint(), TestTimeout::mediumMs());
+    preferences->setDoubleClickAddWaypoint(true);
+    QVERIFY(clickButton(QStringLiteral("caacMapSettingsButton")));
     QVERIFY(clickButton(QStringLiteral("caacFlightDataButton")));
     auto* panel = findVisibleItem(_rootItem, QStringLiteral("caacFlyDataPanel"));
     QVERIFY(panel);
+    auto* handle = findVisibleItem(_rootItem, QStringLiteral("caacFlightDataDragHandle"));
+    QVERIFY(handle);
+    QVERIFY(scrollIntoView(handle, QStringLiteral("caacFlyPanelsScroller")));
+    const auto beforeDrag = handle->mapToScene(QPointF(0, 0));
+    const auto press = handle->mapToScene(QPointF(handle->width() / 2, handle->height() / 2)).toPoint();
+    QTest::mousePress(_window, Qt::LeftButton, Qt::NoModifier, press);
+    for (int i = 1; i <= 4; ++i) {
+        QTest::mouseMove(_window, press - QPoint(i * 10, 0));
+    }
+    QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, press - QPoint(40, 0));
+    QTRY_VERIFY_WITH_TIMEOUT(handle->mapToScene(QPointF(0, 0)).x() < beforeDrag.x() - 10, TestTimeout::mediumMs());
+    auto* pagination = findVisibleItem(_rootItem, QStringLiteral("caacFlightDataPagination"));
+    QVERIFY(pagination);
+    QVERIFY(scrollIntoView(pagination, QStringLiteral("caacFlyPanelsScroller")));
     QVERIFY(clickItemFraction(QStringLiteral("caacFlightDataPagination"), 0.85, 0.5));
     QVERIFY(verifyProperty(QStringLiteral("caacFlyDataPanel"), "currentPage", 2, QStringLiteral("third page dot")));
     const auto unavailable = QCoreApplication::translate("CaacFlyDataPanel", "Unavailable");

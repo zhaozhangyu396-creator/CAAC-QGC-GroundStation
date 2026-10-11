@@ -51,6 +51,8 @@ Popup {
     property bool   destroyOnClose:         true
     property bool   preventClose:           false
     property bool   bypassNavigationCheck:  false
+    property bool   draggable: true
+    property point  _dragOffset: Qt.point(0, 0)
 
     property real maxContentAvailableWidth:    mainWindow.width - _contentMargin * 6
     property real maxContentAvailableHeight:   mainWindow.height - titleRowLayout.height - _contentMargin * 7
@@ -92,6 +94,7 @@ Popup {
     }
 
     onAboutToShow: {
+        _dragOffset = Qt.point(0, 0)
         _previousValidationErrorCount = globals.validationErrorCount
         setupDialogButtons(buttons)
     }
@@ -211,9 +214,11 @@ Popup {
 
     ColumnLayout {
         id:                 mainLayout
-        anchors.centerIn:   parent
-        x:                  _contentMargin
-        y:                  _contentMargin
+        objectName:         "popupDialog_frame"
+        x: Math.max(_contentMargin, Math.min((parent.width - width) / 2 + root._dragOffset.x,
+            parent.width - width - _contentMargin))
+        y: Math.max(_contentMargin, Math.min((parent.height - height) / 2 + root._dragOffset.y,
+            parent.height - height - _contentMargin))
         spacing:            _contentMargin
 
         RowLayout {
@@ -228,6 +233,31 @@ Popup {
                 text:               root.title
                 font.pointSize:     ScreenTools.mediumFontPointSize
                 verticalAlignment:	Text.AlignVCenter
+                MouseArea {
+                    objectName: "popupDialog_dragHandle"
+                    anchors.fill: parent
+                    enabled: root.draggable
+                    acceptedButtons: Qt.LeftButton
+                    cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+                    property point _pressPosition
+                    property point _initialOffset
+                    onPressed: (mouse) => {
+                        _pressPosition = mapToItem(root.contentItem, mouse.x, mouse.y)
+                        _initialOffset = root._dragOffset
+                    }
+                    onPositionChanged: (mouse) => {
+                        if (pressed) {
+                            const position = mapToItem(root.contentItem, mouse.x, mouse.y)
+                            const centerX = (root.contentItem.width - mainLayout.width) / 2
+                            const centerY = (root.contentItem.height - mainLayout.height) / 2
+                            root._dragOffset = Qt.point(
+                                Math.max(_contentMargin, Math.min(centerX + _initialOffset.x + position.x - _pressPosition.x,
+                                    root.contentItem.width - mainLayout.width - _contentMargin)) - centerX,
+                                Math.max(_contentMargin, Math.min(centerY + _initialOffset.y + position.y - _pressPosition.y,
+                                    root.contentItem.height - mainLayout.height - _contentMargin)) - centerY)
+                        }
+                    }
+                }
             }
 
             QGCButton {

@@ -12,6 +12,7 @@ Item {
     signal editingLayerChangeRequested(int layer)
 
     id: root
+    z: QGroundControl.zOrderWidgets + 1
 
     property var  _missionController: planMasterController.missionController
     property real _toolsMargin:       ScreenTools.defaultFontPixelWidth * 0.75
@@ -33,6 +34,7 @@ Item {
         anchors.fill:   parent
         color:          qgcPal.window
         opacity:        0.85
+        visible: !customEditor.enabled || !customEditor.editorItem || customEditor.editorItem.showMissionTree !== false
     }
 
 
@@ -88,6 +90,7 @@ Item {
 
         DeadMouseArea {
             anchors.fill:   parent
+            enabled: rightPanelBackground.visible
         }
 
         PlanTreeView {
