@@ -14063,7 +14063,7 @@ VTOL</source>
     <message>
       <location filename="../src/MissionManager/MissionController.cc" line="1330"/>
       <source>Mission Items</source>
-      <translation>任务物品</translation>
+      <translation>任务项</translation>
     </message>
     <message>
       <location filename="../src/MissionManager/MissionController.cc" line="1334"/>
@@ -14078,7 +14078,7 @@ VTOL</source>
     <message>
       <location filename="../src/MissionManager/MissionController.cc" line="1352"/>
       <source>Transform</source>
-      <translation>变形</translation>
+      <translation>航线变换</translation>
     </message>
   </context>
   <context>
