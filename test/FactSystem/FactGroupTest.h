@@ -8,6 +8,8 @@ class FactGroupTest : public UnitTest
 
 private slots:
     void _addFactAndLookup_test();
+    void _qmlBorrowedFact_test_data();
+    void _qmlBorrowedFact_test();
     void _factExistsNonExistent_test();
     void _getFactNonExistent_test();
     void _duplicateFact_test();

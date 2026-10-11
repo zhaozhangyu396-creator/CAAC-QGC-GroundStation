@@ -1,7 +1,14 @@
 #include "FactGroupTest.h"
-#include <QtCore/QRegularExpression>
-#include <QtTest/QSignalSpy>
 
+#include <memory>
+
+#include <QtCore/QEvent>
+#include <QtCore/QPointer>
+#include <QtCore/QRegularExpression>
+#include <QtQml/QQmlComponent>
+#include <QtQml/QQmlContext>
+#include <QtQml/QQmlEngine>
+#include <QtTest/QSignalSpy>
 
 #include "Fact.h"
 #include "FactGroup.h"
@@ -30,6 +37,40 @@ void FactGroupTest::_addFactAndLookup_test()
 
     QVERIFY(group.factExists(QStringLiteral("testFact")));
     QCOMPARE(group.getFact(QStringLiteral("testFact")), &fact);
+}
+
+void FactGroupTest::_qmlBorrowedFact_test_data()
+{
+    QTest::addColumn<QString>("lookup");
+    QTest::newRow("direct") << QStringLiteral("testFact");
+    QTest::newRow("nested") << QStringLiteral("child.testFact");
+}
+
+void FactGroupTest::_qmlBorrowedFact_test()
+{
+    QFETCH(QString, lookup);
+    TestableFactGroup group;
+    TestableFactGroup child(&group);
+    Fact fact(0, QStringLiteral("testFact"), FactMetaData::valueTypeDouble);
+    fact.setRawValue(42.0);
+    QPointer<Fact> guardedFact(&fact);
+    group._addFact(&fact, QStringLiteral("testFact"));
+    child._addFact(&fact, QStringLiteral("testFact"));
+    group._addFactGroup(&child, QStringLiteral("child"));
+    QQmlEngine engine;
+    engine.rootContext()->setContextProperty(QStringLiteral("factSource"), &group);
+    engine.rootContext()->setContextProperty(QStringLiteral("lookupName"), lookup);
+    QQmlComponent component(&engine);
+    component.setData("import QtQml; QtObject { property var borrowed: factSource.getFact(lookupName) }", QUrl());
+    std::unique_ptr<QObject> object(component.create());
+    QVERIFY2(object, qPrintable(component.errorString()));
+    QCOMPARE(QQmlEngine::objectOwnership(&fact), QQmlEngine::CppOwnership);
+    object.reset();
+    engine.collectGarbage();
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    QVERIFY(guardedFact);
+    QCOMPARE(group.getFact(lookup), &fact);
+    QCOMPARE(fact.rawValue().toDouble(), 42.0);
 }
 
 void FactGroupTest::_factExistsNonExistent_test()

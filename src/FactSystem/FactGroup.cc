@@ -1,6 +1,7 @@
 #include "FactGroup.h"
 
 #include <QtCore/QJsonArray>
+#include <QtQml/QQmlEngine>
 
 #include "QGCLoggingCategory.h"
 
@@ -96,6 +97,10 @@ Fact *FactGroup::getFact(const QString &name) const
         qCWarning(FactGroupLog) << "Unknown Fact" << camelCaseName;
     }
 
+    if (fact) {
+        // Lookup borrows C++ storage, including embedded Facts that QML must never delete.
+        QQmlEngine::setObjectOwnership(fact, QQmlEngine::CppOwnership);
+    }
     return fact;
 }
 
