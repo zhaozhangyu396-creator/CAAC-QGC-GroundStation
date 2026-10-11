@@ -272,12 +272,80 @@ Column {
         width: root.width
         spacing: ScreenTools.defaultFontPixelWidth
         component PanelButton: QGCButton {
+            id: button
             required property int panelIndex
             Layout.fillWidth: true
             Layout.minimumWidth: 0
-            heightFactor: 0.5
-            pointSize: ScreenTools.menuFontPointSize
+            Layout.preferredHeight: Math.min(ScreenTools.defaultFontPixelHeight * 3,
+                (root.width - panelNavigation.spacing * 3) / 4)
             checked: root.activePanel === panelIndex
+            Accessible.name: text
+            ToolTip.visible: hovered
+            ToolTip.text: text
+            background: Rectangle {
+                anchors.centerIn: parent
+                width: Math.min(parent.width, parent.height)
+                height: width
+                radius: width / 2
+                color: button.checked ? dragPalette.colorYellowGreen : "#ffffff"
+            }
+            contentItem: Canvas {
+                onPaint: {
+                    const ctx = getContext("2d")
+                    ctx.reset()
+                    ctx.strokeStyle = "#111111"
+                    ctx.fillStyle = ctx.strokeStyle
+                    ctx.lineWidth = ScreenTools.defaultFontPixelWidth / 3
+                    if (button.panelIndex === 0) {
+                        ctx.beginPath()
+                        ctx.moveTo(width / 2, height / 6)
+                        ctx.lineTo(width * 5 / 6, height * 5 / 12)
+                        ctx.lineTo(width / 2, height * 2 / 3)
+                        ctx.lineTo(width / 6, height * 5 / 12)
+                        ctx.closePath()
+                        ctx.moveTo(width / 6, height * 7 / 12)
+                        ctx.lineTo(width / 2, height * 5 / 6)
+                        ctx.lineTo(width * 5 / 6, height * 7 / 12)
+                        ctx.stroke()
+                    } else if (button.panelIndex === 1) {
+                        ctx.beginPath()
+                        ctx.moveTo(width / 4, height / 4)
+                        ctx.lineTo(width / 4, height * 2 / 3)
+                        ctx.bezierCurveTo(width / 4, height, width / 2, height, width / 2, height * 2 / 3)
+                        ctx.lineTo(width / 2, height / 3)
+                        ctx.bezierCurveTo(width / 2, 0, width * 3 / 4, 0, width * 3 / 4, height / 3)
+                        ctx.lineTo(width * 3 / 4, height * 3 / 4)
+                        ctx.stroke()
+                        for (const point of [Qt.point(width / 4, height / 4), Qt.point(width * 3 / 4, height * 3 / 4)]) {
+                            ctx.beginPath()
+                            ctx.arc(point.x, point.y, width / 12, 0, Math.PI * 2)
+                            ctx.fill()
+                        }
+                    } else if (button.panelIndex === 2) {
+                        const size = width / 4
+                        ctx.strokeRect(width / 6, height / 6, size, size)
+                        ctx.strokeRect(width * 7 / 12, height / 6, size, size)
+                        ctx.strokeRect(width / 6, height * 7 / 12, size, size)
+                        ctx.beginPath()
+                        ctx.moveTo(width * 7 / 12, height * 17 / 24)
+                        ctx.lineTo(width * 5 / 6, height * 17 / 24)
+                        ctx.moveTo(width * 17 / 24, height * 7 / 12)
+                        ctx.lineTo(width * 17 / 24, height * 5 / 6)
+                        ctx.stroke()
+                    } else {
+                        for (let i = 0; i < 3; ++i) {
+                            const y = height * (0.25 + i * 0.25)
+                            ctx.beginPath()
+                            ctx.arc(width / 5, y, width / 25, 0, Math.PI * 2)
+                            ctx.fill()
+                            ctx.beginPath()
+                            ctx.moveTo(width * 2 / 5, y)
+                            ctx.lineTo(width * 4 / 5, y)
+                            ctx.stroke()
+                        }
+                    }
+                }
+            }
             onClicked: root.activePanel = panelIndex
         }
         PanelButton { objectName: "caacGlobalSettingsButton"; panelIndex: 0; text: qsTr("Global") }
