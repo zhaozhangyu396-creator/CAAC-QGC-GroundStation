@@ -109,6 +109,7 @@ RowLayout {
     QGCPalette { id: qgcPal }
 
     QGCButton {
+        pointSize: ScreenTools.menuFontPointSize
         objectName: "planToolbar_openButton"
         text: qsTr("Open")
         iconSource: "/qmlimages/Plan.svg"
@@ -117,6 +118,7 @@ RowLayout {
     }
 
     QGCButton {
+        pointSize: ScreenTools.menuFontPointSize
         objectName: "planToolbar_saveButton"
         text: qsTr("Save")
         iconSource: "/res/SaveToDisk.svg"
@@ -126,6 +128,7 @@ RowLayout {
     }
 
     QGCButton {
+        pointSize: ScreenTools.menuFontPointSize
         id: uploadButton
         objectName: "planToolbar_uploadButton"
         text: qsTr("Upload")
@@ -137,6 +140,7 @@ RowLayout {
     }
 
     QGCButton {
+        pointSize: ScreenTools.menuFontPointSize
         objectName: "planToolbar_clearButton"
         text: qsTr("Clear")
         iconSource: "/res/TrashCan.svg"
@@ -145,6 +149,7 @@ RowLayout {
     }
 
     QGCButton {
+        pointSize: ScreenTools.menuFontPointSize
         objectName: "planToolbar_hamburgerButton"
         iconSource: "qrc:/qmlimages/Hamburger.svg"
 
@@ -174,6 +179,7 @@ RowLayout {
                     spacing: ScreenTools.defaultFontPixelHeight / 2
 
                     QGCButton {
+                        pointSize: ScreenTools.menuFontPointSize
                         objectName: "planToolbar_saveAsButton"
                         Layout.fillWidth: true
                         text: qsTr("Save as...")
@@ -186,6 +192,7 @@ RowLayout {
                     }
 
                     QGCButton {
+                        pointSize: ScreenTools.menuFontPointSize
                         Layout.fillWidth: true
                         text: qsTr("Save as KML")
                         enabled: !_syncInProgress && _hasPlanItems
@@ -197,6 +204,7 @@ RowLayout {
                     }
 
                     QGCButton {
+                        pointSize: ScreenTools.menuFontPointSize
                         Layout.fillWidth: true
                         text: qsTr("Download")
                         enabled: !_syncInProgress && !_controllerOffline

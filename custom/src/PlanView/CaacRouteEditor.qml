@@ -141,7 +141,7 @@ Column {
         parent: root.editorMap
         visible: root.enabled && root.visible
         z: QGroundControl.zOrderWidgets
-        x: ScreenTools.defaultFontPixelWidth * 8
+        x: (root.editorMap ? root.editorMap._leftToolWidth : 0) + ScreenTools.defaultFontPixelWidth
         y: ScreenTools.defaultFontPixelHeight * 3
         width: root.editorMap ? Math.max(0, Math.min(toolRow.implicitWidth,
             root.editorMap.width - root.width - x - ScreenTools.defaultFontPixelWidth)) : 0
@@ -156,6 +156,7 @@ Column {
 
             QGCButton {
                 objectName: "caacUndo"
+                pointSize: ScreenTools.menuFontPointSize
                 Layout.fillWidth: true
                 text: qsTr("Undo")
                 heightFactor: 0.25
@@ -166,6 +167,7 @@ Column {
             }
             QGCButton {
                 objectName: "caacRedo"
+                pointSize: ScreenTools.menuFontPointSize
                 Layout.fillWidth: true
                 text: qsTr("Redo")
                 heightFactor: 0.25
@@ -176,6 +178,7 @@ Column {
             }
             QGCButton {
                 objectName: "caacRotateRoute"
+                pointSize: ScreenTools.menuFontPointSize
                 Layout.fillWidth: true
                 text: qsTr("Rotate / align")
                 heightFactor: 0.25
@@ -185,6 +188,7 @@ Column {
             }
             QGCButton {
                 objectName: "caacRelativePoint"
+                pointSize: ScreenTools.menuFontPointSize
                 Layout.fillWidth: true
                 text: qsTr("Relative point")
                 heightFactor: 0.25
@@ -211,6 +215,7 @@ Column {
             anchors.margins: ScreenTools.defaultFontPixelHeight * 0.5
             QGCLabel {
                 objectName: "caacPanelTitle"
+                font.pointSize: ScreenTools.menuFontPointSize
                 Layout.fillWidth: true
                 text: root.relativeEditorVisible ? qsTr("Relative coordinate editor")
                     : root.showMissionTree ? qsTr("Mission settings") : qsTr("Waypoint list")
@@ -336,6 +341,7 @@ Column {
         spacing: ScreenTools.defaultFontPixelWidth * 0.3
         QGCButton {
             objectName: "caacEditWaypoint"
+            pointSize: ScreenTools.menuFontPointSize
             Layout.fillWidth: true
             Layout.minimumWidth: 0
             text: qsTr("Edit")
@@ -347,6 +353,7 @@ Column {
         }
         QGCButton {
             objectName: "caacRemoveWaypoint"
+            pointSize: ScreenTools.menuFontPointSize
             Layout.fillWidth: true
             Layout.minimumWidth: 0
             text: qsTr("Delete")
@@ -358,6 +365,7 @@ Column {
         }
         QGCButton {
             objectName: "caacMoveWaypointUp"
+            pointSize: ScreenTools.menuFontPointSize
             Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 4
             Layout.maximumWidth: Layout.preferredWidth
             text: "↑"
@@ -371,6 +379,7 @@ Column {
         }
         QGCButton {
             objectName: "caacMoveWaypointDown"
+            pointSize: ScreenTools.menuFontPointSize
             Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 4
             Layout.maximumWidth: Layout.preferredWidth
             text: "↓"
@@ -387,6 +396,7 @@ Column {
     QGCButton {
         id: settingsButton
         objectName: "caacMissionSettings"
+        pointSize: ScreenTools.menuFontPointSize
         width: root.width
         text: root.relativeEditorVisible || root.showMissionTree ? qsTr("Waypoint list") : qsTr("Mission settings")
         heightFactor: 0.25

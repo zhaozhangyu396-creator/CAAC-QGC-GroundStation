@@ -10,6 +10,7 @@ qgc_set_qt_resource_alias(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacWaypointDialog.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacGeometryDialog.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacRelativeEditor.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacFlyDataPanel.qml
 )
 qt_add_qml_module(
     CaacPlanModule
@@ -17,8 +18,17 @@ qt_add_qml_module(
     VERSION 1.0
     RESOURCE_PREFIX /qml
     QML_FILES src/PlanView/CaacRouteEditor.qml src/PlanView/CaacWaypointDialog.qml src/PlanView/CaacGeometryDialog.qml
-              src/PlanView/CaacRelativeEditor.qml
+              src/PlanView/CaacRelativeEditor.qml src/Flight/CaacFlyDataPanel.qml
     NO_PLUGIN
+)
+
+set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/FlyViewCustomLayer.qml
+                            PROPERTIES QT_RESOURCE_ALIAS "QGroundControl/FlyView/FlyViewCustomLayer.qml"
+)
+qt_add_resources(
+    ${CMAKE_PROJECT_NAME} caac_flyview_override
+    PREFIX "/Custom/qml"
+    FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/FlyViewCustomLayer.qml
 )
 
 set(CUSTOM_SOURCES
@@ -28,6 +38,10 @@ set(CUSTOM_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Route/CaacRouteEditorController.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Route/CaacRouteGeometry.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Route/CaacRouteGeometry.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacDirectionalDistance.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacDirectionalDistance.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacFlightDistance.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacFlightDistance.cc
     PARENT_SCOPE
 )
 set(CUSTOM_LIBRARIES
@@ -35,7 +49,7 @@ set(CUSTOM_LIBRARIES
     PARENT_SCOPE
 )
 set(CUSTOM_INCLUDE_DIRECTORIES
-    ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src/Route
+    ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src/Route ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight
     PARENT_SCOPE
 )
 set(CUSTOM_DEFINITIONS

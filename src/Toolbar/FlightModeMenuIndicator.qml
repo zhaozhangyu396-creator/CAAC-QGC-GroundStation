@@ -12,7 +12,7 @@ RowLayout {
 
     property bool showIndicator: true
 
-    property real fontPointSize: ScreenTools.largeFontPointSize
+    property real fontPointSize: ScreenTools.largeFontPointSize * ScreenTools.menuFontPointRatio
     property var  activeVehicle: QGroundControl.multiVehicleManager.activeVehicle
 
     property var    _editFieldWidth:        ScreenTools.defaultFontPixelWidth * 13
@@ -93,6 +93,7 @@ RowLayout {
                         model: activeVehicle ? activeVehicle.flightModes : []
 
                         QGCButton {
+                            pointSize:          ScreenTools.menuFontPointSize
                             text:               modelData
                             Layout.fillWidth:   true
 

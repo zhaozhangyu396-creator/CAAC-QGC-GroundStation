@@ -18,7 +18,7 @@ T.ComboBox {
     id: control
     padding: ScreenTools.comboBoxPadding
     spacing: ScreenTools.defaultFontPixelWidth
-    font.pointSize: ScreenTools.defaultFontPointSize
+    font.pointSize: ScreenTools.menuFontPointSize
     font.family: ScreenTools.normalFontFamily
     implicitWidth: Math.max(background.implicitWidth,
                             (control.sizeToContents ? _largestTextWidth : contentItem.implicitWidth) + leftPadding + rightPadding + padding)
@@ -63,6 +63,7 @@ T.ComboBox {
     onModelChanged: _calcPopupWidth()
     onCountChanged: _calcPopupWidth()
     onTextTransformChanged: _calcPopupWidth()
+    onFontChanged: _calcPopupWidth()
 
     Component.onCompleted: {
         _onCompleted = true

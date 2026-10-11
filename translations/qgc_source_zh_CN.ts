@@ -24569,4 +24569,62 @@ If a vehicle still has this key configured, you will no longer be able to commun
       <translation>方位角以真北为 0°、正东为 90°。夹角 90° 左转、180° 直行；必须存在前一航段，支持负角度。</translation>
     </message>
   </context>
+<context>
+    <name>CaacFlyDataPanel</name>
+    <message>
+        <source>Flight data</source>
+        <translation>飞行数据</translation>
+    </message>
+    <message>
+        <source>Unavailable</source>
+        <translation>未获取数据</translation>
+    </message>
+    <message>
+        <source>Flight time</source>
+        <translation>飞行时间</translation>
+    </message>
+    <message>
+        <source>Satellites</source>
+        <translation>卫星数</translation>
+    </message>
+    <message>
+        <source>AMSL altitude (m)</source>
+        <translation>海拔高度（m）</translation>
+    </message>
+    <message>
+        <source>Airspeed (m/s)</source>
+        <translation>空速（m/s）</translation>
+    </message>
+    <message>
+        <source>No flight messages</source>
+        <translation>暂无飞行消息</translation>
+    </message>
+    <message>
+        <source>North distance (m)</source>
+        <translation>往北飞行里程（m）</translation>
+    </message>
+    <message>
+        <source>South distance (m)</source>
+        <translation>往南飞行里程（m）</translation>
+    </message>
+    <message>
+        <source>East distance (m)</source>
+        <translation>往东飞行里程（m）</translation>
+    </message>
+    <message>
+        <source>West distance (m)</source>
+        <translation>往西飞行里程（m）</translation>
+    </message>
+</context>
+<context>
+    <name>FlyViewCustomLayer</name>
+    <message>
+        <source>Flight data</source>
+        <translation>飞行数据</translation>
+    </message>
+    <message>
+        <source>Center aircraft</source>
+        <translation>无人机居中</translation>
+    </message>
+</context>
 </TS>

@@ -124,7 +124,7 @@ ToolIndicatorPage {
                     rightPadding: leftPadding
                     text: qsTr("Update")
                     primary: true
-                    pointSize: ScreenTools.smallFontPointSize
+                    pointSize: ScreenTools.menuFontPointSize
                     visible: QGroundControl.newStableVersion !== ""
                     onClicked: {
                         mainWindow.closeIndicatorDrawer()

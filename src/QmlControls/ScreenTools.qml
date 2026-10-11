@@ -61,6 +61,10 @@ Item {
     property real mediumFontPointSize:      10
     property real largeFontPointSize:       10
 
+    readonly property real menuFontPointRatio:  1.2
+    readonly property real menuFontPointSize:   defaultFontPointSize * menuFontPointRatio
+    readonly property real menuFontPixelWidth:  defaultFontPixelWidth * menuFontPointRatio
+
     property real toolbarHeight:            0
 
     property real realPixelDensity: {

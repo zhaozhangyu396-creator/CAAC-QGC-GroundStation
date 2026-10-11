@@ -7,15 +7,26 @@ import QGroundControl.Controls
 Rectangle {
     id:         _root
     color:      qgcPal.windowTransparent
-    width:      ScreenTools.defaultFontPixelWidth * 7
+    width: {
+        void _buttonRevision
+        let textWidth = 0
+        for (let i = 0; i < repeater.count; ++i) {
+            const button = repeater.itemAt(i)
+            if (button && button.visible) {
+                textWidth = Math.max(textWidth, button.contentWidth)
+            }
+        }
+        return Math.max(ScreenTools.menuFontPixelWidth * 7, textWidth + ScreenTools.defaultFontPixelWidth * 2)
+    }
     height:     Math.min(maxHeight, toolStripColumn.height + (flickable.anchors.margins * 2))
     radius:     ScreenTools.defaultFontPixelWidth / 2
 
     property alias  model:              repeater.model
     property real   maxHeight           ///< Maximum height for control, determines whether text is hidden to make control shorter
-    property var    fontSize:           ScreenTools.smallFontPointSize
+    property var    fontSize:           ScreenTools.menuFontPointSize
 
     property var _dropPanel: dropPanel
+    property int _buttonRevision: 0
 
     function simulateClick(buttonIndex) {
         var button = toolStripColumn.children[buttonIndex]
@@ -47,6 +58,8 @@ Rectangle {
 
             Repeater {
                 id: repeater
+                onItemAdded: _root._buttonRevision++
+                onItemRemoved: _root._buttonRevision++
 
                 ToolStripHoverButton {
                     id:                 buttonTemplate

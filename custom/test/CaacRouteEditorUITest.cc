@@ -493,6 +493,8 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(mission->visualItems()->count(), beforeInsert);
     relativeDistance->setProperty("focus", false);
+    _window->requestActivate();
+    QVERIFY(QTest::qWaitForWindowActive(_window));
     _rootItem->forceActiveFocus();
     QTest::keyClick(_window, Qt::Key_Space);
     QTRY_COMPARE_WITH_TIMEOUT(mission->visualItems()->count(), beforeInsert + 1, TestTimeout::mediumMs());

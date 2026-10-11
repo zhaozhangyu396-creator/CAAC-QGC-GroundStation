@@ -93,6 +93,7 @@ Item {
                     QGCButton {
                         id:         disconnectButton
                         text:       qsTr("Disconnect")
+                        pointSize:  ScreenTools.menuFontPointSize
                         onClicked:  _activeVehicle.closeVehicle()
                         visible:    _activeVehicle && _communicationLost
                     }

@@ -73,6 +73,8 @@ Button {
             id:                     _label
             visible:                text !== ""
             text:                   button.text
+            font.family:            ScreenTools.normalFontFamily
+            font.pointSize:         ScreenTools.menuFontPointSize
             color:                  button.checked ? qgcPal.buttonHighlightText : qgcPal.buttonText
             anchors.verticalCenter: parent.verticalCenter
         }

@@ -189,7 +189,7 @@ Rectangle {
 
     ColumnLayout {
         id:                 leftPanel
-        width:              Math.max(buttonColumn.implicitWidth + _horizontalMargin, ScreenTools.defaultFontPixelWidth * 22)
+        width:              Math.max(buttonColumn.implicitWidth + _horizontalMargin, ScreenTools.menuFontPixelWidth * 22)
         anchors.topMargin:  _verticalMargin
         anchors.top:        parent.top
         anchors.bottom:     parent.bottom
@@ -345,7 +345,8 @@ Rectangle {
                             contentItem: QGCLabel {
                                 text:  modelData.name
                                 color: sectionBtn.textColor
-                                font.pointSize: ScreenTools.defaultFontPointSize * 0.9
+                                font.pointSize: ScreenTools.menuFontPointSize
+                                wrapMode: Text.WordWrap
                                 horizontalAlignment: Text.AlignLeft
                             }
 

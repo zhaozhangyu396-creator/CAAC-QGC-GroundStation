@@ -111,6 +111,7 @@ Button {
             QGCLabel {
                 id:                         innerText
                 text:                       control.text
+                font.pointSize:             ScreenTools.menuFontPointSize
                 color:                      _currentContentColor
                 anchors.horizontalCenter:   parent.horizontalCenter
                 font.bold:                  !innerImage.visible && !innerImageColorful.visible

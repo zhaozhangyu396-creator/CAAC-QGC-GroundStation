@@ -13,7 +13,7 @@ Item {
     property bool   showIndicator:          true
     property bool   waitForParameters:      false
 
-    property real fontPointSize:    ScreenTools.largeFontPointSize
+    property real fontPointSize:    ScreenTools.largeFontPointSize * ScreenTools.menuFontPointRatio
     property var  activeVehicle:    QGroundControl.multiVehicleManager.activeVehicle
     property bool allowEditMode:    true
     property bool editMode:         false
@@ -134,6 +134,7 @@ Item {
             }
 
             QGCDelayButton {
+                pointSize:          ScreenTools.menuFontPointSize
                 id:                 vtolTransitionButton
                 Layout.fillWidth:   true
                 text:               _vtolInFWDFlight ? qsTr("Transition to Multi-Rotor") : qsTr("Transition to Fixed Wing")
@@ -154,6 +155,7 @@ Item {
                     visible: editMode || !hiddenFlightModesList.find(item => { return item === modelData } )
 
                     QGCDelayButton {
+                        pointSize:          ScreenTools.menuFontPointSize
                         id:                 modeButton
                         text:               modelData
                         delay:              flightModeSettings.requireModeChangeConfirmation.rawValue ? defaultDelay : 0

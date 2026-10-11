@@ -12,14 +12,14 @@ QGCLabel {
     property var    currentVehicle:         QGroundControl.multiVehicleManager.activeVehicle
     property real   mouseAreaLeftMargin:    0
 
-    Menu {
+    QGCMenu {
         id: flightModesMenu
     }
 
     Component {
         id: flightModeMenuItemComponent
 
-        MenuItem {
+        QGCMenuItem {
             enabled: true
             onTriggered: currentVehicle.flightMode = text
         }

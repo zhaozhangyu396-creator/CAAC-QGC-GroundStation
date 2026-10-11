@@ -43,6 +43,8 @@ Button {
             id:                     displayText
             Layout.fillWidth:       true
             text:                   control.text
+            font.pointSize:         ScreenTools.menuFontPointSize
+            wrapMode:               Text.WordWrap
             color:                  control.textColor
             horizontalAlignment:    QGCLabel.AlignLeft
         }
