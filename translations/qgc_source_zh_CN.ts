@@ -3796,7 +3796,7 @@ Please place your vehicle in water, click the button, and wait. Note that the th
     <message>
       <location filename="../src/QmlControls/AltFrameDialog.qml" line="10"/>
       <source>Altitude Frame</source>
-      <translation>海拔高度框</translation>
+      <translation>高度基准</translation>
     </message>
     <message>
       <location filename="../src/QmlControls/AltFrameDialog.qml" line="20"/>
@@ -3821,12 +3821,12 @@ Please place your vehicle in water, click the button, and wait. Note that the th
     <message>
       <location filename="../src/QmlControls/AltFrameDialog.qml" line="32"/>
       <source>Each waypoint specifies its own altitude frame</source>
-      <translation>每个航点指定其自己的高度框架</translation>
+      <translation>每个航点使用各自的高度基准</translation>
     </message>
     <message>
       <location filename="../src/QmlControls/AltFrameDialog.qml" line="61"/>
       <source>Altitude frame for mission items</source>
-      <translation>任务物品的高度框</translation>
+      <translation>任务项的高度基准</translation>
     </message>
   </context>
   <context>
@@ -5672,7 +5672,7 @@ Click Ok to start the auto-tuning process.
     <message>
       <location filename="../custom/src/Route/CaacRouteEditorController.cc" line="175"/>
       <source>Check latitude, longitude and altitude (metres in the existing altitude frame).</source>
-      <translation>检查纬度、经度和海拔（现有海拔框架中的米）。</translation>
+      <translation>请检查纬度、经度和高度（按当前高度基准，单位为米）。</translation>
     </message>
     <message>
       <location filename="../custom/src/Route/CaacRouteEditorController.cc" line="181"/>
