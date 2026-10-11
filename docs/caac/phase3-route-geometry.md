@@ -2,7 +2,8 @@
 
 更新日期：2026-10-11（Asia/Shanghai）。分支：`phase3/caac-route-geometry`。
 继承阶段二 `79046aac004bca22c60157e4a3a0e4d756c0f7a9`，沿用已验证的 QGC 开发基线。
-本报告记录实际实现和验证；Windows 产物信息在验证完成后更新。
+本报告记录实际实现和验证；Windows 最终产物以本报告所列源码和校验和为准。
+实现提交 `f2d72699b9`，安装器及测试修复 `dbc2b331fb`，最终中文措辞提交 `e4411d8348`。
 
 ## 功能和交互
 
@@ -88,14 +89,71 @@ CI=1 QGC_TEST_VERBOSE=1 python /workspace/CAAC-QGC-GroundStation/.github/scripts
   --junit-output phase3-editor-final.xml --ctest-output phase3-editor-final.txt
 ```
 
-专项 3/3 通过，8.39 秒。覆盖赤道、高纬、日期变更线、正负角、多圈角、独立 WGS84 基准值、
+最终专项 3/3 通过，7.95 秒。覆盖赤道、高纬、日期变更线、正负角、多圈角、独立 WGS84 基准值、
 逆旋转、属性及任务 JSON 保留、多步历史、非法输入原子性、文件往返和真实中英文 UI。
 样例精度断言：100 米中心距离及逆旋转误差小于 1 微米，方位误差小于 `1e-7` 度；
 两点定向通过旋转后的实际方位验证。此为测试样例结果，不是全球任意任务的精度承诺。
 
 中文审计命令：`python custom/tools/check_chinese_translations.py`；
 加 `--source-ts` 可检查最新 Qt/JSON 提取目录的覆盖，加 `--output` 保存 JSON 证据。
-打包相关 Python 测试、完整回归、启动和 Windows Debug / Release 的最终结果待验证后补充。
+
+| 检查 | 当前实际结果 |
+| --- | --- |
+| Linux Debug 编译 | 最终中文措辞 `e4411d8348` 编译通过 |
+| Linux 完整 Unit / Integration | 修复提交 `dbc2b331fb` 426/426，479.50 秒；341 Unit、85 Integration |
+| 最终原生 CAAC 模型及中英文 UI | `e4411d8348` 3/3，7.95 秒 |
+| 最终程序启动 | `e4411d8348` 启动检查通过，退出码 0 |
+| 中文覆盖及源码提取一致性 | 6,440 条非空文本，28 条技术标识，0 错误 |
+| 打包及工作流相关 Python | 36/36，3.11 秒；包括真实 CPack 生成及路径恢复检查 |
+| 改动文件 lint | 46 个文件适用检查通过；随后中文措辞变更的检查也通过 |
+| Windows x64 Debug | 最终 `e4411d8348` 编译通过；模型、中文及英文 UI 3/3，94.26 秒 |
+| Windows x64 Release | 最终 `e4411d8348` 编译通过；Portable 10/10，1.04 秒；启动、安装、升级、已安装程序启动及卸载清理通过 |
+| 最终 Windows 安装器中文 | 对实际编译过的 `project.nsi` 审计通过；下载后结合最新源码提取目录再审计，0 错误 |
+
+完整回归之后只修改了 6 条界面译文，没有再次修改 C++ / QML / 任务模型或安装器。
+这些措辞变更已经重新编译，并复跑最终原生模型、中文 UI、英文 UI 和启动检查。
+不是将旧二进制的结果记作新版本测试通过。
+
+完整回归命令：
+
+```bash
+cd /workspace/build/qgc-baseline
+CI=1 QGC_TEST_VERBOSE=1 python /workspace/CAAC-QGC-GroundStation/.github/scripts/cmake_helper.py ctest \
+  --build-type Debug --jobs 2 --include-labels 'Unit|Integration' \
+  --exclude-labels 'Flaky|Network|StockUI' \
+  --junit-output phase3-regression-final.xml --ctest-output phase3-regression-final.txt
+```
+
+`StockUI` 表示旧单击加点及添加模式的交互假设，由实际 CAAC 原生 UI 测试替代；
+排除项不是本阶段新发现的失败。网络及 Flaky 测试不计入上述 426 项。
+原有 ArduSub 配置 UI 有已登记的参数不匹配跳过；没有将该未执行用例记为通过。
+验证记录保存于 `/workspace/caac-phase3-validation-e4411d8348/`。
+本地证据归档为 `/workspace/caac-phase3-validation-final.zip`，安装程序独立提供。
+
+### Windows x64 下载与来源
+
+- [下载阶段三 Windows x64 Release 验证安装包 ZIP](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38113602328/artifacts/11693320998)。
+- [Windows Debug 验证](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38113536733)，x64 任务 `114393887814`。
+- [Windows Release 验证](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38113602328)，x64 任务 `114394114682`。
+
+安装包程序源码为 `e4411d83487f03c08232203ea801f7394ace6bbb`。
+GitHub artifact 名称 `caac-validation-amd64-Release`，ID `11693320998`，
+保留至 2026-10-25 13:20:42（Asia/Shanghai）。需要登录具有该仓库访问权限的 GitHub 账号。
+解压 ZIP 后运行 `build/QGroundControl-installer-AMD64.exe`，同目录有 `.sha256` 校验文件。
+包内也包含实际 `project.nsi` 和两份中文审计结果；不是工作目录文件链接。
+
+安装程序大小 135,214,159 字节，SHA256：
+`2d0fee938fcaab5779f667cbe117e47424a81d275e3e385392ae9db9dacff0f6`。
+下载 ZIP 大小 135,204,773 字节，SHA256：
+`443e5b052aa24a36ce3faa7a4222b55705e4cea485300f48d036745e0f3dcdfd`。
+两个摘要均在下载后验证，分别与 CI 校验文件和 GitHub artifact 摘要一致。
+
+Windows 安装验证移除了 GStreamer SDK 的 bin 搜索路径，再启动已安装程序；
+没有将该步骤夸大为删除全部 Qt SDK 或完成全新裸机测试。
+本次 Windows 使用 Qt 6.11.1、MSVC 19.44.35229.0、CMake 4.4.2、GStreamer 1.28.4。
+NSIS 引导程序可显示为 PE32，实际交付的 QGC 应用为 Windows x64。
+归档没有 `.exe.build.json`；本地来源记录取自 GitHub 运行、任务和 artifact 元数据，
+不伪称其为 CI 生成的构建清单。
 
 ### 验证发现和修复
 
@@ -111,7 +169,7 @@ PX4 / ArduPilot 配置 UI 的语言切换测试将中文重启提示与固定英
 精确识别该同一消息的当前译文和英文；没有添加一般错误过滤或修改编辑断言。
 
 初次 Windows Release（`38058138103`）编译、Portable 10/10（1.13 秒）、启动、安装、升级、
-移除 SDK PATH 后启动和卸载均通过；但复核产物中的最终 `project.nsi` 发现中文 GUI 回调缺失。
+移除 GStreamer SDK 的 bin 路径后启动和卸载均通过；但复核产物中的最终 `project.nsi` 发现中文 GUI 回调缺失。
 因此该安装包没有作为完成汉化的交付版本。
 CPack 在组装组件时覆盖 `CPACK_NSIS_DEFINES`，部署过程也可能改变模块搜索路径。
 修复改为将回调写入派生模板，并在打包前恢复模板搜索路径；保留 CPack 生成的组件定义。
@@ -119,6 +177,25 @@ CPack 在组装组件时覆盖 `CPACK_NSIS_DEFINES`，部署过程也可能改�
 中文安装提示及运行文件组件；桩输出明确不是安装程序，不当作 Windows 编译证据。
 Windows 工作流进一步检查真正编译过的 `project.nsi`，不再只检查配置变量。
 `--nsis-script` 可独立复核该产物；审计结果随安装包归档。
+
+## Windows 人工操作验收清单
+
+以下为待人工执行的步骤，不计入自动测试通过数。请先在规划页建立本地航线。
+
+| 步骤 | 预期结果 |
+| --- | --- |
+| 双击地图空白处，拖动空白区域，右键航点 | 分别加点、拖图、打开属性；左键按住航点可直接拖动 |
+| 打开“旋转 / 定向”，选择一个已有航点为中心，输入 +90° | 顺时针旋转；中心坐标、高度、速度和任务顺序不变 |
+| 选择“在地图上选取”，单击空白区域 | 返回旋转弹窗，中心经纬度取点击位置；Esc 可取消选中心 |
+| 选择“两点定向旋转”，设置 A、B、独立中心和目标方位角 90° | 旋转后 A→B 朝东；起飞点和降落点不是中心时跟随移动 |
+| 打开相对坐标，选择方位角 90°、距离 100 米及插入位置 | 新点在基准东侧，插在选定航点之后 |
+| 前段朝北，以末点为基准输入夹角 +90°、180°、−90° | 分别向西、继续向北、向东；只有起飞点时夹角生成被拒绝 |
+| 连续编辑后撤销、重做；撤销后再新增点 | 可恢复连续操作；新编辑清除重做分支 |
+| 保存 `.plan` 到桌面，再加载 | 顺序、参数和旋转中心恢复；加载不沿用上一文件的撤销历史 |
+| 逐页查看设置、任务参数和新增弹窗 | 内置文本为中文，标准协议与产品名称保留；长文本没有遮挡关键按钮 |
+
+实际在线底图、不同 DPI 的文本布局和 Windows 人工弹窗操作需单独记录结果；
+本阶段自动测试截图使用占位瓦片，不能替代这些人工检查。
 
 ## 遗留事项
 
