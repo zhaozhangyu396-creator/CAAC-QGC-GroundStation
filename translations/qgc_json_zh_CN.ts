@@ -187,7 +187,7 @@
       <extracomment>.groups[General].heading</extracomment>
       <location filename="../src/AppSettings/pages/FlyView.SettingsUI.json"/>
       <source>General</source>
-      <translation>一般</translation>
+      <translation>常规</translation>
     </message>
     <message>
       <extracomment>.groups[General].keywords[0]</extracomment>
@@ -637,7 +637,7 @@
       <extracomment>.groups[General].heading</extracomment>
       <location filename="../src/AppSettings/pages/General.SettingsUI.json"/>
       <source>General</source>
-      <translation>一般</translation>
+      <translation>常规</translation>
     </message>
     <message>
       <extracomment>.groups[General].keywords[0]</extracomment>
@@ -769,7 +769,7 @@
       <extracomment>.groups[Vehicle Preferences].heading</extracomment>
       <location filename="../src/AppSettings/pages/General.SettingsUI.json"/>
       <source>Vehicle Preferences</source>
-      <translation>车辆偏好</translation>
+      <translation>飞行器偏好设置</translation>
     </message>
     <message>
       <extracomment>.groups[Vehicle Preferences].keywords[0]</extracomment>
@@ -1321,7 +1321,7 @@
       <extracomment>.groups[General].heading</extracomment>
       <location filename="../src/AppSettings/pages/PlanView.SettingsUI.json"/>
       <source>General</source>
-      <translation>一般</translation>
+      <translation>常规</translation>
     </message>
     <message>
       <extracomment>.groups[General].keywords[0]</extracomment>
@@ -1882,7 +1882,7 @@
       <extracomment>.pages[General].name</extracomment>
       <location filename="../src/AppSettings/pages/SettingsPages.json"/>
       <source>General</source>
-      <translation>一般</translation>
+      <translation>常规</translation>
     </message>
     <message>
       <extracomment>.pages[Fly View].name</extracomment>
@@ -2377,7 +2377,7 @@
       <extracomment>.groups[General].heading</extracomment>
       <location filename="../src/AppSettings/pages/Viewer3D.SettingsUI.json"/>
       <source>General</source>
-      <translation>一般</translation>
+      <translation>常规</translation>
     </message>
     <message>
       <extracomment>.groups[General].keywords[0]</extracomment>

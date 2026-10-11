@@ -97,6 +97,8 @@ Item {
             anchors.left:           parent.left
             anchors.right:          parent.right
             anchors.bottom:         parent.bottom
+            visible:                !customEditor.enabled || !customEditor.editorItem
+                                    || customEditor.editorItem.showMissionTree !== false
             editorMap:              root.editorMap
             planMasterController:   root.planMasterController
             onEditingLayerChangeRequested: (layer) => root.editingLayerChangeRequested(layer)
@@ -109,8 +111,10 @@ Item {
             anchors.right: parent.right
             source: QGroundControl.corePlugin.planViewEditor
             readonly property var editorItem: item
-            height: editorItem ? editorItem.implicitHeight : 0
+            height: !enabled ? 0 : editorItem && editorItem.showMissionTree === false
+                ? parent.height : editorItem ? editorItem.implicitHeight : 0
             enabled: root.editorMap.directMissionItemEditing
+            visible: enabled
             onLoaded: {
                 item.editorMap = root.editorMap
                 item.planMasterController = root.planMasterController

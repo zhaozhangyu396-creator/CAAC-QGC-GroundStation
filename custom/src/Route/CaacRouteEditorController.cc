@@ -10,6 +10,7 @@
 #include "Fact.h"
 #include "MissionController.h"
 #include "PlanMasterController.h"
+#include "QGCGeo.h"
 #include "SimpleMissionItem.h"
 #include "SpeedSection.h"
 
@@ -199,6 +200,90 @@ bool CaacRouteEditorController::updateWaypoint(QObject* object, double latitude,
         speedSection->setSpecifyFlightSpeed(specifySpeed);
     }
     return true;
+}
+
+VisualMissionItem* CaacRouteEditorController::_previousCoordinateItem(int beforeIndex) const
+{
+    auto* mission = _missionController();
+    auto* model = mission ? mission->visualItems() : nullptr;
+    if (!model || beforeIndex < 1 || beforeIndex > model->count()) {
+        return nullptr;
+    }
+    for (int i = beforeIndex - 1; i >= 0; --i) {
+        auto* candidate = model->value<VisualMissionItem*>(i);
+        if (!candidate) {
+            continue;
+        }
+        // A complex item's entry/exit path cannot be represented by one simple coordinate.
+        if (i > 0 && !candidate->isSimpleItem()) {
+            return nullptr;
+        }
+        if (i == 0 || (candidate->specifiesCoordinate() && !candidate->isStandaloneCoordinate())) {
+            return candidate->coordinate().isValid() ? candidate : nullptr;
+        }
+    }
+    return nullptr;
+}
+
+QVariantMap CaacRouteEditorController::waypointLeg(QObject* object) const
+{
+    auto* mission = _missionController();
+    auto* item = qobject_cast<SimpleMissionItem*>(object);
+    if (!mission || !item || !item->specifiesCoordinate() || item->isStandaloneCoordinate() ||
+        !item->coordinate().isValid()) {
+        return {};
+    }
+    const int index = mission->visualItemIndexForObject(item);
+    auto* previous = _previousCoordinateItem(index);
+    if (!previous) {
+        return {};
+    }
+    const double distance = QGCGeo::geodesicDistance(previous->coordinate(), item->coordinate());
+    QVariantMap result{{QStringLiteral("distance"), distance},
+                       {QStringLiteral("previousNumber"), previous->sequenceNumber()}};
+    if (distance < 0.001) {
+        return result;
+    }
+    const double bearing = QGCGeo::geodesicAzimuth(previous->coordinate(), item->coordinate());
+    result.insert(QStringLiteral("bearing"), bearing);
+    auto* incoming = _previousCoordinateItem(mission->visualItemIndexForObject(previous));
+    if (incoming && QGCGeo::geodesicDistance(incoming->coordinate(), previous->coordinate()) >= 0.001) {
+        result.insert(QStringLiteral("angle"),
+                      CaacRouteGeometry::normalizedAngle(
+                          bearing - QGCGeo::geodesicAzimuth(previous->coordinate(), incoming->coordinate())));
+    }
+    return result;
+}
+
+bool CaacRouteEditorController::updateRelativeWaypoint(QObject* object, double angle, double distance,
+                                                       bool interiorAngle, double altitude, bool specifySpeed,
+                                                       double speed)
+{
+    if (!_canEdit()) {
+        return false;
+    }
+    auto* item = qobject_cast<SimpleMissionItem*>(object);
+    auto* mission = _missionController();
+    const int index = item ? mission->visualItemIndexForObject(item) : -1;
+    auto* previous = _previousCoordinateItem(index);
+    if (!item || index < 1 || !item->specifiesCoordinate() || item->isStandaloneCoordinate() || !previous) {
+        return _fail(tr("This waypoint has no valid simple previous point."));
+    }
+    std::optional<QGeoCoordinate> coordinate;
+    if (interiorAngle) {
+        auto* incoming = _previousCoordinateItem(mission->visualItemIndexForObject(previous));
+        if (!incoming) {
+            return _fail(tr("Interior angle requires an incoming leg; planned home alone has none."));
+        }
+        coordinate =
+            CaacRouteGeometry::interiorAnglePoint(incoming->coordinate(), previous->coordinate(), angle, distance);
+    } else {
+        coordinate = CaacRouteGeometry::relativePoint(previous->coordinate(), angle, distance);
+    }
+    if (!coordinate) {
+        return _fail(tr("Check the reference point, angle and positive distance in metres."));
+    }
+    return updateWaypoint(item, coordinate->latitude(), coordinate->longitude(), altitude, specifySpeed, speed);
 }
 
 bool CaacRouteEditorController::removeCurrentWaypoint()

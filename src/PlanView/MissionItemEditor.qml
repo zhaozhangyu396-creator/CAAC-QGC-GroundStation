@@ -42,6 +42,8 @@ Rectangle {
     readonly property real  _hamburgerSize:     commandPicker.height * 0.75
     readonly property real  _trashSize:         commandPicker.height * 0.75
     readonly property bool  _waypointsOnlyMode: QGroundControl.corePlugin.options.missionWaypointsOnly
+    readonly property string _commandTitle: missionItem.specifiesCoordinate && missionItem.sequenceNumber > 0
+        ? qsTr("%1 %2").arg(missionItem.commandName).arg(missionItem.sequenceNumber) : missionItem.commandName
 
     // setSource() injects missionItem before internal bindings activate
     function _loadEditor() {
@@ -162,7 +164,7 @@ Rectangle {
 
                 property real _padding: ScreenTools.comboBoxPadding
 
-                QGCLabel { text: missionItem.commandName }
+                QGCLabel { text: _root._commandTitle }
 
                 QGCColoredImage {
                     height:             ScreenTools.defaultFontPixelWidth
@@ -206,7 +208,8 @@ Rectangle {
             height:                 commandPicker.height
             visible:                !missionItem.isCurrentItem || !missionItem.isSimpleItem || _waypointsOnlyMode || missionItem.isTakeoffItem
             verticalAlignment:      Text.AlignVCenter
-            text:                   missionItem.commandName
+            objectName:             "missionItemTitle_" + missionItem.sequenceNumber
+            text:                   _root._commandTitle
             color:                  _outerTextColor
         }
     }

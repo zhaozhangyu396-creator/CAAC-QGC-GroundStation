@@ -38,6 +38,8 @@ private slots:
     void _testRotatePreservesMission();
     void _testHistoryTransactions();
     void _testRelativeInsertion();
+    void _testRelativeUpdate_data();
+    void _testRelativeUpdate();
     void _testCenterFileRoundtrip();
 };
 
@@ -201,6 +203,66 @@ void CaacRouteEditorTest::_testRelativeInsertion()
     QCOMPARE(planController()->saveToJson(), saved);
 }
 
+void CaacRouteEditorTest::_testRelativeUpdate_data()
+{
+    QTest::addColumn<double>("angle");
+    QTest::addColumn<double>("bearing");
+    QTest::newRow("left") << 90.0 << 270.0;
+    QTest::newRow("straight") << 180.0 << 0.0;
+    QTest::newRow("negative-right") << -90.0 << 90.0;
+}
+
+void CaacRouteEditorTest::_testRelativeUpdate()
+{
+    QFETCH(double, angle);
+    QFETCH(double, bearing);
+    CaacRouteEditorController editor;
+    editor.setPlanMasterController(planController());
+    missionController()->setHomePosition(QGeoCoordinate(0, 0, 25));
+    QVERIFY(editor.insertRelativeWaypoint(0, 0, 0, 100, false));
+    auto* previous = editor.currentItem();
+    QVERIFY(!editor.waypointLeg(previous).contains(QStringLiteral("angle")));
+    const auto firstPlan = planController()->saveToJson();
+    QVERIFY(!editor.updateRelativeWaypoint(previous, angle, 150, true, 75, false, 0));
+    QCOMPARE(planController()->saveToJson(), firstPlan);
+    QVERIFY(editor.insertRelativeWaypoint(1, 1, 180, 100, true));
+    auto* point = editor.currentItem();
+    QVERIFY(
+        editor.updateWaypoint(point, point->coordinate().latitude(), point->coordinate().longitude(), 123, true, 9));
+    point->missionItem().setParam1(7);
+    const auto original = planController()->saveToJson();
+    const auto originalPrevious = previous->coordinate();
+    const int number = point->sequenceNumber();
+    const auto frame = point->altitudeFrame();
+    QVERIFY(editor.updateRelativeWaypoint(point, angle, 150, true, 123, true, 9));
+    QVERIFY(std::abs(QGCGeo::geodesicAzimuth(previous->coordinate(), point->coordinate()) - bearing) < 1e-7);
+    const auto leg = editor.waypointLeg(point);
+    QVERIFY(std::abs(leg.value(QStringLiteral("distance")).toDouble() - 150) < 1e-6);
+    QVERIFY(std::abs(leg.value(QStringLiteral("angle")).toDouble() - CaacRouteGeometry::normalizedAngle(angle)) < 1e-7);
+    QCOMPARE(previous->coordinate(), originalPrevious);
+    QCOMPARE(point->sequenceNumber(), number);
+    QCOMPARE(point->altitudeFrame(), frame);
+    QCOMPARE(point->altitude()->rawValue().toDouble(), 123.0);
+    QCOMPARE(point->speedSection()->specifiedFlightSpeed(), 9.0);
+    QCOMPARE(point->missionItem().param1(), 7.0);
+    const auto updated = planController()->saveToJson();
+    QVERIFY(!editor.updateRelativeWaypoint(point, angle, -1, true, 123, true, 9));
+    QVERIFY(!editor.updateRelativeWaypoint(point, angle, 150, true, std::numeric_limits<double>::quiet_NaN(), true, 9));
+    QCOMPARE(planController()->saveToJson(), updated);
+    QVERIFY(editor.undo());
+    QCOMPARE(planController()->saveToJson(), original);
+    QVERIFY(editor.redo());
+    QCOMPARE(planController()->saveToJson(), updated);
+    point = editor.currentItem();
+    QVERIFY(editor.updateRelativeWaypoint(point, 45, 200, false, 123, true, 9));
+    QVERIFY(std::abs(editor.waypointLeg(point).value(QStringLiteral("bearing")).toDouble() - 45) < 1e-7);
+    point->setCoordinate(missionController()->visualItems()->value<VisualMissionItem*>(1)->coordinate());
+    const auto coincident = editor.waypointLeg(point);
+    QVERIFY(coincident.value(QStringLiteral("distance")).toDouble() < 0.001);
+    QVERIFY(!coincident.contains(QStringLiteral("bearing")));
+    QVERIFY(!coincident.contains(QStringLiteral("angle")));
+}
+
 void CaacRouteEditorTest::_testCenterFileRoundtrip()
 {
     CaacRouteEditorController editor;
@@ -359,6 +421,8 @@ void CaacRouteEditorTest::_testStaleItem()
     QPointer<SimpleMissionItem> old = editor.currentItem();
     planController()->removeAll();
     QVERIFY(!editor.updateWaypoint(old, 31, 121, 100, false, 0));
+    QVERIFY(editor.waypointLeg(old).isEmpty());
+    QVERIFY(!editor.updateRelativeWaypoint(old, 90, 100, false, 100, false, 0));
     editor.setPlanMasterController(nullptr);
     QVERIFY(!editor.currentItem());
     QVERIFY(!editor.removeCurrentWaypoint());

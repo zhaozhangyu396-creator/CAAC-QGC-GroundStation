@@ -14,6 +14,8 @@ public:
 
     bool directMissionItemEditing() const override { return true; }
 
+    bool showPlanInformation() const override { return false; }
+
     QLocale::Language defaultLanguage() const override { return QLocale::Chinese; }
 
     void postSaveToJson(PlanMasterController* controller, QJsonObject& json) override;

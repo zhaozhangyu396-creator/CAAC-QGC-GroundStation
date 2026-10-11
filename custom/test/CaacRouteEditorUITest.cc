@@ -24,6 +24,7 @@
 #include "PlanMasterController.h"
 #include "QGCApplication.h"
 #include "QGCFileDialogController.h"
+#include "QGCGeo.h"
 #include "QGCMapEngineManager.h"
 #include "QmlUITestBase.h"
 #include "SettingsManager.h"
@@ -251,6 +252,9 @@ void CaacRouteEditorUITest::_testMouseEditing()
     auto* master = plan->property("_planMasterController").value<PlanMasterController*>();
     QVERIFY(master);
     auto* mission = master->missionController();
+    QVERIFY(!mission->planFileGroupIndex().isValid());
+    QVERIFY(mission->defaultsGroupIndex().isValid());
+    QVERIFY(mission->missionGroupIndex().isValid());
     auto* map = findVisibleItem(_rootItem, QStringLiteral("planView_map"));
     QVERIFY(map);
     auto* terrainGraph = findVisibleItem(_rootItem, QStringLiteral("planTerrainGraph"));
@@ -294,6 +298,15 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QTRY_VERIFY_WITH_TIMEOUT(graphDomainsValid(), TestTimeout::mediumMs());
     QPointer<SimpleMissionItem> first = mission->visualItems()->value<SimpleMissionItem*>(1);
     QVERIFY(first);
+    auto* firstNumber = findVisibleItem(_rootItem, QStringLiteral("caacWaypointNumber_1"));
+    QVERIFY(firstNumber);
+    QCOMPARE(firstNumber->property("text").toString(), QStringLiteral("1"));
+    auto* planTree = findItem(_rootItem, QStringLiteral("planView_planTree"));
+    QVERIFY(planTree && !planTree->isVisible());
+    QVERIFY(clickButton(QStringLiteral("caacMissionSettings")));
+    QTRY_VERIFY_WITH_TIMEOUT(planTree->isVisible(), TestTimeout::mediumMs());
+    QVERIFY(clickButton(QStringLiteral("caacMissionSettings")));
+    QTRY_VERIFY_WITH_TIMEOUT(!planTree->isVisible(), TestTimeout::mediumMs());
     auto* dragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_1"), TestTimeout::mediumMs());
     QVERIFY(dragger);
     QTRY_VERIFY_WITH_TIMEOUT(
@@ -344,8 +357,17 @@ void CaacRouteEditorUITest::_testMouseEditing()
     }
     const bool waypointMoved = waitForCondition([&] { return first->coordinate().distanceTo(oldCoordinate) > 1; },
                                                 TestTimeout::mediumMs(), QStringLiteral("waypoint drag"));
-    QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, from + QPoint(40, -25));
+    auto* dragValues = findVisibleItem(_rootItem, QStringLiteral("caacWaypointDragValues"));
+    const QString initialFeedback = dragValues ? dragValues->property("text").toString() : QString();
+    QTest::mouseMove(_window, from + QPoint(55, -35));
+    const bool feedbackChanged =
+        dragValues && waitForCondition([&] { return dragValues->property("text").toString() != initialFeedback; },
+                                       TestTimeout::mediumMs(), QStringLiteral("live drag distance and angle"));
+    QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, from + QPoint(55, -35));
     QVERIFY(waypointMoved);
+    QVERIFY(dragValues);
+    QVERIFY(feedbackChanged);
+    QTRY_VERIFY_WITH_TIMEOUT(!dragValues->isVisible(), TestTimeout::mediumMs());
     QCOMPARE(first->altitude()->rawValue().toDouble(), 123.45);
     QCOMPARE(mission->visualItems()->count(), 3);
 
@@ -413,6 +435,9 @@ void CaacRouteEditorUITest::_testMouseEditing()
     const auto beforeRotation = master->saveToJson();
     QVERIFY(clickButton(QStringLiteral("caacRotateRoute")));
     QVERIFY(waitForDialog(QCoreApplication::translate("CaacGeometryDialog", "Route rotation")));
+    auto* rotationOperation = findVisibleItem(_rootItem, QStringLiteral("caacGeometryOperation"));
+    QVERIFY(rotationOperation);
+    QCOMPARE(rotationOperation->property("count").toInt(), 2);
     auto* rotationLatitude = findVisibleItem(_rootItem, QStringLiteral("caacRotationLatitude"));
     auto* rotationLongitude = findVisibleItem(_rootItem, QStringLiteral("caacRotationLongitude"));
     auto* rotationAngle = findVisibleItem(_rootItem, QStringLiteral("caacRotationAngle"));
@@ -431,6 +456,9 @@ void CaacRouteEditorUITest::_testMouseEditing()
     step("relative point through native controls");
     QVERIFY(clickButton(QStringLiteral("caacRelativePoint")));
     QVERIFY(waitForDialog(QCoreApplication::translate("CaacGeometryDialog", "Relative coordinate editor")));
+    auto* relativeOperation = findItem(_rootItem, QStringLiteral("caacGeometryOperation"));
+    QVERIFY(relativeOperation);
+    QVERIFY(!relativeOperation->isVisible());
     auto* relativeDistance = findVisibleItem(_rootItem, QStringLiteral("caacRelativeDistance"));
     QVERIFY(relativeDistance);
     relativeDistance->setProperty("text", QStringLiteral("100"));
@@ -439,10 +467,44 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QCOMPARE(mission->visualItems()->count(), beforeInsert + 1);
     QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(mission->visualItems()->count(), beforeInsert);
+
+    step("edit existing waypoint by distance and angle");
+    auto* target = mission->visualItems()->value<SimpleMissionItem*>(2);
+    auto* reference = mission->visualItems()->value<SimpleMissionItem*>(1);
+    QVERIFY(target && reference);
+    QVERIFY(editor->selectWaypoint(target));
+    const auto beforeRelativeEdit = master->saveToJson();
+    const auto referenceCoordinate = reference->coordinate();
+    const double targetAltitude = target->altitude()->rawValue().toDouble();
+    const auto targetFrame = target->altitudeFrame();
+    const int targetCommand = target->command();
+    QVERIFY(clickButton(QStringLiteral("caacEditWaypoint")));
+    QVERIFY(waitForDialog(QCoreApplication::translate("CaacWaypointDialog", "Waypoint properties")));
+    auto* positionMode = findVisibleItem(_rootItem, QStringLiteral("caacWaypointPositionMode"));
+    QVERIFY(positionMode && positionMode->isEnabled());
+    positionMode->setProperty("currentIndex", 1);
+    auto* relativeAngle = findVisibleItem(_rootItem, QStringLiteral("caacWaypointRelativeAngle"));
+    auto* existingDistance = findVisibleItem(_rootItem, QStringLiteral("caacWaypointRelativeDistance"));
+    auto* existingAngleType = findVisibleItem(_rootItem, QStringLiteral("caacWaypointAngleType"));
+    QVERIFY(relativeAngle && existingDistance && existingAngleType);
+    existingAngleType->setProperty("currentIndex", 0);
+    relativeAngle->setProperty("text", QStringLiteral("90"));
+    existingDistance->setProperty("text", QStringLiteral("150"));
+    QVERIFY(acceptDialog());
+    QTRY_VERIFY_WITH_TIMEOUT(!dialogVisible(QCoreApplication::translate("CaacWaypointDialog", "Waypoint properties")),
+                             TestTimeout::mediumMs());
+    QVERIFY(std::abs(QGCGeo::geodesicDistance(referenceCoordinate, target->coordinate()) - 150) < 1e-6);
+    QVERIFY(std::abs(QGCGeo::geodesicAzimuth(referenceCoordinate, target->coordinate()) - 90) < 1e-7);
+    QCOMPARE(target->altitude()->rawValue().toDouble(), targetAltitude);
+    QCOMPARE(target->altitudeFrame(), targetFrame);
+    QCOMPARE(target->command(), targetCommand);
+    QCOMPARE(reference->coordinate(), referenceCoordinate);
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QCOMPARE(master->saveToJson(), beforeRelativeEdit);
     if (chinese) {
         const auto* rotateButton = findVisibleItem(_rootItem, QStringLiteral("caacRotateRoute"));
         QVERIFY(rotateButton);
-        QCOMPARE(rotateButton->property("text").toString(), QStringLiteral("旋转 / 定向"));
+        QCOMPARE(rotateButton->property("text").toString(), QStringLiteral("航线旋转"));
         QCOMPARE(QCoreApplication::translate("CaacWaypointDialog", "Waypoint properties"), QStringLiteral("航点属性"));
     }
     step("complete");

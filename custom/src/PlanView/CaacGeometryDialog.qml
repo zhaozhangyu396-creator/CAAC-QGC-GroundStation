@@ -53,8 +53,9 @@ QGCPopupDialog {
             id: operationSelector
             objectName: "caacGeometryOperation"
             Layout.fillWidth: true
-            model: [qsTr("Rotate by angle"), qsTr("Align two points"), qsTr("Insert relative point")]
-            currentIndex: root.operation
+            visible: root.operation !== 2
+            model: [qsTr("Rotate by angle"), qsTr("Align two points")]
+            currentIndex: root.operation === 2 ? -1 : root.operation
             onActivated: root.operation = currentIndex
         }
 

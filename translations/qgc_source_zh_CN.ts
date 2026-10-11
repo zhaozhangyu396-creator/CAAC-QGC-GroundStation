@@ -5619,7 +5619,7 @@ Click Ok to start the auto-tuning process.
     <message>
       <location filename="../custom/src/PlanView/CaacRouteEditor.qml" line="161"/>
       <source>Rotate / align</source>
-      <translation>旋转 / 定向</translation>
+      <translation>航线旋转</translation>
     </message>
     <message>
       <location filename="../custom/src/PlanView/CaacRouteEditor.qml" line="167"/>
@@ -5636,23 +5636,83 @@ Click Ok to start the auto-tuning process.
       <source>Double-click to add · Drag to move · Right-click to edit</source>
       <translation>双击加点 · 左键拖动 · 右键编辑</translation>
     </message>
+    <message>
+      <source>No valid previous waypoint</source>
+      <translation>没有有效的前一航点</translation>
+    </message>
+    <message>
+      <source>Waypoint %1 → %2 · Distance: %3 m</source>
+      <translation>航点 %1 → %2 · 距离：%3 米</translation>
+    </message>
+    <message>
+      <source>Interior angle: %1°</source>
+      <translation>夹角：%1°</translation>
+    </message>
+    <message>
+      <source>Interior angle: unavailable (no incoming leg)</source>
+      <translation>夹角：无法计算（缺少前一航段）</translation>
+    </message>
+    <message>
+      <source>Bearing: %1°</source>
+      <translation>方位角：%1°</translation>
+    </message>
+    <message>
+      <source>Bearing: unavailable (coincident points)</source>
+      <translation>方位角：无法计算（两点重合）</translation>
+    </message>
+    <message>
+      <source>Mission settings</source>
+      <translation>任务参数</translation>
+    </message>
+    <message>
+      <source>Waypoint list</source>
+      <translation>航点列表</translation>
+    </message>
+    <message>
+      <source>%1 points</source>
+      <translation>%1 个航点</translation>
+    </message>
+    <message>
+      <source>Planned home</source>
+      <translation>计划起飞点</translation>
+    </message>
+    <message>
+      <source>Altitude: %1 m · Speed: %2</source>
+      <translation>高度：%1 米 · 速度：%2</translation>
+    </message>
+    <message>
+      <source>%1 m/s</source>
+      <translation>%1 米/秒</translation>
+    </message>
+    <message>
+      <source>Default</source>
+      <translation>默认</translation>
+    </message>
+    <message>
+      <source>Distance: %1 m · Angle: %2</source>
+      <translation>距离：%1 米 · 夹角：%2</translation>
+    </message>
+    <message>
+      <source>%1°</source>
+      <translation>%1°</translation>
+    </message>
   </context>
   <context>
     <name>CaacRouteEditorController</name>
     <message>
       <location filename="../custom/src/Route/CaacRouteEditorController.cc" line="106"/>
       <source>No plan is available.</source>
-      <translation>没有可用的计划。</translation>
+      <translation>当前没有可编辑的航线。</translation>
     </message>
     <message>
       <location filename="../custom/src/Route/CaacRouteEditorController.cc" line="109"/>
       <source>Wait for the vehicle transfer to finish before editing.</source>
-      <translation>等待车辆传输完成后再进行编辑。</translation>
+      <translation>请等待飞行器数据传输完成后再编辑。</translation>
     </message>
     <message>
       <location filename="../custom/src/Route/CaacRouteEditorController.cc" line="123"/>
       <source>This plan contains jump commands. Use the original mission editor to change its order.</source>
-      <translation>该计划包含跳转命令。使用原始任务编辑器更改其顺序。</translation>
+      <translation>航线包含跳转命令（DO_JUMP）。请使用原任务编辑器调整顺序。</translation>
     </message>
     <message>
       <location filename="../custom/src/Route/CaacRouteEditorController.cc" line="135"/>
@@ -5662,12 +5722,12 @@ Click Ok to start the auto-tuning process.
     <message>
       <location filename="../custom/src/Route/CaacRouteEditorController.cc" line="155"/>
       <source>Select a simple coordinate mission item.</source>
-      <translation>选择简单坐标任务项目。</translation>
+      <translation>请选择带坐标的简单任务项。</translation>
     </message>
     <message>
       <location filename="../custom/src/Route/CaacRouteEditorController.cc" line="170"/>
       <source>This mission item does not support waypoint property editing.</source>
-      <translation>该任务项不支持航路点属性编辑。</translation>
+      <translation>该任务项不支持航点属性编辑。</translation>
     </message>
     <message>
       <location filename="../custom/src/Route/CaacRouteEditorController.cc" line="175"/>
@@ -5677,22 +5737,22 @@ Click Ok to start the auto-tuning process.
     <message>
       <location filename="../custom/src/Route/CaacRouteEditorController.cc" line="181"/>
       <source>Flight speed is invalid or unavailable for this mission item.</source>
-      <translation>该任务项目的飞行速度无效或不可用。</translation>
+      <translation>该任务项的飞行速度无效，或不支持设置飞行速度。</translation>
     </message>
     <message>
       <location filename="../custom/src/Route/CaacRouteEditorController.cc" line="208"/>
       <source>Only ordinary waypoints can be removed here.</source>
-      <translation>此处只能删除普通航路点。</translation>
+      <translation>此处只能删除普通航点。</translation>
     </message>
     <message>
       <location filename="../custom/src/Route/CaacRouteEditorController.cc" line="222"/>
       <source>Move one waypoint up or down at a time.</source>
-      <translation>一次向上或向下移动一个航路点。</translation>
+      <translation>每次只能将一个航点上移或下移一位。</translation>
     </message>
     <message>
       <location filename="../custom/src/Route/CaacRouteEditorController.cc" line="228"/>
       <source>Waypoints can only move past adjacent ordinary waypoints.</source>
-      <translation>航路点只能移动经过相邻的普通航路点。</translation>
+      <translation>只能与相邻的普通航点交换顺序。</translation>
     </message>
     <message>
       <location filename="../custom/src/Route/CaacRouteEditorController.cc" line="247"/>
@@ -5712,17 +5772,17 @@ Click Ok to start the auto-tuning process.
     <message>
       <location filename="../custom/src/Route/CaacRouteEditorController.cc" line="279"/>
       <source>Convert complex survey or landing patterns to simple items before rotating.</source>
-      <translation>在旋转之前将复杂的调查或着陆模式转换为简单的项目。</translation>
+      <translation>请先将复杂测绘或降落图案转换为简单任务项，再进行旋转。</translation>
     </message>
     <message>
       <location filename="../custom/src/Route/CaacRouteEditorController.cc" line="283"/>
       <source>Every route coordinate, including planned home, must be valid.</source>
-      <translation>每个路线坐标，包括计划的家，都必须有效。</translation>
+      <translation>所有航线坐标（包括计划起飞点）都必须有效。</translation>
     </message>
     <message>
       <location filename="../custom/src/Route/CaacRouteEditorController.cc" line="290"/>
       <source>Create at least one coordinate waypoint before rotating.</source>
-      <translation>在旋转之前创建至少一个坐标路点。</translation>
+      <translation>请先创建至少一个带坐标的航点，再进行旋转。</translation>
     </message>
     <message>
       <location filename="../custom/src/Route/CaacRouteEditorController.cc" line="309"/>
@@ -5738,32 +5798,36 @@ Click Ok to start the auto-tuning process.
     <message>
       <location filename="../custom/src/Route/CaacRouteEditorController.cc" line="344"/>
       <source>The two points must be distinct and the target bearing must be valid.</source>
-      <translation>这两点必须不同并且目标方位必须有效。</translation>
+      <translation>请选择两个位置不同的点，并输入有效的目标方位角。</translation>
     </message>
     <message>
       <location filename="../custom/src/Route/CaacRouteEditorController.cc" line="358"/>
       <source>Select a reference point and an insertion position.</source>
-      <translation>选择参考点和插入位置。</translation>
+      <translation>请选择坐标基准点和插入位置。</translation>
     </message>
     <message>
       <location filename="../custom/src/Route/CaacRouteEditorController.cc" line="363"/>
       <source>Select a simple coordinate reference point.</source>
-      <translation>选择简单坐标参考点。</translation>
+      <translation>请选择带坐标的简单任务项作为基准点。</translation>
     </message>
     <message>
       <location filename="../custom/src/Route/CaacRouteEditorController.cc" line="376"/>
       <source>Interior angle requires an incoming leg; planned home alone has none.</source>
-      <translation>内角需要引入腿；计划中的家本身就没有。</translation>
+      <translation>夹角模式需要前一航段。起飞点没有前一航段，请选择其他航点作为基准。</translation>
     </message>
     <message>
       <location filename="../custom/src/Route/CaacRouteEditorController.cc" line="384"/>
       <source>Check the reference point, angle and positive distance in metres.</source>
-      <translation>检查参考点、角度和正距离（以米为单位）。</translation>
+      <translation>请检查基准点和角度，并输入大于零的距离（米）。</translation>
     </message>
     <message>
       <location filename="../custom/src/Route/CaacRouteEditorController.cc" line="512"/>
       <source>Unable to restore the route: %1</source>
-      <translation>无法恢复路由：%1</translation>
+      <translation>无法恢复航线：%1</translation>
+    </message>
+    <message>
+      <source>This waypoint has no valid simple previous point.</source>
+      <translation>该航点没有有效的前一简单航点。</translation>
     </message>
   </context>
   <context>
@@ -5826,6 +5890,50 @@ Click Ok to start the auto-tuning process.
       <location filename="../custom/src/PlanView/CaacWaypointDialog.qml" line="76"/>
       <source>Set flight speed (m/s)</source>
       <translation>指定飞行速度（米/秒）</translation>
+    </message>
+    <message>
+      <source>Waypoint %1</source>
+      <translation>航点 %1</translation>
+    </message>
+    <message>
+      <source>Position editing</source>
+      <translation>位置编辑</translation>
+    </message>
+    <message>
+      <source>Coordinates</source>
+      <translation>经纬度</translation>
+    </message>
+    <message>
+      <source>Relative to previous waypoint</source>
+      <translation>相对上一航点</translation>
+    </message>
+    <message>
+      <source>Angle type</source>
+      <translation>角度类型</translation>
+    </message>
+    <message>
+      <source>Bearing</source>
+      <translation>方位角</translation>
+    </message>
+    <message>
+      <source>Interior angle</source>
+      <translation>夹角</translation>
+    </message>
+    <message>
+      <source>Distance from previous waypoint (m)</source>
+      <translation>与上一航点距离（米）</translation>
+    </message>
+    <message>
+      <source>Angle (degrees)</source>
+      <translation>角度（°）</translation>
+    </message>
+    <message>
+      <source>At the previous waypoint: interior angle 90° turns left, 180° continues straight. Negative angles are supported.</source>
+      <translation>以航点前一航段为参照：夹角 90°左转、180°直行，支持负角度。</translation>
+    </message>
+    <message>
+      <source>No incoming leg at the previous point: use a bearing (true north 0°, east 90°).</source>
+      <translation>上一点没有前一航段，请使用方位角（真北 0°、正东 90°）。</translation>
     </message>
   </context>
   <context>
@@ -6856,7 +6964,7 @@ Click Ok to start the auto-tuning process.
     <message>
       <location filename="../src/Toolbar/EscIndicator.qml" line="94"/>
       <source>OK</source>
-      <translation>好的</translation>
+      <translation>正常</translation>
     </message>
     <message>
       <location filename="../src/Toolbar/EscIndicator.qml" line="94"/>
@@ -10446,7 +10554,7 @@ VTOL</source>
     <message>
       <location filename="../src/FirstRunPromptDialogs/InitialSetupPrompt.qml" line="57"/>
       <source>Vehicle Preferences</source>
-      <translation>车辆偏好</translation>
+      <translation>飞行器偏好设置</translation>
     </message>
     <message>
       <location filename="../src/FirstRunPromptDialogs/InitialSetupPrompt.qml" line="58"/>
@@ -14058,7 +14166,7 @@ VTOL</source>
     <message>
       <location filename="../src/MissionManager/MissionController.cc" line="1322"/>
       <source>Defaults</source>
-      <translation>默认值</translation>
+      <translation>航点默认设置</translation>
     </message>
     <message>
       <location filename="../src/MissionManager/MissionController.cc" line="1330"/>
@@ -14086,7 +14194,7 @@ VTOL</source>
     <message>
       <location filename="../src/PlanView/MissionDefaultsEditor.qml" line="59"/>
       <source>Alt Frame</source>
-      <translation>替代框架</translation>
+      <translation>高度基准</translation>
     </message>
     <message>
       <location filename="../src/PlanView/MissionDefaultsEditor.qml" line="88"/>
@@ -14101,7 +14209,7 @@ VTOL</source>
     <message>
       <location filename="../src/PlanView/MissionDefaultsEditor.qml" line="111"/>
       <source>Expected Vehicle Speeds</source>
-      <translation>预期车速</translation>
+      <translation>速度设置</translation>
     </message>
     <message>
       <location filename="../src/PlanView/MissionDefaultsEditor.qml" line="124"/>
@@ -14206,6 +14314,10 @@ VTOL</source>
       <source>Item #%1</source>
       <translation>项目 %1</translation>
     </message>
+    <message>
+      <source>%1 %2</source>
+      <translation>%1 %2</translation>
+    </message>
   </context>
   <context>
     <name>MissionItemStatus</name>
@@ -14271,7 +14383,7 @@ VTOL</source>
     <message>
       <location filename="../src/PlanView/MissionStats.qml" line="111"/>
       <source>Alt diff:</source>
-      <translation>替代差异：</translation>
+      <translation>高度差：</translation>
     </message>
     <message>
       <location filename="../src/PlanView/MissionStats.qml" line="120"/>
@@ -14281,17 +14393,17 @@ VTOL</source>
     <message>
       <location filename="../src/PlanView/MissionStats.qml" line="129"/>
       <source>Dist prev WP:</source>
-      <translation>上一个 WP 距离：</translation>
+      <translation>与上一航点距离：</translation>
     </message>
     <message>
       <location filename="../src/PlanView/MissionStats.qml" line="136"/>
       <source>Gradient:</source>
-      <translation>渐变：</translation>
+      <translation>爬升/下降角：</translation>
     </message>
     <message>
       <location filename="../src/PlanView/MissionStats.qml" line="145"/>
       <source>Heading:</source>
-      <translation>标题：</translation>
+      <translation>航向：</translation>
     </message>
     <message>
       <location filename="../src/PlanView/MissionStats.qml" line="159"/>
@@ -14306,7 +14418,7 @@ VTOL</source>
     <message>
       <location filename="../src/PlanView/MissionStats.qml" line="173"/>
       <source>Max telem dist:</source>
-      <translation>最大远程距离：</translation>
+      <translation>最远遥测距离：</translation>
     </message>
     <message>
       <location filename="../src/PlanView/MissionStats.qml" line="180"/>
@@ -15472,7 +15584,7 @@ Do you wish to proceed?</source>
     <message>
       <location filename="../src/AppSettings/OfflineMapEditor.qml" line="283"/>
       <source>Ok</source>
-      <translation>好的</translation>
+      <translation>确定</translation>
     </message>
     <message>
       <location filename="../src/AppSettings/OfflineMapEditor.qml" line="295"/>
@@ -19313,7 +19425,7 @@ Click 'Ok' to upload the Plan anyway.</source>
     <message>
       <location filename="../src/QmlControls/QGCPopupDialog.qml" line="139"/>
       <source>Ok</source>
-      <translation>好的</translation>
+      <translation>确定</translation>
     </message>
     <message>
       <location filename="../src/QmlControls/QGCPopupDialog.qml" line="142"/>
@@ -19503,7 +19615,7 @@ Click 'Ok' to upload the Plan anyway.</source>
     <message>
       <location filename="../src/QmlControls/QGroundControlQmlGlobal.cc" line="248"/>
       <source>Rel</source>
-      <translation>相对</translation>
+      <translation>相对起飞点</translation>
     </message>
     <message>
       <location filename="../src/QmlControls/QGroundControlQmlGlobal.cc" line="252"/>
@@ -19524,7 +19636,7 @@ Click 'Ok' to upload the Plan anyway.</source>
     <message>
       <location filename="../src/QmlControls/QGroundControlQmlGlobal.cc" line="269"/>
       <source>Relative (%1)</source>
-      <translation>相对 (%1)</translation>
+      <translation>相对高度（%1）</translation>
     </message>
     <message>
       <location filename="../src/QmlControls/QGroundControlQmlGlobal.cc" line="271"/>
@@ -21215,7 +21327,7 @@ Click 'Ok' to upload the Plan anyway.</source>
     <message>
       <location filename="../src/Toolbar/SelectViewDropdown.qml" line="23"/>
       <source>Fly</source>
-      <translation>飞翔</translation>
+      <translation>飞行</translation>
     </message>
     <message>
       <location filename="../src/Toolbar/SelectViewDropdown.qml" line="37"/>
@@ -22120,7 +22232,7 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
       <location filename="../src/PlanView/SimpleItemEditor.qml" line="159"/>
       <source>Alt Frame</source>
-      <translation>替代框架</translation>
+      <translation>高度基准</translation>
     </message>
     <message>
       <location filename="../src/PlanView/SimpleItemEditor.qml" line="172"/>
@@ -22988,7 +23100,7 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
       <location filename="../src/PlanView/TransformEditor.qml" line="53"/>
       <source>Offset Mission</source>
-      <translation>偏移任务</translation>
+      <translation>航线偏移</translation>
     </message>
     <message>
       <location filename="../src/PlanView/TransformEditor.qml" line="64"/>
@@ -23009,18 +23121,18 @@ If a vehicle still has this key configured, you will no longer be able to commun
       <location filename="../src/PlanView/TransformEditor.qml" line="88"/>
       <location filename="../src/PlanView/TransformEditor.qml" line="305"/>
       <source>Also move takeoff items</source>
-      <translation>同时移动起飞项目</translation>
+      <translation>同时移动起飞航点</translation>
     </message>
     <message>
       <location filename="../src/PlanView/TransformEditor.qml" line="93"/>
       <location filename="../src/PlanView/TransformEditor.qml" line="310"/>
       <source>Also move landing items</source>
-      <translation>同时移动登陆物品</translation>
+      <translation>同时移动降落航点</translation>
     </message>
     <message>
       <location filename="../src/PlanView/TransformEditor.qml" line="101"/>
       <source>Note: Home altitude is not modified.</source>
-      <translation>注意：家乡海拔高度未修改。</translation>
+      <translation>注意：起飞点海拔高度保持不变。</translation>
     </message>
     <message>
       <location filename="../src/PlanView/TransformEditor.qml" line="106"/>
@@ -23030,12 +23142,12 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
       <location filename="../src/PlanView/TransformEditor.qml" line="127"/>
       <source>Reposition Mission</source>
-      <translation>重新定位任务</translation>
+      <translation>航线重定位</translation>
     </message>
     <message>
       <location filename="../src/PlanView/TransformEditor.qml" line="141"/>
       <source>Home position must be set to reposition the mission.</source>
-      <translation>必须设置起始位置才能重新定位任务。</translation>
+      <translation>请先设置起飞点，再重新定位航线。</translation>
     </message>
     <message>
       <location filename="../src/PlanView/TransformEditor.qml" line="155"/>
@@ -23046,24 +23158,24 @@ If a vehicle still has this key configured, you will no longer be able to commun
       <location filename="../src/PlanView/TransformEditor.qml" line="162"/>
       <location filename="../src/PlanView/TransformEditor.qml" line="163"/>
       <source>Geographic</source>
-      <translation>地理</translation>
+      <translation>经纬度</translation>
     </message>
     <message>
       <location filename="../src/PlanView/TransformEditor.qml" line="162"/>
       <location filename="../src/PlanView/TransformEditor.qml" line="163"/>
       <source>Universal Transverse Mercator</source>
-      <translation>通用横轴墨卡托</translation>
+      <translation>通用横轴墨卡托坐标（UTM）</translation>
     </message>
     <message>
       <location filename="../src/PlanView/TransformEditor.qml" line="162"/>
       <location filename="../src/PlanView/TransformEditor.qml" line="163"/>
       <source>Military Grid Reference</source>
-      <translation>军事网格参考</translation>
+      <translation>军事格网参考系（MGRS）</translation>
     </message>
     <message>
       <location filename="../src/PlanView/TransformEditor.qml" line="162"/>
       <source>Vehicle Position</source>
-      <translation>载具位置</translation>
+      <translation>飞行器位置</translation>
     </message>
     <message>
       <location filename="../src/PlanView/TransformEditor.qml" line="169"/>
@@ -23085,12 +23197,12 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
       <location filename="../src/PlanView/TransformEditor.qml" line="198"/>
       <source>Zone</source>
-      <translation>时区</translation>
+      <translation>分区编号</translation>
     </message>
     <message>
       <location filename="../src/PlanView/TransformEditor.qml" line="206"/>
       <source>Hemisphere</source>
-      <translation>球面投影</translation>
+      <translation>半球</translation>
     </message>
     <message>
       <location filename="../src/PlanView/TransformEditor.qml" line="215"/>
@@ -23110,17 +23222,17 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
       <location filename="../src/PlanView/TransformEditor.qml" line="264"/>
       <source>Move to Vehicle Position</source>
-      <translation>移至载具位置</translation>
+      <translation>移至飞行器位置</translation>
     </message>
     <message>
       <location filename="../src/PlanView/TransformEditor.qml" line="278"/>
       <source>Rotate Mission</source>
-      <translation>轮换任务</translation>
+      <translation>航线旋转</translation>
     </message>
     <message>
       <location filename="../src/PlanView/TransformEditor.qml" line="291"/>
       <source>Home position must be set to rotate the mission.</source>
-      <translation>必须设置起始位置才能轮换任务。</translation>
+      <translation>请先设置起飞点，再以起飞点为中心旋转航线。</translation>
     </message>
     <message>
       <location filename="../src/PlanView/TransformEditor.qml" line="297"/>
@@ -23130,7 +23242,7 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
       <location filename="../src/PlanView/TransformEditor.qml" line="318"/>
       <source>Note: Complex items are rotated by moving their reference coordinate: their geometry and orientation are not changed.</source>
-      <translation>注意：复杂项目通过移动其参考坐标来旋转：它们的几何形状和方向不会改变。</translation>
+      <translation>注意：复杂任务项仅移动参考点，其图案形状和朝向保持不变。</translation>
     </message>
     <message>
       <location filename="../src/PlanView/TransformEditor.qml" line="323"/>
@@ -24193,7 +24305,7 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
       <location filename="../src/Viewer3D/Viewer3DQml/Viewer3DShowAction.qml" line="13"/>
       <source>Fly</source>
-      <translation>飞翔</translation>
+      <translation>飞行</translation>
     </message>
     <message>
       <location filename="../src/Viewer3D/Viewer3DQml/Viewer3DShowAction.qml" line="13"/>

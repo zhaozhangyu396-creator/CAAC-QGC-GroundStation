@@ -29,7 +29,7 @@ TreeView {
     on_CreateNewPlanModeChanged: {
         if (_createNewPlanMode) {
             var planFileRow = _rowFor(_missionController.planFileGroupIndex)
-            if (!root.isExpanded(planFileRow)) {
+            if (planFileRow >= 0 && !root.isExpanded(planFileRow)) {
                 root.expand(planFileRow)
             }
             root.contentY = 0
@@ -61,7 +61,7 @@ TreeView {
                 // First waypoint added — collapse Plan Info and Defaults
                 if (root._lastMissionItemCount <= 1 && newCount > 1) {
                     var planFileRow = _rowFor(_missionController.planFileGroupIndex)
-                    if (root.isExpanded(planFileRow)) {
+                    if (planFileRow >= 0 && root.isExpanded(planFileRow)) {
                         root.collapse(planFileRow)
                     }
                     var defaultsRow = _rowFor(_missionController.defaultsGroupIndex)
@@ -86,7 +86,10 @@ TreeView {
                 root.expand(_rowFor(_missionController.missionGroupIndex))
             } else {
                 // Empty plan: expand Plan Info and Defaults, scroll to top
-                root.expand(_rowFor(_missionController.planFileGroupIndex))
+                var planFileRow = _rowFor(_missionController.planFileGroupIndex)
+                if (planFileRow >= 0) {
+                    root.expand(planFileRow)
+                }
                 root.expand(_rowFor(_missionController.defaultsGroupIndex))
                 root.contentY = 0
             }

@@ -1311,12 +1311,14 @@ void MissionController::_setupTreeModel(void)
     _visualItemsTree.clear();
 
     // ── Plan File group ──
-    _planFileGroupNode.setObjectName(tr("Plan Info"));
-    _visualItemsTree.appendItem(&_planFileGroupNode, QModelIndex(), QStringLiteral("planFileGroup"));
+    if (QGCCorePlugin::instance()->showPlanInformation()) {
+        _planFileGroupNode.setObjectName(tr("Plan Info"));
+        _visualItemsTree.appendItem(&_planFileGroupNode, QModelIndex(), QStringLiteral("planFileGroup"));
 
-    _planFileInfoMarker.setObjectName(QStringLiteral("planFileInfo"));
-    _visualItemsTree.appendItem(&_planFileInfoMarker,
-        _visualItemsTree.indexForObject(&_planFileGroupNode), QStringLiteral("planFileInfo"));
+        _planFileInfoMarker.setObjectName(QStringLiteral("planFileInfo"));
+        _visualItemsTree.appendItem(&_planFileInfoMarker, _visualItemsTree.indexForObject(&_planFileGroupNode),
+                                    QStringLiteral("planFileInfo"));
+    }
 
     // ── Defaults group ──
     _defaultsGroupNode.setObjectName(tr("Defaults"));

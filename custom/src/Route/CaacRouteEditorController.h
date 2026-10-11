@@ -5,12 +5,14 @@
 #include <QtCore/QPointer>
 #include <QtCore/QTimer>
 #include <QtCore/QVariantList>
+#include <QtCore/QVariantMap>
 #include <QtPositioning/QGeoCoordinate>
 #include <QtQmlIntegration/QtQmlIntegration>
 
 class MissionController;
 class PlanMasterController;
 class SimpleMissionItem;
+class VisualMissionItem;
 
 /// Edits the existing QGC plan model without uploading or changing vehicle parameters.
 class CaacRouteEditorController : public QObject
@@ -49,6 +51,9 @@ public:
     Q_INVOKABLE bool selectWaypoint(QObject* item);
     Q_INVOKABLE bool updateWaypoint(QObject* item, double latitude, double longitude, double altitude,
                                     bool specifySpeed, double speed);
+    Q_INVOKABLE QVariantMap waypointLeg(QObject* item) const;
+    Q_INVOKABLE bool updateRelativeWaypoint(QObject* item, double angle, double distance, bool interiorAngle,
+                                            double altitude, bool specifySpeed, double speed);
     Q_INVOKABLE bool removeCurrentWaypoint();
     Q_INVOKABLE bool moveCurrentWaypoint(int offset);
     Q_INVOKABLE bool setRotationCenter(const QGeoCoordinate& coordinate);
@@ -75,6 +80,7 @@ signals:
 private:
     bool eventFilter(QObject* watched, QEvent* event) override;
     MissionController* _missionController() const;
+    VisualMissionItem* _previousCoordinateItem(int beforeIndex) const;
     bool _canEdit();
     bool _canChangeOrder();
     bool _fail(const QString& error);

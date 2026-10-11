@@ -152,9 +152,13 @@ public:
     virtual const QmlObjectListModel* customGeoMapItems();
 
     /// Optional editor above the plan tree; receives editorMap and planMasterController properties.
+    /// An optional showMissionTree=false property fills the panel with the custom editor instead.
     virtual QUrl planViewEditor() const { return {}; }
 
     virtual bool directMissionItemEditing() const { return false; }
+
+    /// Controls whether the plan tree includes the plan information group.
+    virtual bool showPlanInformation() const { return true; }
 
     /// Allows custom builds to add custom items to the plan file before the document is created.
     virtual void preSaveToJson(PlanMasterController *pController, QJsonObject &json) { Q_UNUSED(pController); Q_UNUSED(json); }
