@@ -53,4 +53,26 @@ Qt 的 `setMouseEnabled(false)` 清空内部鼠标触点，而 `mouseReleaseEven
 运行 [38148539049](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38148539049)，
 x64 作业 `114496982614`。结果包含两种界面的 ROI 原生窗口切换、度分秒编辑、任务模型、模板几何、Fact 所有权及飞行数据检查。
 本地结果保存于 `/workspace/caac-28fe-debug-results/junit-caac.xml`。
-同源 Release 运行 `38149545727` 正在构建；未完成的安装、升级与安装后启动检查不计为通过。
+同源 Release 运行 `38149545727` 的 x64 作业 `114499995825` 已成功：Portable 10/10，编译后启动、实际 NSIS 中文审计、
+安装校验值、安装与升级、移除 Qt/GStreamer 构建 SDK 路径后的安装版启动、卸载及清理均通过。
+两份包内中文审计均为 6594 条消息、30 个技术标识、1 条空来源、0 错误。
+
+## 新版安装包
+
+[下载 Windows x64 Release 验证包](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38149545727/artifacts/11706493935)。
+登录 GitHub 下载 ZIP，解压后运行 `build/QGroundControl-installer-AMD64.exe`。
+Artifact `11706493935`，名称 `caac-validation-amd64-Release`，过期时间 2026-10-25 15:19:50 UTC。
+该包的应用源码为 `28fe9574251ad3f67aa762e92796c1304522db74`，由工作流完整 HEAD 确认。
+
+| 文件 | 字节数 | SHA256 |
+| --- | --- | --- |
+| 下载 ZIP | 135232537 | `17ca54f2acbd777a0a094562ff589e6b0dd59b2970cf070ac3a20681673bf551` |
+| 安装 EXE | 135241996 | `0d8c366509696b3b8b48355a5c96eac58315bb6c4da9026c6b2981e23c5acb38` |
+
+ZIP 与 GitHub API digest 一致，EXE 与包内 `.sha256` 一致。
+本地下载与审计记录为 `/workspace/caac-28fe-release-*`，Portable 结果为 `/workspace/caac-28fe-release-portable/junit-portable.xml`。
+该包包含已完成的凌动布局、航点与模板编辑、窗口拖动、航段标注、菜单字体与中文修正、本次 ROI 修复和高级参数编辑，
+仍有“同包高级编辑”部分列出的高级功能未完成，不称为完整凌动等效软件。
+
+测试辅助程序与外部软件切换回归随后提交于 `b07019bc214db501ce4df841e27f980511a8dcb7`，未改变安装包的应用行为。
+其独立 Windows Debug 验证运行 `38150862151` 尚未完成，不将它与上述安装包的 8/8 原生结果混为同一源码验收。
