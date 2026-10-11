@@ -4,6 +4,18 @@ target_sources(
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacFlightDistanceTest.cc ${CMAKE_CURRENT_SOURCE_DIR}/CaacFlightDataUITest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacPlanningToolsTest.cc
 )
+if(WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    qt_add_executable(CaacFocusTestWindow WIN32 CaacFocusTestWindow.cc)
+    target_link_libraries(CaacFocusTestWindow PRIVATE Qt6::Gui Qt6::Network)
+    if(WIN32)
+        target_link_libraries(CaacFocusTestWindow PRIVATE user32)
+    else()
+        find_package(PkgConfig REQUIRED)
+        pkg_check_modules(CAAC_FOCUS_XCB REQUIRED IMPORTED_TARGET xcb)
+        target_link_libraries(CaacFocusTestWindow PRIVATE PkgConfig::CAAC_FOCUS_XCB)
+    endif()
+    add_dependencies(${CMAKE_PROJECT_NAME} CaacFocusTestWindow)
+endif()
 add_qgc_test(CaacFlightDistanceTest LABELS Unit Vehicle)
 add_qgc_test(CaacRouteEditorTest LABELS Unit MissionManager)
 add_qgc_test(CaacPlanningToolsTest LABELS Unit MissionManager)

@@ -6,13 +6,18 @@
 
 #include <QtCore/QByteArray>
 #include <QtCore/QFile>
+#include <QtCore/QFileInfo>
 #include <QtCore/QLineF>
 #include <QtCore/QPointer>
+#include <QtCore/QProcess>
 #include <QtCore/QScopeGuard>
 #include <QtCore/QTemporaryDir>
+#include <QtCore/QUuid>
 #include <QtGui/QFontMetricsF>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QImage>
+#include <QtNetwork/QLocalServer>
+#include <QtNetwork/QLocalSocket>
 #include <QtQml/QQmlApplicationEngine>
 #include <QtQml/QQmlComponent>
 #include <QtQuick/QQuickItem>
@@ -744,6 +749,46 @@ void CaacRouteEditorUITest::_roiWindowFocus()
                        map->mapToScene(QPointF(map->width() * 0.5, map->height() * 0.55)).toPoint());
     QTRY_COMPARE_WITH_TIMEOUT(mission->visualItems()->count(), 3, TestTimeout::mediumMs());
 
+#if defined(Q_OS_WIN) || (defined(Q_OS_LINUX) && !defined(Q_OS_ANDROID))
+    QProcess otherApplication;
+    const auto stopOtherApplication = [&] {
+        if (otherApplication.state() != QProcess::NotRunning) {
+            otherApplication.terminate();
+            if (!otherApplication.waitForFinished(TestTimeout::shortMs())) {
+                otherApplication.kill();
+                otherApplication.waitForFinished(TestTimeout::shortMs());
+            }
+        }
+    };
+    const auto cleanupOtherApplication = qScopeGuard(stopOtherApplication);
+    QString helper = QCoreApplication::applicationDirPath() + QStringLiteral("/CaacFocusTestWindow");
+#ifdef Q_OS_WIN
+    helper += QStringLiteral(".exe");
+#endif
+    QVERIFY(QFileInfo::exists(helper));
+    const auto changeFocus = [&] {
+        QLocalServer control;
+        control.setSocketOptions(QLocalServer::UserAccessOption);
+        const QString serverName = QStringLiteral("caac-focus-") + QUuid::createUuid().toString(QUuid::Id128);
+        QVERIFY(control.listen(serverName));
+        _window->requestActivate();
+        QTRY_VERIFY_WITH_TIMEOUT(QGuiApplication::focusWindow() == _window && _window->isActive(),
+                                 TestTimeout::mediumMs());
+        otherApplication.start(helper, {serverName, QString::number(_window->winId())});
+        QVERIFY(otherApplication.waitForStarted(TestTimeout::mediumMs()));
+        QTRY_VERIFY_WITH_TIMEOUT(control.hasPendingConnections(), TestTimeout::mediumMs());
+        std::unique_ptr<QLocalSocket> connection(control.nextPendingConnection());
+        QVERIFY(connection);
+        QTRY_VERIFY_WITH_TIMEOUT(QGuiApplication::applicationState() == Qt::ApplicationInactive && !_window->isActive(),
+                                 TestTimeout::mediumMs());
+        QCOMPARE(connection->write("return\n"), 7);
+        QVERIFY(connection->flush());
+        QTRY_VERIFY_WITH_TIMEOUT(QGuiApplication::applicationState() == Qt::ApplicationActive && _window->isActive(),
+                                 TestTimeout::mediumMs());
+        stopOtherApplication();
+    };
+#else
+    // Other native platforms retain the second-window regression until an external focus helper is available.
     QQuickWindow otherWindow;
     otherWindow.setTitle(QStringLiteral("ROI focus regression"));
     otherWindow.resize(320, 240);
@@ -754,6 +799,7 @@ void CaacRouteEditorUITest::_roiWindowFocus()
         _window->requestActivate();
         QTRY_VERIFY_WITH_TIMEOUT(_window->isActive() && !otherWindow.isActive(), TestTimeout::mediumMs());
     };
+#endif
     for (int i = 0; i < 3; ++i) {
         QVERIFY(clickButton(QStringLiteral("planToolStrip_roiButton")));
         QTRY_VERIFY_WITH_TIMEOUT(plan->property("_addROIOnClick").toBool(), TestTimeout::mediumMs());
@@ -778,7 +824,6 @@ void CaacRouteEditorUITest::_roiWindowFocus()
     }
     QVERIFY(mission->property("isROIActive").toBool());
     master->removeAll();
-    otherWindow.close();
 }
 
 UT_REGISTER_TEST(CaacRouteEditorUITest, TestLabel::Integration, TestLabel::MissionManager)

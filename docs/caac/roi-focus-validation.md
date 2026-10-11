@@ -11,8 +11,11 @@ Qt 的 `setMouseEnabled(false)` 清空内部鼠标触点，而 `mouseReleaseEven
 `FlightMap.qml` 现在在事件结束后发送地图点击信号，避免在 Qt 正在处理释放时切换鼠标接收区域。
 取消触摸时还会停止长按定时器、清除按压状态并结束地图平移。
 
-`CaacRouteEditorUITest::_roiWindowFocus` 使用真实原生窗口，重复三次开启 ROI、窗口失焦与重新激活、关闭 ROI，
-随后放置兴趣点并再次切换窗口，检查模式、任务数量和 ROI 状态。它验证原生窗口切换，不等同于手动覆盖所有外部软件和输入设备。
+`CaacRouteEditorUITest::_roiWindowFocus` 在 Windows 和 Linux Xcb 中启动独立的原生窗口程序，重复三次开启 ROI、
+应用失焦与重新激活、关闭 ROI，随后放置兴趣点并再次切换，检查应用状态、主窗口、任务数量和 ROI 状态。
+辅助程序通过本地套接字接收返回请求，从前台程序激活原窗口；Windows 使用原生前台窗口接口，Xcb 使用当前时间的原生焦点请求。
+辅助程序仅用于测试，不安装到软件中。其他原生平台保留第二窗口回归，尚未验证外部程序切换。
+这不等同于手动覆盖所有外部软件、输入设备和 Windows DPI 设置。
 
 ## 本地验证
 
@@ -22,6 +25,8 @@ Qt 的 `setMouseEnabled(false)` 清空内部鼠标触点，而 `mouseReleaseEven
 - 新鲜源码翻译审计：6594 条消息、30 个技术标识、1 条空来源、0 个错误。
 - 原生 Xcb／Mesa 125% 缩放：页面、工具栏、参数弹窗、飞行地图及 CAAC 界面 8/8 通过，153.04 秒；记录 `caac-advanced-ui-125.xml`。
 - 度分秒输入宽度修正后，125% 中英文界面 2/2 通过，19.90 秒，检查实际字体宽度与输入框内边距，保留 ROI 窗口切换测试；记录 `caac-coordinate-layout-125.xml`。
+- 改为独立程序切换后，125% 中英文界面 2/2 通过，47.24 秒；检查实际应用失焦及重新激活，记录 `caac-external-native-focus-125.xml`。
+- 测试辅助程序限定为 Windows／Linux、保留其他平台原有窗口回归后，125% 中英文最终检查 2/2 通过，45.73 秒；记录 `caac-external-focus-complete-125.xml`。其余平台不计为外部程序切换验收。
 - 启动检查和本批变更静态检查通过。度分秒截图已检查数字与单位完整显示，记录 `/workspace/caac-advanced-waypoint.png`。
 - Windows 验证结果在完成后补充。Linux 缩放验证不代替用户 Windows 手动 DPI 验收。
 
@@ -43,3 +48,9 @@ Qt 的 `setMouseEnabled(false)` 清空内部鼠标触点，而 `mouseReleaseEven
 同源 Debug 检查因模板几何的每组数据反复启动任务控制器而超出 60 秒；其他六类检查通过。
 几何测试现独立于任务集成测试，仍保留所有数据和断言，不增加超时或跳过检查。
 新版 Windows 验证必须对应包含本次修复的源码提交；最终身份和下载链接在完成后记录。
+
+源 `28fe9574251ad3f67aa762e92796c1304522db74` 的 Windows x64 Debug 原生检查已完成：8/8 通过，0 失败、0 跳过，189 秒。
+运行 [38148539049](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38148539049)，
+x64 作业 `114496982614`。结果包含两种界面的 ROI 原生窗口切换、度分秒编辑、任务模型、模板几何、Fact 所有权及飞行数据检查。
+本地结果保存于 `/workspace/caac-28fe-debug-results/junit-caac.xml`。
+同源 Release 运行 `38149545727` 正在构建；未完成的安装、升级与安装后启动检查不计为通过。
