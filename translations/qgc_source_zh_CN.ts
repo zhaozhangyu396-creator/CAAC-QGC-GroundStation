@@ -5732,6 +5732,11 @@ Click Ok to start the auto-tuning process.
   <context>
     <name>CaacRouteEditorController</name>
     <message>
+        <source>Enter a nonnegative hold duration and a valid waypoint yaw.</source>
+        <translation>请输入非负的停留时长和有效的航点朝向。</translation>
+    </message>
+
+    <message>
       <source>Check the template anchor, dimensions and waypoint count (maximum 1000).</source>
       <translation>请检查模板基准点、尺寸和航点数（最多 1000 个）。</translation>
     </message>
@@ -5884,6 +5889,31 @@ Click Ok to start the auto-tuning process.
   </context>
   <context>
     <name>CaacWaypointDialog</name>
+    <message>
+        <source>Advanced settings</source>
+        <translation>高级设置</translation>
+    </message>
+    <message>
+        <source>Hold duration (s)</source>
+        <translation>停留时长（秒）</translation>
+    </message>
+    <message>
+        <source>Waypoint yaw</source>
+        <translation>航点朝向</translation>
+    </message>
+    <message>
+        <source>Unspecified</source>
+        <translation>不指定</translation>
+    </message>
+    <message>
+        <source>Specified</source>
+        <translation>指定</translation>
+    </message>
+    <message>
+        <source>Yaw (°)</source>
+        <translation>指定角度（°）</translation>
+    </message>
+
     <message>
       <location filename="../custom/src/PlanView/CaacWaypointDialog.qml" line="11"/>
       <location filename="../custom/test/CaacRouteEditorUITest.cc" line="304"/>
@@ -24986,4 +25016,27 @@ If a vehicle still has this key configured, you will no longer be able to commun
       <translation>平移和航线拖拽包含起飞点与降落点。复杂图形须先转换为简单航点。</translation>
     </message>
   </context>
+<context>
+    <name>CaacCoordinateField</name>
+    <message>
+        <source>North</source>
+        <translation>北纬</translation>
+    </message>
+    <message>
+        <source>South</source>
+        <translation>南纬</translation>
+    </message>
+    <message>
+        <source>East</source>
+        <translation>东经</translation>
+    </message>
+    <message>
+        <source>West</source>
+        <translation>西经</translation>
+    </message>
+    <message>
+        <source>Switch coordinate format</source>
+        <translation>切换坐标格式</translation>
+    </message>
+</context>
 </TS>

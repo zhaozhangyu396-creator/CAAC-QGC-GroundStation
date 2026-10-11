@@ -7,6 +7,7 @@ target_sources(
 add_qgc_test(CaacFlightDistanceTest LABELS Unit Vehicle)
 add_qgc_test(CaacRouteEditorTest LABELS Unit MissionManager)
 add_qgc_test(CaacPlanningToolsTest LABELS Unit MissionManager)
+add_qgc_test(CaacRouteTemplateGeometryTest LABELS Unit MissionManager)
 add_qgc_test(
     CaacChineseUITest
     LABELS

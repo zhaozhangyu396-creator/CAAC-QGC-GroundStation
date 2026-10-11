@@ -34,6 +34,9 @@ public:
     void setDoubleClickAddWaypoint(bool enabled);
     void setDragWaypoints(bool enabled);
     Q_INVOKABLE QVariantMap routeLegMetrics(const QGeoCoordinate& from, const QGeoCoordinate& to) const;
+    Q_INVOKABLE QVariantMap coordinateToDms(double value, int maximumDegrees) const;
+    Q_INVOKABLE double coordinateFromDms(double degrees, double minutes, double seconds, bool negative,
+                                         int maximumDegrees) const;
 
     QUrl planViewEditor() const override;
     QQmlApplicationEngine* createQmlApplicationEngine(QObject* parent) override;

@@ -17,6 +17,7 @@ qgc_set_qt_resource_alias(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacTemplateEditor.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacGlobalSettings.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacPanelDragHandle.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacCoordinateField.qml
 )
 qt_add_qml_module(
     CaacPlanModule
@@ -34,6 +35,7 @@ qt_add_qml_module(
               src/PlanView/CaacTemplateEditor.qml
               src/PlanView/CaacGlobalSettings.qml
               src/PlanView/CaacPanelDragHandle.qml
+              src/PlanView/CaacCoordinateField.qml
     NO_PLUGIN
 )
 

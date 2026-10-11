@@ -1,5 +1,8 @@
 #include "CaacCorePlugin.h"
 
+#include <cmath>
+#include <limits>
+
 #include <QtCore/QApplicationStatic>
 #include <QtCore/QJsonObject>
 #include <QtCore/QSettings>
@@ -68,6 +71,42 @@ QVariantMap CaacCorePlugin::routeLegMetrics(const QGeoCoordinate& from, const QG
     return {{QStringLiteral("distance"), distance},
             {QStringLiteral("bearing"), QGCGeo::geodesicAzimuth(from, to)},
             {QStringLiteral("midpoint"), QVariant::fromValue(QGCGeo::interpolateAtDistance(from, to, distance / 2))}};
+}
+
+QVariantMap CaacCorePlugin::coordinateToDms(double value, int maximumDegrees) const
+{
+    if ((maximumDegrees != 90 && maximumDegrees != 180) || !std::isfinite(value) || std::abs(value) > maximumDegrees) {
+        return {};
+    }
+    const double absolute = std::abs(value);
+    int degrees = static_cast<int>(std::floor(absolute));
+    const double fraction = (absolute - degrees) * 60;
+    int minutes = static_cast<int>(std::floor(fraction));
+    double seconds = std::round((fraction - minutes) * 60 * 1e9) / 1e9;
+    if (seconds >= 60) {
+        seconds = 0;
+        if (++minutes == 60) {
+            minutes = 0;
+            ++degrees;
+        }
+    }
+    return {{QStringLiteral("degrees"), degrees},
+            {QStringLiteral("minutes"), minutes},
+            {QStringLiteral("seconds"), seconds},
+            {QStringLiteral("negative"), std::signbit(value)}};
+}
+
+double CaacCorePlugin::coordinateFromDms(double degrees, double minutes, double seconds, bool negative,
+                                         int maximumDegrees) const
+{
+    const double invalid = std::numeric_limits<double>::quiet_NaN();
+    if ((maximumDegrees != 90 && maximumDegrees != 180) || !std::isfinite(degrees) || !std::isfinite(minutes) ||
+        !std::isfinite(seconds) || degrees < 0 || degrees > maximumDegrees || std::floor(degrees) != degrees ||
+        minutes < 0 || minutes >= 60 || std::floor(minutes) != minutes || seconds < 0 || seconds >= 60) {
+        return invalid;
+    }
+    const double value = degrees + minutes / 60 + seconds / 3600;
+    return value <= maximumDegrees ? (negative ? -value : value) : invalid;
 }
 
 QGCCorePlugin* CaacCorePlugin::instance()

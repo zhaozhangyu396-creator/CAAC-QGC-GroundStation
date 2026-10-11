@@ -213,9 +213,21 @@ Map {
                 dragActive = false
                 mapPanStop()
             } else if (!pressAndHold) {
-                mapClicked(Qt.point(touchPoints[0].x, touchPoints[0].y))
+                // ROI insertion can disable mouseEnabled. Qt still uses its mouse touch point after released returns.
+                const clickPosition = Qt.point(touchPoints[0].x, touchPoints[0].y)
+                Qt.callLater(function() { _map.mapClicked(clickPosition) })
             }
             pressAndHold = false
+        }
+
+        onCanceled: {
+            isPressed = false
+            pressAndHoldTimer.stop()
+            pressAndHold = false
+            if (dragActive) {
+                dragActive = false
+                mapPanStop()
+            }
         }
 
         Timer {

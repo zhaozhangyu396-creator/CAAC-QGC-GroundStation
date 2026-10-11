@@ -54,6 +54,8 @@ public:
     Q_INVOKABLE QVariantMap waypointLeg(QObject* item) const;
     Q_INVOKABLE bool updateRelativeWaypoint(QObject* item, double angle, double distance, bool interiorAngle,
                                             double altitude, bool specifySpeed, double speed);
+    Q_INVOKABLE QVariantMap waypointAdvancedProperties(QObject* item) const;
+    Q_INVOKABLE bool updateWaypointProperties(QObject* item, const QVariantMap& properties);
     Q_INVOKABLE bool removeCurrentWaypoint();
     Q_INVOKABLE bool moveCurrentWaypoint(int offset);
     Q_INVOKABLE bool setRotationCenter(const QGeoCoordinate& coordinate);

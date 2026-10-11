@@ -16,6 +16,7 @@ QGCPopupDialog {
     readonly property var _speedSection: waypoint ? waypoint.speedSection : null
     readonly property var _leg: routeController && routeController.coordinateItems.length > 0
         ? routeController.waypointLeg(waypoint) : ({})
+    readonly property var _advanced: routeController && waypoint ? routeController.waypointAdvancedProperties(waypoint) : ({})
 
     function number(text) {
         return text.trim().length ? Number(text) : NaN
@@ -37,17 +38,25 @@ QGCPopupDialog {
     onAccepted: {
         if (!routeController) {
             preventClose = true
-        } else if (positionMode.currentIndex === 1) {
-            preventClose = !routeController.updateRelativeWaypoint(waypoint, number(relativeAngle.text),
-                number(relativeDistance.text), angleType.currentIndex === 1,
-                number(altitude.text), specifySpeed.checked, number(speed.text))
         } else {
-            preventClose = !routeController.updateWaypoint(waypoint, number(latitude.text),
-                number(longitude.text), number(altitude.text), specifySpeed.checked, number(speed.text))
+            const properties = {
+                relative: positionMode.currentIndex === 1,
+                latitude: latitude.coordinate, longitude: longitude.coordinate,
+                angle: number(relativeAngle.text), distance: number(relativeDistance.text),
+                interiorAngle: angleType.currentIndex === 1,
+                altitude: number(altitude.text), specifySpeed: specifySpeed.checked, speed: number(speed.text)
+            }
+            if (_advanced.supported) {
+                properties.holdSeconds = number(holdDuration.text)
+                properties.specifyYaw = yawMode.currentIndex === 1
+                properties.yaw = number(yaw.text)
+            }
+            preventClose = !routeController.updateWaypointProperties(waypoint, properties)
         }
     }
 
     ColumnLayout {
+        width: Math.min(root.maxContentAvailableWidth, ScreenTools.defaultFontPixelWidth * 80)
         spacing: ScreenTools.defaultFontPixelHeight * 0.5
 
         QGCLabel {
@@ -56,7 +65,9 @@ QGCPopupDialog {
         }
 
         GridLayout {
-            columns: 2
+            id: waypointFields
+            Layout.fillWidth: true
+            columns: root.maxContentAvailableWidth < ScreenTools.defaultFontPixelWidth * 68 ? 1 : 2
             columnSpacing: ScreenTools.defaultFontPixelWidth
 
             QGCLabel { text: qsTr("Position editing") }
@@ -68,22 +79,22 @@ QGCPopupDialog {
                 enabled: root._leg.distance !== undefined
             }
             QGCLabel { text: qsTr("Latitude (degrees)"); visible: positionMode.currentIndex === 0 }
-            QGCTextField {
+            CaacCoordinateField {
                 id: latitude
-                objectName: "caacWaypointLatitude"
-                Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 20
-                text: root.waypoint ? root.waypoint.coordinate.latitude.toString() : ""
+                fieldName: "caacWaypointLatitude"
+                maximumDegrees: 90
+                Layout.fillWidth: true
+                value: root.waypoint ? root.waypoint.coordinate.latitude : NaN
                 visible: positionMode.currentIndex === 0
-                validator: DoubleValidator { bottom: -90; top: 90; decimals: 17; locale: "C" }
             }
             QGCLabel { text: qsTr("Longitude (degrees)"); visible: positionMode.currentIndex === 0 }
-            QGCTextField {
+            CaacCoordinateField {
                 id: longitude
-                objectName: "caacWaypointLongitude"
+                fieldName: "caacWaypointLongitude"
+                maximumDegrees: 180
                 Layout.fillWidth: true
-                text: root.waypoint ? root.waypoint.coordinate.longitude.toString() : ""
+                value: root.waypoint ? root.waypoint.coordinate.longitude : NaN
                 visible: positionMode.currentIndex === 0
-                validator: DoubleValidator { bottom: -180; top: 180; decimals: 17; locale: "C" }
             }
             QGCLabel { text: qsTr("Angle type"); visible: positionMode.currentIndex === 1 }
             QGCComboBox {
@@ -138,6 +149,34 @@ QGCPopupDialog {
                 enabled: specifySpeed.checked && specifySpeed.enabled
                 text: root._speedSection ? root._speedSection.flightSpeed.rawValue.toString() : ""
                 validator: DoubleValidator { bottom: 0; locale: "C" }
+            }
+            QGCLabel { text: qsTr("Advanced settings"); font.bold: true; visible: root._advanced.supported === true; Layout.columnSpan: waypointFields.columns }
+            QGCLabel { text: qsTr("Hold duration (s)"); visible: root._advanced.supported === true }
+            QGCTextField {
+                id: holdDuration
+                objectName: "caacWaypointHoldDuration"
+                Layout.fillWidth: true
+                visible: root._advanced.supported === true
+                text: root._advanced.holdSeconds !== undefined ? root._advanced.holdSeconds.toString() : ""
+                validator: DoubleValidator { bottom: 0; locale: "C" }
+            }
+            QGCLabel { text: qsTr("Waypoint yaw"); visible: root._advanced.supported === true }
+            QGCComboBox {
+                id: yawMode
+                objectName: "caacWaypointYawMode"
+                Layout.fillWidth: true
+                visible: root._advanced.supported === true
+                model: [qsTr("Unspecified"), qsTr("Specified")]
+                currentIndex: root._advanced.specifyYaw ? 1 : 0
+            }
+            QGCLabel { text: qsTr("Yaw (°)"); visible: root._advanced.supported === true && yawMode.currentIndex === 1 }
+            QGCTextField {
+                id: yaw
+                objectName: "caacWaypointYaw"
+                Layout.fillWidth: true
+                visible: root._advanced.supported === true && yawMode.currentIndex === 1
+                text: root._advanced.yaw !== undefined ? root._advanced.yaw.toString() : "0"
+                validator: DoubleValidator { locale: "C" }
             }
         }
         QGCLabel {

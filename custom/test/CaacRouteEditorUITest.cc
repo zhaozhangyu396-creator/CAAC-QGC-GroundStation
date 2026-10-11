@@ -10,6 +10,7 @@
 #include <QtCore/QPointer>
 #include <QtCore/QScopeGuard>
 #include <QtCore/QTemporaryDir>
+#include <QtGui/QFontMetricsF>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QImage>
 #include <QtQml/QQmlApplicationEngine>
@@ -126,6 +127,7 @@ class CaacRouteEditorUITest : public QmlUITestBase
 private slots:
     void _testMouseEditing_data();
     void _testMouseEditing();
+    void _roiWindowFocus();
 };
 
 void CaacRouteEditorUITest::_testMouseEditing_data()
@@ -579,6 +581,65 @@ void CaacRouteEditorUITest::_testMouseEditing()
         QCOMPARE(rotateButton->property("text").toString(), QStringLiteral("航线旋转"));
         QCOMPARE(QCoreApplication::translate("CaacWaypointDialog", "Waypoint properties"), QStringLiteral("航点属性"));
     }
+    step("coordinate format preserves precision");
+    QVERIFY(editor->selectWaypoint(mission->visualItems()->value<SimpleMissionItem*>(1)));
+    const auto beforeDms = master->saveToJson();
+    QVERIFY(clickButton(QStringLiteral("caacEditWaypoint")));
+    QVERIFY(waitForDialog(QCoreApplication::translate("CaacWaypointDialog", "Waypoint properties")));
+    QVERIFY(clickButton(QStringLiteral("caacWaypointLatitudeFormatToggle")));
+    QVERIFY(clickButton(QStringLiteral("caacWaypointLongitudeFormatToggle")));
+    for (const auto* name :
+         {"caacWaypointLatitudeDegrees", "caacWaypointLatitudeMinutes", "caacWaypointLatitudeSeconds",
+          "caacWaypointLongitudeDegrees", "caacWaypointLongitudeMinutes", "caacWaypointLongitudeSeconds"}) {
+        auto* field = findVisibleItem(_rootItem, QLatin1String(name));
+        QVERIFY(field);
+        const auto textFits = [field] {
+            const QFontMetricsF metrics(field->property("font").value<QFont>());
+            return field->width() >= metrics.horizontalAdvance(field->property("text").toString()) +
+                                         field->property("leftPadding").toDouble() +
+                                         field->property("rightPadding").toDouble();
+        };
+        QTRY_VERIFY_WITH_TIMEOUT(textFits(), TestTimeout::mediumMs());
+    }
+    QVERIFY(acceptDialog());
+    QCOMPARE(master->saveToJson(), beforeDms);
+
+    step("edit DMS and advanced waypoint parameters atomically");
+    QVERIFY(clickButton(QStringLiteral("caacEditWaypoint")));
+    QVERIFY(waitForDialog(QCoreApplication::translate("CaacWaypointDialog", "Waypoint properties")));
+    QVERIFY(clickButton(QStringLiteral("caacWaypointLatitudeFormatToggle")));
+    auto* degrees = findVisibleItem(_rootItem, QStringLiteral("caacWaypointLatitudeDegrees"));
+    auto* minutes = findVisibleItem(_rootItem, QStringLiteral("caacWaypointLatitudeMinutes"));
+    auto* seconds = findVisibleItem(_rootItem, QStringLiteral("caacWaypointLatitudeSeconds"));
+    auto* hemisphere = findVisibleItem(_rootItem, QStringLiteral("caacWaypointLatitudeHemisphere"));
+    auto* hold = findVisibleItem(_rootItem, QStringLiteral("caacWaypointHoldDuration"));
+    auto* yawMode = findVisibleItem(_rootItem, QStringLiteral("caacWaypointYawMode"));
+    QVERIFY(degrees && minutes && seconds && hemisphere && hold && yawMode);
+    degrees->setProperty("text", QStringLiteral("0"));
+    minutes->setProperty("text", QStringLiteral("60"));
+    seconds->setProperty("text", QStringLiteral("0"));
+    hemisphere->setProperty("currentIndex", 1);
+    hold->setProperty("text", QStringLiteral("2.5"));
+    yawMode->setProperty("currentIndex", 1);
+    auto* yaw = findVisibleItem(_rootItem, QStringLiteral("caacWaypointYaw"));
+    QVERIFY(yaw);
+    yaw->setProperty("text", QStringLiteral("270"));
+    QVERIFY(acceptDialog());
+    QVERIFY(dialogVisible(QCoreApplication::translate("CaacWaypointDialog", "Waypoint properties")));
+    QCOMPARE(master->saveToJson(), beforeDms);
+    minutes->setProperty("text", QStringLiteral("30"));
+    const QString advancedScreenshot = qEnvironmentVariable("CAAC_UI_ADVANCED_SCREENSHOT");
+    if (chinese && !advancedScreenshot.isEmpty()) {
+        QVERIFY(_window->grabWindow().save(advancedScreenshot));
+    }
+    QVERIFY(acceptDialog());
+    auto* dmsPoint = mission->visualItems()->value<SimpleMissionItem*>(1);
+    QCOMPARE(dmsPoint->coordinate().latitude(), -0.5);
+    QCOMPARE(dmsPoint->missionItem().param1(), 2.5);
+    QCOMPARE(dmsPoint->missionItem().param4(), -90);
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QCOMPARE(master->saveToJson(), beforeDms);
+
     step("generate template through native controls");
     const auto beforeTemplate = master->saveToJson();
     const int beforeTemplateCount = mission->visualItems()->count();
@@ -656,6 +717,68 @@ void CaacRouteEditorUITest::_testMouseEditing()
         QVERIFY(_window->grabWindow().save(screenshot));
     }
     master->removeAll();
+}
+
+void CaacRouteEditorUITest::_roiWindowFocus()
+{
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewPlan")));
+    auto* plan = findVisibleItem(_rootItem, QStringLiteral("mainView_plan"), TestTimeout::mediumMs());
+    QVERIFY(plan);
+    auto* master = plan->property("_planMasterController").value<PlanMasterController*>();
+    QVERIFY(master);
+    auto* mission = master->missionController();
+    auto* map = findVisibleItem(_rootItem, QStringLiteral("planView_map"));
+    QVERIFY(map);
+    map->setProperty("center", QVariant::fromValue(QGeoCoordinate(30, 120)));
+    map->setProperty("zoomLevel", 16.0);
+    QTRY_VERIFY_WITH_TIMEOUT(map->property("mapReady").toBool(), TestTimeout::mediumMs());
+    QVERIFY(clickItemFraction(QStringLiteral("planView_map"), 0.4, 0.5));
+    QTest::mouseDClick(_window, Qt::LeftButton, Qt::NoModifier,
+                       map->mapToScene(QPointF(map->width() * 0.4, map->height() * 0.5)).toPoint());
+    QTRY_COMPARE_WITH_TIMEOUT(mission->visualItems()->count(), 2, TestTimeout::mediumMs());
+    QTest::mouseDClick(_window, Qt::LeftButton, Qt::NoModifier,
+                       map->mapToScene(QPointF(map->width() * 0.5, map->height() * 0.55)).toPoint());
+    QTRY_COMPARE_WITH_TIMEOUT(mission->visualItems()->count(), 3, TestTimeout::mediumMs());
+
+    QQuickWindow otherWindow;
+    otherWindow.setTitle(QStringLiteral("ROI focus regression"));
+    otherWindow.resize(320, 240);
+    otherWindow.show();
+    const auto changeFocus = [&] {
+        otherWindow.requestActivate();
+        QTRY_VERIFY_WITH_TIMEOUT(otherWindow.isActive() && !_window->isActive(), TestTimeout::mediumMs());
+        _window->requestActivate();
+        QTRY_VERIFY_WITH_TIMEOUT(_window->isActive() && !otherWindow.isActive(), TestTimeout::mediumMs());
+    };
+    for (int i = 0; i < 3; ++i) {
+        QVERIFY(clickButton(QStringLiteral("planToolStrip_roiButton")));
+        QTRY_VERIFY_WITH_TIMEOUT(plan->property("_addROIOnClick").toBool(), TestTimeout::mediumMs());
+        QVERIFY(!map->property("directMissionItemEditing").toBool());
+        changeFocus();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QVERIFY(plan->property("_addROIOnClick").toBool());
+        QCOMPARE(mission->visualItems()->count(), 3);
+        QVERIFY(clickButton(QStringLiteral("planToolStrip_roiButton")));
+        QTRY_VERIFY_WITH_TIMEOUT(!plan->property("_addROIOnClick").toBool(), TestTimeout::mediumMs());
+        QTRY_VERIFY_WITH_TIMEOUT(map->property("directMissionItemEditing").toBool(), TestTimeout::mediumMs());
+    }
+    QVERIFY(clickButton(QStringLiteral("planToolStrip_roiButton")));
+    QVERIFY(clickItemFraction(QStringLiteral("planView_map"), 0.45, 0.35));
+    QTRY_COMPARE_WITH_TIMEOUT(mission->visualItems()->count(), 4, TestTimeout::mediumMs());
+    QVERIFY(mission->property("isROIActive").toBool());
+    changeFocus();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    QVERIFY(mission->property("isROIActive").toBool());
+    master->removeAll();
+    otherWindow.close();
 }
 
 UT_REGISTER_TEST(CaacRouteEditorUITest, TestLabel::Integration, TestLabel::MissionManager)

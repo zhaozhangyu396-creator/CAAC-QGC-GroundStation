@@ -1,6 +1,8 @@
 #include <cmath>
 #include <limits>
 
+#include <QtCore/QTemporaryDir>
+
 #include "CaacCorePlugin.h"
 #include "CaacRouteEditorController.h"
 #include "CaacRouteTemplates.h"
@@ -17,14 +19,22 @@ class CaacPlanningToolsTest : public OfflineMissionTest
 {
     Q_OBJECT
 private slots:
-    void _templateGeometry_data();
-    void _templateGeometry();
     void _templateTransactions();
     void _translationPreservesMission();
     void _invalidInputsAreAtomic();
+    void _coordinateFormats();
+    void _advancedWaypointProperties();
 };
 
-void CaacPlanningToolsTest::_templateGeometry_data()
+class CaacRouteTemplateGeometryTest : public UnitTest
+{
+    Q_OBJECT
+private slots:
+    void _templateGeometry_data();
+    void _templateGeometry();
+};
+
+void CaacRouteTemplateGeometryTest::_templateGeometry_data()
 {
     QTest::addColumn<int>("shape");
     QTest::addColumn<int>("start");
@@ -58,7 +68,7 @@ void CaacPlanningToolsTest::_templateGeometry_data()
     }
 }
 
-void CaacPlanningToolsTest::_templateGeometry()
+void CaacRouteTemplateGeometryTest::_templateGeometry()
 {
     QFETCH(int, shape);
     QFETCH(int, start);
@@ -191,6 +201,94 @@ void CaacPlanningToolsTest::_invalidInputsAreAtomic()
     QCOMPARE(before, after);
 }
 
+void CaacPlanningToolsTest::_coordinateFormats()
+{
+    const CaacCorePlugin plugin;
+    for (int maximum : {90, 180}) {
+        for (double value : {0.0, -0.0, 0.5, -0.5, 22.5125727, -113.4427937, 90.0, -90.0, 180.0, -180.0,
+                             std::nextafter(90.0, 0.0), std::nextafter(180.0, 0.0)}) {
+            const auto dms = plugin.coordinateToDms(value, maximum);
+            if (std::abs(value) > maximum) {
+                QVERIFY(dms.isEmpty());
+                continue;
+            }
+            QVERIFY(!dms.isEmpty());
+            QVERIFY(dms.value("seconds").toDouble() < 60);
+            QCOMPARE(dms.value("negative").toBool(), std::signbit(value));
+            const double restored =
+                plugin.coordinateFromDms(dms.value("degrees").toDouble(), dms.value("minutes").toDouble(),
+                                         dms.value("seconds").toDouble(), dms.value("negative").toBool(), maximum);
+            QVERIFY(std::abs(restored - value) < 3e-13);
+            QCOMPARE(std::signbit(restored), std::signbit(value));
+        }
+    }
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    QVERIFY(plugin.coordinateToDms(nan, 90).isEmpty());
+    QVERIFY(plugin.coordinateToDms(0, 360).isEmpty());
+    for (const auto& parts : {QList<double>{90, 0, 1},
+                              {1, 60, 0},
+                              {1, 0, 60},
+                              {-1, 0, 0},
+                              {1.5, 0, 0},
+                              {0, 1.5, 0},
+                              {0, 0, -1},
+                              {nan, 0, 0},
+                              {0, nan, 0},
+                              {0, 0, nan}}) {
+        QVERIFY(std::isnan(plugin.coordinateFromDms(parts[0], parts[1], parts[2], false, 90)));
+    }
+}
+
+void CaacPlanningToolsTest::_advancedWaypointProperties()
+{
+    CaacRouteEditorController editor;
+    editor.setPlanMasterController(planController());
+    missionController()->setHomePosition(QGeoCoordinate(30, 120, 20));
+    QVERIFY(editor.addWaypoint(QGeoCoordinate(30.001, 120)));
+    auto* item = editor.currentItem();
+    editor.beginEdit();
+    item->missionItem().setParam2(3.25);
+    item->missionItem().setParam3(8);
+    editor.endEdit();
+    const auto before = planController()->saveToJson();
+    QVariantMap properties{{"latitude", 30.002}, {"longitude", 120.003}, {"altitude", 65}, {"specifySpeed", false},
+                           {"holdSeconds", 2.5}, {"specifyYaw", true},   {"yaw", 270}};
+    QVERIFY(editor.updateWaypointProperties(item, properties));
+    QCOMPARE(item->missionItem().param1(), 2.5);
+    QCOMPARE(item->missionItem().param4(), -90);
+    QCOMPARE(item->missionItem().param2(), 3.25);
+    QCOMPARE(item->missionItem().param3(), 8);
+    const auto edited = planController()->saveToJson();
+    editor.undo();
+    QCOMPARE(planController()->saveToJson(), before);
+    editor.redo();
+    QCOMPARE(planController()->saveToJson(), edited);
+    item = editor.currentItem();
+    QVERIFY(item);
+    for (const auto& invalid : {QVariantMap{{"holdSeconds", -1}}, QVariantMap{{"holdSeconds", "invalid"}},
+                                QVariantMap{{"yaw", std::numeric_limits<double>::quiet_NaN()}},
+                                QVariantMap{{"latitude", 91}}, QVariantMap{{"altitude", "invalid"}}}) {
+        auto rejected = properties;
+        for (auto it = invalid.cbegin(); it != invalid.cend(); ++it) {
+            rejected[it.key()] = it.value();
+        }
+        QVERIFY(!editor.updateWaypointProperties(item, rejected));
+        QCOMPARE(planController()->saveToJson(), edited);
+    }
+    properties["specifyYaw"] = false;
+    QVERIFY(editor.updateWaypointProperties(item, properties));
+    QVERIFY(std::isnan(item->missionItem().param4()));
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+    const auto file = directory.filePath(QStringLiteral("advanced.plan"));
+    QVERIFY(planController()->saveToFile(file));
+    const auto saved = planController()->saveToJson();
+    planController()->removeAll();
+    planController()->loadFromFile(file);
+    QCOMPARE(planController()->saveToJson(), saved);
+}
+
 UT_REGISTER_TEST(CaacPlanningToolsTest, TestLabel::Unit, TestLabel::MissionManager)
+UT_REGISTER_TEST(CaacRouteTemplateGeometryTest, TestLabel::Unit, TestLabel::MissionManager)
 
 #include "CaacPlanningToolsTest.moc"

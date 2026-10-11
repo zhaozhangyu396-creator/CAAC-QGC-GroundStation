@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 #include <QtCore/QEvent>
 #include <QtCore/QScopeGuard>
@@ -200,6 +201,63 @@ bool CaacRouteEditorController::updateWaypoint(QObject* object, double latitude,
             speedSection->flightSpeed()->setRawValue(speed);
         }
         speedSection->setSpecifyFlightSpeed(specifySpeed);
+    }
+    return true;
+}
+
+QVariantMap CaacRouteEditorController::waypointAdvancedProperties(QObject* object) const
+{
+    const auto* item = qobject_cast<SimpleMissionItem*>(object);
+    auto* mission = _missionController();
+    if (!item || !mission || mission->visualItemIndexForObject(object) < 1 || item->command() != MAV_CMD_NAV_WAYPOINT) {
+        return {};
+    }
+    const auto& command = item->missionItem();
+    return {{QStringLiteral("supported"), true},
+            {QStringLiteral("holdSeconds"), command.param1()},
+            {QStringLiteral("specifyYaw"), std::isfinite(command.param4())},
+            {QStringLiteral("yaw"), std::isfinite(command.param4()) ? command.param4() : 0}};
+}
+
+bool CaacRouteEditorController::updateWaypointProperties(QObject* object, const QVariantMap& properties)
+{
+    if (!_canEdit()) {
+        return false;
+    }
+    auto* item = qobject_cast<SimpleMissionItem*>(object);
+    const auto number = [&properties](const char* key) {
+        bool valid = false;
+        const double value = properties.value(QLatin1String(key)).toDouble(&valid);
+        return valid ? value : std::numeric_limits<double>::quiet_NaN();
+    };
+    const bool advanced = properties.contains(QStringLiteral("holdSeconds")) ||
+                          properties.contains(QStringLiteral("specifyYaw")) ||
+                          properties.contains(QStringLiteral("yaw"));
+    const double hold = number("holdSeconds");
+    const bool specifyYaw = properties.value(QStringLiteral("specifyYaw")).toBool();
+    const double yaw = number("yaw");
+    if (advanced && (!item || _missionController()->visualItemIndexForObject(item) < 1 ||
+                     item->command() != MAV_CMD_NAV_WAYPOINT || !std::isfinite(hold) || hold < 0 ||
+                     hold > std::numeric_limits<float>::max() || (specifyYaw && !std::isfinite(yaw)))) {
+        return _fail(tr("Enter a nonnegative hold duration and a valid waypoint yaw."));
+    }
+    beginEdit();
+    const auto finish = qScopeGuard([this]() { endEdit(); });
+    const double altitude = number("altitude");
+    const bool specifySpeed = properties.value(QStringLiteral("specifySpeed")).toBool();
+    const double speed = number("speed");
+    const bool updated =
+        properties.value(QStringLiteral("relative")).toBool()
+            ? updateRelativeWaypoint(object, number("angle"), number("distance"),
+                                     properties.value(QStringLiteral("interiorAngle")).toBool(), altitude, specifySpeed,
+                                     speed)
+            : updateWaypoint(object, number("latitude"), number("longitude"), altitude, specifySpeed, speed);
+    if (!updated) {
+        return false;
+    }
+    if (advanced) {
+        item->missionItem().setParam1(hold);
+        item->missionItem().setParam4(specifyYaw ? std::remainder(yaw, 360) : std::numeric_limits<double>::quiet_NaN());
     }
     return true;
 }
