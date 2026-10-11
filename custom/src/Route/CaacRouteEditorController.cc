@@ -523,6 +523,8 @@ void CaacRouteEditorController::_watchItems()
             _itemConnections.append(
                 connect(fact, &Fact::rawValueChanged, this, &CaacRouteEditorController::_scheduleCapture));
         }
+        _itemConnections.append(connect(item, &VisualMissionItem::sequenceNumberChanged, this,
+                                        &CaacRouteEditorController::coordinateItemsChanged));
         _itemConnections.append(connect(item, &VisualMissionItem::coordinateChanged, this, [this]() {
             emit coordinateItemsChanged();
             _scheduleCapture();

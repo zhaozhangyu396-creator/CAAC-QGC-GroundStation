@@ -6,6 +6,7 @@
 
 #include <QtCore/QByteArray>
 #include <QtCore/QFile>
+#include <QtCore/QLineF>
 #include <QtCore/QPointer>
 #include <QtCore/QScopeGuard>
 #include <QtCore/QTemporaryDir>
@@ -312,9 +313,27 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QTRY_VERIFY_WITH_TIMEOUT(
         _rootItem->boundingRect().contains(dragger->mapToScene(QPointF(dragger->width() / 2, dragger->height() / 2))),
         TestTimeout::mediumMs());
+    // The native settings panel can move the camera; settle the map before sending a screen-space click.
+    map->setProperty("center", QVariant::fromValue(first->coordinate()));
+    auto* indicator = dragger->property("itemIndicator").value<QQuickItem*>();
+    QVERIFY(indicator);
+    const auto markerAnchor = [&]() {
+        return dragger->mapToScene(indicator->property("anchorPoint").toPointF() +
+                                   QPointF(dragger->property("_touchMarginHorizontal").toDouble(),
+                                           dragger->property("_touchMarginVertical").toDouble()));
+    };
+    const QPointF expectedMarker = map->mapToScene(QPointF(map->width() / 2, map->height() / 2));
+    QTRY_VERIFY_WITH_TIMEOUT(QLineF(markerAnchor(), expectedMarker).length() < 1.0, TestTimeout::mediumMs());
     const QPoint marker = dragger->mapToScene(QPointF(dragger->width() / 2, dragger->height() / 2)).toPoint();
     step("right-click first waypoint");
-    QTest::mouseClick(_window, Qt::RightButton, Qt::NoModifier, marker);
+    QTest::mousePress(_window, Qt::RightButton, Qt::NoModifier, marker);
+    auto* rightClickGrabber = _window->mouseGrabberItem();
+    const bool waypointGrabbed = rightClickGrabber && rightClickGrabber->parentItem() == dragger;
+    const QString grabbedItem = rightClickGrabber ? QString::fromLatin1(rightClickGrabber->metaObject()->className()) +
+                                                        QLatin1Char(':') + rightClickGrabber->objectName()
+                                                  : QStringLiteral("none");
+    QTest::mouseRelease(_window, Qt::RightButton, Qt::NoModifier, marker);
+    QVERIFY2(waypointGrabbed, qPrintable(QStringLiteral("Waypoint right-click intercepted by ") + grabbedItem));
     QVERIFY(waitForDialog(QCoreApplication::translate("CaacWaypointDialog", "Waypoint properties"),
                           TestTimeout::mediumMs()));
     auto* latitude = findVisibleItem(_rootItem, QStringLiteral("caacWaypointLatitude"));

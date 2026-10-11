@@ -5,6 +5,7 @@
 #include <QtCore/QScopeGuard>
 #include <QtCore/QTemporaryDir>
 #include <QtGraphs/QLineSeries>
+#include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
 #include "CaacRouteEditorController.h"
@@ -26,6 +27,7 @@ class CaacRouteEditorTest : public OfflineMissionTest
 
 private slots:
     void _testInsertReorderDelete();
+    void _testWaypointLabelsFollowSpeedCommands();
     void _testInvalidProperties_data();
     void _testInvalidProperties();
     void _testPlanRoundtrip();
@@ -42,6 +44,39 @@ private slots:
     void _testRelativeUpdate();
     void _testCenterFileRoundtrip();
 };
+
+void CaacRouteEditorTest::_testWaypointLabelsFollowSpeedCommands()
+{
+    CaacRouteEditorController editor;
+    editor.setPlanMasterController(planController());
+    missionController()->setHomePosition(QGeoCoordinate(30, 120, 50));
+    QVERIFY(editor.addWaypoint(QGeoCoordinate(30.001, 120)));
+    auto* first = editor.currentItem();
+    QVERIFY(editor.addWaypoint(QGeoCoordinate(30.002, 120)));
+    auto* second = editor.currentItem();
+    QVERIFY(first && second);
+    const int originalNumber = second->sequenceNumber();
+    const auto secondCoordinate = second->coordinate();
+    QSignalSpy labelsChanged(&editor, &CaacRouteEditorController::coordinateItemsChanged);
+    QVERIFY(labelsChanged.isValid());
+    const auto label = [&editor]() { return editor.coordinateItems().at(2).toMap().value("label").toString(); };
+    QString observedLabel = label();
+    connect(&editor, &CaacRouteEditorController::coordinateItemsChanged, this, [&]() { observedLabel = label(); });
+    QVERIFY(editor.updateWaypoint(first, 30.001, 120, 50, true, 5));
+    QCOMPARE(second->sequenceNumber(), originalNumber + 1);
+    QVERIFY(!labelsChanged.isEmpty());
+    QCOMPARE(observedLabel, QCoreApplication::translate("CaacRouteEditorController", "Waypoint %1 · %2")
+                                .arg(second->sequenceNumber())
+                                .arg(second->commandName()));
+    QCOMPARE(second->coordinate(), secondCoordinate);
+    labelsChanged.clear();
+    QVERIFY(editor.updateWaypoint(first, 30.001, 120, 50, false, 5));
+    QCOMPARE(second->sequenceNumber(), originalNumber);
+    QVERIFY(!labelsChanged.isEmpty());
+    QCOMPARE(observedLabel, QCoreApplication::translate("CaacRouteEditorController", "Waypoint %1 · %2")
+                                .arg(second->sequenceNumber())
+                                .arg(second->commandName()));
+}
 
 void CaacRouteEditorTest::_testGeodesicGeometry_data()
 {
