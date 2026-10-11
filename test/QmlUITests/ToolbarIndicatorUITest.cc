@@ -4,6 +4,7 @@
 #include <QtCore/QRegularExpression>
 #include <QtCore/QScopeGuard>
 #include <QtCore/QVariant>
+#include <QtGui/QGuiApplication>
 #include <QtQuick/QQuickItem>
 #include <QtQuick/QQuickWindow>
 #include <QtTest/QSignalSpy>
@@ -62,6 +63,14 @@ bool ToolbarIndicatorUITest::_exerciseIndicator(QQuickItem *indicatorItem, const
     }
 
     // 3. Close the drawer with Escape — verify it closes
+    if (QGuiApplication::platformName() != QStringLiteral("offscreen") &&
+        QGuiApplication::platformName() != QStringLiteral("minimal")) {
+        _window->requestActivate();
+        if (!QTest::qWaitForWindowActive(_window)) {
+            qWarning() << indicatorName << ": window did not activate before pressing Escape";
+            return false;
+        }
+    }
     QTest::keyClick(_window, Qt::Key_Escape);
 
     const bool drawerClosed = waitForCondition(

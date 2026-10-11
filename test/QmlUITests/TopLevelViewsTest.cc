@@ -176,6 +176,7 @@ void TopLevelViewsTest::_testSettingsSectionVisibility()
 
     QQuickItem* settingsSection = nullptr;
     QTRY_VERIFY((settingsSection = findVisibleSectionButton(videoButton->parentItem(), QStringLiteral("Settings"))));
+    QVERIFY(scrollIntoView(settingsSection, QStringLiteral("settings_buttonList")));
     QVERIFY(_clickItemAt(settingsSection, 0.5, 0.5, QStringLiteral("section Settings")));
 
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("settingsGroup_Settings")));
@@ -250,6 +251,7 @@ void TopLevelViewsTest::_testSettingsSectionCollapseToSingle()
     // Select the always-visible "Video Source" section
     QQuickItem* sourceSection = nullptr;
     QTRY_VERIFY((sourceSection = findVisibleSectionButton(videoButton->parentItem(), QStringLiteral("Video Source"))));
+    QVERIFY(scrollIntoView(sourceSection, QStringLiteral("settings_buttonList")));
     QVERIFY(_clickItemAt(sourceSection, 0.5, 0.5, QStringLiteral("section Video Source")));
     QTRY_VERIFY(!videoButton->property("checked").toBool());
 
