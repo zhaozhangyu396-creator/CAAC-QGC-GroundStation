@@ -455,18 +455,36 @@ void CaacRouteEditorUITest::_testMouseEditing()
 
     step("relative point through native controls");
     QVERIFY(clickButton(QStringLiteral("caacRelativePoint")));
-    QVERIFY(waitForDialog(QCoreApplication::translate("CaacGeometryDialog", "Relative coordinate editor")));
-    auto* relativeOperation = findItem(_rootItem, QStringLiteral("caacGeometryOperation"));
-    QVERIFY(relativeOperation);
-    QVERIFY(!relativeOperation->isVisible());
+    QVERIFY(editorPanel->property("relativeEditorVisible").toBool());
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacWaypointList")));
     auto* relativeDistance = findVisibleItem(_rootItem, QStringLiteral("caacRelativeDistance"));
     QVERIFY(relativeDistance);
+    auto* panelTitle = findVisibleItem(_rootItem, QStringLiteral("caacPanelTitle"));
+    QVERIFY(panelTitle);
+    QCOMPARE(panelTitle->property("text").toString(),
+             chinese ? QStringLiteral("相对坐标编辑器") : QStringLiteral("Relative coordinate editor"));
+    const auto beforeInvalidInsert = master->saveToJson();
+    QVERIFY(clickButton(QStringLiteral("caacRelativeAdd")));
+    QCOMPARE(master->saveToJson(), beforeInvalidInsert);
+    QVERIFY(!editor->lastError().isEmpty());
     relativeDistance->setProperty("text", QStringLiteral("100"));
     const int beforeInsert = mission->visualItems()->count();
-    QVERIFY(acceptDialog());
+    QVERIFY(clickButton(QStringLiteral("caacRelativeAdd")));
     QCOMPARE(mission->visualItems()->count(), beforeInsert + 1);
     QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(mission->visualItems()->count(), beforeInsert);
+    relativeDistance->setProperty("focus", false);
+    _rootItem->forceActiveFocus();
+    QTest::keyClick(_window, Qt::Key_Space);
+    QTRY_COMPARE_WITH_TIMEOUT(mission->visualItems()->count(), beforeInsert + 1, TestTimeout::mediumMs());
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QCOMPARE(mission->visualItems()->count(), beforeInsert);
+    const QString relativeScreenshot = qEnvironmentVariable("CAAC_RELATIVE_UI_SCREENSHOT");
+    if (!relativeScreenshot.isEmpty() && chinese) {
+        QVERIFY(_window->grabWindow().save(relativeScreenshot));
+    }
+    QVERIFY(clickButton(QStringLiteral("caacMissionSettings")));
+    QVERIFY(!editorPanel->property("relativeEditorVisible").toBool());
 
     step("edit existing waypoint by distance and angle");
     auto* target = mission->visualItems()->value<SimpleMissionItem*>(2);

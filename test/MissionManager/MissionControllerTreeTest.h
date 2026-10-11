@@ -49,13 +49,12 @@ private slots:
 private:
     void _initForTest();
 
-    // Use canonical constants from MissionController
-    static constexpr int kPlanFileGroupRow = MissionController::kPlanFileGroupRow;
-    static constexpr int kDefaultsGroupRow = MissionController::kDefaultsGroupRow;
-    static constexpr int kMissionGroupRow  = MissionController::kMissionGroupRow;
-    static constexpr int kFenceGroupRow    = MissionController::kFenceGroupRow;
-    static constexpr int kRallyGroupRow    = MissionController::kRallyGroupRow;
-    static constexpr int kGroupCount       = MissionController::kGroupCount;
+    int _planFileGroupRow = 0;
+    int _defaultsGroupRow = 1;
+    int _missionGroupRow = 2;
+    int _fenceGroupRow = 3;
+    int _rallyGroupRow = 4;
+    int _groupCount = 6;
 
     std::unique_ptr<PlanMasterController> _masterController;
     MissionController* _missionController = nullptr;

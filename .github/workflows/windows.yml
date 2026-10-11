@@ -353,15 +353,13 @@ jobs:
           CAAC_CHINESE_INSTALLER: 'true'
         run: ./deploy/windows/verify-installer.ps1 -Phase Install
 
-      - name: Remove build SDK from PATH for installed verification
-        if: matrix.build_type == 'Release' && matrix.gstreamer
+      - name: Remove build SDKs from PATH for installed verification
+        if: matrix.build_type == 'Release' && matrix.variant != 'arm64-cross'
         shell: pwsh
         env:
           GST_ROOT: ${{ steps.gst-root.outputs.gst_root }}
-        run: |
-          $sdkBin = Join-Path $env:GST_ROOT "bin"
-          $sanitizedPath = (($env:PATH -split ';') | Where-Object { $_ -and ($_ -ne $sdkBin) }) -join ';'
-          "QGC_VERIFY_INSTALLED_PATH=$sanitizedPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          QT_ROOT: ${{ steps.build-setup.outputs.qt_root_dir }}
+        run: python .github/scripts/windows_installed_path.py
 
       - name: Verify installed executable
         if: matrix.build_type == 'Release' && matrix.variant != 'arm64-cross'

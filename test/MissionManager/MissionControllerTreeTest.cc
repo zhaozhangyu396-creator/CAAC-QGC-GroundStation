@@ -3,13 +3,14 @@
 #include "AppSettings.h"
 #include "MissionController.h"
 #include "MissionSettingsItem.h"
+#include "MultiSignalSpy.h"
 #include "PlanMasterController.h"
+#include "QGCCorePlugin.h"
 #include "QmlObjectTreeModel.h"
 #include "RallyPointController.h"
 #include "SettingsManager.h"
 #include "SimpleMissionItem.h"
 #include "TestFixtures.h"
-#include "MultiSignalSpy.h"
 
 using namespace TestFixtures;
 
@@ -24,6 +25,15 @@ void MissionControllerTreeTest::cleanup()
 
 void MissionControllerTreeTest::_initForTest()
 {
+    const bool showPlanInformation = QGCCorePlugin::instance()->showPlanInformation();
+    const int omittedGroups = showPlanInformation ? 0 : 1;
+    _planFileGroupRow = showPlanInformation ? MissionController::kPlanFileGroupRow : -1;
+    _defaultsGroupRow = MissionController::kDefaultsGroupRow - omittedGroups;
+    _missionGroupRow = MissionController::kMissionGroupRow - omittedGroups;
+    _fenceGroupRow = MissionController::kFenceGroupRow - omittedGroups;
+    _rallyGroupRow = MissionController::kRallyGroupRow - omittedGroups;
+    _groupCount = MissionController::kGroupCount - omittedGroups;
+
     _initForFirmwareType(MAV_AUTOPILOT_PX4);
     SettingsManager::instance()->appSettings()->offlineEditingFirmwareClass()->setRawValue(
         QGCMAVLink::firmwareClass(MAV_AUTOPILOT_PX4));
@@ -54,30 +64,39 @@ void MissionControllerTreeTest::_testTreeStructureAfterInit()
     QVERIFY(tree);
 
     // Root should have all expected top-level groups
-    QCOMPARE(tree->rowCount(), kGroupCount);
+    QCOMPARE(tree->rowCount(), _groupCount);
 
     // Verify group node types
-    const QModelIndex planFileGroup = tree->index(kPlanFileGroupRow, 0);
-    const QModelIndex defaultsGroup = tree->index(kDefaultsGroupRow, 0);
-    const QModelIndex missionGroup  = tree->index(kMissionGroupRow, 0);
-    const QModelIndex fenceGroup    = tree->index(kFenceGroupRow, 0);
-    const QModelIndex rallyGroup    = tree->index(kRallyGroupRow, 0);
-    QVERIFY(planFileGroup.isValid());
+    const QModelIndex planFileGroup = tree->index(_planFileGroupRow, 0);
+    const QModelIndex defaultsGroup = tree->index(_defaultsGroupRow, 0);
+    const QModelIndex missionGroup = tree->index(_missionGroupRow, 0);
+    const QModelIndex fenceGroup = tree->index(_fenceGroupRow, 0);
+    const QModelIndex rallyGroup = tree->index(_rallyGroupRow, 0);
+    QCOMPARE(planFileGroup.isValid(), _planFileGroupRow >= 0);
     QVERIFY(defaultsGroup.isValid());
     QVERIFY(missionGroup.isValid());
     QVERIFY(fenceGroup.isValid());
     QVERIFY(rallyGroup.isValid());
 
-    QCOMPARE(tree->data(planFileGroup, QmlObjectTreeModel::NodeTypeRole).toString(), QStringLiteral("planFileGroup"));
+    if (_planFileGroupRow >= 0) {
+        QCOMPARE(tree->data(planFileGroup, QmlObjectTreeModel::NodeTypeRole).toString(),
+                 QStringLiteral("planFileGroup"));
+    }
     QCOMPARE(tree->data(defaultsGroup, QmlObjectTreeModel::NodeTypeRole).toString(), QStringLiteral("defaultsGroup"));
     QCOMPARE(tree->data(missionGroup, QmlObjectTreeModel::NodeTypeRole).toString(), QStringLiteral("missionGroup"));
     QCOMPARE(tree->data(fenceGroup, QmlObjectTreeModel::NodeTypeRole).toString(), QStringLiteral("fenceGroup"));
     QCOMPARE(tree->data(rallyGroup, QmlObjectTreeModel::NodeTypeRole).toString(), QStringLiteral("rallyGroup"));
 
     // Plan File group should have 1 child (planFileInfo marker)
-    QCOMPARE(tree->rowCount(planFileGroup), 1);
-    const QModelIndex planFileChild = tree->index(0, 0, planFileGroup);
-    QCOMPARE(tree->data(planFileChild, QmlObjectTreeModel::NodeTypeRole).toString(), QStringLiteral("planFileInfo"));
+    if (_planFileGroupRow >= 0) {
+        QCOMPARE(tree->rowCount(planFileGroup), 1);
+        const QModelIndex planFileChild = tree->index(0, 0, planFileGroup);
+        QCOMPARE(tree->data(planFileChild, QmlObjectTreeModel::NodeTypeRole).toString(),
+                 QStringLiteral("planFileInfo"));
+    }
+    const QModelIndex transformGroup = tree->index(_groupCount - 1, 0);
+    QCOMPARE(tree->data(transformGroup, QmlObjectTreeModel::NodeTypeRole).toString(), QStringLiteral("transformGroup"));
+    QCOMPARE(QModelIndex(_missionController->transformGroupIndex()), transformGroup);
 
     // Defaults group should have 1 child (defaultsInfo marker)
     QCOMPARE(tree->rowCount(defaultsGroup), 1);
@@ -107,7 +126,7 @@ void MissionControllerTreeTest::_testInsertWaypointUpdatesTree()
     _initForTest();
 
     QmlObjectTreeModel* tree = _missionController->visualItemsTree();
-    const QModelIndex missionGroup = tree->index(kMissionGroupRow, 0);
+    const QModelIndex missionGroup = tree->index(_missionGroupRow, 0);
 
     // Before insert: 1 mission item (MissionSettingsItem)
     const int initialMissionChildren = tree->rowCount(missionGroup);
@@ -143,7 +162,7 @@ void MissionControllerTreeTest::_testRemoveWaypointUpdatesTree()
     _initForTest();
 
     QmlObjectTreeModel* tree = _missionController->visualItemsTree();
-    const QModelIndex missionGroup = tree->index(kMissionGroupRow, 0);
+    const QModelIndex missionGroup = tree->index(_missionGroupRow, 0);
 
     // Insert 3 waypoints
     const QList<QGeoCoordinate> waypoints = Coord::waypointPath(Coord::zurich(), 3);
@@ -183,17 +202,17 @@ void MissionControllerTreeTest::_testRemoveAllRebuildsTree()
         _missionController->insertSimpleMissionItem(waypoints[i], i + 1);
     }
 
-    const QModelIndex missionGroupBefore = tree->index(kMissionGroupRow, 0);
+    const QModelIndex missionGroupBefore = tree->index(_missionGroupRow, 0);
     QCOMPARE(tree->rowCount(missionGroupBefore), 4);
 
     // Remove all
     _missionController->removeAll();
 
     // After removeAll, tree should still have all groups
-    QCOMPARE(tree->rowCount(), kGroupCount);
+    QCOMPARE(tree->rowCount(), _groupCount);
 
     // Mission group should have 1 child (the new MissionSettingsItem)
-    const QModelIndex missionGroupAfter = tree->index(kMissionGroupRow, 0);
+    const QModelIndex missionGroupAfter = tree->index(_missionGroupRow, 0);
     QCOMPARE(tree->rowCount(missionGroupAfter), 1);
 
     // That child should be the new settings item
@@ -213,11 +232,11 @@ void MissionControllerTreeTest::_testPersistentGroupIndexes()
     QmlObjectTreeModel* tree = _missionController->visualItemsTree();
 
     // Capture persistent indexes for each group
-    QPersistentModelIndex planFilePersist(tree->index(kPlanFileGroupRow, 0));
-    QPersistentModelIndex defaultsPersist(tree->index(kDefaultsGroupRow, 0));
-    QPersistentModelIndex missionPersist(tree->index(kMissionGroupRow, 0));
-    QPersistentModelIndex fencePersist(tree->index(kFenceGroupRow, 0));
-    QPersistentModelIndex rallyPersist(tree->index(kRallyGroupRow, 0));
+    QPersistentModelIndex planFilePersist(tree->index(_planFileGroupRow, 0));
+    QPersistentModelIndex defaultsPersist(tree->index(_defaultsGroupRow, 0));
+    QPersistentModelIndex missionPersist(tree->index(_missionGroupRow, 0));
+    QPersistentModelIndex fencePersist(tree->index(_fenceGroupRow, 0));
+    QPersistentModelIndex rallyPersist(tree->index(_rallyGroupRow, 0));
 
     // Insert waypoints
     const QList<QGeoCoordinate> waypoints = Coord::waypointPath(Coord::zurich(), 5);
@@ -226,25 +245,25 @@ void MissionControllerTreeTest::_testPersistentGroupIndexes()
     }
 
     // All persistent indexes should still be valid
-    QVERIFY(planFilePersist.isValid());
+    QCOMPARE(planFilePersist.isValid(), _planFileGroupRow >= 0);
     QVERIFY(defaultsPersist.isValid());
     QVERIFY(missionPersist.isValid());
     QVERIFY(fencePersist.isValid());
     QVERIFY(rallyPersist.isValid());
 
     // They should still be at the same rows (group structure didn't change)
-    QCOMPARE(planFilePersist.row(), kPlanFileGroupRow);
-    QCOMPARE(defaultsPersist.row(), kDefaultsGroupRow);
-    QCOMPARE(missionPersist.row(), kMissionGroupRow);
-    QCOMPARE(fencePersist.row(), kFenceGroupRow);
-    QCOMPARE(rallyPersist.row(), kRallyGroupRow);
+    QCOMPARE(planFilePersist.row(), _planFileGroupRow);
+    QCOMPARE(defaultsPersist.row(), _defaultsGroupRow);
+    QCOMPARE(missionPersist.row(), _missionGroupRow);
+    QCOMPARE(fencePersist.row(), _fenceGroupRow);
+    QCOMPARE(rallyPersist.row(), _rallyGroupRow);
 
     // Remove some waypoints
     _missionController->removeVisualItem(3);
     _missionController->removeVisualItem(2);
 
     // Persistent indexes should still be valid
-    QVERIFY(planFilePersist.isValid());
+    QCOMPARE(planFilePersist.isValid(), _planFileGroupRow >= 0);
     QVERIFY(defaultsPersist.isValid());
     QVERIFY(missionPersist.isValid());
     QVERIFY(fencePersist.isValid());
@@ -266,14 +285,14 @@ void MissionControllerTreeTest::_testRecalcChildItemsNoCrash()
     }
 
     QmlObjectTreeModel* tree = _missionController->visualItemsTree();
-    const QModelIndex missionGroup = tree->index(kMissionGroupRow, 0);
+    const QModelIndex missionGroup = tree->index(_missionGroupRow, 0);
 
     // Tree should be consistent — recalcChildItems happens automatically during insert
     QCOMPARE(tree->rowCount(missionGroup), _missionController->visualItems()->count());
 
     // Verify no crash and tree is still functional
     QVERIFY(tree->index(0, 0, missionGroup).isValid());
-    QCOMPARE(tree->rowCount(), kGroupCount);
+    QCOMPARE(tree->rowCount(), _groupCount);
 }
 
 // ===========================================================================
@@ -286,11 +305,11 @@ void MissionControllerTreeTest::_testExposedPersistentIndexGettersMatchTree()
 
     QmlObjectTreeModel* tree = _missionController->visualItemsTree();
 
-    QCOMPARE(QModelIndex(_missionController->planFileGroupIndex()), tree->index(kPlanFileGroupRow, 0));
-    QCOMPARE(QModelIndex(_missionController->defaultsGroupIndex()), tree->index(kDefaultsGroupRow, 0));
-    QCOMPARE(QModelIndex(_missionController->missionGroupIndex()),  tree->index(kMissionGroupRow, 0));
-    QCOMPARE(QModelIndex(_missionController->fenceGroupIndex()),    tree->index(kFenceGroupRow, 0));
-    QCOMPARE(QModelIndex(_missionController->rallyGroupIndex()),    tree->index(kRallyGroupRow, 0));
+    QCOMPARE(QModelIndex(_missionController->planFileGroupIndex()), tree->index(_planFileGroupRow, 0));
+    QCOMPARE(QModelIndex(_missionController->defaultsGroupIndex()), tree->index(_defaultsGroupRow, 0));
+    QCOMPARE(QModelIndex(_missionController->missionGroupIndex()), tree->index(_missionGroupRow, 0));
+    QCOMPARE(QModelIndex(_missionController->fenceGroupIndex()), tree->index(_fenceGroupRow, 0));
+    QCOMPARE(QModelIndex(_missionController->rallyGroupIndex()), tree->index(_rallyGroupRow, 0));
 }
 
 // ===========================================================================
@@ -310,18 +329,18 @@ void MissionControllerTreeTest::_testExposedIndexesSurviveRemoveAll()
     _missionController->removeAll();
 
     // The CONSTANT Q_PROPERTY persistent indexes must still be valid
-    QVERIFY(_missionController->planFileGroupIndex().isValid());
+    QCOMPARE(_missionController->planFileGroupIndex().isValid(), _planFileGroupRow >= 0);
     QVERIFY(_missionController->defaultsGroupIndex().isValid());
     QVERIFY(_missionController->missionGroupIndex().isValid());
     QVERIFY(_missionController->fenceGroupIndex().isValid());
     QVERIFY(_missionController->rallyGroupIndex().isValid());
 
     // They should still point to the correct rows
-    QCOMPARE(_missionController->planFileGroupIndex().row(), kPlanFileGroupRow);
-    QCOMPARE(_missionController->defaultsGroupIndex().row(), kDefaultsGroupRow);
-    QCOMPARE(_missionController->missionGroupIndex().row(),  kMissionGroupRow);
-    QCOMPARE(_missionController->fenceGroupIndex().row(),    kFenceGroupRow);
-    QCOMPARE(_missionController->rallyGroupIndex().row(),    kRallyGroupRow);
+    QCOMPARE(_missionController->planFileGroupIndex().row(), _planFileGroupRow);
+    QCOMPARE(_missionController->defaultsGroupIndex().row(), _defaultsGroupRow);
+    QCOMPARE(_missionController->missionGroupIndex().row(), _missionGroupRow);
+    QCOMPARE(_missionController->fenceGroupIndex().row(), _fenceGroupRow);
+    QCOMPARE(_missionController->rallyGroupIndex().row(), _rallyGroupRow);
 }
 
 // ===========================================================================

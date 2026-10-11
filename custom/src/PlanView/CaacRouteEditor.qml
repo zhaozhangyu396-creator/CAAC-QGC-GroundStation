@@ -16,6 +16,7 @@ Column {
     property var editorMap: null
     property var planMasterController: null
     property bool showMissionTree: false
+    property bool relativeEditorVisible: false
     readonly property var currentItem: editorController.currentItem
     readonly property var routeController: editorController
     property bool _pickingCenter: false
@@ -189,24 +190,48 @@ Column {
                 heightFactor: 0.25
                 leftPadding: ScreenTools.defaultFontPixelWidth
                 rightPadding: leftPadding
-                onClicked: root.openGeometry(2)
+                onClicked: {
+                    root.showMissionTree = false
+                    root.relativeEditorVisible = true
+                }
             }
         }
     }
 
-    RowLayout {
+    Rectangle {
         id: listHeader
         width: root.width
-        QGCLabel {
-            Layout.fillWidth: true
-            text: root.showMissionTree ? qsTr("Mission settings") : qsTr("Waypoint list")
-            font.bold: true
+        height: headerContent.implicitHeight + ScreenTools.defaultFontPixelHeight
+        color: dragPalette.windowShade
+        radius: ScreenTools.defaultBorderRadius
+
+        RowLayout {
+            id: headerContent
+            anchors.fill: parent
+            anchors.margins: ScreenTools.defaultFontPixelHeight * 0.5
+            QGCLabel {
+                objectName: "caacPanelTitle"
+                Layout.fillWidth: true
+                text: root.relativeEditorVisible ? qsTr("Relative coordinate editor")
+                    : root.showMissionTree ? qsTr("Mission settings") : qsTr("Waypoint list")
+                font.bold: true
+                wrapMode: Text.WordWrap
+                horizontalAlignment: Text.AlignHCenter
+            }
+            QGCLabel {
+                visible: !root.showMissionTree && !root.relativeEditorVisible
+                text: qsTr("%1 points").arg(Math.max(0, editorController.coordinateItems.length - 1))
+                font.pointSize: ScreenTools.smallFontPointSize
+            }
         }
-        QGCLabel {
-            visible: !root.showMissionTree
-            text: qsTr("%1 points").arg(Math.max(0, editorController.coordinateItems.length - 1))
-            font.pointSize: ScreenTools.smallFontPointSize
-        }
+    }
+
+    CaacRelativeEditor {
+        width: root.width
+        height: Math.max(ScreenTools.defaultFontPixelHeight * 8,
+            root.height - listHeader.height - settingsButton.height - helpLabel.height - root.spacing * 3)
+        visible: root.relativeEditorVisible
+        routeController: editorController
     }
 
     QGCListView {
@@ -216,7 +241,7 @@ Column {
         height: Math.max(ScreenTools.defaultFontPixelHeight * 5,
             root.height - listHeader.height - pointActions.height - settingsButton.height - helpLabel.height
             - root.spacing * 4)
-        visible: !root.showMissionTree
+        visible: !root.showMissionTree && !root.relativeEditorVisible
         clip: true
         spacing: ScreenTools.defaultFontPixelHeight * 0.4
         model: root.planMasterController ? root.planMasterController.missionController.visualItems : null
@@ -306,6 +331,7 @@ Column {
 
     RowLayout {
         id: pointActions
+        visible: !root.relativeEditorVisible
         width: root.width
         spacing: ScreenTools.defaultFontPixelWidth * 0.3
         QGCButton {
@@ -362,9 +388,15 @@ Column {
         id: settingsButton
         objectName: "caacMissionSettings"
         width: root.width
-        text: root.showMissionTree ? qsTr("Waypoint list") : qsTr("Mission settings")
+        text: root.relativeEditorVisible || root.showMissionTree ? qsTr("Waypoint list") : qsTr("Mission settings")
         heightFactor: 0.25
-        onClicked: root.showMissionTree = !root.showMissionTree
+        onClicked: {
+            if (root.relativeEditorVisible) {
+                root.relativeEditorVisible = false
+            } else {
+                root.showMissionTree = !root.showMissionTree
+            }
+        }
     }
 
     QGCLabel {

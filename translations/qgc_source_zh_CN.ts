@@ -5582,6 +5582,10 @@ Click Ok to start the auto-tuning process.
   <context>
     <name>CaacRouteEditor</name>
     <message>
+      <source>Relative coordinate editor</source>
+      <translation>相对坐标编辑器</translation>
+    </message>
+    <message>
       <location filename="../custom/src/PlanView/CaacRouteEditor.qml" line="101"/>
       <source>CAAC route workbench</source>
       <translation>CAAC 航线工作台</translation>
@@ -24504,6 +24508,65 @@ If a vehicle still has this key configured, you will no longer be able to commun
       <location filename="../src/Utilities/QGCCommandLineParser.cc" line="266"/>
       <source>--no-windows-assert-ui is only supported on Windows.</source>
       <translation>--no-windows-assert-ui 仅在 Windows 上受支持。</translation>
+    </message>
+  </context>
+  <context>
+    <name>CaacRelativeEditor</name>
+    <message>
+      <source>Basic settings</source>
+      <translation>基础设置</translation>
+    </message>
+    <message>
+      <source>Reference point</source>
+      <translation>基准点</translation>
+    </message>
+    <message>
+      <source>Angle type</source>
+      <translation>角度类型</translation>
+    </message>
+    <message>
+      <source>Bearing</source>
+      <translation>方位角</translation>
+    </message>
+    <message>
+      <source>Interior angle</source>
+      <translation>夹角</translation>
+    </message>
+    <message>
+      <source>Angle (°)</source>
+      <translation>角度数值（°）</translation>
+    </message>
+    <message>
+      <source>Distance (m)</source>
+      <translation>相对距离（米）</translation>
+    </message>
+    <message>
+      <source>Advanced settings</source>
+      <translation>高级设置</translation>
+    </message>
+    <message>
+      <source>Generation method</source>
+      <translation>生成方式</translation>
+    </message>
+    <message>
+      <source>Insert</source>
+      <translation>插入</translation>
+    </message>
+    <message>
+      <source>Insert after</source>
+      <translation>插入到该航点之后</translation>
+    </message>
+    <message>
+      <source>Add</source>
+      <translation>添加</translation>
+    </message>
+    <message>
+      <source>Press Space to add a waypoint</source>
+      <translation>空格键可添加航点</translation>
+    </message>
+    <message>
+      <source>Bearing: north 0°, east 90°. Interior angle: 90° turns left, 180° continues straight; an incoming leg is required.</source>
+      <translation>方位角以真北为 0°、正东为 90°。夹角 90° 左转、180° 直行；必须存在前一航段，支持负角度。</translation>
     </message>
   </context>
 </TS>

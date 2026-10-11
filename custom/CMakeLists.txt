@@ -5,9 +5,11 @@ set(QGC_CAAC_BUILD
 qt_add_library(CaacPlanModule STATIC)
 qgc_configure_target(CaacPlanModule)
 
-qgc_set_qt_resource_alias(${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacRouteEditor.qml
-                          ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacWaypointDialog.qml
-                          ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacGeometryDialog.qml
+qgc_set_qt_resource_alias(
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacRouteEditor.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacWaypointDialog.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacGeometryDialog.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacRelativeEditor.qml
 )
 qt_add_qml_module(
     CaacPlanModule
@@ -15,6 +17,7 @@ qt_add_qml_module(
     VERSION 1.0
     RESOURCE_PREFIX /qml
     QML_FILES src/PlanView/CaacRouteEditor.qml src/PlanView/CaacWaypointDialog.qml src/PlanView/CaacGeometryDialog.qml
+              src/PlanView/CaacRelativeEditor.qml
     NO_PLUGIN
 )
 

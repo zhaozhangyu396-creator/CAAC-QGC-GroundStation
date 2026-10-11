@@ -20,7 +20,8 @@ Item {
     readonly property int   _decimalPlaces: 8
     readonly property real  _margin: ScreenTools.defaultFontPixelHeight * 0.5
     readonly property real  _toolsMargin: ScreenTools.defaultFontPixelWidth * 0.75
-    readonly property real  _rightPanelWidth: Math.min(width / 3, ScreenTools.defaultFontPixelWidth * 30)
+    readonly property real  _rightPanelWidth: Math.min(width / 3, ScreenTools.defaultFontPixelWidth
+        * (QGroundControl.corePlugin.directMissionItemEditing ? 46 : 30))
 
     property var    _planMasterController: planMasterController
     property var    _missionController: _planMasterController.missionController
