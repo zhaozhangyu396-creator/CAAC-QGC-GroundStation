@@ -168,8 +168,12 @@ void CaacSimulationUITest::_uploadAndFlightControls()
                        QStringLiteral("independent altitude button")));
     QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->pauseFlightMode(), TestTimeout::longMs());
     step("start route from flight controls");
+    auto* startAction = findVisibleItem(_rootItem, QStringLiteral("caacStartMission"));
+    QVERIFY(startAction);
+    QTRY_VERIFY_WITH_TIMEOUT(startAction->isEnabled(), TestTimeout::mediumMs());
     QVERIFY(clickButtonScrolled(QStringLiteral("caacStartMission"), QStringLiteral("flyViewToolStrip_flickable")));
-    auto* startConfirmation = findVisibleItem(_rootItem, QStringLiteral("guidedActionConfirmButton"));
+    auto* startConfirmation =
+        findVisibleItem(_rootItem, QStringLiteral("guidedActionConfirmButton"), TestTimeout::mediumMs());
     QVERIFY(startConfirmation);
     QVERIFY(QMetaObject::invokeMethod(startConfirmation, "activated"));
     QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->missionFlightMode(), TestTimeout::mediumMs());
