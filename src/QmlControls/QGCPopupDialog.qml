@@ -288,6 +288,7 @@ Popup {
             property real maxAvailableHeight:   mainWindow.height - titleRowLayout.height - _contentMargin * 5
 
             QGCFlickable {
+                objectName: "popupDialog_contentFlickable"
                 anchors.margins:    _contentMargin
                 anchors.fill:       parent
                 contentWidth:       dialogContentParent.childrenRect.width

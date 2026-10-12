@@ -75,6 +75,7 @@ public:
     Q_INVOKABLE bool translateRoute(const QGeoCoordinate& reference, const QGeoCoordinate& target);
     Q_INVOKABLE bool moveRouteBy(double bearing, double distance);
     Q_INVOKABLE bool updatePlannedHome(double latitude, double longitude, double amslAltitude);
+    Q_INVOKABLE bool setMissionFlightSpeed(bool specified, double speed);
 
 signals:
     void planMasterControllerChanged();

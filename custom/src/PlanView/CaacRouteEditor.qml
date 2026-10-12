@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtPositioning
 
 import QGC
 import QGroundControl
@@ -26,6 +27,11 @@ Column {
     readonly property var currentItem: editorController.currentItem
     readonly property var routeController: editorController
     property bool _pickingCenter: false
+    property int measurePick: 0
+    property var measureA: QtPositioning.coordinate()
+    property var measureB: QtPositioning.coordinate()
+    onVisibleChanged: { if (!visible) { measurePick = 0 } }
+    onEnabledChanged: { if (!enabled) { measurePick = 0 } }
     property int _pendingOperation: 0
     property var _draggedWaypoint: null
     readonly property var _dragLeg: _draggedWaypoint && editorController.coordinateItems.length > 0
@@ -65,6 +71,13 @@ Column {
         segments: root.planMasterController ? root.planMasterController.missionController.simpleFlightPathSegments : null
     }
 
+    CaacMeasureMap {
+        mapControl: root.editorMap
+        pointA: root.measureA
+        pointB: root.measureB
+        showMeasurement: root.enabled && root.visible
+    }
+
     Rectangle {
         parent: root.editorMap
         objectName: "caacWaypointDragFeedback"
@@ -100,12 +113,25 @@ Column {
     }
 
     function pickRotationCenter(operation) {
+        measurePick = 0
         _pendingOperation = operation
         _pickingCenter = true
     }
 
     function openGeometry(operation) {
         geometryDialogFactory.open({operation: operation})
+    }
+
+    function openMeasurement() { measureDialogFactory.open() }
+    function openUnitConverter() { unitDialogFactory.open() }
+    function pickMeasurement(point) {
+        _pickingCenter = false
+        measurePick = point
+    }
+    function clearMeasurement() {
+        measurePick = 0
+        measureA = QtPositioning.coordinate()
+        measureB = QtPositioning.coordinate()
     }
 
     function editWaypoint(item) {
@@ -127,7 +153,7 @@ Column {
         anchors.fill: parent
         enabled: root.enabled && root.visible && root.editorMap && root.editorMap.directMissionItemEditing
         acceptedButtons: Qt.LeftButton
-        z: root.routeDragMode ? QGroundControl.zOrderMapItems + 3 : 0
+        z: root.routeDragMode || root.measurePick > 0 ? QGroundControl.zOrderMapItems + 3 : 0
 
         property point _pressPosition
         property point _lastPosition
@@ -150,7 +176,7 @@ Column {
             if (!_dragged && Math.hypot(mouse.x - _pressPosition.x, mouse.y - _pressPosition.y)
                 >= _styleHints.startDragDistance) {
                 _dragged = true
-                if (root.routeDragMode) {
+                if (root.routeDragMode && root.measurePick === 0) {
                     _routeDragging = true
                     editorController.beginEdit()
                 } else {
@@ -197,7 +223,11 @@ Column {
         }
         onDoubleClicked: (mouse) => {
             if (!_dragged) {
-                root.editorMap.mapDoubleClicked(Qt.point(mouse.x, mouse.y))
+                if (root.measurePick > 0) {
+                    root.editorMap.mapClicked(Qt.point(mouse.x, mouse.y))
+                } else {
+                    root.editorMap.mapDoubleClicked(Qt.point(mouse.x, mouse.y))
+                }
             }
         }
     }
@@ -592,12 +622,21 @@ Column {
         width: root.width
         wrapMode: Text.WordWrap
         font.pointSize: ScreenTools.smallFontPointSize
-        text: root._pickingCenter ? qsTr("Click the map to choose a rotation centre. Esc cancels.")
+        text: root.measurePick > 0 ? qsTr("Click the map to choose point %1. Esc cancels.").arg(root.measurePick === 1 ? "A" : "B")
+            : root._pickingCenter ? qsTr("Click the map to choose a rotation centre. Esc cancels.")
             : editorController.lastError || (root.routeDragMode
                 ? qsTr("Left-drag the route to move all points. Turn off route dragging to edit individual points.")
                 : qsTr("Double-click to add · Drag to move · Right-click to edit"))
     }
 
+    QGCPopupDialogFactory {
+        id: measureDialogFactory
+        dialogComponent: Component { CaacMeasureDialog { editor: root } }
+    }
+    QGCPopupDialogFactory {
+        id: unitDialogFactory
+        dialogComponent: Component { CaacUnitConverter { } }
+    }
     QGCPopupDialogFactory {
         id: waypointDialogFactory
         dialogComponent: Component {
@@ -619,8 +658,8 @@ Column {
 
     Shortcut {
         sequence: "Esc"
-        enabled: root._pickingCenter
-        onActivated: root._pickingCenter = false
+        enabled: root._pickingCenter || root.measurePick > 0
+        onActivated: { root._pickingCenter = false; root.measurePick = 0 }
     }
 
     Connections {
@@ -628,15 +667,29 @@ Column {
 
         function onWidthChanged() { root.movePanel(Qt.point(0, 0)) }
         function onHeightChanged() { root.movePanel(Qt.point(0, 0)) }
+        function onDirectMissionItemEditingChanged() {
+            if (!root.editorMap.directMissionItemEditing) { root.measurePick = 0 }
+        }
 
         function onMapDoubleClicked(position) {
-            if (root.enabled && root.visible && root.editorMap.directMissionItemEditing && !root._pickingCenter
+            if (root.enabled && root.visible && root.editorMap.directMissionItemEditing && !root._pickingCenter && root.measurePick === 0
                 && QGroundControl.corePlugin.doubleClickAddWaypoint) {
                 editorController.addWaypoint(root.editorMap.toCoordinate(position, false))
             }
         }
         function onMapClicked(position) {
-            if (root._pickingCenter) {
+            if (root.enabled && root.visible && root.measurePick > 0) {
+                const coordinate = root.editorMap.toCoordinate(position, false)
+                if (!coordinate.isValid) { return }
+                if (root.measurePick === 1) {
+                    root.measureA = coordinate
+                    root.measurePick = root.measureB.isValid ? 0 : 2
+                } else {
+                    root.measureB = coordinate
+                    root.measurePick = 0
+                }
+                if (root.measurePick === 0) { root.openMeasurement() }
+            } else if (root._pickingCenter) {
                 if (editorController.setRotationCenter(root.editorMap.toCoordinate(position, false))) {
                     root._pickingCenter = false
                     root.openGeometry(root._pendingOperation)

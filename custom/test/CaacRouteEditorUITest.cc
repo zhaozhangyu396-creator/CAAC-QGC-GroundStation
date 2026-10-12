@@ -133,6 +133,7 @@ private slots:
     void _testMouseEditing_data();
     void _testMouseEditing();
     void _roiWindowFocus();
+    void _planningUtilities();
 };
 
 void CaacRouteEditorUITest::_testMouseEditing_data()
@@ -823,6 +824,114 @@ void CaacRouteEditorUITest::_roiWindowFocus()
         return;
     }
     QVERIFY(mission->property("isROIActive").toBool());
+    master->removeAll();
+}
+
+void CaacRouteEditorUITest::_planningUtilities()
+{
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewPlan")));
+    auto* plan = findVisibleItem(_rootItem, QStringLiteral("mainView_plan"));
+    QVERIFY(plan);
+    auto* master = plan->property("_planMasterController").value<PlanMasterController*>();
+    QVERIFY(master);
+    auto* panel = findVisibleItem(_rootItem, QStringLiteral("caacRouteEditor"));
+    QVERIFY(panel);
+    auto* editor = qobject_cast<CaacRouteEditorController*>(panel->property("routeController").value<QObject*>());
+    QVERIFY(editor);
+    master->missionController()->setHomePosition(QGeoCoordinate(30, 120, 20));
+    QVERIFY(editor->addWaypoint(QGeoCoordinate(30.001, 120)));
+    auto* map = findVisibleItem(_rootItem, QStringLiteral("planView_map"));
+    QVERIFY(map);
+    map->setProperty("center", QVariant::fromValue(QGeoCoordinate(30, 120)));
+    map->setProperty("zoomLevel", 16.0);
+    QTRY_VERIFY_WITH_TIMEOUT(map->property("mapReady").toBool(), TestTimeout::mediumMs());
+    const auto before = master->saveToJson();
+    QVERIFY(clickButton(QStringLiteral("caacGlobalSettingsButton")));
+    QVERIFY(clickButton(QStringLiteral("caacUnitConverter")));
+    auto* value = findVisibleItem(_rootItem, QStringLiteral("caacConvertValue"));
+    auto* quantity = findVisibleItem(_rootItem, QStringLiteral("caacConvertQuantity"));
+    auto* from = findVisibleItem(_rootItem, QStringLiteral("caacConvertFrom"));
+    auto* to = findVisibleItem(_rootItem, QStringLiteral("caacConvertTo"));
+    auto* result = findVisibleItem(_rootItem, QStringLiteral("caacConvertResult"));
+    QVERIFY(value && quantity && from && to && result);
+    value->setProperty("text", QStringLiteral("1000"));
+    QTRY_COMPARE_WITH_TIMEOUT(result->property("text").toString(), QStringLiteral("1 km"), TestTimeout::mediumMs());
+    quantity->setProperty("currentIndex", 1);
+    from->setProperty("currentIndex", 1);
+    to->setProperty("currentIndex", 0);
+    value->setProperty("text", QStringLiteral("36"));
+    QTRY_COMPARE_WITH_TIMEOUT(result->property("text").toString(), QStringLiteral("10 m/s"), TestTimeout::mediumMs());
+    value->setProperty("text", QString());
+    QTRY_COMPARE_WITH_TIMEOUT(
+        result->property("text").toString(),
+        QCoreApplication::translate("CaacUnitConverter", "Enter a finite value and select valid units."),
+        TestTimeout::mediumMs());
+    QVERIFY(rejectDialog());
+    QVERIFY(clickButton(QStringLiteral("caacMeasureTool")));
+    auto* format = findVisibleItem(_rootItem, QStringLiteral("caacMeasureALatitudeFormatToggle"));
+    QVERIFY(format);
+    QVERIFY(scrollIntoView(format, QStringLiteral("popupDialog_contentFlickable")));
+    QVERIFY(clickButton(QStringLiteral("caacMeasureALatitudeFormatToggle")));
+    auto* blankDegrees = findVisibleItem(_rootItem, QStringLiteral("caacMeasureALatitudeDegrees"));
+    QVERIFY2(blankDegrees, qPrintable(QStringLiteral("dirty=%1 canonical=%2 dms=%3")
+                                          .arg(format->parentItem()->property("_dirty").toBool())
+                                          .arg(format->parentItem()->property("_canonicalValue").toDouble())
+                                          .arg(format->parentItem()->property("displayDms").toBool())));
+    QVERIFY(clickButton(QStringLiteral("caacMeasureALatitudeFormatToggle")));
+    auto* pickA = findVisibleItem(_rootItem, QStringLiteral("caacMeasurePickA"));
+    QVERIFY(pickA);
+    QVERIFY(scrollIntoView(pickA, QStringLiteral("popupDialog_contentFlickable")));
+    QVERIFY(clickButton(QStringLiteral("caacMeasurePickA")));
+    QTRY_COMPARE_WITH_TIMEOUT(panel->property("measurePick").toInt(), 1, TestTimeout::mediumMs());
+    QVERIFY(clickItemFraction(QStringLiteral("planView_map"), 0.3, 0.4));
+    QTRY_COMPARE_WITH_TIMEOUT(panel->property("measurePick").toInt(), 2, TestTimeout::mediumMs());
+    QVERIFY(clickItemFraction(QStringLiteral("planView_map"), 0.4, 0.4));
+    QTRY_COMPARE_WITH_TIMEOUT(panel->property("measurePick").toInt(), 0, TestTimeout::mediumMs());
+    const auto a = panel->property("measureA").value<QGeoCoordinate>();
+    const auto b = panel->property("measureB").value<QGeoCoordinate>();
+    QVERIFY(a.isValid() && b.isValid());
+    auto* measured = findVisibleItem(_rootItem, QStringLiteral("caacMeasureResult"));
+    QVERIFY(measured);
+    const auto expected = QCoreApplication::translate("CaacMeasureDialog", "Distance: %1 m · Bearing A → B: %2°")
+                              .arg(QGCGeo::geodesicDistance(a, b), 0, 'f', 2)
+                              .arg(QGCGeo::geodesicAzimuth(a, b), 0, 'f', 2);
+    QTRY_COMPARE_WITH_TIMEOUT(measured->property("text").toString(), expected, TestTimeout::mediumMs());
+    QCOMPARE(master->saveToJson(), before);
+    auto* aLatitude = findVisibleItem(_rootItem, QStringLiteral("caacMeasureALatitude"));
+    QVERIFY(aLatitude);
+    aLatitude->setProperty("text", QStringLiteral("91"));
+    auto* apply = findVisibleItem(_rootItem, QStringLiteral("caacMeasureApply"));
+    QVERIFY(apply);
+    QVERIFY(scrollIntoView(apply, QStringLiteral("popupDialog_contentFlickable")));
+    QVERIFY(clickButton(QStringLiteral("caacMeasureApply")));
+    QCOMPARE(panel->property("measureA").value<QGeoCoordinate>(), a);
+    QCOMPARE(master->saveToJson(), before);
+    QVERIFY(rejectDialog());
+    const auto screenshot = qEnvironmentVariable("CAAC_MEASURE_UI_SCREENSHOT");
+    if (!screenshot.isEmpty() && inherits("CaacChineseUITest")) {
+        QSignalSpy frame(_window, &QQuickWindow::frameSwapped);
+        _window->update();
+        QVERIFY(frame.wait(TestTimeout::mediumMs()));
+        QVERIFY(_window->grabWindow().save(screenshot));
+    }
+    auto* specify = findVisibleItem(_rootItem, QStringLiteral("caacSpecifyMissionSpeed"));
+    QVERIFY(specify);
+    QVERIFY(scrollIntoView(specify, QStringLiteral("caacGlobalSettingsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacSpecifyMissionSpeed")));
+    auto* speed = findVisibleItem(_rootItem, QStringLiteral("caacMissionSpeed"));
+    QVERIFY(speed);
+    speed->setProperty("text", QStringLiteral("8.5"));
+    apply = findVisibleItem(_rootItem, QStringLiteral("caacApplyMissionSpeed"));
+    QVERIFY(apply);
+    QVERIFY(scrollIntoView(apply, QStringLiteral("caacGlobalSettingsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacApplyMissionSpeed")));
+    QVERIFY(master->saveToJson() != before);
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QCOMPARE(master->saveToJson(), before);
     master->removeAll();
 }
 

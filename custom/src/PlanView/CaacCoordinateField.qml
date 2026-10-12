@@ -35,6 +35,10 @@ RowLayout {
     function toggleFormat() {
         const current = coordinate
         if (!isFinite(current) || Math.abs(current) > maximumDegrees) {
+            if (!_dirty && isNaN(_canonicalValue)) {
+                displayDms = !displayDms
+                render()
+            }
             return
         }
         _canonicalValue = current
@@ -98,7 +102,8 @@ RowLayout {
         objectName: root.fieldName + "FormatToggle"
         text: "⇄"
         Accessible.name: qsTr("Switch coordinate format")
-        enabled: isFinite(root.coordinate) && Math.abs(root.coordinate) <= root.maximumDegrees
+        enabled: (isFinite(root.coordinate) && Math.abs(root.coordinate) <= root.maximumDegrees)
+            || (!root._dirty && isNaN(root._canonicalValue))
         onClicked: root.toggleFormat()
     }
 }

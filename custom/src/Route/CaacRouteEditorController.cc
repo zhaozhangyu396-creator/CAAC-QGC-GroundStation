@@ -25,6 +25,34 @@ CaacRouteEditorController::CaacRouteEditorController(QObject* parent)
     connect(&_captureTimer, &QTimer::timeout, this, &CaacRouteEditorController::_capture);
 }
 
+bool CaacRouteEditorController::setMissionFlightSpeed(bool specified, double speed)
+{
+    if (!_canEdit()) {
+        return false;
+    }
+    auto* model = _missionController()->visualItems();
+    auto* settings = model && model->count() ? model->value<MissionSettingsItem*>(0) : nullptr;
+    auto* section = settings ? settings->speedSection() : nullptr;
+    if (!section || !section->available()) {
+        return _fail(tr("Mission flight speed is unavailable."));
+    }
+    if (specified &&
+        (!std::isfinite(speed) || speed <= 0 || speed > std::numeric_limits<float>::max() ||
+         speed < section->flightSpeed()->rawMin().toDouble() || speed > section->flightSpeed()->rawMax().toDouble())) {
+        return _fail(tr("Enter a valid mission flight speed."));
+    }
+    if (specified != section->specifyFlightSpeed() && !_canChangeOrder()) {
+        return false;
+    }
+    beginEdit();
+    const auto finish = qScopeGuard([this]() { endEdit(); });
+    if (specified) {
+        section->flightSpeed()->setRawValue(speed);
+    }
+    section->setSpecifyFlightSpeed(specified);
+    return true;
+}
+
 PlanMasterController* CaacRouteEditorController::planMasterController() const
 {
     return _masterController.data();
@@ -182,9 +210,10 @@ bool CaacRouteEditorController::updateWaypoint(QObject* object, double latitude,
         return _fail(tr("Check latitude, longitude and altitude (metres in the existing altitude frame)."));
     }
     auto* speedSection = item->speedSection();
-    if (specifySpeed && (!speedSection || !speedSection->available() || !std::isfinite(speed) || speed <= 0 ||
-                         speed < speedSection->flightSpeed()->rawMin().toDouble() ||
-                         speed > speedSection->flightSpeed()->rawMax().toDouble())) {
+    if (specifySpeed &&
+        (!speedSection || !speedSection->available() || !std::isfinite(speed) || speed <= 0 ||
+         speed > std::numeric_limits<float>::max() || speed < speedSection->flightSpeed()->rawMin().toDouble() ||
+         speed > speedSection->flightSpeed()->rawMax().toDouble())) {
         return _fail(tr("Flight speed is invalid or unavailable for this mission item."));
     }
     if (speedSection && speedSection->available() && specifySpeed != speedSection->specifyFlightSpeed() &&

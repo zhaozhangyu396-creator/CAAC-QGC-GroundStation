@@ -18,6 +18,9 @@ qgc_set_qt_resource_alias(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacGlobalSettings.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacPanelDragHandle.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacCoordinateField.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacMeasureDialog.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacMeasureMap.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacUnitConverter.qml
 )
 qt_add_qml_module(
     CaacPlanModule
@@ -36,6 +39,9 @@ qt_add_qml_module(
               src/PlanView/CaacGlobalSettings.qml
               src/PlanView/CaacPanelDragHandle.qml
               src/PlanView/CaacCoordinateField.qml
+              src/PlanView/CaacMeasureDialog.qml
+              src/PlanView/CaacMeasureMap.qml
+              src/PlanView/CaacUnitConverter.qml
     NO_PLUGIN
 )
 

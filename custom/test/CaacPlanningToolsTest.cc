@@ -24,6 +24,7 @@ private slots:
     void _invalidInputsAreAtomic();
     void _coordinateFormats();
     void _advancedWaypointProperties();
+    void _missionSpeedTransaction();
 };
 
 class CaacRouteTemplateGeometryTest : public UnitTest
@@ -286,6 +287,42 @@ void CaacPlanningToolsTest::_advancedWaypointProperties()
     planController()->removeAll();
     planController()->loadFromFile(file);
     QCOMPARE(planController()->saveToJson(), saved);
+}
+
+void CaacPlanningToolsTest::_missionSpeedTransaction()
+{
+    CaacRouteEditorController editor;
+    editor.setPlanMasterController(planController());
+    missionController()->setHomePosition(QGeoCoordinate(30, 120, 20));
+    QVERIFY(editor.addWaypoint(QGeoCoordinate(30.001, 120)));
+    editor.clearHistory();
+    const auto before = planController()->saveToJson();
+    for (double invalid : {0.0, -1.0, 1e100, std::numeric_limits<double>::quiet_NaN()}) {
+        QVERIFY(!editor.setMissionFlightSpeed(true, invalid));
+        QCOMPARE(planController()->saveToJson(), before);
+        QVERIFY(!editor.canUndo());
+    }
+    QVERIFY(editor.setMissionFlightSpeed(true, 12.5));
+    const auto edited = planController()->saveToJson();
+    auto* settings = missionController()->visualItems()->value<MissionSettingsItem*>(0);
+    QVERIFY(settings);
+    QList<MissionItem*> commands;
+    settings->appendMissionItems(commands, &editor);
+    QVERIFY(!commands.isEmpty());
+    auto* speedCommand = commands.last();
+    QCOMPARE(speedCommand->command(), MAV_CMD_DO_CHANGE_SPEED);
+    QCOMPARE(speedCommand->param2(), 12.5);
+    QVERIFY(editor.undo());
+    QCOMPARE(planController()->saveToJson(), before);
+    QVERIFY(editor.redo());
+    QCOMPARE(planController()->saveToJson(), edited);
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+    const auto file = directory.filePath(QStringLiteral("mission-speed.plan"));
+    QVERIFY(planController()->saveToFile(file));
+    planController()->removeAll();
+    planController()->loadFromFile(file);
+    QCOMPARE(planController()->saveToJson(), edited);
 }
 
 UT_REGISTER_TEST(CaacPlanningToolsTest, TestLabel::Unit, TestLabel::MissionManager)

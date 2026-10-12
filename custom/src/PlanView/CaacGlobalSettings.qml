@@ -14,6 +14,8 @@ Item {
     required property var editor
     readonly property var _points: routeController.coordinateItems
     readonly property var _home: _points.length ? _points[0].coordinate : QtPositioning.coordinate()
+    readonly property var _missionItems: editor.planMasterController ? editor.planMasterController.missionController.visualItems : null
+    readonly property var _speedSection: _missionItems && _missionItems.count ? _missionItems.get(0).speedSection : null
     function number(value) { return value.trim().length ? Number(value) : NaN }
     component NumberField: QGCTextField {
         Layout.fillWidth: true
@@ -30,6 +32,19 @@ Item {
             id: fields
             width: parent.width
             spacing: ScreenTools.defaultFontPixelHeight
+            QGCLabel { text: qsTr("Planning tools"); font.bold: true }
+            QGCButton {
+                objectName: "caacMeasureTool"
+                Layout.fillWidth: true
+                text: qsTr("A/B measurement")
+                onClicked: root.editor.openMeasurement()
+            }
+            QGCButton {
+                objectName: "caacUnitConverter"
+                Layout.fillWidth: true
+                text: qsTr("Unit conversion")
+                onClicked: root.editor.openUnitConverter()
+            }
             QGCLabel { text: qsTr("Planned home"); font.bold: true }
             GridLayout {
                 columns: root.width < ScreenTools.defaultFontPixelWidth * 35 ? 1 : 2
@@ -50,6 +65,34 @@ Item {
                 onClicked: root.routeController.updatePlannedHome(root.number(homeLatitude.text), root.number(homeLongitude.text), root.number(homeAltitude.text))
             }
             QGCLabel { text: qsTr("Basic settings"); font.bold: true }
+            QGCCheckBox {
+                id: specifySpeed
+                objectName: "caacSpecifyMissionSpeed"
+                text: qsTr("Specify initial mission speed")
+                checked: root._speedSection ? root._speedSection.specifyFlightSpeed : false
+                enabled: root._speedSection && root._speedSection.available
+            }
+            NumberField {
+                id: missionSpeed
+                objectName: "caacMissionSpeed"
+                visible: specifySpeed.checked
+                text: root._speedSection ? root._speedSection.flightSpeed.rawValue.toString() : ""
+                showUnits: true
+                unitsLabel: "m/s"
+            }
+            QGCButton {
+                objectName: "caacApplyMissionSpeed"
+                Layout.fillWidth: true
+                text: qsTr("Save mission speed")
+                enabled: specifySpeed.enabled
+                onClicked: root.routeController.setMissionFlightSpeed(specifySpeed.checked, root.number(missionSpeed.text))
+            }
+            QGCLabel {
+                Layout.fillWidth: true
+                text: qsTr("Initial mission speed; later waypoint speed commands override it. Vertical speed is separate.")
+                font.pointSize: ScreenTools.smallFontPointSize
+                wrapMode: Text.WordWrap
+            }
             QGCLabel { text: qsTr("New waypoint altitude") }
             FactTextField {
                 Layout.fillWidth: true

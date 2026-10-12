@@ -5728,7 +5728,11 @@ Click Ok to start the auto-tuning process.
       <source>%1°</source>
       <translation>%1°</translation>
     </message>
-  </context>
+      <message>
+        <source>Click the map to choose point %1. Esc cancels.</source>
+        <translation>点击地图选取点 %1，按 Esc 取消。</translation>
+    </message>
+</context>
   <context>
     <name>CaacRouteEditorController</name>
     <message>
@@ -5886,7 +5890,15 @@ Click Ok to start the auto-tuning process.
       <source>This waypoint has no valid simple previous point.</source>
       <translation>该航点没有有效的前一简单航点。</translation>
     </message>
-  </context>
+      <message>
+        <source>Mission flight speed is unavailable.</source>
+        <translation>当前任务不支持设置初始飞行速度。</translation>
+    </message>
+    <message>
+        <source>Enter a valid mission flight speed.</source>
+        <translation>请输入有效的任务飞行速度。</translation>
+    </message>
+</context>
   <context>
     <name>CaacWaypointDialog</name>
     <message>
@@ -25015,7 +25027,31 @@ If a vehicle still has this key configured, you will no longer be able to commun
       <source>Translation and route dragging include home, takeoff and landing points. Complex patterns must first be converted to simple items.</source>
       <translation>平移和航线拖拽包含起飞点与降落点。复杂图形须先转换为简单航点。</translation>
     </message>
-  </context>
+      <message>
+        <source>Planning tools</source>
+        <translation>规划工具</translation>
+    </message>
+    <message>
+        <source>A/B measurement</source>
+        <translation>A/B 测量</translation>
+    </message>
+    <message>
+        <source>Unit conversion</source>
+        <translation>单位换算</translation>
+    </message>
+    <message>
+        <source>Specify initial mission speed</source>
+        <translation>指定任务初始速度</translation>
+    </message>
+    <message>
+        <source>Save mission speed</source>
+        <translation>保存任务速度</translation>
+    </message>
+    <message>
+        <source>Initial mission speed; later waypoint speed commands override it. Vertical speed is separate.</source>
+        <translation>任务初始速度；后续航点的速度命令会覆盖此值。此值不表示垂直速度。</translation>
+    </message>
+</context>
 <context>
     <name>CaacCoordinateField</name>
     <message>
@@ -25037,6 +25073,100 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
         <source>Switch coordinate format</source>
         <translation>切换坐标格式</translation>
+    </message>
+</context>
+<context>
+    <name>CaacUnitConverter</name>
+    <message>
+        <source>Unit conversion</source>
+        <translation>单位换算</translation>
+    </message>
+    <message>
+        <source>Quantity</source>
+        <translation>换算类型</translation>
+    </message>
+    <message>
+        <source>Length</source>
+        <translation>长度</translation>
+    </message>
+    <message>
+        <source>Speed</source>
+        <translation>速度</translation>
+    </message>
+    <message>
+        <source>Angle</source>
+        <translation>角度</translation>
+    </message>
+    <message>
+        <source>Input value</source>
+        <translation>输入数值</translation>
+    </message>
+    <message>
+        <source>From unit</source>
+        <translation>原单位</translation>
+    </message>
+    <message>
+        <source>To unit</source>
+        <translation>目标单位</translation>
+    </message>
+    <message>
+        <source>Enter a finite value and select valid units.</source>
+        <translation>请输入有效数值并选择单位。</translation>
+    </message>
+</context>
+<context>
+    <name>CaacMeasureDialog</name>
+    <message>
+        <source>A/B measurement</source>
+        <translation>A/B 测量</translation>
+    </message>
+    <message>
+        <source>Enter valid coordinates for both points.</source>
+        <translation>请输入 A、B 两点的有效坐标。</translation>
+    </message>
+    <message>
+        <source>A latitude</source>
+        <translation>A 点纬度</translation>
+    </message>
+    <message>
+        <source>A longitude</source>
+        <translation>A 点经度</translation>
+    </message>
+    <message>
+        <source>B latitude</source>
+        <translation>B 点纬度</translation>
+    </message>
+    <message>
+        <source>B longitude</source>
+        <translation>B 点经度</translation>
+    </message>
+    <message>
+        <source>Pick A on map</source>
+        <translation>在地图上选取 A 点</translation>
+    </message>
+    <message>
+        <source>Pick B on map</source>
+        <translation>在地图上选取 B 点</translation>
+    </message>
+    <message>
+        <source>Measure entered coordinates</source>
+        <translation>测量输入坐标</translation>
+    </message>
+    <message>
+        <source>Distance: %1 m · Bearing A → B: %2°</source>
+        <translation>距离：%1 m · A → B 方位角：%2°</translation>
+    </message>
+    <message>
+        <source>Select or enter points A and B.</source>
+        <translation>请选择或输入 A、B 两点。</translation>
+    </message>
+    <message>
+        <source>WGS84 horizontal distance and true-north bearing. Measurement does not change the mission.</source>
+        <translation>采用 WGS84 水平距离与真北方位角；测量不会修改任务。</translation>
+    </message>
+    <message>
+        <source>Clear measurement</source>
+        <translation>清除测量</translation>
     </message>
 </context>
 </TS>
