@@ -12,6 +12,11 @@ Write-Host "PowerShell version: $($PSVersionTable.PSVersion)"
 Write-Host "Reference shortcut target: $($readReference.TargetPath)"
 Write-Host "Reference shortcut type: $($readReference.GetType().FullName)"
 if ([String]::IsNullOrWhiteSpace($readReference.TargetPath)) { throw 'Unable to read the reference shortcut' }
+$unicodeReference = Join-Path $fixture 'reference飞虎.lnk'
+Copy-Item $referencePath $unicodeReference
+$nativeReference = [QgcWindowsShortcut]::Read($unicodeReference)
+if ($nativeReference.TargetPath -ne $readReference.TargetPath) { throw 'Native Unicode shortcut reader mismatch' }
+Write-Host "Native Unicode reference target: $($nativeReference.TargetPath)"
 
 $compiler = Join-Path ${env:ProgramFiles(x86)} 'NSIS\makensis.exe'
 if (-not (Test-Path $compiler)) {
@@ -43,7 +48,10 @@ include(CreateCPackNSIS)
 cmake -S $source -B $build -G "Visual Studio 17 2022"
 if ($LASTEXITCODE -ne 0) { throw 'Fixture configure failed' }
 cpack --config "$build\CPackConfig.cmake" -C Release -D "CPACK_NSIS_EXECUTABLE=$compiler"
-if ($LASTEXITCODE -ne 0) { throw 'Fixture packaging failed' }
+if ($LASTEXITCODE -ne 0) {
+    Get-ChildItem "$build/_CPack_Packages" -Filter NSISOutput.log -Recurse | ForEach-Object { Get-Content $_.FullName }
+    throw 'Fixture packaging failed'
+}
 $installer = Get-ChildItem $build -Filter '*installer*.exe' | Select-Object -First 1
 $installDir = Join-Path $fixture 'installed'
 Start-Process $installer.FullName -ArgumentList '/S', "/D=$installDir" -Wait -NoNewWindow
