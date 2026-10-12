@@ -22,6 +22,7 @@ Item {
     property rect   pipViewRect:            Qt.rect(0, height, 0, 0)
     property var    occluders:              _occluders
     property var    mapControl
+    property alias  toolStripControl: toolStrip
     property var    viewer3DCameraController
 
     readonly property bool _simulationEmergency: QGroundControl.corePlugin.simulation
@@ -67,15 +68,17 @@ Item {
 
     FlyViewTopRightPanel {
         id:                     topRightPanel
+        anchors.topMargin:      toolStrip.roundButtonDiameter + _toolsMargin * 2
         visible:                !_root._simulationEmergency && !QGroundControl.videoManager.fullScreen
             && topRightPanel._multipleVehicles && topRightPanel._settingEnableMVPanel
         anchors.top:            parent.top
         anchors.right:          parent.right
-        maximumHeight:          parent.height - (bottomRightRowLayout.height + _margins * 4)
+        maximumHeight:          Math.max(0, parent.height - anchors.topMargin - (bottomRightRowLayout.height + _margins * 4))
     }
 
     FlyViewTopRightColumnLayout {
         id:                 topRightColumnLayout
+        anchors.topMargin:  toolStrip.roundButtonDiameter + _toolsMargin * 2
         anchors.top:        parent.top
         anchors.right:      parent.right
         spacing:            _layoutSpacing
@@ -149,7 +152,7 @@ Item {
         id:                     toolStrip
         objectName:             "flyViewToolStrip"
         horizontal:             true
-        maxWidth:               Math.max(ScreenTools.defaultFontPixelHeight * 4, parent.width - _toolsMargin * 2)
+        maxWidth:               Math.max(0, (parent.width - _toolsMargin * 2) / 2)
         anchors.left:           parent.left
         anchors.top:            parent.top
         z:                      QGroundControl.zOrderWidgets
@@ -172,9 +175,9 @@ Item {
     Row {
         id:                 mapScaleRow
         visible:            !_root._simulationEmergency
-        anchors.left:       toolStrip.right
-        anchors.leftMargin: _toolsMargin
-        anchors.top:        parent.top
+        anchors.left:       parent.left
+        anchors.top:        toolStrip.bottom
+        anchors.topMargin:  _toolsMargin
         spacing:            _toolsMargin
 
         // MapScale auto-hides by fading opacity, not visibility

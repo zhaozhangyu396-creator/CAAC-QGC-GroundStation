@@ -30,7 +30,7 @@ Button {
     property real imageScale:        forceImageScale11 && (text == "") ? 0.8 : 0.6
     property real contentMargins:    roundStyle ? ScreenTools.defaultFontPixelWidth * 0.3 : innerText.height * 0.1
 
-    property color _currentContentColor: roundStyle ? qgcPal.windowShadeDark : (checked || pressed) ? qgcPal.buttonHighlightText : qgcPal.text
+    property color _currentContentColor: roundStyle ? (qgcPal.globalTheme === QGCPalette.Dark ? qgcPal.windowShadeDark : qgcPal.text) : (checked || pressed) ? qgcPal.buttonHighlightText : qgcPal.text
     property color _currentContentColorSecondary:  (checked || pressed) ? qgcPal.text : qgcPal.buttonHighlight
 
     signal dropped(int index)
@@ -101,7 +101,8 @@ Button {
                     radius: width / 2
                     visible: control.roundStyle
                     z: -1
-                    color: control.checked || control.pressed ? qgcPal.buttonHighlight : qgcPal.text
+                    color: control.checked || control.pressed ? qgcPal.buttonHighlight
+                        : (qgcPal.globalTheme === QGCPalette.Dark ? qgcPal.text : qgcPal.button)
                     opacity: control.enabled ? 1 : 0.45
                     border.width: control.hovered && control.enabled ? ScreenTools.defaultFontPixelWidth * 0.2 : 0
                     border.color: qgcPal.buttonHighlight
@@ -126,6 +127,8 @@ Button {
 
             QGCLabel {
                 id:                         innerText
+                style:                      control.roundStyle ? Text.Outline : Text.Normal
+                styleColor:                 qgcPal.windowShadeDark
                 text:                       control.text
                 width:                      control.roundStyle ? control.width - control.contentMargins * 2 : implicitWidth
                 wrapMode:                   control.roundStyle ? Text.Wrap : Text.NoWrap

@@ -120,10 +120,28 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     auto* toolbar = findVisibleItem(_rootItem, QStringLiteral("flyViewToolStrip"));
     QVERIFY(toolbar);
     const auto originalWidth = toolbar->property("maxWidth");
-    const auto singleRowHeight = toolbar->height();
+    QTRY_COMPARE_WITH_TIMEOUT(toolbar->property("_roundColumns").toInt(), 4, TestTimeout::mediumMs());
+    auto* rightTool = findVisibleItem(_rootItem, QStringLiteral("caacFlightDataButton"));
+    QVERIFY(rightTool);
+    QTRY_VERIFY_WITH_TIMEOUT(std::abs(rightTool->width() - toolbar->property("roundButtonDiameter").toDouble()) < 1,
+                             TestTimeout::mediumMs());
+    auto* firstAction = findVisibleItem(_rootItem, QStringLiteral("caacStartMission"));
+    auto* secondRowAction = findVisibleItem(_rootItem, QStringLiteral("caacJumpWaypoint"));
+    QVERIFY(firstAction && secondRowAction);
+    auto* lastRightTool = findVisibleItem(_rootItem, QStringLiteral("caacCenterVehicleButton"));
+    QVERIFY(lastRightTool);
+    QTRY_VERIFY_WITH_TIMEOUT(
+        std::abs(firstAction->mapToScene(QPointF(firstAction->width() / 2, 0)).x() +
+                 lastRightTool->mapToScene(QPointF(lastRightTool->width() / 2, 0)).x() - _window->width()) < 2,
+        TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(
+        std::abs(rightTool->mapToScene(QPointF(0, 0)).y() - firstAction->mapToScene(QPointF(0, 0)).y() -
+                 firstAction->property("contentMargins").toDouble()) < 1,
+        TestTimeout::mediumMs());
+    QVERIFY(secondRowAction->mapToScene(QPointF(0, 0)).y() >
+            firstAction->mapToScene(QPointF(0, 0)).y() + firstAction->height() * 0.8);
     QVERIFY(toolbar->setProperty("maxWidth", 400.0));
     QTRY_COMPARE_WITH_TIMEOUT(toolbar->property("_roundColumns").toInt(), 4, TestTimeout::mediumMs());
-    QTRY_VERIFY_WITH_TIMEOUT(toolbar->height() > singleRowHeight * 1.5, TestTimeout::mediumMs());
     QTRY_VERIFY_WITH_TIMEOUT(flightActions->property("contentWidth").toDouble() <= flightActions->width() + 1,
                              TestTimeout::mediumMs());
     QVERIFY(toolbar->setProperty("maxWidth", originalWidth));
@@ -194,7 +212,10 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacEmergencyBlackout")));
     auto* emergencyAttitude = findVisibleItem(_rootItem, QStringLiteral("caacEmergencyAttitude"));
     QVERIFY(emergencyAttitude);
-    QVERIFY(emergencyAttitude->mapToScene(QPointF(0, 0)).y() >= toolbar->mapToScene(QPointF(0, toolbar->height())).y());
+    const QRectF emergencyRect(emergencyAttitude->mapToScene(QPointF(0, 0)),
+                               QSizeF(emergencyAttitude->width(), emergencyAttitude->height()));
+    const QRectF toolbarRect(toolbar->mapToScene(QPointF(0, 0)), QSizeF(toolbar->width(), toolbar->height()));
+    QVERIFY(!emergencyRect.intersects(toolbarRect));
     QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("flyViewMap"), 0));
     QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacDashboardHeadingValue"), 0));
     QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacFlightDataButton"), 0));

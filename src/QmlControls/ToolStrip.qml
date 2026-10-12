@@ -6,7 +6,7 @@ import QGroundControl.Controls
 
 Rectangle {
     id:         _root
-    color:      qgcPal.windowTransparent
+    color:      roundButtons ? "transparent" : qgcPal.windowTransparent
     readonly property real _buttonWidth: {
         void _buttonRevision
         if (roundButtons && horizontal) {
@@ -35,13 +35,16 @@ Rectangle {
         }
         return Math.max(1, count)
     }
-    readonly property int _roundColumns: maxWidth < _visibleButtonCount * ScreenTools.defaultFontPixelHeight * 3.6
+    readonly property int _roundColumns: horizontalColumns > 0 ? horizontalColumns : maxWidth < _visibleButtonCount * ScreenTools.defaultFontPixelHeight * 3.6
         + (_visibleButtonCount - 1) * _buttonSpacing + flickable.anchors.margins * 2
         ? Math.ceil(_visibleButtonCount / 2) : _visibleButtonCount
 
     property alias  model:              repeater.model
     property bool   horizontal: false
     property bool   roundButtons: false
+    property int    horizontalColumns: 0
+    readonly property real roundButtonDiameter: Math.max(0, Math.min(ScreenTools.defaultFontPixelHeight * 3,
+        _buttonWidth - ScreenTools.defaultFontPixelWidth * 1.4))
     property real   maxWidth: Infinity
     property real   maxHeight           ///< Maximum height for control, determines whether text is hidden to make control shorter
     property var    fontSize:           ScreenTools.menuFontPointSize
@@ -90,7 +93,7 @@ Rectangle {
                 ToolStripHoverButton {
                     id:                 buttonTemplate
                     width:              _root._buttonWidth - flickable.anchors.margins * 2
-                    height:             _root.roundButtons ? ScreenTools.defaultFontPixelHeight * 5.2 : width
+                    height:             _root.roundButtons ? ScreenTools.defaultFontPixelHeight * 4.7 : width
                     roundStyle:         _root.roundButtons
                     radius:             ScreenTools.defaultFontPixelWidth / 2
                     fontPointSize:      _root.roundButtons ? Math.min(_root.fontSize, ScreenTools.smallFontPointSize) : _root.fontSize

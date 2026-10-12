@@ -11,6 +11,7 @@ Item {
     objectName: "caacFlyLayer"
 
     property var occluders
+    property var flightToolStrip
     property var mapControl
     property var customOccluders: tools.visible ? [Qt.rect(tools.x, tools.y, tools.width, tools.height)] : []
 
@@ -36,7 +37,9 @@ Item {
     component RoundTool: QGCButton {
         id: button
         property string toolIcon: "data"
-        Layout.preferredWidth: ScreenTools.defaultFontPixelHeight * 3
+        Layout.minimumWidth: Layout.preferredWidth
+        Layout.maximumWidth: Layout.preferredWidth
+        Layout.preferredWidth: root.flightToolStrip ? root.flightToolStrip.roundButtonDiameter : ScreenTools.defaultFontPixelHeight * 3
         Layout.preferredHeight: Layout.preferredWidth
         Accessible.name: text
         ToolTip.visible: hovered
@@ -104,6 +107,7 @@ Item {
     QGCLabel {
         objectName: "caacSimulationBanner"
         anchors.horizontalCenter: parent.horizontalCenter
+        anchors.horizontalCenterOffset: -parent.width / 4
         anchors.top: parent.top
         anchors.topMargin: root.occluders ? root.occluders.toolStrip.y + root.occluders.toolStrip.height + root._margin : root._margin
         width: parent.width / 3
@@ -136,11 +140,12 @@ Item {
 
     CaacAttitudeInstrument {
         objectName: "caacEmergencyAttitude"
-        readonly property real topInset: root.occluders ? root.occluders.toolStrip.y + root.occluders.toolStrip.height + root._margin * 2 : root._margin
-        readonly property real availableHeight: Math.max(0, root.height - topInset - ScreenTools.defaultFontPixelHeight * 2)
-        anchors.horizontalCenter: parent.horizontalCenter
-        y: topInset + (availableHeight - height) / 2
-        width: Math.min(parent.width * 0.55, availableHeight * 0.88)
+        readonly property real sideInset: root.occluders
+            ? root.occluders.toolStrip.x + root.occluders.toolStrip.width + root._margin : root._margin
+        readonly property real availableWidth: Math.max(0, root.width - sideInset - root._margin)
+        x: sideInset + (availableWidth - width) / 2
+        y: (root.height - height) / 2
+        width: Math.min(availableWidth, root.height * 0.7)
         height: width
         vehicle: root._vehicle
         visible: root._simulationEmergency
@@ -161,14 +166,13 @@ Item {
 
     ColumnLayout {
         id: tools
-        readonly property real baseY: root.occluders ? Math.max(root.occluders.topRight.y + root.occluders.topRight.height,
-            root.occluders.toolStrip.y + root.occluders.toolStrip.height) + root._margin : root._margin
-        x: Math.max(root._margin, Math.min(root.width - width - ScreenTools.defaultFontPixelHeight * 3 - root._margin + root._panelOffset.x,
-            root.width - width - root._margin))
-        y: Math.max(root._margin, Math.min(baseY + root._panelOffset.y,
+        readonly property real baseY: root.occluders
+            ? root.occluders.toolStrip.y + ScreenTools.defaultFontPixelWidth * 0.7 : root._margin
+        x: Math.max(root._margin, Math.min(root.width - width + root._panelOffset.x, root.width - width))
+        y: Math.max(0, Math.min(baseY + root._panelOffset.y,
             (root.occluders ? Math.min(root.occluders.bottomRight.y, root.occluders.virtualJoystickRight.y) : root.height)
                 - toolbar.height - root._margin * 2))
-        width: Math.min(ScreenTools.defaultFontPixelWidth * 46, parent.width / 3)
+        width: root.flightToolStrip ? root.flightToolStrip.width : Math.min(ScreenTools.defaultFontPixelWidth * 46, parent.width / 2)
         readonly property real availableHeight: (root.occluders ? Math.min(root.occluders.bottomRight.y, root.occluders.virtualJoystickRight.y) : root.height) - y - root._margin
         visible: !root._simulationEmergency && availableHeight > toolbar.height
         spacing: root._margin
@@ -176,6 +180,8 @@ Item {
         RowLayout {
             id: toolbar
             Layout.fillWidth: true
+            Layout.leftMargin: ScreenTools.defaultFontPixelWidth * 0.7
+            Layout.rightMargin: ScreenTools.defaultFontPixelWidth * 0.7
             RoundTool {
                 id: missionButton
                 objectName: "caacMissionDetailsButton"

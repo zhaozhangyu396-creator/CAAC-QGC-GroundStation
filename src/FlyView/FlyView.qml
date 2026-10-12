@@ -160,6 +160,7 @@ Item {
             anchors.fill:       widgetLayer
             z:                  _fullItemZorder + 2
             occluders:          _layerOccluders
+            flightToolStrip:     widgetLayer.toolStripControl
             mapControl:         _mapControl
             visible:            !QGroundControl.videoManager.fullScreen
         }

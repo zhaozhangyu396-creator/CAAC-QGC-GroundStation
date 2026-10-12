@@ -7,6 +7,7 @@ import QGroundControl.FlyView
 ToolStrip {
     id: _root
     roundButtons: true
+    horizontalColumns: 4
 
     signal displayPreFlightChecklist
 
