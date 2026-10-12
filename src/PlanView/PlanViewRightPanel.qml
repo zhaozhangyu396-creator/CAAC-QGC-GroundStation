@@ -14,6 +14,7 @@ Item {
     id: root
     z: QGroundControl.zOrderWidgets + 1
 
+    readonly property bool showNativeEditor: !customEditor.enabled || !customEditor.editorItem || customEditor.editorItem.showMissionTree !== false
     property var  _missionController: planMasterController.missionController
     property real _toolsMargin:       ScreenTools.defaultFontPixelWidth * 0.75
 

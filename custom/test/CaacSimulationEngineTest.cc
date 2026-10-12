@@ -39,7 +39,44 @@ private slots:
     void _rejectInvalidMissionAtomically();
     void _settingsHistoryAndFile();
     void _guidedTargetPreservesMission();
+    void _manualFlightWithoutMission();
 };
+
+void CaacSimulationEngineTest::_manualFlightWithoutMission()
+{
+    CaacSimulationEngine engine;
+    const QGeoCoordinate home(30, 120, 20);
+    engine.initialize(home, {.horizontalSpeed = 10, .verticalSpeed = 10});
+    QVERIFY(!engine.loaded());
+    QVERIFY(!engine.state().airborne);
+    for (int i = 0; i < 20; ++i) {
+        engine.advanceHoldAltitude(22, 0.1);
+    }
+    QCOMPARE(engine.state().position.altitude(), 22.0);
+    QVERIFY(engine.state().airborne);
+    auto target = QGCGeo::geodesicDestination(home, 90, 5);
+    target.setAltitude(22);
+    for (int i = 0; i < 20; ++i) {
+        engine.advanceGuidedTarget(target, 0.1);
+    }
+    QVERIFY(QGCGeo::geodesicDistance(engine.state().position, target) < 0.01);
+    bool landed = false;
+    for (int i = 0; i < 100 && !landed; ++i) {
+        landed = engine.advanceReturn(0.1);
+    }
+    QVERIFY(landed);
+    QVERIFY(!engine.state().airborne);
+    QVERIFY(QGCGeo::geodesicDistance(engine.state().position, home) < 0.01);
+    QCOMPARE(engine.state().position.altitude(), 20.0);
+    for (int i = 0; i < 20; ++i) {
+        engine.advanceHoldAltitude(22, 0.1);
+    }
+    for (int i = 0; i < 20; ++i) {
+        landed = engine.advanceLanding(0.1);
+    }
+    QVERIFY(landed);
+    QVERIFY(!engine.state().airborne);
+}
 
 void CaacSimulationEngineTest::_guidedTargetPreservesMission()
 {

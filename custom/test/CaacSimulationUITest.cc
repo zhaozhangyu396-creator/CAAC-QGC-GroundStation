@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstdio>
 
 #include <QtCore/QLineF>
@@ -8,6 +9,7 @@
 #include <QtQuick/QQuickWindow>
 #include <QtTest/QSignalSpy>
 
+#include "AppSettings.h"
 #include "CaacCorePlugin.h"
 #include "CaacFlightDistance.h"
 #include "CaacRouteEditorController.h"
@@ -19,6 +21,7 @@
 #include "PlanMasterController.h"
 #include "QGCGeo.h"
 #include "QmlUITestBase.h"
+#include "SettingsManager.h"
 #include "SimpleMissionItem.h"
 #include "Vehicle.h"
 #include "VehicleLinkManager.h"
@@ -41,11 +44,18 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     if (QTest::currentTestFailed()) {
         return;
     }
+    step("UI started");
+    QCOMPARE(SettingsManager::instance()->appSettings()->uiScalePercent()->rawDefaultValue().toUInt(), 120U);
+    QCOMPARE(SettingsManager::instance()->appSettings()->uiScalePercent()->rawValue().toUInt(), 120U);
     QCOMPARE(QGuiApplication::applicationDisplayName(), QStringLiteral("飞虎无人机地面站系统"));
     QCOMPARE(_window->title(), QStringLiteral("飞虎无人机地面站系统"));
     QVERIFY(verifyText(QStringLiteral("caacDashboardHeadingValue"),
                        QCoreApplication::translate("TelemetryValuesBar", "Unavailable"), QStringLiteral("no heading")));
+    QVERIFY(verifyText(QStringLiteral("caacAttitudeHeading"),
+                       QCoreApplication::translate("CaacAttitudeInstrument", "Not available"),
+                       QStringLiteral("no attitude heading")));
     QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewPlan")));
+    step("plan opened");
     auto* plan = findVisibleItem(_rootItem, QStringLiteral("mainView_plan"));
     QVERIFY(plan);
     auto* master = plan->property("_planMasterController").value<PlanMasterController*>();
@@ -53,6 +63,29 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     auto* mission = master->missionController();
     const QGeoCoordinate home(30, 120, 20);
     mission->setHomePosition(home);
+    auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
+    QVERIFY(plugin);
+    auto* simulation = plugin->simulation();
+    QVERIFY(simulation);
+    const auto stop = qScopeGuard([simulation]() { simulation->stop(); });
+    ignoreLogMessage("Utilities.QGCSensors", QtWarningMsg,
+                     QRegularExpression(QStringLiteral("Failed to connect to pressure backend")));
+    ignoreLogMessage("Utilities.QGCSensors", QtWarningMsg,
+                     QRegularExpression(QStringLiteral("Error Initializing Pressure Sensor")));
+    step("connect virtual aircraft");
+    auto* simulationButton = findVisibleItem(_rootItem, QStringLiteral("planToolStrip_simulationButton"));
+    QVERIFY(simulationButton && simulationButton->isEnabled());
+    QVERIFY(
+        clickButtonScrolled(QStringLiteral("planToolStrip_simulationButton"), QStringLiteral("toolStrip_flickable")));
+    step("connection requested");
+    QTRY_VERIFY_WITH_TIMEOUT(simulation->vehicle() && simulation->vehicle()->isInitialConnectComplete(),
+                             TestTimeout::longMs());
+    QVERIFY(!simulation->vehicle()->armed());
+    QVERIFY(!simulation->vehicle()->airborne());
+    QVERIFY(!simulation->missionReady());
+    QVERIFY(QGCGeo::geodesicDistance(mission->plannedHomePosition(), home) < 0.02);
+    QCOMPARE(mission->plannedHomePosition().altitude(), home.altitude());
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("mainView_plan")));
     for (int bearing : {0, 90}) {
         auto* item = qobject_cast<SimpleMissionItem*>(mission->insertSimpleMissionItem(
             QGCGeo::geodesicDestination(home, bearing, 1000), mission->visualItems()->count(), false));
@@ -69,26 +102,55 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     settings["closed"] = true;
     QVERIFY(editor.setSimulationSettings(settings));
     const auto original = master->saveToJson();
-    auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
-    QVERIFY(plugin);
-    auto* simulation = plugin->simulation();
-    QVERIFY(simulation);
-    const auto stop = qScopeGuard([simulation]() { simulation->stop(); });
-    ignoreLogMessage("Utilities.QGCSensors", QtWarningMsg,
-                     QRegularExpression(QStringLiteral("Failed to connect to pressure backend")));
-    ignoreLogMessage("Utilities.QGCSensors", QtWarningMsg,
-                     QRegularExpression(QStringLiteral("Error Initializing Pressure Sensor")));
-    QVERIFY(
-        clickButtonScrolled(QStringLiteral("planToolStrip_simulationButton"), QStringLiteral("toolStrip_flickable")));
     step("upload simulation");
-    QVERIFY(clickButton(QStringLiteral("caacUploadSimulation")));
+    QVERIFY(clickButton(QStringLiteral("caacWaypointListButton")));
+    QSignalSpy initialUpload(simulation, &CaacSimulationController::missionUploaded);
+    QVERIFY(initialUpload.isValid());
+    QVERIFY(clickButton(QStringLiteral("caacUploadWaypoints")));
+    QVERIFY(initialUpload.wait(TestTimeout::longMs()));
+    QVERIFY(simulation->missionReady());
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacSimulationBanner")));
+    QVERIFY(!simulation->vehicle()->armed());
+    QVERIFY(!simulation->vehicle()->airborne());
+    auto* flightActions = findVisibleItem(_rootItem, QStringLiteral("flyViewToolStrip_flickable"));
+    QVERIFY(flightActions);
+    QVERIFY(!flightActions->property("interactive").toBool());
+    QTRY_VERIFY_WITH_TIMEOUT(flightActions->property("contentWidth").toDouble() <= flightActions->width() + 1,
+                             TestTimeout::mediumMs());
+    auto* toolbar = findVisibleItem(_rootItem, QStringLiteral("flyViewToolStrip"));
+    QVERIFY(toolbar);
+    const auto originalWidth = toolbar->property("maxWidth");
+    const auto singleRowHeight = toolbar->height();
+    QVERIFY(toolbar->setProperty("maxWidth", 400.0));
+    QTRY_COMPARE_WITH_TIMEOUT(toolbar->property("_roundColumns").toInt(), 4, TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(toolbar->height() > singleRowHeight * 1.5, TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(flightActions->property("contentWidth").toDouble() <= flightActions->width() + 1,
+                             TestTimeout::mediumMs());
+    QVERIFY(toolbar->setProperty("maxWidth", originalWidth));
+    step("manual takeoff");
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacTakeoff"), QStringLiteral("flyViewToolStrip_flickable")));
     QTRY_VERIFY2_WITH_TIMEOUT(simulation->vehicle() && simulation->vehicle()->airborne(),
                               qPrintable(simulation->status()), TestTimeout::longMs());
     step("airborne");
     auto* vehicle = simulation->vehicle();
     QVERIFY(vehicle);
     QCOMPARE(MultiVehicleManager::instance()->vehicles()->count(), 1);
-    QCOMPARE(vehicle->flightMode(), vehicle->missionFlightMode());
+    auto* attitude = findVisibleItem(_rootItem, QStringLiteral("caacAttitudeInstrument"));
+    QVERIFY(attitude);
+    QTRY_VERIFY_WITH_TIMEOUT(attitude->property("attitudeAvailable").toBool(), TestTimeout::mediumMs());
+    QCOMPARE(attitude->property("rollAngle").toDouble(), vehicle->roll()->rawValue().toDouble());
+    QCOMPARE(attitude->property("pitchAngle").toDouble(), vehicle->pitch()->rawValue().toDouble());
+    QCOMPARE(attitude->property("headingAngle").toDouble(), vehicle->heading()->rawValue().toDouble());
+    QVERIFY(verifyText(QStringLiteral("caacModifyWaypointAltitude"),
+                       QCoreApplication::translate("CaacFlightActionList", "Change altitude"),
+                       QStringLiteral("independent altitude button")));
+    QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->pauseFlightMode(), TestTimeout::longMs());
+    step("start route from flight controls");
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacStartMission"), QStringLiteral("flyViewToolStrip_flickable")));
+    auto* startConfirmation = findVisibleItem(_rootItem, QStringLiteral("guidedActionConfirmButton"));
+    QVERIFY(startConfirmation);
+    QVERIFY(QMetaObject::invokeMethod(startConfirmation, "activated"));
+    QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->missionFlightMode(), TestTimeout::mediumMs());
     auto* manager = vehicle->missionManager();
     QVERIFY(!manager->inProgress());
     int takeoffs = 0;
@@ -115,7 +177,7 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     QVERIFY(firstWaypointSequence > 0);
     QCOMPARE(loopTarget, firstWaypointSequence);
     QCOMPARE(master->saveToJson(), original);
-    QVERIFY(clickButton(QStringLiteral("caacViewSimulation")));
+
     QVERIFY(verifyVisibility(QStringLiteral("caacSimulationBanner"), true, QStringLiteral("simulation identity")));
     QTRY_VERIFY_WITH_TIMEOUT(vehicle->groundSpeed()->rawValue().toDouble() > 0, TestTimeout::mediumMs());
     auto* heading = findVisibleItem(_rootItem, QStringLiteral("caacDashboardHeadingValue"));
@@ -123,6 +185,30 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     QTRY_COMPARE_WITH_TIMEOUT(heading->property("text").toString(),
                               vehicle->heading()->cookedValueString() + " " + vehicle->heading()->cookedUnits(),
                               TestTimeout::mediumMs());
+    step("emergency blackout");
+    const auto positionBeforeEmergency = vehicle->coordinate();
+    const auto modeBeforeEmergency = vehicle->flightMode();
+    QVERIFY(
+        clickButtonScrolled(QStringLiteral("caacSimulationEmergency"), QStringLiteral("flyViewToolStrip_flickable")));
+    QVERIFY(simulation->emergencyMode());
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacEmergencyBlackout")));
+    auto* emergencyAttitude = findVisibleItem(_rootItem, QStringLiteral("caacEmergencyAttitude"));
+    QVERIFY(emergencyAttitude);
+    QVERIFY(emergencyAttitude->mapToScene(QPointF(0, 0)).y() >= toolbar->mapToScene(QPointF(0, toolbar->height())).y());
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("flyViewMap"), 0));
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacDashboardHeadingValue"), 0));
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacFlightDataButton"), 0));
+    QTRY_VERIFY_WITH_TIMEOUT(QGCGeo::geodesicDistance(positionBeforeEmergency, vehicle->coordinate()) > 1,
+                             TestTimeout::mediumMs());
+    QCOMPARE(vehicle->flightMode(), modeBeforeEmergency);
+    if (qEnvironmentVariableIsSet("CAAC_SIMULATION_UI_SCREENSHOT")) {
+        QVERIFY(_window->grabWindow().save(QStringLiteral("/workspace/caac-emergency-attitude.png")));
+    }
+    QVERIFY(
+        clickButtonScrolled(QStringLiteral("caacSimulationEmergency"), QStringLiteral("flyViewToolStrip_flickable")));
+    QVERIFY(!simulation->emergencyMode());
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("flyViewMap")));
+    QCOMPARE(vehicle->flightMode(), modeBeforeEmergency);
     const auto link = vehicle->vehicleLinkManager()->primaryLink().lock();
     auto* mock = qobject_cast<MockLink*>(link.get());
     QVERIFY(mock);
@@ -157,6 +243,19 @@ void CaacSimulationUITest::_uploadAndFlightControls()
         }
         return nullptr;
     };
+    step("live altitude change");
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacModifyWaypointAltitude"),
+                                QStringLiteral("flyViewToolStrip_flickable")));
+    QVERIFY(clickButton(QStringLiteral("caacChangeFlightAltitude")));
+    auto* liveAltitudeSlider = findVisibleItem(_rootItem, QStringLiteral("guidedValueSlider"));
+    QVERIFY(liveAltitudeSlider);
+    QVERIFY(QMetaObject::invokeMethod(liveAltitudeSlider, "setCurrentValue", Q_ARG(QVariant, QVariant(4.0)),
+                                      Q_ARG(QVariant, QVariant(false))));
+    confirmation = findVisibleItem(_rootItem, QStringLiteral("guidedActionConfirmButton"));
+    QVERIFY(confirmation);
+    QVERIFY(QMetaObject::invokeMethod(confirmation, "activated"));
+    QTRY_VERIFY_WITH_TIMEOUT(std::abs(vehicle->altitudeRelative()->rawValue().toDouble() - 4) < 0.1,
+                             TestTimeout::longMs());
     step("height edit");
     auto* target = chooseLastWaypoint();
     QVERIFY(target);
@@ -187,6 +286,8 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     QVERIFY(uploadedAltitude);
     step("jump");
     QVERIFY(clickButtonScrolled(QStringLiteral("caacJumpWaypoint"), QStringLiteral("flyViewToolStrip_flickable")));
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacFlightWaypointAltitude"), 0));
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacChangeFlightAltitude"), 0));
     choices = findVisibleItem(_rootItem, QStringLiteral("caacFlightWaypointChoice"));
     QVERIFY(choices);
     QVERIFY(choices->setProperty("currentIndex", choices->property("count").toInt() - 1));
@@ -278,11 +379,43 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     QCOMPARE(listUpload.last().first().toBool(), false);
     QTRY_VERIFY_WITH_TIMEOUT(!master->syncInProgress(), TestTimeout::mediumMs());
     QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewFly")));
+    step("manual return home");
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacReturnHome"), QStringLiteral("flyViewToolStrip_flickable")));
+    QTRY_VERIFY_WITH_TIMEOUT(!vehicle->airborne() && !vehicle->armed(), TestTimeout::longMs());
+    QVERIFY(QGCGeo::geodesicDistance(vehicle->coordinate(), home) < 0.1);
     step("restart");
-    QVERIFY(simulation->restart());
+    if (!simulation->emergencyMode()) {
+        QVERIFY(clickButtonScrolled(QStringLiteral("caacSimulationEmergency"),
+                                    QStringLiteral("flyViewToolStrip_flickable")));
+    }
+    QVERIFY(clickButton(QStringLiteral("caacSimulationManagement")));
+    QVERIFY(clickButton(QStringLiteral("caacEmergencyRestart")));
     QCOMPARE(plugin->flightDistance()->north(), 0.0);
     QCOMPARE(plugin->flightDistance()->east(), 0.0);
-    simulation->stop();
+    step("manual landing");
+    // Wait for the telemetry and the corresponding guided control state to agree after restarting.
+    QTRY_VERIFY_WITH_TIMEOUT(findVisibleItem(_rootItem, QStringLiteral("caacTakeoff"), 0) &&
+                                 findVisibleItem(_rootItem, QStringLiteral("caacTakeoff"), 0)->isEnabled(),
+                             TestTimeout::mediumMs());
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacTakeoff"), QStringLiteral("flyViewToolStrip_flickable")));
+    QTRY_VERIFY_WITH_TIMEOUT(vehicle->airborne(), TestTimeout::longMs());
+    if (!simulation->emergencyMode()) {
+        QVERIFY(clickButtonScrolled(QStringLiteral("caacSimulationEmergency"),
+                                    QStringLiteral("flyViewToolStrip_flickable")));
+    }
+    QVERIFY(clickButton(QStringLiteral("caacSimulationManagement")));
+    QTRY_VERIFY_WITH_TIMEOUT(findVisibleItem(_rootItem, QStringLiteral("caacLand"), 0) &&
+                                 findVisibleItem(_rootItem, QStringLiteral("caacLand"), 0)->isEnabled(),
+                             TestTimeout::mediumMs());
+    QVERIFY(clickButton(QStringLiteral("caacLand")));
+    QTRY_VERIFY_WITH_TIMEOUT(!vehicle->airborne() && !vehicle->armed(), TestTimeout::longMs());
+    if (!simulation->emergencyMode()) {
+        QVERIFY(clickButtonScrolled(QStringLiteral("caacSimulationEmergency"),
+                                    QStringLiteral("flyViewToolStrip_flickable")));
+    }
+    QVERIFY(clickButton(QStringLiteral("caacSimulationManagement")));
+    QVERIFY(clickButton(QStringLiteral("caacDisconnectSimulation")));
+    QVERIFY(!simulation->emergencyMode());
     QTRY_VERIFY_WITH_TIMEOUT(!MultiVehicleManager::instance()->activeVehicle(), TestTimeout::mediumMs());
     QVERIFY(verifyVisibility(QStringLiteral("caacSimulationBanner"), false, QStringLiteral("disconnected")));
     QVERIFY(verifyEnabled(QStringLiteral("caacStartMission"), false, QStringLiteral("no aircraft")));

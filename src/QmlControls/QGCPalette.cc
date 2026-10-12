@@ -77,7 +77,7 @@ void QGCPalette::_buildMap()
 
     // Colors not affecting by theming
     //                                                      Disabled     Enabled
-    DECLARE_QGC_NONTHEMED_COLOR(brandPrimary,               "#4A2C6D", "#4A2C6D")
+    DECLARE_QGC_NONTHEMED_COLOR(brandPrimary,               "#0994DD", "#0994DD")
     DECLARE_QGC_NONTHEMED_COLOR(brandAccent,                "#48D6FF", "#6045c5")
     DECLARE_QGC_NONTHEMED_COLOR(toolStripFGColor,           "#707070", "#ffffff")
     DECLARE_QGC_NONTHEMED_COLOR(photoCaptureButtonColor,    "#707070", "#ffffff")

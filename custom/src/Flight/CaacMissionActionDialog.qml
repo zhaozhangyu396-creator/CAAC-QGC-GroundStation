@@ -17,7 +17,7 @@ QGCPopupDialog {
     readonly property var _items: _mission ? _mission.visualItems : null
     property var _choices: []
     property string _error: ""
-    title: editAltitude ? qsTr("Modify waypoint altitude") : qsTr("Jump to waypoint")
+    title: editAltitude ? qsTr("Change altitude") : qsTr("Jump to waypoint")
     buttons: Dialog.Ok | Dialog.Cancel
 
     Component.onCompleted: {
@@ -102,6 +102,22 @@ QGCPopupDialog {
             visible: root.editAltitude
             wrapMode: Text.WordWrap
             text: qsTr("Keeps the waypoint's altitude frame. Pause the mission before saving; saving uploads the complete mission to the aircraft.")
+        }
+        QGCButton {
+            objectName: "caacChangeFlightAltitude"
+            Layout.fillWidth: true
+            visible: root.editAltitude
+            text: qsTr("Change current flight altitude")
+            enabled: root._vehicle && root._vehicle === root._openedVehicle
+                && globals.guidedControllerFlyView.showChangeAlt
+            onClicked: {
+                if (enabled) {
+                    root.close()
+                    const guided = globals.guidedControllerFlyView
+                    guided.closeAll()
+                    guided.confirmAction(guided.actionChangeAlt)
+                }
+            }
         }
         QGCLabel {
             Layout.fillWidth: true

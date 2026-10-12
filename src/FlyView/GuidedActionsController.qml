@@ -281,7 +281,9 @@ Item {
         }
         _outputState()
         if (showStartMission &&
-            _flyViewSettings.enableAutomaticMissionPopups.rawValue) {
+            _flyViewSettings.enableAutomaticMissionPopups.rawValue
+                && !(QGroundControl.corePlugin.simulation && QGroundControl.corePlugin.simulation.active
+                    && QGroundControl.corePlugin.simulation.vehicle === _activeVehicle)) {
             confirmAction(actionStartMission)
         }
     }
@@ -291,7 +293,9 @@ Item {
         }
         _outputState()
         if (showContinueMission &&
-            _flyViewSettings.enableAutomaticMissionPopups.rawValue) {
+            _flyViewSettings.enableAutomaticMissionPopups.rawValue
+                && !(QGroundControl.corePlugin.simulation && QGroundControl.corePlugin.simulation.active
+                    && QGroundControl.corePlugin.simulation.vehicle === _activeVehicle)) {
             confirmAction(actionContinueMission)
         }
     }

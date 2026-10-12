@@ -18,6 +18,11 @@ Item {
     }
 
     function addWaypoint() {
+        if (target.currentIndex > 0) {
+            return routeController.setRelativeEndpoint(selectedIndex(reference),
+                angle.text.trim().length ? Number(angle.text) : NaN,
+                distance.text.trim().length ? Number(distance.text) : NaN, target.currentIndex === 2)
+        }
         return routeController.insertRelativeWaypoint(selectedIndex(reference), selectedIndex(insertAfter),
             angle.text.trim().length ? Number(angle.text) : NaN,
             distance.text.trim().length ? Number(distance.text) : NaN, angleType.currentIndex === 1)
@@ -51,6 +56,15 @@ Item {
                 rowSpacing: ScreenTools.defaultFontPixelHeight
                 columnSpacing: ScreenTools.defaultFontPixelWidth
 
+                QGCLabel { text: qsTr("Target point") }
+                QGCComboBox {
+                    id: target
+                    objectName: "caacRelativeTarget"
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: 0
+                    model: [qsTr("Waypoint"), qsTr("Takeoff point"), qsTr("Landing point")]
+                    onActivated: { if (currentIndex > 0) { angleType.currentIndex = 0 } }
+                }
                 QGCLabel { text: qsTr("Reference point") }
                 QGCComboBox {
                     id: reference
@@ -64,6 +78,7 @@ Item {
                 QGCComboBox {
                     id: angleType
                     objectName: "caacRelativeAngleType"
+                    enabled: target.currentIndex === 0
                     Layout.fillWidth: true
                     Layout.minimumWidth: 0
                     model: [qsTr("Bearing"), qsTr("Interior angle")]
@@ -116,11 +131,12 @@ Item {
                 rowSpacing: ScreenTools.defaultFontPixelHeight
                 columnSpacing: ScreenTools.defaultFontPixelWidth
                 QGCLabel { text: qsTr("Generation method") }
-                QGCLabel { text: qsTr("Insert"); Layout.fillWidth: true }
-                QGCLabel { text: qsTr("Insert after") }
+                QGCLabel { text: target.currentIndex === 0 ? qsTr("Insert") : qsTr("Set position"); Layout.fillWidth: true }
+                QGCLabel { text: qsTr("Insert after"); visible: target.currentIndex === 0 }
                 QGCComboBox {
                     id: insertAfter
                     objectName: "caacRelativeInsertAfter"
+                    visible: target.currentIndex === 0
                     Layout.fillWidth: true
                     Layout.minimumWidth: 0
                     model: root._points
@@ -136,7 +152,7 @@ Item {
             QGCLabel {
                 Layout.fillWidth: true
                 wrapMode: Text.WordWrap
-                text: qsTr("Press Space to add a waypoint")
+                text: target.currentIndex === 0 ? qsTr("Press Space to add a waypoint") : qsTr("Set the selected endpoint from the reference point, bearing and distance.")
                 font.pointSize: ScreenTools.smallFontPointSize
             }
         }
@@ -148,7 +164,7 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        text: qsTr("Add")
+        text: target.currentIndex === 0 ? qsTr("Add") : target.currentIndex === 1 ? qsTr("Set takeoff point") : qsTr("Set landing point")
         enabled: root._points.length > 0
         primary: true
         onClicked: root.addWaypoint()

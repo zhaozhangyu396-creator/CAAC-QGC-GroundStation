@@ -4,7 +4,6 @@ import QtQml.Models
 import QGroundControl
 import QGroundControl.Controls
 import QGroundControl.FlyView
-import QGroundControl.Viewer3D
 import CAAC.Plan
 
 ToolStripActionList {
@@ -15,6 +14,8 @@ ToolStripActionList {
     readonly property var _master: globals.planMasterControllerFlyView
     readonly property bool _hasMission: _vehicle && _master && !_master.syncInProgress
         && _master.missionController.visualItems.count > 1
+    readonly property var _simulation: QGroundControl.corePlugin.simulation
+    readonly property bool _simulatedVehicle: _vehicle && _simulation.active && _simulation.vehicle === _vehicle
     property Component _missionDialog: Component { CaacMissionActionDialog { } }
     property var _pendingVehicle: null
     property bool _pendingAltitude: false
@@ -52,15 +53,10 @@ ToolStripActionList {
     }
 
     model: [
-        Viewer3DShowAction { },
-        PreFlightCheckListShowAction { onTriggered: root.displayPreFlightChecklist() },
-        GuidedActionTakeoff { },
-        GuidedActionLand { },
-        GuidedActionRTL { },
         ToolStripAction {
             objectName: "caacStartMission"
-            text: root._guided.showContinueMission ? qsTr("Continue\nroute") : qsTr("Start\nroute")
-            iconSource: "/res/takeoff.svg"
+            text: qsTr("Start route")
+            iconSource: "/InstrumentValueIcons/play.svg"
             enabled: root._hasMission && (root._guided.showStartMission || root._guided.showContinueMission)
             onTriggered: {
                 if (enabled) {
@@ -72,24 +68,60 @@ ToolStripActionList {
         },
         GuidedActionPause {
             objectName: "caacPauseMission"
-            text: qsTr("Pause\nroute")
+            text: qsTr("Pause route")
             visible: true
         },
         ToolStripAction {
+            objectName: "caacTakeoff"
+            text: qsTr("One-click takeoff")
+            iconSource: "/res/takeoff.svg"
+            enabled: root._vehicle && root._guided.showTakeoff
+            onTriggered: {
+                if (enabled) {
+                    root._guided.closeAll()
+                    if (root._simulatedVehicle) { root._vehicle.guidedModeTakeoff(root._simulation.takeoffHeight) }
+                    else { root._guided.confirmAction(root._guided.actionTakeoff) }
+                }
+            }
+        },
+        ToolStripAction {
+            objectName: "caacReturnHome"
+            text: qsTr("One-click return")
+            iconSource: "/res/rtl.svg"
+            enabled: root._vehicle && root._guided.showRTL
+            onTriggered: {
+                if (enabled) {
+                    root._guided.closeAll()
+                    if (root._simulatedVehicle) { root._vehicle.guidedModeRTL(false) }
+                    else { root._guided.confirmAction(root._guided.actionRTL) }
+                }
+            }
+        },
+        ToolStripAction {
             objectName: "caacJumpWaypoint"
-            text: qsTr("Jump to\nwaypoint")
+            text: qsTr("Jump to waypoint")
             iconSource: "/res/waypoint.svg"
             enabled: root._hasMission && root._vehicle.armed && root._vehicle.airborne
             onTriggered: { if (enabled) { root.openMissionDialog(false) } }
         },
         ToolStripAction {
             objectName: "caacModifyWaypointAltitude"
-            text: qsTr("Waypoint\naltitude")
+            text: qsTr("Change altitude")
             iconSource: "/InstrumentValueIcons/arrow-thick-up.svg"
             enabled: root._hasMission
             onTriggered: { if (enabled) { root.openMissionDialog(true) } }
         },
-        FlyViewAdditionalActionsButton { },
-        FlyViewGripperButton { }
+        ToolStripAction {
+            objectName: "caacSimulationEmergency"
+            text: root._simulation.emergencyMode ? qsTr("Exit emergency") : qsTr("Simulation emergency")
+            iconSource: "/InstrumentValueIcons/hand-stop.svg"
+            enabled: root._simulatedVehicle && root._vehicle.initialConnectComplete
+            onTriggered: {
+                if (enabled) {
+                    root._guided.closeAll()
+                    root._simulation.emergencyMode = !root._simulation.emergencyMode
+                }
+            }
+        }
     ]
 }

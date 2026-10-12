@@ -138,40 +138,14 @@ bool CaacSimulationController::start(PlanMasterController* plan)
         _setStatus(tr("Stop the current simulation and disconnect other aircraft before starting."));
         return false;
     }
-    if (plan->property("caacRotationPreviewActive").toBool()) {
-        _setStatus(QCoreApplication::translate(
-            "PlanMasterController", "Confirm or cancel the orientation preview before saving or uploading."));
-        return false;
-    }
-    auto* mission = plan->missionController();
-    _home = mission->plannedHomePosition();
-    _settings = plan->property("caacSimulationSettings").toMap();
-    _settingsExplicit = !_settings.isEmpty();
-    if (_settings.isEmpty()) {
-        _settings = defaults();
-    }
-    const auto validation = validateSettings(_settings);
-    if (!validation.isEmpty() || !_home.isValid() || !std::isfinite(_home.altitude()) ||
-        std::abs(_home.altitude()) > 100000 || mission->readyForSaveState() != VisualMissionItem::ReadyForSave ||
-        mission->visualItems()->count() <= 1) {
-        _setStatus(validation.isEmpty() ? tr("Complete the planned home and mission before simulating.") : validation);
-        return false;
-    }
-    _sourceMission = {};
-    mission->save(_sourceMission);
-    _options = {.horizontalSpeed = _settings.value("horizontalSpeed").toDouble(),
-                .verticalSpeed = _settings.value("verticalSpeed").toDouble(),
-                .yawRate = _settings.value("yawRate").toDouble(),
-                .windSpeed = _settings.value("windSpeed").toDouble(),
-                .windBearing = _settings.value("windBearing").toDouble(),
-                .turnMode = _settings.value("turnMode").toInt(),
-                .climbMode = _settings.value("climbMode").toInt()};
+    _home = plan->missionController()->plannedHomePosition();
+    _settings = defaults();
+    _options = {};
     _engine = {};
     _holdAltitude = qQNaN();
     _guidedTarget = QGeoCoordinate();
     _uploadSent = false;
     _missionReady = false;
-    _missionStarted = false;
     auto* config = new MockConfiguration(tr("Built-in flight simulation"));
     config->setFirmwareType(MAV_AUTOPILOT_PX4);
     config->setVehicleType(MAV_TYPE_QUADROTOR);
@@ -182,7 +156,16 @@ bool CaacSimulationController::start(PlanMasterController* plan)
         _setStatus(tr("Unable to connect the simulation aircraft."));
         return false;
     }
+    _planningPlan = plan;
+    _planningPlan->setProperty("caacSimulationPlanning", true);
     _link->_caacSimulation = true;
+    if (!_home.isValid()) {
+        _home = _link->_homeCoordinate;
+    }
+    if (!std::isfinite(_home.altitude())) {
+        _home.setAltitude(0);
+    }
+    _engine.initialize(_home, _options);
     _link->_vehicleAltitudeAMSL = _home.altitude();
     connect(_link, &MockLink::simulationAltitudeRequested, this, [this](double altitude) {
         _holdAltitude = altitude;
@@ -201,10 +184,11 @@ bool CaacSimulationController::start(PlanMasterController* plan)
                 _fail(error);
                 return;
             }
-            if (wasLoaded) {
+            if (wasLoaded || before.airborne) {
                 _engine.restoreState(before);
             }
             _missionReady = true;
+            emit statusChanged();
         },
         Qt::QueuedConnection);
     connect(_link->_missionItemHandler, &MockLinkMissionItemHandler::missionSequenceRequested, this,
@@ -220,9 +204,88 @@ bool CaacSimulationController::start(PlanMasterController* plan)
     return true;
 }
 
+bool CaacSimulationController::upload(PlanMasterController* plan)
+{
+    if (!_link || !_vehicle || !_vehicle->isInitialConnectComplete() || !plan || plan->syncInProgress() ||
+        _vehicle->missionManager()->inProgress() || _uploadSent ||
+        (_vehicle->armed() && _vehicle->flightMode() == _vehicle->missionFlightMode())) {
+        _setStatus(tr("Connect the simulation aircraft and pause the mission before uploading."));
+        return false;
+    }
+    if (plan->property("caacRotationPreviewActive").toBool()) {
+        _setStatus(QCoreApplication::translate(
+            "PlanMasterController", "Confirm or cancel the orientation preview before saving or uploading."));
+        return false;
+    }
+    auto* mission = plan->missionController();
+    const auto home = mission->plannedHomePosition();
+    auto settings = plan->property("caacSimulationSettings").toMap();
+    const bool settingsExplicit = !settings.isEmpty();
+    if (settings.isEmpty()) {
+        settings = defaults();
+    }
+    const auto validation = validateSettings(settings);
+    if (!validation.isEmpty() || !home.isValid() || !std::isfinite(home.altitude()) ||
+        std::abs(home.altitude()) > 100000 || mission->readyForSaveState() != VisualMissionItem::ReadyForSave ||
+        mission->visualItems()->count() <= 1) {
+        _setStatus(validation.isEmpty() ? tr("Complete the planned home and mission before simulating.") : validation);
+        return false;
+    }
+    _home = home;
+    _settings = settings;
+    _settingsExplicit = settingsExplicit;
+    _sourceMission = {};
+    mission->save(_sourceMission);
+    _options = {.horizontalSpeed = _settings.value("horizontalSpeed").toDouble(),
+                .verticalSpeed = _settings.value("verticalSpeed").toDouble(),
+                .yawRate = _settings.value("yawRate").toDouble(),
+                .windSpeed = _settings.value("windSpeed").toDouble(),
+                .windBearing = _settings.value("windBearing").toDouble(),
+                .turnMode = _settings.value("turnMode").toInt(),
+                .climbMode = _settings.value("climbMode").toInt()};
+    if (_uploadPlan) {
+        _uploadPlan->deleteLater();
+        _uploadPlan.clear();
+    }
+    if (!_prepareFlightPlan()) {
+        return false;
+    }
+    _uploadSent = true;
+    _missionReady = false;
+    _elapsed.restart();
+    _setStatus(tr("Uploading the simulation mission…"));
+    connect(
+        _vehicle->missionManager(), &MissionManager::sendComplete, this,
+        [this](bool error) {
+            if (!_uploadSent) {
+                return;
+            }
+            if (error) {
+                _uploadSent = false;
+                _setStatus(tr("Simulation mission upload failed."));
+            }
+        },
+        Qt::SingleShotConnection);
+    MissionController::sendItemsToVehicle(_vehicle, _uploadPlan->missionController()->visualItems());
+    return true;
+}
+
+void CaacSimulationController::setEmergencyMode(bool enabled)
+{
+    if (enabled && (!_link || !_vehicle || !_vehicle->isInitialConnectComplete() ||
+                    MultiVehicleManager::instance()->activeVehicle() != _vehicle)) {
+        return;
+    }
+    if (_emergencyMode != enabled) {
+        _emergencyMode = enabled;
+        emit emergencyModeChanged();
+    }
+}
+
 void CaacSimulationController::stop()
 {
     _timer.stop();
+    setEmergencyMode(false);
     if (_link) {
         const auto config = _link->linkConfiguration();
         LinkManager::instance()->disconnectLink(_link);
@@ -230,6 +293,12 @@ void CaacSimulationController::stop()
             LinkManager::instance()->removeConfiguration(config.get());
         }
     }
+    if (_planningPlan) {
+        _planningPlan->setProperty("caacSimulationPlanning", false);
+    }
+    _planningPlan.clear();
+    _uploadSent = false;
+    _missionReady = false;
     _link.clear();
     _vehicle.clear();
     if (_uploadPlan) {
@@ -253,7 +322,6 @@ bool CaacSimulationController::restart()
     }
     _link->_mavBaseMode &= ~MAV_MODE_FLAG_SAFETY_ARMED;
     _link->_mavCustomMode = PX4CustomMode::AUTO_LOITER;
-    _missionStarted = false;
     _holdAltitude = qQNaN();
     _guidedTarget = QGeoCoordinate();
     if (auto* plugin = qobject_cast<CaacCorePlugin*>(parent())) {
@@ -288,38 +356,44 @@ void CaacSimulationController::_tick()
         }
     }
     _publish();
-    if (!_uploadSent) {
+    if (!_vehicle || !_vehicle->isInitialConnectComplete()) {
         if (_elapsed.elapsed() > 30000) {
             _fail(tr("Simulation connection timed out."));
-            return;
-        }
-        if (_vehicle && _vehicle->isInitialConnectComplete() && !_vehicle->missionManager()->inProgress()) {
-            if (!_prepareFlightPlan()) {
-                return;
-            }
-            _uploadSent = true;
-            _setStatus(tr("Uploading the simulation mission…"));
-            MissionController::sendItemsToVehicle(_vehicle, _uploadPlan->missionController()->visualItems());
         }
         return;
     }
-    if (!_missionReady) {
-        if (_elapsed.elapsed() > 60000) {
+    if (_uploadSent) {
+        if (_missionReady && !_vehicle->missionManager()->inProgress()) {
+            _uploadSent = false;
+            _setStatus(tr("Simulation mission uploaded; ready for flight controls."));
+            emit missionUploaded();
+        } else if (_elapsed.elapsed() > 60000) {
             _fail(tr("Simulation mission upload timed out."));
         }
         return;
     }
-    if (!_missionStarted) {
-        if (!_vehicle || _vehicle->missionManager()->inProgress()) {
-            return;
+    const bool armed = _link->_mavBaseMode & MAV_MODE_FLAG_SAFETY_ARMED;
+    if (armed && _link->_mavCustomMode == PX4CustomMode::AUTO_TAKEOFF) {
+        _engine.advanceHoldAltitude(_holdAltitude, 0.1);
+        _setStatus(tr("Simulation taking off"));
+        if (std::abs(_engine.state().position.altitude() - _holdAltitude) < 0.05) {
+            _link->_mavCustomMode = PX4CustomMode::AUTO_LOITER;
+            _setStatus(tr("Simulation hovering"));
         }
-        _missionStarted = true;
-        if (auto* plugin = qobject_cast<CaacCorePlugin*>(parent())) {
-            plugin->resetFlightDistanceForSimulationRestart(_vehicle);
+    } else if (armed && (_link->_mavCustomMode == PX4CustomMode::AUTO_LAND ||
+                         _link->_mavCustomMode == PX4CustomMode::AUTO_RTL)) {
+        const bool landed = _link->_mavCustomMode == PX4CustomMode::AUTO_LAND ? _engine.advanceLanding(0.1)
+                                                                              : _engine.advanceReturn(0.1);
+        _setStatus(tr("Simulation returning or landing"));
+        if (landed) {
+            _link->_mavBaseMode &= ~MAV_MODE_FLAG_SAFETY_ARMED;
+            _link->_mavCustomMode = PX4CustomMode::AUTO_LOITER;
+            _holdAltitude = qQNaN();
+            _guidedTarget = QGeoCoordinate();
+            _setStatus(tr("Simulation landed"));
         }
-        QMetaObject::invokeMethod(_vehicle, &Vehicle::startMission, Qt::QueuedConnection);
-    }
-    if ((_link->_mavBaseMode & MAV_MODE_FLAG_SAFETY_ARMED) && _link->_mavCustomMode == PX4CustomMode::AUTO_MISSION) {
+    } else if ((_link->_mavBaseMode & MAV_MODE_FLAG_SAFETY_ARMED) &&
+               _link->_mavCustomMode == PX4CustomMode::AUTO_MISSION) {
         _guidedTarget = QGeoCoordinate();
         _holdAltitude = qQNaN();
         _engine.advance(0.1);
@@ -337,11 +411,11 @@ void CaacSimulationController::_tick()
             (_link->_mavBaseMode & MAV_MODE_FLAG_SAFETY_ARMED)) {
             _engine.advanceGuidedTarget(_guidedTarget, 0.1);
             _setStatus(tr("Simulation guided flight"));
-        } else if (_link->_mavCustomMode == PX4CustomMode::AUTO_LOITER && std::isfinite(_holdAltitude)) {
+        } else if (armed && _link->_mavCustomMode == PX4CustomMode::AUTO_LOITER && std::isfinite(_holdAltitude)) {
             _engine.advanceHoldAltitude(_holdAltitude, 0.1);
         }
         if (!_engine.state().finished && !_guidedTarget.isValid()) {
-            _setStatus(tr("Simulation paused"));
+            _setStatus(_missionReady ? tr("Simulation paused") : tr("Simulation connected; edit and upload a route."));
         }
     }
     _link->_vehicleAltitudeAMSL = _engine.state().position.altitude();
@@ -417,14 +491,16 @@ bool CaacSimulationController::_prepareFlightPlan()
     auto* items = mission->visualItems();
     QList<SimpleMissionItem*> waypoints;
     bool takeoff = false;
+    bool existingFlow = false;
     SimpleMissionItem* selectedStart = nullptr;
     SimpleMissionItem* selectedReturn = nullptr;
     for (int i = 1; i < items->count(); ++i) {
         auto* item = items->value<SimpleMissionItem*>(i);
-        if (!item || item->command() == MAV_CMD_DO_JUMP) {
+        if (!item) {
             _fail(tr("Simulation flow requires a simple mission without existing jump commands."));
             return false;
         }
+        existingFlow = existingFlow || item->command() == MAV_CMD_DO_JUMP;
         takeoff = takeoff || item->isTakeoffItem();
         if (item->command() == MAV_CMD_NAV_WAYPOINT) {
             waypoints.append(item);
@@ -441,6 +517,9 @@ bool CaacSimulationController::_prepareFlightPlan()
          !selectedReturn)) {
         _fail(tr("Select existing waypoints for the start and return points."));
         return false;
+    }
+    if (existingFlow) {
+        return true;
     }
     if (!selectedStart) {
         selectedStart = waypoints.first();

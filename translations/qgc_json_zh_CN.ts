@@ -7367,8 +7367,8 @@
     <message>
       <extracomment>.QGC.MetaData.Facts[uiScalePercent].longDesc</extracomment>
       <location filename="../src/Settings/App.SettingsGroup.json"/>
-      <source>Scales the entire user interface relative to the platform default. 100% is the default size.</source>
-      <translation>相对于平台默认值缩放整个用户界面。 100% 是默认大小。</translation>
+      <source>Scales the entire user interface relative to the platform default. 120% is the default size.</source>
+      <translation>相对于平台默认值缩放整个用户界面。120% 是默认大小。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[uiScalePercent].label</extracomment>

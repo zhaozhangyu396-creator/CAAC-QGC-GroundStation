@@ -53,6 +53,8 @@ Menu {
                     objectName: "caacAuxiliaryCircleRadius"
                     Layout.fillWidth: true
                     placeholderText: qsTr("Radius")
+                    color: colors.textFieldText
+                    placeholderTextColor: colors.textFieldText
                     showUnits: true
                     font.pointSize: ScreenTools.menuFontPointSize
                     unitsLabel: "m"
@@ -74,6 +76,8 @@ Menu {
                     objectName: "caacAuxiliaryLineBearing"
                     Layout.fillWidth: true
                     placeholderText: qsTr("Bearing")
+                    color: colors.textFieldText
+                    placeholderTextColor: colors.textFieldText
                     showUnits: true
                     font.pointSize: ScreenTools.menuFontPointSize
                     unitsLabel: "°"
@@ -141,6 +145,13 @@ Menu {
         objectName: "caacContextReverse"
         text: qsTr("Reverse route")
         onTriggered: root.controller.reverseWaypoints()
+    }
+    MenuItem {
+        objectName: "caacContextDeleteAxes"
+        text: qsTr("Delete coordinate axes")
+        visible: root.editor.hasCoordinateAxes
+        enabled: root.editor.hasCoordinateAxes
+        onTriggered: root.editor.clearCoordinateAxes()
     }
     Connections {
         target: root.editor.planMasterController ? root.editor.planMasterController.missionController : null

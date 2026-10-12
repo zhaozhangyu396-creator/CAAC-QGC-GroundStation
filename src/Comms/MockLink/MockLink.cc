@@ -2960,7 +2960,13 @@ void MockLink::sendStatusTextMessage(uint8_t severity, const QString &text)
 
 void MockLink::_handleTakeoff(const mavlink_command_long_t &request)
 {
-    _vehicleAltitudeAMSL = request.param7 + _defaultVehicleHomeAltitude;
+    if (_caacSimulation) {
+        _mavCustomMode = PX4CustomMode::AUTO_TAKEOFF;
+        setProperty("caacGuidedTarget", QVariant::fromValue(QGeoCoordinate()));
+        emit simulationAltitudeRequested(request.param7);
+    } else {
+        _vehicleAltitudeAMSL = request.param7 + _defaultVehicleHomeAltitude;
+    }
     _mavBaseMode |= MAV_MODE_FLAG_SAFETY_ARMED;
 }
 

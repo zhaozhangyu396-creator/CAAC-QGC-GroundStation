@@ -33,6 +33,7 @@ public:
         bool finished = false;
     };
 
+    void initialize(const QGeoCoordinate& home, const Options& options);
     bool load(const QMap<uint16_t, mavlink_mission_item_int_t>& mission, const QGeoCoordinate& home,
               const Options& options, QString& error);
     bool jump(int sequence);
@@ -41,6 +42,8 @@ public:
     void setAltitude(double amslAltitude);
     void advanceHoldAltitude(double amslAltitude, double seconds);
     void advanceGuidedTarget(const QGeoCoordinate& target, double seconds);
+    bool advanceLanding(double seconds);
+    bool advanceReturn(double seconds);
     void restoreState(const State& state);
 
     const State& state() const { return _state; }

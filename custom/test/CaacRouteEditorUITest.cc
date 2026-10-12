@@ -291,7 +291,10 @@ void CaacRouteEditorUITest::_testMouseEditing()
     map->setProperty("center", QVariant::fromValue(center));
     map->setProperty("zoomLevel", 16.0);
     QTRY_VERIFY_WITH_TIMEOUT(map->property("mapReady").toBool(), TestTimeout::mediumMs());
-    const QPointF aScene = map->mapToScene(QPointF(map->width() * 0.4, map->height() * 0.5));
+    const auto mapViewport = map->property("centerViewport").toRectF();
+    QVERIFY(mapViewport.isValid());
+    const QPointF aScene = map->mapToScene(
+        QPointF(mapViewport.x() + mapViewport.width() * 0.4, mapViewport.y() + mapViewport.height() * 0.6));
     QVERIFY(std::isfinite(aScene.x()) && std::isfinite(aScene.y()));
     QVERIFY(_rootItem->boundingRect().contains(aScene));
     const QPoint a = aScene.toPoint();
@@ -308,7 +311,8 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QTRY_VERIFY_WITH_TIMEOUT(graphDomainsValid(), TestTimeout::mediumMs());
     QPointer<SimpleMissionItem> first = mission->visualItems()->value<SimpleMissionItem*>(1);
     QVERIFY(first);
-    auto* legLabel = findVisibleItem(_rootItem, QStringLiteral("caacRouteLegLabel_0"));
+    QCOMPARE(mission->simpleFlightPathSegments()->count(), 2);
+    auto* legLabel = findVisibleItem(_rootItem, QStringLiteral("caacRouteLegLabel_1"));
     QVERIFY(legLabel);
     const auto initialLegText = legLabel->property("legText").toString();
     QVERIFY(initialLegText.contains(QStringLiteral(" m")) && initialLegText.contains(QChar(0x00b0)));

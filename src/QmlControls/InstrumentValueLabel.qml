@@ -45,7 +45,7 @@ ColumnLayout {
         smooth:                     true
         color:                      _color
         opacity:                    instrumentValueData.currentOpacity
-        visible:                    _iconVisible
+        visible:                    false
 
         readonly property string iconPrefix: "/InstrumentValueIcons/"
 

@@ -176,7 +176,7 @@ ApplicationWindow {
     }
 
     function showSettingsTool(settingsPage = "") {
-        showTool(qsTr("Application Settings"), "qrc:/qml/QGroundControl/Controls/AppSettings.qml", "/res/QGCLogoWhite")
+        showTool(qsTr("Application Settings"), "qrc:/qml/QGroundControl/Controls/AppSettings.qml", "/res/gear-white.svg")
         if (settingsPage !== "") {
             toolDrawerLoader.item.showSettingsPage(settingsPage)
         }
@@ -438,11 +438,10 @@ ApplicationWindow {
                 spacing:            ScreenTools.defaultFontPixelWidth
 
                 QGCToolBarButton {
-                    id: qgcButton
                     objectName: "toolbar_qgcLogo"
                     height: parent.height
-                    icon.source: "/res/QGCLogoFull.svg"
-                    logo: true
+                    icon.source: "/res/gear-white.svg"
+                    logo: false
                     onClicked: mainWindow.showToolSelectDialog()
                 }
 

@@ -809,6 +809,62 @@ bool CaacRouteEditorController::insertRelativeWaypoint(int referenceIndex, int a
     return true;
 }
 
+bool CaacRouteEditorController::setRelativeEndpoint(int referenceIndex, double bearing, double distance, bool landing)
+{
+    if (!_canChangeOrder()) {
+        return false;
+    }
+    auto* mission = _missionController();
+    auto* model = mission->visualItems();
+    if (referenceIndex < 0 || referenceIndex >= model->count()) {
+        return _fail(tr("Select a simple coordinate reference point."));
+    }
+    auto* reference = model->value<VisualMissionItem*>(referenceIndex);
+    if (!reference || (referenceIndex > 0 && (!reference->isSimpleItem() || !reference->specifiesCoordinate() ||
+                                              reference->isStandaloneCoordinate()))) {
+        return _fail(tr("Select a simple coordinate reference point."));
+    }
+    const auto coordinate = distance == 0 && std::isfinite(bearing) && reference->coordinate().isValid()
+                                ? std::optional<QGeoCoordinate>(reference->coordinate())
+                                : CaacRouteGeometry::relativePoint(reference->coordinate(), bearing, distance);
+    if (!coordinate) {
+        return _fail(tr("Check the reference point, angle and positive distance in metres."));
+    }
+    beginEdit();
+    const auto finish = qScopeGuard([this]() { endEdit(); });
+    _masterController->setUserSelectedManualCreation(true);
+    if (!landing) {
+        const auto altitude = mission->plannedHomePosition().altitude();
+        if (!updatePlannedHome(coordinate->latitude(), coordinate->longitude(), altitude)) {
+            return false;
+        }
+        auto takeoffCoordinate = *coordinate;
+        takeoffCoordinate.setAltitude(altitude);
+        for (int i = 1; i < model->count(); ++i) {
+            auto* item = model->value<SimpleMissionItem*>(i);
+            if (item && item->isTakeoffItem()) {
+                item->setCoordinate(takeoffCoordinate);
+            }
+        }
+        return true;
+    }
+    for (int i = model->count() - 1; i > 0; --i) {
+        auto* item = model->value<SimpleMissionItem*>(i);
+        if (item && item->isLandCommand()) {
+            item->setCoordinate(*coordinate);
+            return true;
+        }
+    }
+    auto* item = qobject_cast<SimpleMissionItem*>(mission->insertSimpleMissionItem(*coordinate, model->count(), true));
+    if (!item) {
+        return _fail(tr("Unable to create the landing point."));
+    }
+    item->setCommand(MAV_CMD_NAV_LAND);
+    item->setAltitudeFrame(QGroundControlQmlGlobal::AltitudeFrameRelative);
+    item->altitude()->setRawValue(0);
+    return true;
+}
+
 QVariantList CaacRouteEditorController::templateCoordinates(int shape, int referenceIndex,
                                                             const QVariantMap& options) const
 {
@@ -913,7 +969,7 @@ bool CaacRouteEditorController::updatePlannedHome(double latitude, double longit
         return false;
     }
     auto* home = _missionController()->visualItems()->value<MissionSettingsItem*>(0);
-    const QGeoCoordinate coordinate(latitude, longitude);
+    const QGeoCoordinate coordinate(latitude, longitude, amslAltitude);
     if (!home || !coordinate.isValid() || !std::isfinite(amslAltitude) ||
         amslAltitude < home->plannedHomePositionAltitude()->rawMin().toDouble() ||
         amslAltitude > home->plannedHomePositionAltitude()->rawMax().toDouble()) {

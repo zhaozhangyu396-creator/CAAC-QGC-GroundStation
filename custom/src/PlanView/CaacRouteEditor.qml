@@ -51,7 +51,17 @@ Column {
         root.activePanel = 3
         root.showMissionTree = true
     }
-    function openSimulation() { simulationDialogFactory.open() }
+    function openSimulation() {
+        const simulation = QGroundControl.corePlugin.simulation
+        if (simulation.active) { simulationDialogFactory.open() }
+        else if (!simulation.start(root.planMasterController)) {
+            QGroundControl.showMessageDialog(mainWindow, qsTr("Simulation flight"), simulation.status)
+        }
+    }
+    Connections {
+        target: QGroundControl.corePlugin.simulation
+        function onMissionUploaded() { mainWindow.showFlyView() }
+    }
 
     Rectangle {
         parent: root.parent
@@ -96,14 +106,17 @@ Column {
 
     CaacWaypointPopup { id: waypointPopup; editor: root }
     CaacWaypointMenu { id: waypointMenu; editor: root }
+    property bool showDrawingAids: true
     CaacDrawingAids {
         id: drawingAids
         mapControl: root.editorMap
-        showAids: root.visible && root.enabled
+        showAids: root.visible && root.enabled && root.showDrawingAids
     }
     function closeWaypointProperties() { waypointPopup.close() }
     function addDrawingAid(origin, radius, bearing, axes) { drawingAids.add(origin, radius, bearing, axes) }
     function clearDrawingAids() { drawingAids.clear() }
+    readonly property bool hasCoordinateAxes: drawingAids.aids.some(aid => aid.axes)
+    function clearCoordinateAxes() { drawingAids.clearAxes() }
     function pickPlannedHome() {
         _pickingCenter = false
         measurePick = 0

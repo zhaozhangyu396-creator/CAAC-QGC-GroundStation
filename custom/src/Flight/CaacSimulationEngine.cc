@@ -21,6 +21,18 @@ double normalized(double value)
 }
 }  // namespace
 
+void CaacSimulationEngine::initialize(const QGeoCoordinate& home, const Options& options)
+{
+    _items.clear();
+    _home = home;
+    _options = options;
+    _state = {};
+    _state.position = home;
+    _jumpCounts.clear();
+    _wait = -1;
+    _returnLanding = false;
+}
+
 bool CaacSimulationEngine::load(const QMap<uint16_t, mavlink_mission_item_int_t>& mission, const QGeoCoordinate& home,
                                 const Options& options, QString& error)
 {
@@ -126,7 +138,7 @@ void CaacSimulationEngine::setAltitude(double amslAltitude)
 void CaacSimulationEngine::advanceHoldAltitude(double amslAltitude, double seconds)
 {
     pause();
-    if (!loaded() || !std::isfinite(amslAltitude) || !std::isfinite(seconds) || seconds <= 0 || seconds > 1) {
+    if (!_home.isValid() || !std::isfinite(amslAltitude) || !std::isfinite(seconds) || seconds <= 0 || seconds > 1) {
         return;
     }
     const double step = std::clamp(amslAltitude - _state.position.altitude(), -_options.verticalSpeed * seconds,
@@ -138,12 +150,38 @@ void CaacSimulationEngine::advanceHoldAltitude(double amslAltitude, double secon
 
 void CaacSimulationEngine::advanceGuidedTarget(const QGeoCoordinate& target, double seconds)
 {
-    if (!loaded() || !target.isValid() || !std::isfinite(target.altitude()) || !std::isfinite(seconds) ||
+    if (!_home.isValid() || !target.isValid() || !std::isfinite(target.altitude()) || !std::isfinite(seconds) ||
         seconds <= 0 || seconds > 1) {
         return;
     }
     pause();
     _move(target, seconds, false);
+}
+
+bool CaacSimulationEngine::advanceLanding(double seconds)
+{
+    pause();
+    if (!_home.isValid() || !std::isfinite(seconds) || seconds <= 0 || seconds > 1) {
+        return false;
+    }
+    auto target = _state.position;
+    target.setAltitude(_home.altitude());
+    return _move(target, seconds, true);
+}
+
+bool CaacSimulationEngine::advanceReturn(double seconds)
+{
+    pause();
+    if (!_home.isValid() || !std::isfinite(seconds) || seconds <= 0 || seconds > 1) {
+        return false;
+    }
+    auto target = _home;
+    const bool landing = QGCGeo::geodesicDistance(_state.position, _home) < 0.05;
+    if (!landing) {
+        target.setAltitude(std::max(_state.position.altitude(), _home.altitude() + 10));
+    }
+    const bool arrived = _move(target, seconds, landing);
+    return landing && arrived;
 }
 
 void CaacSimulationEngine::restoreState(const State& state)

@@ -116,10 +116,10 @@ Popup {
         if (!fineTuning || !_editable) { return false }
         let angle = _leg.bearing === undefined ? Number(bearing.text) : _leg.bearing
         let metres = _leg.distance
-        if (key === Qt.Key_Up) { angle += 0.1 }
-        else if (key === Qt.Key_Down) { angle -= 0.1 }
-        else if (key === Qt.Key_Right) { metres += 0.1 }
-        else if (key === Qt.Key_Left) { metres = Math.max(0, metres - 0.1) }
+        if (key === Qt.Key_Up) { angle += 0.01 }
+        else if (key === Qt.Key_Down) { angle -= 0.01 }
+        else if (key === Qt.Key_Right) { metres += 0.01 }
+        else if (key === Qt.Key_Left) { metres = Math.max(0, metres - 0.01) }
         else { return false }
         if (controller.updateWaypointLeg(waypoint, angle, metres)) {
             syncFields()
@@ -145,6 +145,8 @@ Popup {
 
     contentItem: FocusScope {
         id: keyTarget
+        objectName: "caacWaypointPopupContent"
+        readonly property rect popupGeometry: Qt.rect(root.x, root.y, root.width, root.height)
         implicitHeight: fields.implicitHeight
         Keys.onPressed: (event) => { if (root.nudge(event.key)) { event.accepted = true } }
         ColumnLayout {
@@ -191,8 +193,8 @@ Popup {
             }
             QGCLabel {
                 Layout.fillWidth: true
-                visible: root.fineTuning
-                text: qsTr("Up/down: bearing ±0.1°. Left/right: distance ±0.1 m.")
+                opacity: root.fineTuning ? 1 : 0
+                text: qsTr("Up/down: bearing ±0.01°. Left/right: distance ±0.01 m.")
                 wrapMode: Text.WordWrap
                 font.pointSize: ScreenTools.smallFontPointSize
             }

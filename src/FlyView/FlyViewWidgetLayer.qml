@@ -24,6 +24,8 @@ Item {
     property var    mapControl
     property var    viewer3DCameraController
 
+    readonly property bool _simulationEmergency: QGroundControl.corePlugin.simulation
+        && QGroundControl.corePlugin.simulation.emergencyMode
     property var    _activeVehicle:         QGroundControl.multiVehicleManager.activeVehicle
     property var    _planMasterController:  globals.planMasterControllerFlyView
     property var    _missionController:     _planMasterController.missionController
@@ -65,6 +67,8 @@ Item {
 
     FlyViewTopRightPanel {
         id:                     topRightPanel
+        visible:                !_root._simulationEmergency && !QGroundControl.videoManager.fullScreen
+            && topRightPanel._multipleVehicles && topRightPanel._settingEnableMVPanel
         anchors.top:            parent.top
         anchors.right:          parent.right
         maximumHeight:          parent.height - (bottomRightRowLayout.height + _margins * 4)
@@ -75,12 +79,13 @@ Item {
         anchors.top:        parent.top
         anchors.right:      parent.right
         spacing:            _layoutSpacing
-        visible:           !topRightPanel.visible
+        visible:           !topRightPanel.visible && !_root._simulationEmergency
     }
 
     FlyViewBottomRightRowLayout {
         id:                 bottomRightRowLayout
         objectName:         "flyViewBottomRightRowLayout"
+        visible:            !_root._simulationEmergency
         anchors.bottom:     parent.bottom
         anchors.right:      parent.right
         spacing:            _layoutSpacing
@@ -144,9 +149,7 @@ Item {
         id:                     toolStrip
         objectName:             "flyViewToolStrip"
         horizontal:             true
-        maxWidth:               Math.max(ScreenTools.defaultFontPixelHeight * 4, parent.width
-                                    - Math.min(ScreenTools.defaultFontPixelWidth * 46, parent.width / 3)
-                                    - ScreenTools.defaultFontPixelHeight * 3 - _toolsMargin * 3)
+        maxWidth:               Math.max(ScreenTools.defaultFontPixelHeight * 4, parent.width - _toolsMargin * 2)
         anchors.left:           parent.left
         anchors.top:            parent.top
         z:                      QGroundControl.zOrderWidgets
@@ -168,6 +171,7 @@ Item {
 
     Row {
         id:                 mapScaleRow
+        visible:            !_root._simulationEmergency
         anchors.left:       toolStrip.right
         anchors.leftMargin: _toolsMargin
         anchors.top:        parent.top
@@ -202,7 +206,7 @@ Item {
         anchors.top:        parent.top
         controller:         _root.viewer3DCameraController
         autoHide:           true
-        visible:            !ScreenTools.isTinyScreen && QGroundControl.corePlugin.options.flyView.showMapScale && QGCViewer3DManager.displayMode === QGCViewer3DManager.View3D && !!_root.viewer3DCameraController
+        visible:            !_root._simulationEmergency && !ScreenTools.isTinyScreen && QGroundControl.corePlugin.options.flyView.showMapScale && QGCViewer3DManager.displayMode === QGCViewer3DManager.View3D && !!_root.viewer3DCameraController
     }
 
     Loader {

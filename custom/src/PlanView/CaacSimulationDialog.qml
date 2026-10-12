@@ -13,14 +13,13 @@ QGCPopupDialog {
     readonly property var _simulation: QGroundControl.corePlugin.simulation
     title: qsTr("Simulation flight")
     buttons: Dialog.Close
+    Connections {
+        target: root._simulation
+        function onMissionUploaded() { root.close() }
+    }
     ColumnLayout {
         width: Math.min(root.maxContentAvailableWidth, ScreenTools.defaultFontPixelWidth * 65)
         spacing: ScreenTools.defaultFontPixelHeight * 0.5
-        QGCLabel {
-            Layout.fillWidth: true
-            wrapMode: Text.WordWrap
-            text: qsTr("Built-in kinematic training, separate from PX4 SITL. Uploads a copy of the saved planning settings and route to an isolated simulation aircraft. Disconnect other aircraft first.")
-        }
         QGCLabel {
             objectName: "caacSimulationStatus"
             Layout.fillWidth: true
@@ -30,9 +29,9 @@ QGCPopupDialog {
         QGCButton {
             objectName: "caacUploadSimulation"
             Layout.fillWidth: true
-            text: qsTr("Upload and execute simulation mission")
-            enabled: !root._simulation.active
-            onClicked: root._simulation.start(root.editor.planMasterController)
+            text: qsTr("Upload simulation mission")
+            enabled: root._simulation.vehicle !== null && !root.editor.planMasterController.syncInProgress
+            onClicked: root._simulation.upload(root.editor.planMasterController)
         }
         QGCButton {
             objectName: "caacViewSimulation"
@@ -51,7 +50,7 @@ QGCPopupDialog {
         QGCButton {
             objectName: "caacStopSimulation"
             Layout.fillWidth: true
-            text: qsTr("Stop simulation")
+            text: qsTr("Disconnect simulation")
             enabled: root._simulation.active
             onClicked: root._simulation.stop()
         }

@@ -50,8 +50,8 @@ Item {
 
                     gradient: Gradient {
                         orientation: Gradient.Horizontal
-                        GradientStop { position: 0; color: _mainStatusBGColor }
-                        //GradientStop { position: qgcButton.x + qgcButton.width; color: _mainStatusBGColor }
+                        GradientStop { position: 0; color: Qt.darker(_mainStatusBGColor, 1.35) }
+                        GradientStop { position: 0.45; color: _mainStatusBGColor }
                         GradientStop { position: 1; color: qgcPal.window }
                     }
                 }

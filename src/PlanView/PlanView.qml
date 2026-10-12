@@ -112,6 +112,11 @@ Item {
             if (!checkReadyForSaveUpload(false /* save */)) {
                 return
             }
+            const simulation = QGroundControl.corePlugin.simulation
+            if (simulation && simulation.active && simulation.vehicle === _planMasterController.managerVehicle) {
+                simulation.upload(_planMasterController)
+                return
+            }
             switch (_missionController.sendToVehiclePreCheck()) {
                 case MissionController.SendToVehiclePreCheckStateOk: sendToVehicle()
                     break
@@ -501,7 +506,7 @@ Item {
                         text: qsTr("Waypoint")
                         iconSource: "/res/waypoint.svg"
                         enabled: _missionController.flyThroughCommandsAllowed
-                        visible: toolStrip._isMissionLayer
+                        visible: false
                         checkable: true
                         onTriggered: {
                             _addWaypointOnClick = !_addWaypointOnClick
@@ -530,7 +535,7 @@ Item {
                         text: qsTr("Simulation")
                         iconSource: "/InstrumentValueIcons/play.svg"
                         visible: QGroundControl.corePlugin.directMissionItemEditing && toolStrip._isMissionLayer
-                        enabled: visible && (QGroundControl.corePlugin.simulation.active || _visualItems.count > 1)
+                        enabled: visible
                         onTriggered: editorMap.simulationRequested()
                     },
                     ToolStripAction {
@@ -585,7 +590,7 @@ Item {
             width:                  layerRow.width
             height:                 _layerButtonSize
             z:                      QGroundControl.zOrderWidgets
-            visible:                !_planMasterController.showCreateFromTemplate
+            visible:                rightPanel.showNativeEditor && !_planMasterController.showCreateFromTemplate
 
             property bool   expanded: false
             property real   _layerButtonSize: ScreenTools.defaultFontPixelHeight * 2.0

@@ -18,6 +18,8 @@ import QGroundControl.Viewer3D
 Item {
     id: _root
 
+    readonly property bool _simulationEmergency: QGroundControl.corePlugin.simulation
+        && QGroundControl.corePlugin.simulation.emergencyMode
     readonly property bool _is3DMode:       QGCViewer3DManager.displayMode === QGCViewer3DManager.View3D
     readonly property bool _keepSceneAlive: QGroundControl.settingsManager.viewer3DSettings.keepSceneAlive.rawValue
 
@@ -82,8 +84,8 @@ Item {
                 viewportRect:           Qt.rect(widgetLayer.x, widgetLayer.y, widgetLayer.width, widgetLayer.height)
                 occluders:              _mapOccluders
                 mapName:                "FlightDisplayView"
-                enabled:                !_is3DMode
-                visible:                !_is3DMode
+                enabled:                !_is3DMode && !_root._simulationEmergency
+                visible:                !_is3DMode && !_root._simulationEmergency
             }
         }
 
@@ -101,14 +103,15 @@ Item {
                 chromeTopMargin:        widgetLayer.y + _layerOccluders.topRight.y + _layerOccluders.topRight.height + _widgetMargin
                 chromeBottomMargin:     mapHolder.height - widgetLayer.y - Math.min(_layerOccluders.pipView.y, _layerOccluders.virtualJoystickLeft.y) + ScreenTools.defaultFontPixelWidth / 2
                 mapName:                "FlightDisplayView"
-                enabled:                !_is3DMode
-                visible:                !_is3DMode
+                enabled:                !_is3DMode && !_root._simulationEmergency
+                visible:                !_is3DMode && !_root._simulationEmergency
             }
         }
 
         FlyViewVideo {
             id:         videoControl
             pipView:    _pipView
+            visible:    !_root._simulationEmergency
         }
 
         PipView {
@@ -120,10 +123,20 @@ Item {
             item1IsFullSettingsKey: "MainFlyWindowIsMap"
             item1:                  _mapControl
             item2:                  QGroundControl.videoManager.hasVideo ? videoControl : null
-            show:                   QGroundControl.videoManager.hasVideo && !QGroundControl.videoManager.fullScreen &&
+            show:                   !_root._simulationEmergency && QGroundControl.videoManager.hasVideo && !QGroundControl.videoManager.fullScreen &&
                                         (videoControl.pipState.state === videoControl.pipState.pipState ||
                                          (_mapControl && _mapControl.pipState.state === _mapControl.pipState.pipState))
             z:                      QGroundControl.zOrderWidgets
+        }
+
+        Rectangle {
+            objectName: "caacEmergencyBlackout"
+            anchors.fill: parent
+            color: "black"
+            z: _fullItemZorder + 1
+            visible: _root._simulationEmergency
+            enabled: visible
+            DeadMouseArea { anchors.fill: parent }
         }
 
         FlyViewWidgetLayer {
@@ -183,7 +196,7 @@ Item {
             id:           viewer3DLoader
             z:            1
             anchors.fill: parent
-            visible:      _is3DMode
+            visible:      _is3DMode && !_root._simulationEmergency
         }
 
         Connections {

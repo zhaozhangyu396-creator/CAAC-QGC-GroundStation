@@ -118,7 +118,8 @@ void MissionController::_newMissionItemsAvailableFromVehicle(bool removeAllReque
     // Plan view only reloads if:
     //  - Load was specifically requested
     //  - There is no current Plan
-    if (_flyView || removeAllRequested || _itemsRequested || isEmpty()) {
+    if (_flyView || removeAllRequested || _itemsRequested ||
+        (isEmpty() && !_masterController->property("caacSimulationPlanning").toBool())) {
         // Fly Mode (accept if):
         //      - Always accepts new items from the vehicle so Fly view is kept up to date
         // Edit Mode (accept if):
@@ -1040,7 +1041,7 @@ void MissionController::_recalcFlightPathSegments(void)
     bool                firstCoordinateNotFound =   true;
     VisualMissionItem*  lastFlyThroughVI =          qobject_cast<VisualMissionItem*>(_visualItems->get(0));
     bool                linkEndToHome =             false;
-    bool                linkStartToHome =           _controllerVehicle->rover() ? true : false;
+    bool linkStartToHome = true;
     bool                foundRTL =                  false;
     bool                homePositionValid =         _settingsItem->coordinate().isValid();
     bool                roiActive =                 false;

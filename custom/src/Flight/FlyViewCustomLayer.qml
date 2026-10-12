@@ -14,6 +14,8 @@ Item {
     property var mapControl
     property var customOccluders: tools.visible ? [Qt.rect(tools.x, tools.y, tools.width, tools.height)] : []
 
+    readonly property bool _simulationEmergency: _corePlugin.simulation.emergencyMode
+    property Component _emergencyDialog: Component { CaacSimulationEmergencyDialog { } }
     readonly property var _vehicle: QGroundControl.multiVehicleManager.activeVehicle
     readonly property var _corePlugin: QGroundControl.corePlugin
     readonly property var _missionController: mapControl && mapControl.planMasterController
@@ -103,7 +105,7 @@ Item {
         objectName: "caacSimulationBanner"
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
-        anchors.topMargin: root._margin
+        anchors.topMargin: root.occluders ? root.occluders.toolStrip.y + root.occluders.toolStrip.height + root._margin : root._margin
         width: parent.width / 3
         wrapMode: Text.WordWrap
         horizontalAlignment: Text.AlignHCenter
@@ -115,6 +117,7 @@ Item {
     }
 
     CaacWaypointOverlap {
+        visible: !root._simulationEmergency
         anchors.fill: parent
         z: QGroundControl.zOrderMapItems + 1
         mapControl: root.mapControl
@@ -123,14 +126,43 @@ Item {
     }
 
     CaacRouteLegLabels {
+        visible: !root._simulationEmergency
         anchors.fill: parent
         mapControl: root.mapControl
+        blockedAreas: root.occluders ? root.occluders.all.concat(root.customOccluders) : root.customOccluders
+        warningTopInset: root.occluders ? root.occluders.toolStrip.y + root.occluders.toolStrip.height + root._margin : 0
         segments: root._missionController ? root._missionController.simpleFlightPathSegments : null
+    }
+
+    CaacAttitudeInstrument {
+        objectName: "caacEmergencyAttitude"
+        readonly property real topInset: root.occluders ? root.occluders.toolStrip.y + root.occluders.toolStrip.height + root._margin * 2 : root._margin
+        readonly property real availableHeight: Math.max(0, root.height - topInset - ScreenTools.defaultFontPixelHeight * 2)
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: topInset + (availableHeight - height) / 2
+        width: Math.min(parent.width * 0.55, availableHeight * 0.88)
+        height: width
+        vehicle: root._vehicle
+        visible: root._simulationEmergency
+    }
+
+    QGCButton {
+        objectName: "caacSimulationManagement"
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.margins: root._margin
+        visible: root._simulationEmergency
+        text: qsTr("Simulation controls")
+        onClicked: {
+            const dialog = root._emergencyDialog.createObject(mainWindow)
+            if (dialog) { dialog.open() }
+        }
     }
 
     ColumnLayout {
         id: tools
-        readonly property real baseY: root.occluders ? root.occluders.topRight.y + root.occluders.topRight.height + root._margin : root._margin
+        readonly property real baseY: root.occluders ? Math.max(root.occluders.topRight.y + root.occluders.topRight.height,
+            root.occluders.toolStrip.y + root.occluders.toolStrip.height) + root._margin : root._margin
         x: Math.max(root._margin, Math.min(root.width - width - ScreenTools.defaultFontPixelHeight * 3 - root._margin + root._panelOffset.x,
             root.width - width - root._margin))
         y: Math.max(root._margin, Math.min(baseY + root._panelOffset.y,
@@ -138,7 +170,7 @@ Item {
                 - toolbar.height - root._margin * 2))
         width: Math.min(ScreenTools.defaultFontPixelWidth * 46, parent.width / 3)
         readonly property real availableHeight: (root.occluders ? Math.min(root.occluders.bottomRight.y, root.occluders.virtualJoystickRight.y) : root.height) - y - root._margin
-        visible: availableHeight > toolbar.height
+        visible: !root._simulationEmergency && availableHeight > toolbar.height
         spacing: root._margin
 
         RowLayout {

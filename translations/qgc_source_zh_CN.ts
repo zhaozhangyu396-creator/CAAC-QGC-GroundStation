@@ -5768,6 +5768,10 @@ Click Ok to start the auto-tuning process.
         <source>Reading from the drone will replace the current unsaved plan. Continue?</source>
         <translation>从无人机读取航点将覆盖当前未保存的规划，是否继续？</translation>
     </message>
+    <message>
+        <source>Simulation flight</source>
+        <translation>模拟飞行</translation>
+    </message>
 </context>
   <context>
     <name>CaacRouteEditorController</name>
@@ -5949,6 +5953,10 @@ Click Ok to start the auto-tuning process.
     <message>
         <source>Select an ordinary waypoint to use as the takeoff point.</source>
         <translation>请选择普通航点，将其更改为起飞点。</translation>
+    </message>
+    <message>
+        <source>Unable to create the landing point.</source>
+        <translation>无法创建降落点。</translation>
     </message>
 </context>
   <context>
@@ -24719,7 +24727,39 @@ If a vehicle still has this key configured, you will no longer be able to commun
       <source>Bearing: north 0°, east 90°. Interior angle: 90° turns left, 180° continues straight; an incoming leg is required.</source>
       <translation>方位角以真北为 0°、正东为 90°。夹角 90° 左转、180° 直行；必须存在前一航段，支持负角度。</translation>
     </message>
-  </context>
+      <message>
+        <source>Target point</source>
+        <translation>目标点</translation>
+    </message>
+    <message>
+        <source>Waypoint</source>
+        <translation>航点</translation>
+    </message>
+    <message>
+        <source>Takeoff point</source>
+        <translation>起飞点</translation>
+    </message>
+    <message>
+        <source>Landing point</source>
+        <translation>降落点</translation>
+    </message>
+    <message>
+        <source>Set position</source>
+        <translation>设置位置</translation>
+    </message>
+    <message>
+        <source>Set the selected endpoint from the reference point, bearing and distance.</source>
+        <translation>根据参考点、方位角和距离设置所选起飞点或降落点。</translation>
+    </message>
+    <message>
+        <source>Set takeoff point</source>
+        <translation>设置起飞点</translation>
+    </message>
+    <message>
+        <source>Set landing point</source>
+        <translation>设置降落点</translation>
+    </message>
+</context>
 <context>
     <name>CaacFlyDataPanel</name>
     <message>
@@ -24789,6 +24829,10 @@ If a vehicle still has this key configured, you will no longer be able to commun
         <source>SIMULATION FLIGHT</source>
         <translation>模拟飞行</translation>
     </message>
+    <message>
+      <source>Simulation controls</source>
+      <translation>模拟控制</translation>
+    </message>
 </context>
   <context>
     <name>CaacRouteLegLabels</name>
@@ -24796,7 +24840,11 @@ If a vehicle still has this key configured, you will no longer be able to commun
       <source>%1 m  %2°</source>
       <translation>%1 m  %2°</translation>
     </message>
-  </context>
+      <message>
+        <source>True height is too low; adjust the waypoint altitude.</source>
+        <translation>真高过低，请调整航点高度。</translation>
+    </message>
+</context>
   <context>
     <name>CaacMissionDetails</name>
     <message>
@@ -25132,6 +25180,26 @@ If a vehicle still has this key configured, you will no longer be able to commun
         <source>Initial mission speed; later waypoint speed commands override it. Vertical speed is separate.</source>
         <translation>任务初始速度；后续航点的速度命令会覆盖此值。此值不表示垂直速度。</translation>
     </message>
+    <message>
+        <source>Map editing and drawing aids</source>
+        <translation>地图编辑与辅助作图</translation>
+    </message>
+    <message>
+        <source>Double-click to add waypoints</source>
+        <translation>双击添加航点</translation>
+    </message>
+    <message>
+        <source>Drag waypoints with the left mouse button</source>
+        <translation>左键拖动航点</translation>
+    </message>
+    <message>
+        <source>Show drawing aids</source>
+        <translation>显示辅助作图</translation>
+    </message>
+    <message>
+        <source>Clear drawing aids</source>
+        <translation>清除辅助作图</translation>
+    </message>
 </context>
 <context>
     <name>CaacCoordinateField</name>
@@ -25281,16 +25349,56 @@ altitude</source>
         <source>Waypoint operations</source>
         <translation>航点操作</translation>
     </message>
+    <message>
+        <source>Disconnect
+simulation</source>
+        <translation>断开
+模拟</translation>
+    </message>
+    <message>
+        <source>Flight
+altitude</source>
+        <translation>飞行
+高度</translation>
+    </message>
+    <message>
+      <source>Start route</source>
+      <translation>开始航线</translation>
+    </message>
+    <message>
+      <source>Pause route</source>
+      <translation>暂停航线</translation>
+    </message>
+    <message>
+      <source>One-click takeoff</source>
+      <translation>一键起飞</translation>
+    </message>
+    <message>
+      <source>One-click return</source>
+      <translation>一键返航</translation>
+    </message>
+    <message>
+      <source>Jump to waypoint</source>
+      <translation>跳转航点</translation>
+    </message>
+    <message>
+      <source>Change altitude</source>
+      <translation>更改航高</translation>
+    </message>
+    <message>
+      <source>Exit emergency</source>
+      <translation>退出应急</translation>
+    </message>
+    <message>
+      <source>Simulation emergency</source>
+      <translation>模拟应急</translation>
+    </message>
 </context>
   <context>
     <name>CaacMissionActionDialog</name>
     <message>
       <source>Modify waypoint altitude</source>
       <translation>修改航点高度</translation>
-    </message>
-    <message>
-      <source>Jump to waypoint</source>
-      <translation>跳转航点</translation>
     </message>
     <message>
       <source>Waypoint %1</source>
@@ -25320,7 +25428,19 @@ altitude</source>
       <source>No downloaded waypoints are available.</source>
       <translation>没有可用的已下载航点。</translation>
     </message>
-  </context>
+    <message>
+      <source>Change current flight altitude</source>
+      <translation>更改当前飞行高度</translation>
+    </message>
+      <message>
+      <source>Change altitude</source>
+      <translation>更改航高</translation>
+    </message>
+    <message>
+      <source>Jump to waypoint</source>
+      <translation>跳转航点</translation>
+    </message>
+</context>
   <context>
     <name>CaacCorePlugin</name>
     <message>
@@ -25504,16 +25624,44 @@ altitude</source>
         <source>Simulation guided flight</source>
         <translation>模拟指点飞行</translation>
     </message>
+    <message>
+        <source>Connect the simulation aircraft and pause the mission before uploading.</source>
+        <translation>请连接模拟无人机，并暂停航线任务后上传。</translation>
+    </message>
+    <message>
+        <source>Simulation mission upload failed.</source>
+        <translation>模拟任务上传失败。</translation>
+    </message>
+    <message>
+        <source>Simulation mission uploaded; ready for flight controls.</source>
+        <translation>模拟任务已上传，可在飞行界面控制。</translation>
+    </message>
+    <message>
+        <source>Simulation taking off</source>
+        <translation>模拟起飞中</translation>
+    </message>
+    <message>
+        <source>Simulation hovering</source>
+        <translation>模拟悬停中</translation>
+    </message>
+    <message>
+        <source>Simulation returning or landing</source>
+        <translation>模拟返航或降落中</translation>
+    </message>
+    <message>
+        <source>Simulation landed</source>
+        <translation>模拟已降落</translation>
+    </message>
+    <message>
+        <source>Simulation connected; edit and upload a route.</source>
+        <translation>模拟已连接，请编辑并上传航线。</translation>
+    </message>
 </context>
 <context>
     <name>CaacSimulationDialog</name>
     <message>
         <source>Simulation flight</source>
         <translation>模拟飞行</translation>
-    </message>
-    <message>
-        <source>Built-in kinematic training, separate from PX4 SITL. Uploads a copy of the saved planning settings and route to an isolated simulation aircraft. Disconnect other aircraft first.</source>
-        <translation>内置运动学训练模拟，与 PX4 SITL 分开。将规划设置和航线的副本上传至独立的模拟飞行器。请先断开其他飞行器。</translation>
     </message>
     <message>
         <source>Ready to simulate</source>
@@ -25534,6 +25682,14 @@ altitude</source>
     <message>
         <source>Restart simulation and clear mileage</source>
         <translation>重新开始模拟并清零里程</translation>
+    </message>
+    <message>
+        <source>Upload simulation mission</source>
+        <translation>上传模拟任务</translation>
+    </message>
+    <message>
+        <source>Disconnect simulation</source>
+        <translation>断开模拟</translation>
     </message>
 </context>
 <context>
@@ -25584,10 +25740,6 @@ altitude</source>
     <message>
         <source>Advanced simulation settings</source>
         <translation>高级模拟设置</translation>
-    </message>
-    <message>
-        <source>These turn and climb modes apply to the built-in kinematic simulation. For aircraft, use firmware-supported mission settings. Waypoint speed commands override the initial speed.</source>
-        <translation>这些转弯和爬升方式适用于内置运动学模拟。实机请使用飞控支持的任务设置。航点速度命令会覆盖初始速度。</translation>
     </message>
     <message>
         <source>Takeoff height (relative, m)</source>
@@ -25725,6 +25877,22 @@ altitude</source>
         <source>Simulation flight</source>
         <translation>模拟飞行</translation>
     </message>
+    <message>
+        <source>Takeoff and flight speed</source>
+        <translation>起飞与飞行速度</translation>
+    </message>
+    <message>
+        <source>Horizontal speed (m/s)</source>
+        <translation>水平速度（米/秒）</translation>
+    </message>
+    <message>
+        <source>Turn and heading</source>
+        <translation>转弯与朝向</translation>
+    </message>
+    <message>
+        <source>Climb settings</source>
+        <translation>爬升设置</translation>
+    </message>
 </context>
 <context>
     <name>CaacWaypointMenu</name>
@@ -25792,6 +25960,10 @@ altitude</source>
         <source>Reverse route</source>
         <translation>航线反向</translation>
     </message>
+    <message>
+        <source>Delete coordinate axes</source>
+        <translation>删除坐标轴</translation>
+    </message>
 </context>
 <context>
     <name>CaacWaypointOverlap</name>
@@ -25827,12 +25999,49 @@ altitude</source>
         <translation>关闭</translation>
     </message>
     <message>
-        <source>Up/down: bearing ±0.1°. Left/right: distance ±0.1 m.</source>
-        <translation>上／下键：方位角 ±0.1°；左／右键：距离 ±0.1 米。</translation>
+        <source>Up/down: bearing ±0.01°. Left/right: distance ±0.01 m.</source>
+        <translation>上／下键：方位角 ±0.01°；左／右键：距离 ±0.01 米。</translation>
     </message>
     <message>
         <source>Delete</source>
         <translation>删除</translation>
     </message>
 </context>
+<context>
+    <name>CaacDrawingAids</name>
+    <message>
+        <source>Delete coordinate axes</source>
+        <translation>删除坐标轴</translation>
+    </message>
+</context>
+  <context>
+    <name>CaacSimulationEmergencyDialog</name>
+    <message>
+      <source>Emergency hover</source>
+      <translation>应急悬停</translation>
+    </message>
+    <message>
+      <source>Land at current position</source>
+      <translation>原地降落</translation>
+    </message>
+    <message>
+      <source>Restart simulation and clear mileage</source>
+      <translation>重启模拟并清零里程</translation>
+    </message>
+    <message>
+      <source>Disconnect simulation</source>
+      <translation>断开模拟</translation>
+    </message>
+      <message>
+      <source>Simulation emergency</source>
+      <translation>模拟应急</translation>
+    </message>
+</context>
+  <context>
+    <name>CaacAttitudeInstrument</name>
+    <message>
+      <source>Not available</source>
+      <translation>未获取</translation>
+    </message>
+  </context>
 </TS>

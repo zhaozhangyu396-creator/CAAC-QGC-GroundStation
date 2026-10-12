@@ -21,6 +21,9 @@ class CaacSimulationController : public QObject
     QML_UNCREATABLE("Owned by the application plugin")
     Q_MOC_INCLUDE("Vehicle.h")
     Q_PROPERTY(bool active READ active NOTIFY statusChanged)
+    Q_PROPERTY(bool emergencyMode READ emergencyMode WRITE setEmergencyMode NOTIFY emergencyModeChanged)
+    Q_PROPERTY(bool missionReady READ missionReady NOTIFY statusChanged)
+    Q_PROPERTY(double takeoffHeight READ takeoffHeight NOTIFY statusChanged)
     Q_PROPERTY(QString status READ status NOTIFY statusChanged)
     Q_PROPERTY(Vehicle* vehicle READ vehicle NOTIFY statusChanged)
 
@@ -30,11 +33,20 @@ public:
 
     bool active() const { return !_link.isNull(); }
 
+    bool emergencyMode() const { return _emergencyMode; }
+
+    void setEmergencyMode(bool enabled);
+
+    bool missionReady() const { return _missionReady; }
+
+    double takeoffHeight() const { return _settings.value("takeoffHeight", 10.0).toDouble(); }
+
     QString status() const { return _status; }
 
     Vehicle* vehicle() const;
     bool ownsVehicle(const Vehicle* vehicle) const;
     Q_INVOKABLE bool start(PlanMasterController* plan);
+    Q_INVOKABLE bool upload(PlanMasterController* plan);
     Q_INVOKABLE bool restart();
     Q_INVOKABLE void stop();
     static QVariantMap defaults();
@@ -42,6 +54,8 @@ public:
 
 signals:
     void statusChanged();
+    void missionUploaded();
+    void emergencyModeChanged();
 
 private:
     bool _prepareFlightPlan();
@@ -52,6 +66,7 @@ private:
     QPointer<MockLink> _link;
     QPointer<Vehicle> _vehicle;
     QPointer<PlanMasterController> _uploadPlan;
+    QPointer<PlanMasterController> _planningPlan;
     CaacSimulationEngine _engine;
     CaacSimulationEngine::Options _options;
     QGeoCoordinate _home;
@@ -61,9 +76,9 @@ private:
     QTimer _timer;
     QElapsedTimer _elapsed;
     QString _status;
+    bool _emergencyMode = false;
     bool _uploadSent = false;
     bool _missionReady = false;
-    bool _missionStarted = false;
     bool _settingsExplicit = false;
     double _holdAltitude = qQNaN();
 };

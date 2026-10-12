@@ -24,11 +24,13 @@ Button {
     property alias  imageSource:        innerImage.source
     property alias  contentWidth:       innerText.contentWidth
 
+    property bool roundStyle: false
+    readonly property real roundDiameter: Math.min(ScreenTools.defaultFontPixelHeight * 3, width - contentMargins * 2)
     property bool forceImageScale11: false
     property real imageScale:        forceImageScale11 && (text == "") ? 0.8 : 0.6
-    property real contentMargins:    innerText.height * 0.1
+    property real contentMargins:    roundStyle ? ScreenTools.defaultFontPixelWidth * 0.3 : innerText.height * 0.1
 
-    property color _currentContentColor:  (checked || pressed) ? qgcPal.buttonHighlightText : qgcPal.text
+    property color _currentContentColor: roundStyle ? qgcPal.windowShadeDark : (checked || pressed) ? qgcPal.buttonHighlightText : qgcPal.text
     property color _currentContentColorSecondary:  (checked || pressed) ? qgcPal.text : qgcPal.buttonHighlight
 
     signal dropped(int index)
@@ -51,7 +53,7 @@ Button {
         }
     }
 
-    QGCPalette { id: qgcPal; colorGroupEnabled: control.enabled }
+    QGCPalette { id: qgcPal; colorGroupEnabled: control.roundStyle || control.enabled }
 
     contentItem: Item {
         id:                 contentLayoutItem
@@ -59,13 +61,14 @@ Button {
         anchors.margins:    contentMargins
 
         Column {
-            anchors.centerIn:   parent
-            spacing:            0
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: control.roundStyle ? control.roundDiameter * 0.225 : (parent.height - height) / 2
+            spacing:            control.roundStyle ? control.roundDiameter * 0.3 : 0
 
             Image {
                 id:                         innerImageColorful
-                height:                     contentLayoutItem.height * imageScale
-                width:                      contentLayoutItem.width  * imageScale
+                height:                     control.roundStyle ? control.roundDiameter * 0.55 : contentLayoutItem.height * imageScale
+                width:                      control.roundStyle ? height : contentLayoutItem.width  * imageScale
                 smooth:                     true
                 mipmap:                     true
                 fillMode:                   Image.PreserveAspectFit
@@ -79,8 +82,8 @@ Button {
 
             QGCColoredImage {
                 id:                         innerImage
-                height:                     contentLayoutItem.height * imageScale
-                width:                      contentLayoutItem.width  * imageScale
+                height:                     control.roundStyle ? control.roundDiameter * 0.55 : contentLayoutItem.height * imageScale
+                width:                      control.roundStyle ? height : contentLayoutItem.width  * imageScale
                 smooth:                     true
                 mipmap:                     true
                 color:                      _currentContentColor
@@ -91,11 +94,24 @@ Button {
                 anchors.horizontalCenter:   parent.horizontalCenter
                 visible:                    source != "" && !(modelData && modelData.fullColorIcon)
 
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: control.roundDiameter
+                    height: width
+                    radius: width / 2
+                    visible: control.roundStyle
+                    z: -1
+                    color: control.checked || control.pressed ? qgcPal.buttonHighlight : qgcPal.text
+                    opacity: control.enabled ? 1 : 0.45
+                    border.width: control.hovered && control.enabled ? ScreenTools.defaultFontPixelWidth * 0.2 : 0
+                    border.color: qgcPal.buttonHighlight
+                }
+
                 QGCColoredImage {
                     id:                         innerImageSecondColor
                     source:                     modelData ? modelData.alternateIconSource : ""
-                    height:                     contentLayoutItem.height * imageScale
-                    width:                      contentLayoutItem.width  * imageScale
+                    height:                     control.roundStyle ? control.roundDiameter * 0.55 : contentLayoutItem.height * imageScale
+                    width:                      control.roundStyle ? height : contentLayoutItem.width  * imageScale
                     smooth:                     true
                     mipmap:                     true
                     color:                      _currentContentColorSecondary
@@ -111,18 +127,23 @@ Button {
             QGCLabel {
                 id:                         innerText
                 text:                       control.text
+                width:                      control.roundStyle ? control.width - control.contentMargins * 2 : implicitWidth
+                wrapMode:                   control.roundStyle ? Text.Wrap : Text.NoWrap
+                maximumLineCount:           control.roundStyle ? 2 : 2147483647
+                elide:                      control.roundStyle ? Text.ElideRight : Text.ElideNone
+                horizontalAlignment:        Text.AlignHCenter
                 font.pointSize:             ScreenTools.menuFontPointSize
-                color:                      _currentContentColor
+                color:                      control.roundStyle ? qgcPal.text : _currentContentColor
                 anchors.horizontalCenter:   parent.horizontalCenter
                 font.bold:                  !innerImage.visible && !innerImageColorful.visible
-                opacity:                    !innerImage.visible ? 0.8 : 1.0
+                opacity:                    control.roundStyle && !control.enabled ? 0.45 : !innerImage.visible ? 0.8 : 1.0
             }
         }
     }
 
     background: Rectangle {
         id:     buttonBkRect
-        color:  (control.checked || control.pressed) ?
+        color:  control.roundStyle ? "transparent" : (control.checked || control.pressed) ?
                     qgcPal.buttonHighlight :
                     ((control.enabled && control.hovered) ? qgcPal.toolStripHoverColor : "transparent")
     }

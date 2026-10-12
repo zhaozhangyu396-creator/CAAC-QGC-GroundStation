@@ -1,6 +1,7 @@
 #include <cmath>
 
 #include <QtCore/QLineF>
+#include <QtCore/QRectF>
 #include <QtGui/QImage>
 #include <QtQuick/QQuickItem>
 #include <QtQuick/QQuickWindow>
@@ -9,6 +10,7 @@
 #include "AppSettings.h"
 #include "CaacRouteEditorController.h"
 #include "Fact.h"
+#include "FlightPathSegment.h"
 #include "MissionController.h"
 #include "PlanMasterController.h"
 #include "QGCGeo.h"
@@ -47,6 +49,16 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     const auto a = QGCGeo::geodesicDestination(home, 90, 100);
     QVERIFY(editor->addWaypoint(a));
     QVERIFY(editor->addWaypoint(a));
+    QTRY_COMPARE_WITH_TIMEOUT(mission->simpleFlightPathSegments()->count(), 2, TestTimeout::mediumMs());
+    auto* firstLeg = mission->simpleFlightPathSegments()->value<FlightPathSegment*>(0);
+    QVERIFY(firstLeg);
+    QVERIFY(QGCGeo::geodesicDistance(firstLeg->coordinate1(), home) < 0.01);
+    QVERIFY(QGCGeo::geodesicDistance(firstLeg->coordinate2(), a) < 0.01);
+    QVERIFY(firstLeg->setProperty("terrainCollision", true));
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacTerrainClearanceWarning")));
+    QVERIFY(firstLeg->setProperty("terrainCollision", false));
+    QTRY_VERIFY_WITH_TIMEOUT(!findVisibleItem(_rootItem, QStringLiteral("caacTerrainClearanceWarning"), 0),
+                             TestTimeout::mediumMs());
     map->setProperty("zoomLevel", 18);
     map->setProperty("center", QVariant::fromValue(a));
     auto* dragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_2"), TestTimeout::mediumMs());
@@ -68,6 +80,16 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     QTest::mouseClick(_window, Qt::LeftButton, Qt::NoModifier, markerPosition().toPoint());
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickBearing")));
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickDistance")));
+    auto* popup = findVisibleItem(_rootItem, QStringLiteral("caacWaypointPopupContent"));
+    QVERIFY(popup);
+    const auto popupGeometry = [&]() { return popup->property("popupGeometry").toRectF(); };
+    QVERIFY(!_window->grabWindow().isNull());
+    const auto initialPopupGeometry = popupGeometry();
+    for (int toggle = 0; toggle < 2; ++toggle) {
+        QVERIFY(clickButton(QStringLiteral("caacWaypointFineTuning")));
+        QVERIFY(!_window->grabWindow().isNull());
+        QCOMPARE(popupGeometry(), initialPopupGeometry);
+    }
     const auto selected = mission->currentPlanViewItem()->sequenceNumber();
     auto* waypoint = editor->currentItem();
     QVERIFY(waypoint);
@@ -77,12 +99,12 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     QTRY_VERIFY_WITH_TIMEOUT(_window->isActive(), TestTimeout::mediumMs());
     QTest::keyClick(_window, Qt::Key_Right);
     QTRY_VERIFY_WITH_TIMEOUT(
-        std::abs(editor->waypointLeg(waypoint).value("distance").toDouble() - initialDistance - 0.1) < 0.001,
+        std::abs(editor->waypointLeg(waypoint).value("distance").toDouble() - initialDistance - 0.01) < 0.001,
         TestTimeout::mediumMs());
     const auto initialBearing = editor->waypointLeg(waypoint).value("bearing").toDouble();
     QTest::keyClick(_window, Qt::Key_Up);
     QTRY_VERIFY_WITH_TIMEOUT(
-        std::abs(std::remainder(editor->waypointLeg(waypoint).value("bearing").toDouble() - initialBearing - 0.1,
+        std::abs(std::remainder(editor->waypointLeg(waypoint).value("bearing").toDouble() - initialBearing - 0.01,
                                 360)) < 0.001,
         TestTimeout::mediumMs());
     QTest::keyClick(_window, Qt::Key_Down);
@@ -105,6 +127,11 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
         QVERIFY(_window->grabWindow().save(QString::fromUtf8(screenshot)));
     }
     QVERIFY(clickButton(QStringLiteral("caacDrawingAidButton")));
+    for (const auto* name : {"caacAuxiliaryCircleRadius", "caacAuxiliaryLineBearing"}) {
+        auto* field = findVisibleItem(_rootItem, QLatin1String(name));
+        QVERIFY(field);
+        QCOMPARE(field->property("placeholderTextColor").value<QColor>(), field->property("color").value<QColor>());
+    }
     QVERIFY(clickButton(QStringLiteral("caacAuxiliaryCircleRadius")));
     QTest::keyClick(_window, '5');
     QTest::keyClick(_window, '0');
@@ -123,12 +150,55 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     QTest::keyClick(_window, Qt::Key_Escape);
     QTest::mouseClick(_window, Qt::RightButton, Qt::NoModifier, markerPosition().toPoint());
     QVERIFY(clickButton(QStringLiteral("caacPlaceCoordinateAxes")));
-    QVERIFY(findItem(_rootItem, QStringLiteral("caacAuxiliaryLine")));
+    auto* axes = findVisibleItem(_rootItem, QStringLiteral("caacCoordinateAxes"));
+    auto* graphic = findVisibleItem(_rootItem, QStringLiteral("caacCoordinateAxesGraphic"));
+    QVERIFY(axes && graphic);
+    QVERIFY(graphic->width() < map->width() / 2);
+    for (const auto& direction : {QStringLiteral("N"), QStringLiteral("S"), QStringLiteral("W"), QStringLiteral("E")}) {
+        auto* label = findVisibleItem(_rootItem, QStringLiteral("caacAxesDirection_") + direction);
+        QVERIFY(label);
+        QCOMPARE(label->property("text").toString(), direction);
+    }
+    const auto axesOrigin = axes->property("coordinate").value<QGeoCoordinate>();
+    const auto mapCenter = map->property("center").value<QGeoCoordinate>();
+    const auto beforeAxesDrag = master->saveToJson();
+    const auto armPosition = [&]() {
+        return graphic->mapToScene(QPointF(graphic->width() * 0.75, graphic->height() / 2)).toPoint();
+    };
+    const auto arm = armPosition();
+    QTest::mousePress(_window, Qt::LeftButton, Qt::NoModifier, arm);
+    QTest::mouseMove(_window, arm + QPoint(60, 40));
+    QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, arm + QPoint(60, 40));
+    QTRY_VERIFY_WITH_TIMEOUT(
+        QGCGeo::geodesicDistance(axesOrigin, axes->property("coordinate").value<QGeoCoordinate>()) > 1,
+        TestTimeout::mediumMs());
+    QCOMPARE(master->saveToJson(), beforeAxesDrag);
+    QVERIFY(QGCGeo::geodesicDistance(mapCenter, map->property("center").value<QGeoCoordinate>()) < 0.02);
+    if (const auto screenshot = qgetenv("CAAC_AXES_UI_SCREENSHOT"); !screenshot.isEmpty()) {
+        QVERIFY(_window->grabWindow().save(QString::fromUtf8(screenshot)));
+    }
+    QTest::mouseClick(_window, Qt::RightButton, Qt::NoModifier, armPosition());
+    QVERIFY(clickButton(QStringLiteral("caacDeleteCoordinateAxes")));
+    QTRY_VERIFY_WITH_TIMEOUT(!panel->property("hasCoordinateAxes").toBool(), TestTimeout::mediumMs());
+
     QVERIFY(clickButton(QStringLiteral("caacEditWaypoint_%1").arg(selected)));
     QVERIFY(waitForDialog(QCoreApplication::translate("CaacWaypointDialog", "Waypoint properties")));
     QVERIFY(rejectDialog());
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacRemoveWaypoint_%1").arg(selected)));
 
+    QVERIFY(clickButton(QStringLiteral("caacRelativeEditorButton")));
+    auto* relativeTarget = findVisibleItem(_rootItem, QStringLiteral("caacRelativeTarget"));
+    auto* relativeReference = findVisibleItem(_rootItem, QStringLiteral("caacRelativeReference"));
+    auto* relativeDistance = findVisibleItem(_rootItem, QStringLiteral("caacRelativeDistance"));
+    QVERIFY(relativeTarget && relativeReference && relativeDistance);
+    const auto beforeEndpoint = master->saveToJson();
+    relativeTarget->setProperty("currentIndex", 1);
+    relativeReference->setProperty("currentIndex", 1);
+    relativeDistance->setProperty("text", QStringLiteral("25"));
+    QVERIFY(clickButton(QStringLiteral("caacRelativeAdd")));
+    QVERIFY(master->saveToJson() != beforeEndpoint);
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QCOMPARE(master->saveToJson(), beforeEndpoint);
     QVERIFY(clickButton(QStringLiteral("caacTemplateEditorButton")));
     auto* bearing =
         findVisibleItemScrolled(QStringLiteral("caacTemplateBearing"), QStringLiteral("caacTemplateScroller"));
@@ -158,6 +228,29 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     QVERIFY(!editor->rotationPreviewActive());
     QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), original);
+    QVERIFY(clickButton(QStringLiteral("caacGlobalSettingsButton")));
+    for (const auto* name :
+         {"caacHomeSection", "caacBasicSection", "caacSimFlightSection", "caacSimTurnSection", "caacSimClimbSection",
+          "caacSimLoopsSection", "caacSimWindSection", "caacMapEditingSection"}) {
+        QVERIFY(findItem(_rootItem, QLatin1String(name)));
+    }
+    auto* horizontal =
+        findVisibleItemScrolled(QStringLiteral("caacSimHorizontalSpeed"), QStringLiteral("caacGlobalSettingsScroller"));
+    QVERIFY(horizontal);
+    horizontal->setProperty("text", QStringLiteral("7.5"));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacSaveSimulationSettings"),
+                                QStringLiteral("caacGlobalSettingsScroller")));
+    QCOMPARE(editor->simulationSettings().value("horizontalSpeed").toDouble(), 7.5);
+    QVERIFY(
+        clickButtonScrolled(QStringLiteral("caacGlobalShowDrawingAids"), QStringLiteral("caacGlobalSettingsScroller")));
+    QVERIFY(!panel->property("showDrawingAids").toBool());
+    QVERIFY(
+        clickButtonScrolled(QStringLiteral("caacGlobalShowDrawingAids"), QStringLiteral("caacGlobalSettingsScroller")));
+    QVERIFY(panel->property("showDrawingAids").toBool());
+    if (const auto screenshot = qgetenv("CAAC_GLOBAL_UI_SCREENSHOT"); !screenshot.isEmpty()) {
+        QVERIFY(scrollIntoView(horizontal, QStringLiteral("caacGlobalSettingsScroller")));
+        QVERIFY(_window->grabWindow().save(QString::fromUtf8(screenshot)));
+    }
     QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewSettings")));
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("settingsButton_General")));
     for (const auto* name : {"settingsButton_Help", "settingsButton_PX4 Log Transfer", "settingsButton_Remote ID"}) {

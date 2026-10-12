@@ -30,7 +30,9 @@ Item {
             _vehicleWasArmed = true
             _vehicleWasInMissionFlightMode = _vehicleInMissionFlightMode
         } else {
-            if (_showMissionCompleteDialog) {
+            if (_showMissionCompleteDialog
+                    && !(QGroundControl.corePlugin.simulation && QGroundControl.corePlugin.simulation.active
+                        && QGroundControl.corePlugin.simulation.vehicle === _activeVehicle)) {
                 missionCompleteDialogFactory.open()
             }
             _vehicleWasArmed = false

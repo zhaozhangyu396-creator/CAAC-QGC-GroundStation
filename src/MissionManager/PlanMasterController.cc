@@ -154,6 +154,8 @@ void PlanMasterController::_activeVehicleChanged(Vehicle* activeVehicle)
             qCDebug(PlanMasterControllerLog) << "_activeVehicleChanged: Fly View - New active vehicle, loading new plan from manager vehicle";
             _showPlanFromManagerVehicle();
         }
+    } else if (property("caacSimulationPlanning").toBool()) {
+        _setDirtyForUpload(containsItems());
     } else {
         // We are in the Plan view.
         if (containsItems()) {

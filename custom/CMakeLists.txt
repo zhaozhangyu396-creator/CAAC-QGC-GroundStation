@@ -15,12 +15,15 @@ qgc_set_qt_resource_alias(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacMapSettings.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacRouteLegLabels.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacTemplateEditor.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacSettingsSection.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacGlobalSettings.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacPanelDragHandle.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacCoordinateField.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacMeasureDialog.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacMeasureMap.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacUnitConverter.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacAttitudeInstrument.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacSimulationEmergencyDialog.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacMissionActionDialog.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacSimulationSettings.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacSimulationDialog.qml
@@ -43,12 +46,15 @@ qt_add_qml_module(
               src/Flight/CaacMapSettings.qml
               src/PlanView/CaacRouteLegLabels.qml
               src/PlanView/CaacTemplateEditor.qml
+              src/PlanView/CaacSettingsSection.qml
               src/PlanView/CaacGlobalSettings.qml
               src/PlanView/CaacPanelDragHandle.qml
               src/PlanView/CaacCoordinateField.qml
               src/PlanView/CaacMeasureDialog.qml
               src/PlanView/CaacMeasureMap.qml
               src/PlanView/CaacUnitConverter.qml
+              src/Flight/CaacAttitudeInstrument.qml
+              src/Flight/CaacSimulationEmergencyDialog.qml
               src/Flight/CaacMissionActionDialog.qml
               src/PlanView/CaacSimulationSettings.qml
               src/PlanView/CaacSimulationDialog.qml

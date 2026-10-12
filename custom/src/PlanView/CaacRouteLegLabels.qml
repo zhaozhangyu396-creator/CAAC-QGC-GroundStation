@@ -9,7 +9,56 @@ Item {
     id: root
     required property var mapControl
     property var segments: null
+    property var blockedAreas: []
+    property real warningTopInset: 0
     property int _projectionRevision: 0
+    readonly property bool terrainCollision: {
+        if (segments) {
+            for (let i = 0; i < segments.count; ++i) {
+                if (segments.get(i).terrainCollision) { return true }
+            }
+        }
+        return false
+    }
+    Rectangle {
+        objectName: "caacTerrainClearanceWarning"
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.horizontalCenterOffset: -parent.width / 6
+        y: Math.max(root.warningTopInset, ScreenTools.defaultFontPixelHeight * 6)
+        width: Math.min(parent.width - ScreenTools.defaultFontPixelWidth * 2,
+            warning.implicitWidth + ScreenTools.defaultFontPixelWidth * 2)
+        height: warning.implicitHeight + ScreenTools.defaultFontPixelHeight
+        visible: root.terrainCollision
+        z: QGroundControl.zOrderTopMost
+        color: QGroundControl.globalPalette.windowShadeDark
+        border.color: QGroundControl.globalPalette.warningText
+        radius: ScreenTools.defaultBorderRadius
+        QGCLabel {
+            id: warning
+            anchors.centerIn: parent
+            width: parent.width - ScreenTools.defaultFontPixelWidth * 2
+            text: qsTr("True height is too low; adjust the waypoint altitude.")
+            color: QGroundControl.globalPalette.warningText
+            font.bold: true
+            font.pointSize: ScreenTools.menuFontPointSize
+            wrapMode: Text.WordWrap
+        }
+    }
+
+    function screenPoint(coordinate) {
+        const point = mapControl.fromCoordinate(coordinate, false)
+        return mapControl.mapToItem(root, point.x, point.y)
+    }
+
+    function overlapsControls(point, radius) {
+        for (const area of blockedAreas) {
+            if (area.width <= 0 || area.height <= 0) { continue }
+            const dx = Math.max(area.x - point.x, 0, point.x - area.x - area.width)
+            const dy = Math.max(area.y - point.y, 0, point.y - area.y - area.height)
+            if (Math.hypot(dx, dy) < radius) { return true }
+        }
+        return false
+    }
 
     Repeater {
         model: root.segments
@@ -21,15 +70,15 @@ Item {
             readonly property var metrics: QGroundControl.corePlugin.routeLegMetrics(object.coordinate1, object.coordinate2)
             readonly property point _from: {
                 root._projectionRevision
-                return root.mapControl.fromCoordinate(object.coordinate1, false)
+                return root.screenPoint(object.coordinate1)
             }
             readonly property point _to: {
                 root._projectionRevision
-                return root.mapControl.fromCoordinate(object.coordinate2, false)
+                return root.screenPoint(object.coordinate2)
             }
             readonly property point _midpoint: {
                 root._projectionRevision
-                return metrics.midpoint !== undefined ? root.mapControl.fromCoordinate(metrics.midpoint, false) : Qt.point(-1, -1)
+                return metrics.midpoint !== undefined ? root.screenPoint(metrics.midpoint) : Qt.point(-1, -1)
             }
             readonly property real _angle: Math.atan2(_to.y - _from.y, _to.x - _from.x) * 180 / Math.PI
             readonly property string legText: metrics.distance !== undefined
@@ -37,7 +86,8 @@ Item {
             x: _midpoint.x
             y: _midpoint.y
             visible: metrics.distance !== undefined && isFinite(_midpoint.x) && isFinite(_midpoint.y)
-                && _midpoint.x >= 0 && _midpoint.y >= 0 && _midpoint.x <= root.mapControl.width && _midpoint.y <= root.mapControl.height
+                && _midpoint.x >= 0 && _midpoint.y >= 0 && _midpoint.x <= root.width && _midpoint.y <= root.height
+                && !root.overlapsControls(_midpoint, Math.hypot(text.implicitWidth / 2, text.implicitHeight * 1.5))
                 && Math.hypot(_to.x - _from.x, _to.y - _from.y) >= ScreenTools.defaultFontPixelHeight * 2
             rotation: _angle > 90 ? _angle - 180 : _angle < -90 ? _angle + 180 : _angle
             z: QGroundControl.zOrderWaypointLines + 2
@@ -65,6 +115,7 @@ Item {
     Connections {
         target: root.mapControl
         function onCenterChanged() { ++root._projectionRevision }
+        function onBearingChanged() { ++root._projectionRevision }
         function onZoomLevelChanged() { ++root._projectionRevision }
         function onWidthChanged() { ++root._projectionRevision }
         function onHeightChanged() { ++root._projectionRevision }
