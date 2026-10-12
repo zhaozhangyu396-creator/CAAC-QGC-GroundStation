@@ -257,7 +257,7 @@ jobs:
         with:
           build-dir: ${{ runner.temp }}/build
           build-type: ${{ matrix.build_type }}
-          tests-regex: '^(FactGroupTest|Caac(RouteEditor(Test|UITest)|ChineseUITest|FlightDistanceTest|FlightDataUITest|PlanningToolsTest|RouteTemplateGeometryTest))$'
+          tests-regex: '^(FactGroupTest|Caac.*Test)$'
           include-labels: 'Unit|Integration'
           parallel: '1'
           junit-output: junit-caac.xml

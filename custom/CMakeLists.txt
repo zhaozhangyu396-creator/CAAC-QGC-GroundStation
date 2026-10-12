@@ -21,6 +21,13 @@ qgc_set_qt_resource_alias(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacMeasureDialog.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacMeasureMap.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacUnitConverter.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacMissionActionDialog.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacSimulationSettings.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacSimulationDialog.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacWaypointOverlap.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacWaypointPopup.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacWaypointMenu.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacDrawingAids.qml
 )
 qt_add_qml_module(
     CaacPlanModule
@@ -42,16 +49,27 @@ qt_add_qml_module(
               src/PlanView/CaacMeasureDialog.qml
               src/PlanView/CaacMeasureMap.qml
               src/PlanView/CaacUnitConverter.qml
+              src/Flight/CaacMissionActionDialog.qml
+              src/PlanView/CaacSimulationSettings.qml
+              src/PlanView/CaacSimulationDialog.qml
+              src/PlanView/CaacWaypointOverlap.qml
+              src/PlanView/CaacWaypointPopup.qml
+              src/PlanView/CaacWaypointMenu.qml
+              src/PlanView/CaacDrawingAids.qml
     NO_PLUGIN
 )
 
 set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/FlyViewCustomLayer.qml
                             PROPERTIES QT_RESOURCE_ALIAS "QGroundControl/FlyView/FlyViewCustomLayer.qml"
 )
+set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacFlightActionList.qml
+                            PROPERTIES QT_RESOURCE_ALIAS "QGroundControl/FlyView/CaacFlightActionList.qml"
+)
 qt_add_resources(
     ${CMAKE_PROJECT_NAME} caac_flyview_override
     PREFIX "/Custom/qml"
     FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/FlyViewCustomLayer.qml
+          ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacFlightActionList.qml
 )
 
 set(CUSTOM_SOURCES
@@ -67,7 +85,22 @@ set(CUSTOM_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacDirectionalDistance.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacFlightDistance.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacFlightDistance.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacSimulationEngine.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacSimulationEngine.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacSimulationController.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacSimulationController.cc
     PARENT_SCOPE
+)
+set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/assets/company-logo.svg PROPERTIES QT_RESOURCE_ALIAS
+                                                                                           "company-logo.svg"
+)
+set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/assets/company-logo.ico PROPERTIES QT_RESOURCE_ALIAS
+                                                                                           "company-logo.ico"
+)
+qt_add_resources(
+    ${CMAKE_PROJECT_NAME} caac_company_brand
+    PREFIX "/CAAC/Brand"
+    FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/company-logo.svg ${CMAKE_CURRENT_SOURCE_DIR}/assets/company-logo.ico
 )
 set(CUSTOM_LIBRARIES
     CaacPlanModule
@@ -78,6 +111,6 @@ set(CUSTOM_INCLUDE_DIRECTORIES
     PARENT_SCOPE
 )
 set(CUSTOM_DEFINITIONS
-    QGC_CUSTOM_BUILD CUSTOMHEADER="CaacCorePlugin.h" CUSTOMCLASS=CaacCorePlugin
+    QGC_CUSTOM_BUILD QGC_CAAC_SIMULATION CUSTOMHEADER="CaacCorePlugin.h" CUSTOMCLASS=CaacCorePlugin
     PARENT_SCOPE
 )

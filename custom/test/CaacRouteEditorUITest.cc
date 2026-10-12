@@ -361,6 +361,12 @@ void CaacRouteEditorUITest::_testMouseEditing()
                                                   : QStringLiteral("none");
     QTest::mouseRelease(_window, Qt::RightButton, Qt::NoModifier, marker);
     QVERIFY2(waypointGrabbed, qPrintable(QStringLiteral("Waypoint right-click intercepted by ") + grabbedItem));
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacContextDeleteWaypoint")));
+    QTest::keyClick(_window, Qt::Key_Escape);
+    QTest::mouseClick(_window, Qt::LeftButton, Qt::NoModifier, marker);
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickBearing")));
+    QTest::keyClick(_window, Qt::Key_Escape);
+    QVERIFY(clickButton(QStringLiteral("caacEditWaypoint_1")));
     QVERIFY(waitForDialog(QCoreApplication::translate("CaacWaypointDialog", "Waypoint properties"),
                           TestTimeout::mediumMs()));
     auto* latitude = findVisibleItem(_rootItem, QStringLiteral("caacWaypointLatitude"));
@@ -465,7 +471,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QVERIFY(!master->dirtyForSave());
     const auto saved = master->saveToJson();
     step("delete waypoint and load plan");
-    QVERIFY(clickButton(QStringLiteral("caacRemoveWaypoint")));
+    QVERIFY(clickButton(QStringLiteral("caacRemoveWaypoint_%1").arg(mission->currentPlanViewItem()->sequenceNumber())));
     QCOMPARE(mission->visualItems()->count(), 2);
     master->removeAll();
     QTRY_VERIFY_WITH_TIMEOUT(graphDomainsValid(), TestTimeout::mediumMs());
@@ -574,7 +580,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     const double targetAltitude = target->altitude()->rawValue().toDouble();
     const auto targetFrame = target->altitudeFrame();
     const int targetCommand = target->command();
-    QVERIFY(clickButton(QStringLiteral("caacEditWaypoint")));
+    QVERIFY(clickButton(QStringLiteral("caacEditWaypoint_%1").arg(editor->currentItem()->sequenceNumber())));
     QVERIFY(waitForDialog(QCoreApplication::translate("CaacWaypointDialog", "Waypoint properties")));
     auto* positionMode = findVisibleItem(_rootItem, QStringLiteral("caacWaypointPositionMode"));
     QVERIFY(positionMode && positionMode->isEnabled());
@@ -606,7 +612,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     step("coordinate format preserves precision");
     QVERIFY(editor->selectWaypoint(mission->visualItems()->value<SimpleMissionItem*>(1)));
     const auto beforeDms = master->saveToJson();
-    QVERIFY(clickButton(QStringLiteral("caacEditWaypoint")));
+    QVERIFY(clickButton(QStringLiteral("caacEditWaypoint_%1").arg(editor->currentItem()->sequenceNumber())));
     QVERIFY(waitForDialog(QCoreApplication::translate("CaacWaypointDialog", "Waypoint properties")));
     QVERIFY(clickButton(QStringLiteral("caacWaypointLatitudeFormatToggle")));
     QVERIFY(clickButton(QStringLiteral("caacWaypointLongitudeFormatToggle")));
@@ -627,7 +633,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QCOMPARE(master->saveToJson(), beforeDms);
 
     step("edit DMS and advanced waypoint parameters atomically");
-    QVERIFY(clickButton(QStringLiteral("caacEditWaypoint")));
+    QVERIFY(clickButton(QStringLiteral("caacEditWaypoint_%1").arg(editor->currentItem()->sequenceNumber())));
     QVERIFY(waitForDialog(QCoreApplication::translate("CaacWaypointDialog", "Waypoint properties")));
     QVERIFY(clickButton(QStringLiteral("caacWaypointLatitudeFormatToggle")));
     auto* degrees = findVisibleItem(_rootItem, QStringLiteral("caacWaypointLatitudeDegrees"));

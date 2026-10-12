@@ -29,6 +29,9 @@ class CaacRouteEditorController : public QObject
     Q_PROPERTY(bool canRedo READ canRedo NOTIFY historyChanged)
     Q_PROPERTY(QGeoCoordinate rotationCenter READ rotationCenter NOTIFY rotationCenterChanged)
     Q_PROPERTY(QVariantList coordinateItems READ coordinateItems NOTIFY coordinateItemsChanged)
+    Q_PROPERTY(QVariantMap simulationSettings READ simulationSettings NOTIFY simulationSettingsChanged)
+    Q_PROPERTY(double routeOrientation READ routeOrientation NOTIFY routeOrientationChanged)
+    Q_PROPERTY(bool rotationPreviewActive READ rotationPreviewActive NOTIFY rotationPreviewChanged)
 
 public:
     explicit CaacRouteEditorController(QObject* parent = nullptr);
@@ -46,12 +49,25 @@ public:
     QGeoCoordinate rotationCenter() const { return _rotationCenter; }
 
     QVariantList coordinateItems() const;
+    QVariantMap simulationSettings() const;
+    Q_INVOKABLE bool setSimulationSettings(const QVariantMap& settings);
+    double routeOrientation() const;
+
+    bool rotationPreviewActive() const { return _rotationPreviewActive; }
+
+    Q_INVOKABLE bool previewRouteOrientation(double heading, const QGeoCoordinate& center);
+    Q_INVOKABLE bool confirmRouteOrientation();
+    Q_INVOKABLE void cancelRouteOrientation();
 
     Q_INVOKABLE bool addWaypoint(const QGeoCoordinate& coordinate);
     Q_INVOKABLE bool selectWaypoint(QObject* item);
     Q_INVOKABLE bool updateWaypoint(QObject* item, double latitude, double longitude, double altitude,
                                     bool specifySpeed, double speed);
     Q_INVOKABLE QVariantMap waypointLeg(QObject* item) const;
+    Q_INVOKABLE bool updateWaypointLeg(QObject* item, double bearing, double distance);
+    Q_INVOKABLE bool clearWaypoints();
+    Q_INVOKABLE bool reverseWaypoints();
+    Q_INVOKABLE bool useWaypointAsHome(QObject* item);
     Q_INVOKABLE bool updateRelativeWaypoint(QObject* item, double angle, double distance, bool interiorAngle,
                                             double altitude, bool specifySpeed, double speed);
     Q_INVOKABLE QVariantMap waypointAdvancedProperties(QObject* item) const;
@@ -84,12 +100,15 @@ signals:
     void historyChanged();
     void rotationCenterChanged();
     void coordinateItemsChanged();
+    void simulationSettingsChanged();
+    void routeOrientationChanged();
+    void rotationPreviewChanged();
 
 private:
     bool eventFilter(QObject* watched, QEvent* event) override;
     MissionController* _missionController() const;
     VisualMissionItem* _previousCoordinateItem(int beforeIndex) const;
-    bool _canEdit();
+    bool _canEdit(bool allowRotationPreview = false);
     bool _canChangeOrder();
     bool _fail(const QString& error);
     void _clearError();
@@ -98,6 +117,8 @@ private:
     {
         QJsonObject mission;
         QGeoCoordinate center;
+        QVariantMap simulation;
+        QVariant orientation;
         int selection = 0;
     };
 
@@ -108,6 +129,8 @@ private:
     bool _restore(int index);
     bool _rotationCoordinates(QList<QGeoCoordinate>& coordinates, QList<QObject*>& items);
     void _setCenter(const QGeoCoordinate& coordinate);
+    bool _previewItemsCurrent() const;
+    void _clearRotationPreview();
 
     QPointer<PlanMasterController> _masterController;
     QString _lastError;
@@ -118,4 +141,11 @@ private:
     int _historyIndex = -1;
     int _editDepth = 0;
     bool _restoring = false;
+    QList<QGeoCoordinate> _previewCoordinates;
+    QList<QPointer<VisualMissionItem>> _previewItems;
+    QGeoCoordinate _previewCenter;
+    double _previewBaseOrientation = 0;
+    double _previewOrientation = 0;
+    bool _previewDirty = false;
+    bool _rotationPreviewActive = false;
 };

@@ -142,6 +142,11 @@ Item {
 
     FlyViewToolStrip {
         id:                     toolStrip
+        objectName:             "flyViewToolStrip"
+        horizontal:             true
+        maxWidth:               Math.max(ScreenTools.defaultFontPixelHeight * 4, parent.width
+                                    - Math.min(ScreenTools.defaultFontPixelWidth * 46, parent.width / 3)
+                                    - ScreenTools.defaultFontPixelHeight * 3 - _toolsMargin * 3)
         anchors.left:           parent.left
         anchors.top:            parent.top
         z:                      QGroundControl.zOrderWidgets

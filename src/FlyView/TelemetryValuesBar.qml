@@ -49,8 +49,21 @@ Item {
             }
         }
 
-        HorizontalFactValueGrid {
-            id: factValueGrid
+        RowLayout {
+            spacing: ScreenTools.defaultFontPixelWidth
+            HorizontalFactValueGrid {
+                id: factValueGrid
+            }
+            ColumnLayout {
+                QGCLabel { text: qsTr("Heading"); font.pointSize: ScreenTools.smallFontPointSize }
+                QGCLabel {
+                    objectName: "caacDashboardHeadingValue"
+                    readonly property var vehicle: QGroundControl.multiVehicleManager.activeVehicle
+                    text: vehicle && isFinite(vehicle.heading.rawValue)
+                        ? vehicle.heading.valueString + " " + vehicle.heading.units : qsTr("Unavailable")
+                    font.pointSize: ScreenTools.menuFontPointSize
+                }
+            }
         }
     }
 

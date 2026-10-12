@@ -37,8 +37,8 @@ Rectangle {
         id: qgcButton
         objectName: "toolbar_qgcLogo"
         height: parent.height
-        icon.source: "/res/QGCLogoFull.svg"
-        logo: true
+        icon.source: "/res/gear-white.svg"
+        logo: false
         onClicked: mainWindow.showToolSelectDialog()
     }
 

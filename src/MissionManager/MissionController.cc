@@ -1,35 +1,37 @@
-#include "QmlObjectListModel.h"
 #include "MissionController.h"
-#include "Vehicle.h"
-#include "VehicleSupports.h"
-#include "MissionManager.h"
-#include "FlightPathSegment.h"
-#include "FirmwarePlugin.h"
-#include "QGCApplication.h"
-#include "SimpleMissionItem.h"
-#include "SurveyComplexItem.h"
-#include "FixedWingLandingComplexItem.h"
-#include "VTOLLandingComplexItem.h"
-#include "StructureScanComplexItem.h"
-#include "CorridorScanComplexItem.h"
-#include "GeoJsonHelper.h"
-#include "JsonParsing.h"
-#include "QGroundControlQmlGlobal.h"
-#include "SettingsManager.h"
-#include "AppSettings.h"
-#include "MissionSettingsItem.h"
-#include "PlanMasterController.h"
-#include "KMLPlanDomDocument.h"
-#include "QGCCorePlugin.h"
-#include "TakeoffMissionItem.h"
-#include "PlanViewSettings.h"
-#include "MissionCommandTree.h"
-#include "QGCMath.h"
-#include "QGCLoggingCategory.h"
 
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonDocument>
 #include <QtMath>
+
+#include "AppMessages.h"
+#include "AppSettings.h"
+#include "CorridorScanComplexItem.h"
+#include "FirmwarePlugin.h"
+#include "FixedWingLandingComplexItem.h"
+#include "FlightPathSegment.h"
+#include "GeoJsonHelper.h"
+#include "JsonParsing.h"
+#include "KMLPlanDomDocument.h"
+#include "MissionCommandTree.h"
+#include "MissionManager.h"
+#include "MissionSettingsItem.h"
+#include "PlanMasterController.h"
+#include "PlanViewSettings.h"
+#include "QGCApplication.h"
+#include "QGCCorePlugin.h"
+#include "QGCLoggingCategory.h"
+#include "QGCMath.h"
+#include "QGroundControlQmlGlobal.h"
+#include "QmlObjectListModel.h"
+#include "SettingsManager.h"
+#include "SimpleMissionItem.h"
+#include "StructureScanComplexItem.h"
+#include "SurveyComplexItem.h"
+#include "TakeoffMissionItem.h"
+#include "VTOLLandingComplexItem.h"
+#include "Vehicle.h"
+#include "VehicleSupports.h"
 
 #define UPDATE_TIMEOUT 5000 ///< How often we check for bounding box changes
 
@@ -182,6 +184,11 @@ void MissionController::loadFromVehicle(void)
 
 void MissionController::sendToVehicle(void)
 {
+    if (_masterController->property("caacRotationPreviewActive").toBool()) {
+        QGC::showAppMessage(QCoreApplication::translate(
+            "PlanMasterController", "Confirm or cancel the orientation preview before saving or uploading."));
+        return;
+    }
     if (_masterController->offline()) {
         qCCritical(MissionControllerLog) << "MissionControllerLog::sendToVehicle called while offline";
     } else if (syncInProgress()) {

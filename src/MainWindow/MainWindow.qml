@@ -17,6 +17,7 @@ import QGroundControl.Toolbar
 ApplicationWindow {
     id:         mainWindow
     visible:    true
+    title:      QGroundControl.appName
     // The special casing for android prevents white bars from showing up on the edges of the screen with newer android versions
     flags:      Qt.Window | (ScreenTools.isAndroid ? Qt.ExpandedClientAreaHint | Qt.NoTitleBarBackgroundHint : 0)
 

@@ -63,7 +63,7 @@ public:
     bool signingEnabled() const { return _signingEnabled; }
 
     /// Sends the specified mavlink message to QGC
-    void respondWithMavlinkMessage(const mavlink_message_t &msg);
+    void respondWithMavlinkMessage(const mavlink_message_t& msg, bool simulationMessage = false);
 
     /// Sends a STATUSTEXT message to QGC
     ///     @param severity MAV_SEVERITY value
@@ -249,7 +249,8 @@ public:
     static constexpr MAV_CMD MAV_CMD_MOCKLINK_RESULT_IN_PROGRESS_NO_ACK = static_cast<MAV_CMD>(MAV_CMD_USER_5 + 4);
 
 signals:
-    void writeBytesQueuedSignal(const QByteArray &bytes);
+    void simulationAltitudeRequested(double amslAltitude);
+    void writeBytesQueuedSignal(const QByteArray& bytes);
     void highLatencyTransmissionEnabledChanged(bool highLatencyTransmissionEnabled);
 
 private slots:
@@ -258,6 +259,8 @@ private slots:
     void _writeBytesQueued(const QByteArray &bytes);
 
 private:
+    friend class CaacSimulationController;
+    std::atomic<bool> _caacSimulation = false;
     typedef struct {
         const char *name;
         uint8_t standard_mode;

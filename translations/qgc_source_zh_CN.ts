@@ -128,7 +128,7 @@
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMAirframeComponent.qml" line="62"/>
       <source> To change this configuration, select the desired frame class below and then reboot the vehicle.</source>
-      <translation>要更改此配置，请在下面选择所需的帧类别，然后重新启动车辆。</translation>
+      <translation>要更改此配置，请在下面选择所需的帧类别，然后重新启动无人机。</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMAirframeComponent.qml" line="154"/>
@@ -143,7 +143,7 @@
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMAirframeComponent.h" line="17"/>
       <source>Configure the airframe type that matches your vehicle.</source>
-      <translation>配置与您的车辆匹配的机身类型。</translation>
+      <translation>配置与您的无人机匹配的机身类型。</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMAirframeComponent.h" line="26"/>
@@ -493,7 +493,7 @@
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMCalcAmpsPerVoltDialog.qml" line="36"/>
       <source>Vehicle current telemetry is not available. Connect to a vehicle with a powered battery to enable automatic calculation.</source>
-      <translation>车辆电流遥测不可用。连接到带有动力电池的车辆以启用自动计算。</translation>
+      <translation>无人机电流遥测不可用。连接到带有动力电池的无人机以启用自动计算。</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMCalcAmpsPerVoltDialog.qml" line="44"/>
@@ -503,7 +503,7 @@
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMCalcAmpsPerVoltDialog.qml" line="48"/>
       <source>Vehicle current:</source>
-      <translation>车辆电流：</translation>
+      <translation>无人机电流：</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMCalcAmpsPerVoltDialog.qml" line="56"/>
@@ -531,7 +531,7 @@
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMCalcVoltageDividerDialog.qml" line="36"/>
       <source>Vehicle voltage telemetry is not available. Connect to a vehicle with a powered battery to enable automatic calculation.</source>
-      <translation>车辆电压遥测不可用。连接到带有动力电池的车辆以启用自动计算。</translation>
+      <translation>无人机电压遥测不可用。连接到带有动力电池的无人机以启用自动计算。</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMCalcVoltageDividerDialog.qml" line="44"/>
@@ -541,7 +541,7 @@
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMCalcVoltageDividerDialog.qml" line="48"/>
       <source>Vehicle voltage:</source>
-      <translation>车辆电压：</translation>
+      <translation>无人机电压：</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMCalcVoltageDividerDialog.qml" line="56"/>
@@ -1327,7 +1327,7 @@
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMESCComponent.qml" line="52"/>
       <source>Requires vehicle reboot</source>
-      <translation>需要重新启动车辆</translation>
+      <translation>需要重新启动无人机</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMESCComponent.qml" line="59"/>
@@ -1412,7 +1412,7 @@
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMESCComponent.qml" line="157"/>
       <source>- The arming tone will be played (if the vehicle has a buzzer attached)</source>
-      <translation>- 将播放布防音（如果车辆附有蜂鸣器）</translation>
+      <translation>- 将播放布防音（如果无人机附有蜂鸣器）</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMESCComponent.qml" line="158"/>
@@ -1589,12 +1589,12 @@
     <message>
       <location filename="../src/FirmwarePlugin/APM/APMFirmwarePlugin.cc" line="864"/>
       <source>Unable to pause vehicle.</source>
-      <translation>无法暂停车辆。</translation>
+      <translation>无法暂停无人机。</translation>
     </message>
     <message>
       <location filename="../src/FirmwarePlugin/APM/APMFirmwarePlugin.cc" line="950"/>
       <source>Vehicle does not support guided rotate</source>
-      <translation>车辆不支持引导旋转</translation>
+      <translation>无人机不支持引导旋转</translation>
     </message>
     <message>
       <location filename="../src/FirmwarePlugin/APM/APMFirmwarePlugin.cc" line="1025"/>
@@ -1624,12 +1624,12 @@
     <message>
       <location filename="../src/FirmwarePlugin/APM/APMFirmwarePlugin.cc" line="1070"/>
       <source>Unable to start takeoff: Vehicle failed to change to Takeoff mode.</source>
-      <translation>无法开始起飞：车辆未能更改为起飞模式。</translation>
+      <translation>无法开始起飞：无人机未能更改为起飞模式。</translation>
     </message>
     <message>
       <location filename="../src/FirmwarePlugin/APM/APMFirmwarePlugin.cc" line="1075"/>
       <source>Unable to start takeoff: Vehicle failed to arm.</source>
-      <translation>无法开始起飞：车辆解锁失败。</translation>
+      <translation>无法开始起飞：无人机解锁失败。</translation>
     </message>
     <message>
       <location filename="../src/FirmwarePlugin/APM/APMFirmwarePlugin.cc" line="1085"/>
@@ -1974,7 +1974,7 @@
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMFlightSafetyComponentSub.qml" line="245"/>
       <source>Warning: Turning off arming checks can lead to loss of Vehicle control.</source>
-      <translation>警告：关闭布防检查可能会导致车辆失去控制。</translation>
+      <translation>警告：关闭布防检查可能会导致无人机失去控制。</translation>
     </message>
   </context>
   <context>
@@ -2085,7 +2085,7 @@
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMFollowComponent.qml" line="221"/>
       <source>The vehicle parameters required for follow me are currently set in a way which is not supported. Using follow with this setup may lead to unpredictable/hazardous results.</source>
-      <translation>跟随模式的车辆参数设置不支持。使用此设置可能将导致不可预测或危险的结果。</translation>
+      <translation>跟随模式的无人机参数设置不支持。使用此设置可能将导致不可预测或危险的结果。</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMFollowComponent.qml" line="226"/>
@@ -2115,7 +2115,7 @@
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMFollowComponent.qml" line="262"/>
       <source>Point Vehicle</source>
-      <translation>点式车辆</translation>
+      <translation>点式无人机</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMFollowComponent.qml" line="273"/>
@@ -2135,7 +2135,7 @@
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMFollowComponent.qml" line="280"/>
       <source>Vehicle Offsets</source>
-      <translation>车辆补偿值</translation>
+      <translation>无人机补偿值</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMFollowComponent.qml" line="285"/>
@@ -2165,7 +2165,7 @@
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMFollowComponent.h" line="13"/>
       <source>Configure the vehicle to track the ground station position.</source>
-      <translation>配置车辆以跟踪地面站位置。</translation>
+      <translation>配置无人机以跟踪地面站位置。</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMFollowComponent.h" line="25"/>
@@ -2378,7 +2378,7 @@
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMGimbalInstance.qml" line="383"/>
       <source>Gimbal settings will be available after rebooting the vehicle.</source>
-      <translation>重新启动车辆后，万向节设置将可用。</translation>
+      <translation>重新启动无人机后，万向节设置将可用。</translation>
     </message>
   </context>
   <context>
@@ -2964,7 +2964,7 @@
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="489"/>
       <source>Simple accelerometer calibration is less precise but allows calibrating without rotating the vehicle. Check this if you have a large/heavy vehicle.</source>
-      <translation>简单的加速度计校准不太精确，但允许在不旋转车辆的情况下进行校准。如果您有大型/重型车辆，请检查此项。</translation>
+      <translation>简单的加速度计校准不太精确，但允许在不旋转无人机的情况下进行校准。如果您有大型/重型无人机，请检查此项。</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="507"/>
@@ -2979,7 +2979,7 @@
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="541"/>
       <source>Fast compass calibration given vehicle position and yaw. This </source>
-      <translation>给定车辆位置和偏航的快速罗盘校准。这个</translation>
+      <translation>给定无人机位置和偏航的快速罗盘校准。这个</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="542"/>
@@ -2989,17 +2989,17 @@
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="543"/>
       <source>suitable for vehicles where the field is close to spherical. It is </source>
-      <translation>适合于场接近球形的车辆。它是</translation>
+      <translation>适合于场接近球形的无人机。它是</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="544"/>
       <source>useful for large vehicles where moving the vehicle to calibrate it </source>
-      <translation>对于移动车辆进行校准的大型车辆很有用</translation>
+      <translation>对于移动无人机进行校准的大型无人机很有用</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="545"/>
       <source>is difficult. Point the vehicle North before using it.</source>
-      <translation>很难。使用前将车辆指向北方。</translation>
+      <translation>很难。使用前将无人机指向北方。</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="558"/>
@@ -3009,7 +3009,7 @@
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="566"/>
       <source>Vehicle has no Valid positon, please provide it</source>
-      <translation>车辆无有效位置，请提供</translation>
+      <translation>无人机无有效位置，请提供</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="572"/>
@@ -3264,7 +3264,7 @@ Click Ok to start calibration.</source>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponentController.cc" line="262"/>
       <source>Rotate the vehicle randomly around all axes until the progress bar fills all the way to the right.</source>
-      <translation>围绕所有轴随机旋转车辆，直到进度条一直向右填满。</translation>
+      <translation>围绕所有轴随机旋转无人机，直到进度条一直向右填满。</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponentController.cc" line="307"/>
@@ -3715,7 +3715,7 @@ Please place your vehicle in water, click the button, and wait. Note that the th
     <message>
       <location filename="../src/AutoPilotPlugins/PX4/AirframeComponent.qml" line="109"/>
       <source>Clicking 'Apply' will save the changes you have made to your airframe configuration.&lt;br&gt;&lt;br&gt;                                                                        All vehicle parameters other than Radio Calibration will be reset.&lt;br&gt;&lt;br&gt;                                                                        Your vehicle will also be restarted in order to complete the process.</source>
-      <translation>单击“应用”将保存您对机身配置所做的更改。&lt;br&gt;&lt;br&gt;除无线电校准之外的所有车辆参数都将被重置。&lt;br&gt;&lt;br&gt;您的车辆也将重新启动以完成该过程。</translation>
+      <translation>单击“应用”将保存您对机身配置所做的更改。&lt;br&gt;&lt;br&gt;除无线电校准之外的所有无人机参数都将被重置。&lt;br&gt;&lt;br&gt;您的无人机也将重新启动以完成该过程。</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/PX4/AirframeComponent.qml" line="96"/>
@@ -3842,7 +3842,7 @@ Please place your vehicle in water, click the button, and wait. Note that the th
     <message>
       <location filename="../src/AnalyzeView/AnalyzeView.qml" line="171"/>
       <source>Requires a connected vehicle</source>
-      <translation>需要联网车辆</translation>
+      <translation>需要联网无人机</translation>
     </message>
   </context>
   <context>
@@ -4536,7 +4536,7 @@ Please place your vehicle in water, click the button, and wait. Note that the th
     <message>
       <location filename="../src/AutoPilotPlugins/AutoPilotPlugin.cc" line="60"/>
       <source>Configuration tasks remain before this vehicle is ready to fly. See Vehicle Configuration for details.</source>
-      <translation>在该飞行器准备飞行之前，配置任务仍然存在。详细信息请参见车辆配置。</translation>
+      <translation>在该飞行器准备飞行之前，配置任务仍然存在。详细信息请参见无人机配置。</translation>
     </message>
   </context>
   <context>
@@ -4574,7 +4574,7 @@ Please place your vehicle in water, click the button, and wait. Note that the th
     <message>
       <location filename="../src/Vehicle/Autotune.cpp" line="93"/>
       <source>Land and disarm the vehicle in order to apply the parameters.</source>
-      <translation>着陆并解除车辆解锁以便应用参数。</translation>
+      <translation>着陆并解除无人机解锁以便应用参数。</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/Autotune.cpp" line="98"/>
@@ -4731,7 +4731,7 @@ Click Ok to start the auto-tuning process.
     <message>
       <location filename="../src/Toolbar/BatteryIndicator.qml" line="563"/>
       <source>Vehicle Power</source>
-      <translation>车辆电源</translation>
+      <translation>无人机电源</translation>
     </message>
     <message>
       <location filename="../src/Toolbar/BatteryIndicator.qml" line="564"/>
@@ -5740,6 +5740,34 @@ Click Ok to start the auto-tuning process.
         <source>Click the map to choose point %1. Esc cancels.</source>
         <translation>点击地图选取点 %1，按 Esc 取消。</translation>
     </message>
+    <message>
+        <source>Clear waypoints</source>
+        <translation>清空航点</translation>
+    </message>
+    <message>
+        <source>Remove all mission items and keep the planned takeoff point? This can be undone.</source>
+        <translation>删除所有任务项并保留计划起飞点？此操作可以撤销。</translation>
+    </message>
+    <message>
+        <source>Click the map to set the planned takeoff point. Esc cancels.</source>
+        <translation>单击地图设置计划起飞点，按 Esc 取消。</translation>
+    </message>
+    <message>
+        <source>Double-click to add · Drag to move · Left-click properties · Right-click actions</source>
+        <translation>双击加点 · 拖动调整 · 左键属性 · 右键操作</translation>
+    </message>
+    <message>
+        <source>Read waypoints</source>
+        <translation>读取航点</translation>
+    </message>
+    <message>
+        <source>Upload waypoints</source>
+        <translation>上传航点</translation>
+    </message>
+    <message>
+        <source>Reading from the drone will replace the current unsaved plan. Continue?</source>
+        <translation>从无人机读取航点将覆盖当前未保存的规划，是否继续？</translation>
+    </message>
 </context>
   <context>
     <name>CaacRouteEditorController</name>
@@ -5906,6 +5934,22 @@ Click Ok to start the auto-tuning process.
         <source>Enter a valid mission flight speed.</source>
         <translation>请输入有效的任务飞行速度。</translation>
     </message>
+    <message>
+        <source>The route changed. Start the orientation preview again.</source>
+        <translation>航线已改变，请重新开始朝向预览。</translation>
+    </message>
+    <message>
+        <source>Enter a valid bearing and distance in metres for an ordinary waypoint.</source>
+        <translation>请输入普通航点的有效方位角和距离（米）。</translation>
+    </message>
+    <message>
+        <source>Route reversal requires ordinary waypoints only.</source>
+        <translation>航线反向仅支持全部由普通航点组成的航线。</translation>
+    </message>
+    <message>
+        <source>Select an ordinary waypoint to use as the takeoff point.</source>
+        <translation>请选择普通航点，将其更改为起飞点。</translation>
+    </message>
 </context>
   <context>
     <name>CaacWaypointDialog</name>
@@ -6058,7 +6102,7 @@ Click Ok to start the auto-tuning process.
     <message>
       <location filename="../src/AutoPilotPlugins/PX4/CalcAmpsPerVoltDialog.qml" line="39"/>
       <source>Vehicle current:</source>
-      <translation>车辆电流：</translation>
+      <translation>无人机电流：</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/PX4/CalcAmpsPerVoltDialog.qml" line="42"/>
@@ -6091,7 +6135,7 @@ Click Ok to start the auto-tuning process.
     <message>
       <location filename="../src/AutoPilotPlugins/PX4/CalcVoltageDividerDialog.qml" line="39"/>
       <source>Vehicle voltage:</source>
-      <translation>车辆电压：</translation>
+      <translation>无人机电压：</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/PX4/CalcVoltageDividerDialog.qml" line="42"/>
@@ -6742,7 +6786,7 @@ Click Ok to start the auto-tuning process.
     <message>
       <location filename="../src/AutoPilotPlugins/PX4/ESCCalibrationDialog.qml" line="39"/>
       <source>WARNING: Props must be removed from vehicle prior to performing ESC calibration.</source>
-      <translation>警告：在执行 ESC 校准之前，必须从车辆上拆下支柱。</translation>
+      <translation>警告：在执行 ESC 校准之前，必须从无人机上拆下支柱。</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/PX4/ESCCalibrationDialog.qml" line="40"/>
@@ -7018,12 +7062,12 @@ Click Ok to start the auto-tuning process.
     <message>
       <location filename="../src/QmlControls/EditPositionDialog.qml" line="143"/>
       <source>Set position from vehicle</source>
-      <translation>设置车辆位置</translation>
+      <translation>设置无人机位置</translation>
     </message>
     <message>
       <location filename="../src/QmlControls/EditPositionDialog.qml" line="150"/>
       <source>Set altitude from vehicle</source>
-      <translation>设置距车辆的高度</translation>
+      <translation>设置距无人机的高度</translation>
     </message>
     <message>
       <location filename="../src/QmlControls/EditPositionDialog.qml" line="156"/>
@@ -7272,7 +7316,7 @@ Click Ok to start the auto-tuning process.
       <location filename="../src/Vehicle/FTPManager.cc" line="530"/>
       <location filename="../src/Vehicle/FTPManager.cc" line="578"/>
       <source>Upload failed for: %1 - no response from vehicle</source>
-      <translation>上传失败：%1 - 车辆没有响应</translation>
+      <translation>上传失败：%1 - 无人机没有响应</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/FTPManager.cc" line="435"/>
@@ -8549,7 +8593,7 @@ VTOL</source>
     <message>
       <location filename="../src/FlyView/FlyViewTopRightPanel.qml" line="119"/>
       <source>Vehicles Selected: </source>
-      <translation>所选车辆：</translation>
+      <translation>所选无人机：</translation>
     </message>
     <message>
       <location filename="../src/FlyView/FlyViewTopRightPanel.qml" line="129"/>
@@ -8564,7 +8608,7 @@ VTOL</source>
     <message>
       <location filename="../src/FlyView/FlyViewTopRightPanel.qml" line="144"/>
       <source>Multi Vehicle Actions</source>
-      <translation>多车辆动作</translation>
+      <translation>多无人机动作</translation>
     </message>
     <message>
       <location filename="../src/FlyView/FlyViewTopRightPanel.qml" line="153"/>
@@ -8766,7 +8810,7 @@ VTOL</source>
     <message>
       <location filename="../src/Toolbar/GPSIndicatorPage.qml" line="91"/>
       <source>Vehicle GPS Status</source>
-      <translation>车辆GPS状态</translation>
+      <translation>无人机GPS状态</translation>
     </message>
     <message>
       <location filename="../src/Toolbar/GPSIndicatorPage.qml" line="95"/>
@@ -8988,7 +9032,7 @@ VTOL</source>
     <message>
       <location filename="../src/GPS/Receiver/GPSReceiverMessages.cc" line="121"/>
       <source>Receiving RTCM corrections without position messages. Turn on Forward receiver RTCM to send them to vehicles.</source>
-      <translation>接收没有位置消息的 RTCM 校正。打开前向接收器 RTCM 将其发送到车辆。</translation>
+      <translation>接收没有位置消息的 RTCM 校正。打开前向接收器 RTCM 将其发送到无人机。</translation>
     </message>
     <message>
       <location filename="../src/GPS/Receiver/GPSReceiverMessages.cc" line="131"/>
@@ -9268,7 +9312,7 @@ VTOL</source>
     <message>
       <location filename="../src/GPS/Qml/GPSReceiverSettings.qml" line="95"/>
       <source>QGroundControl configures a supported receiver as an RTK base station and forwards its RTCM corrections to vehicles.</source>
-      <translation>QGroundControl将支持的接收器配置为RTK基站并将其RTCM校正转发给车辆。</translation>
+      <translation>QGroundControl将支持的接收器配置为RTK基站并将其RTCM校正转发给无人机。</translation>
     </message>
     <message>
       <location filename="../src/GPS/Qml/GPSReceiverSettings.qml" line="96"/>
@@ -10371,7 +10415,7 @@ VTOL</source>
     <message>
       <location filename="../src/FlyView/GuidedActionsController.qml" line="61"/>
       <source>Takeoff and start the current mission for selected vehicles</source>
-      <translation>起飞并开始所选车辆的当前任务</translation>
+      <translation>起飞并开始所选无人机的当前任务</translation>
     </message>
     <message>
       <location filename="../src/FlyView/GuidedActionsController.qml" line="62"/>
@@ -10381,17 +10425,17 @@ VTOL</source>
     <message>
       <location filename="../src/FlyView/GuidedActionsController.qml" line="64"/>
       <source>Land the vehicle at the current position</source>
-      <translation>将车辆降落在当前位置</translation>
+      <translation>将无人机降落在当前位置</translation>
     </message>
     <message>
       <location filename="../src/FlyView/GuidedActionsController.qml" line="65"/>
       <source>Return to the launch position of the vehicle</source>
-      <translation>返回车辆发射位置</translation>
+      <translation>返回无人机发射位置</translation>
     </message>
     <message>
       <location filename="../src/FlyView/GuidedActionsController.qml" line="66"/>
       <source>Change the altitude of the vehicle up or down</source>
-      <translation>向上或向下更改车辆的高度</translation>
+      <translation>向上或向下更改无人机的高度</translation>
     </message>
     <message>
       <location filename="../src/FlyView/GuidedActionsController.qml" line="67"/>
@@ -10411,7 +10455,7 @@ VTOL</source>
     <message>
       <location filename="../src/FlyView/GuidedActionsController.qml" line="70"/>
       <source>Move the vehicle to the specified location</source>
-      <translation>将车辆移动到指定位置</translation>
+      <translation>将无人机移动到指定位置</translation>
     </message>
     <message>
       <location filename="../src/FlyView/GuidedActionsController.qml" line="71"/>
@@ -10436,7 +10480,7 @@ VTOL</source>
     <message>
       <location filename="../src/FlyView/GuidedActionsController.qml" line="75"/>
       <source>Pause selected vehicles at their current position</source>
-      <translation>将所选车辆暂停在当前位置</translation>
+      <translation>将所选无人机暂停在当前位置</translation>
     </message>
     <message>
       <location filename="../src/FlyView/GuidedActionsController.qml" line="76"/>
@@ -10451,7 +10495,7 @@ VTOL</source>
     <message>
       <location filename="../src/FlyView/GuidedActionsController.qml" line="80"/>
       <source>Set the vehicle heading towards the specified location</source>
-      <translation>设置车辆驶向指定位置</translation>
+      <translation>设置无人机驶向指定位置</translation>
     </message>
     <message>
       <location filename="../src/FlyView/GuidedActionsController.qml" line="27"/>
@@ -10501,12 +10545,12 @@ VTOL</source>
     <message>
       <location filename="../src/FlyView/GuidedActionsController.qml" line="54"/>
       <source>Arm selected vehicles.</source>
-      <translation>解锁选定的车辆。</translation>
+      <translation>解锁选定的无人机。</translation>
     </message>
     <message>
       <location filename="../src/FlyView/GuidedActionsController.qml" line="55"/>
       <source>WARNING: This will force arming of the vehicle bypassing any safety checks.</source>
-      <translation>警告：这将强制车辆解锁，绕过任何安全检查。</translation>
+      <translation>警告：这将强制无人机解锁，绕过任何安全检查。</translation>
     </message>
     <message>
       <location filename="../src/FlyView/GuidedActionsController.qml" line="56"/>
@@ -10516,7 +10560,7 @@ VTOL</source>
     <message>
       <location filename="../src/FlyView/GuidedActionsController.qml" line="57"/>
       <source>Disarm selected vehicles.</source>
-      <translation>解除所选车辆的解锁。</translation>
+      <translation>解除所选无人机的解锁。</translation>
     </message>
     <message>
       <location filename="../src/FlyView/GuidedActionsController.qml" line="58"/>
@@ -10531,7 +10575,7 @@ VTOL</source>
     <message>
       <location filename="../src/FlyView/GuidedActionsController.qml" line="77"/>
       <source>Set vehicle home as the specified location. This will affect Return to Home position</source>
-      <translation>将车辆所在地设置为指定位置。这会影响返航位置</translation>
+      <translation>将无人机所在地设置为指定位置。这会影响返航位置</translation>
     </message>
     <message>
       <location filename="../src/FlyView/GuidedActionsController.qml" line="79"/>
@@ -10661,7 +10705,7 @@ VTOL</source>
     <message>
       <location filename="../src/FirstRunPromptDialogs/InitialSetupPrompt.qml" line="58"/>
       <source>Select the firmware and vehicle type you typically use.</source>
-      <translation>选择您通常使用的固件和车辆类型。</translation>
+      <translation>选择您通常使用的固件和无人机类型。</translation>
     </message>
     <message>
       <location filename="../src/FirstRunPromptDialogs/InitialSetupPrompt.qml" line="62"/>
@@ -10671,7 +10715,7 @@ VTOL</source>
     <message>
       <location filename="../src/FirstRunPromptDialogs/InitialSetupPrompt.qml" line="70"/>
       <source>Preferred Vehicle</source>
-      <translation>首选车辆</translation>
+      <translation>首选机型</translation>
     </message>
     <message>
       <location filename="../src/FirstRunPromptDialogs/InitialSetupPrompt.qml" line="81"/>
@@ -10727,7 +10771,7 @@ VTOL</source>
     <message>
       <location filename="../src/QmlControls/InstrumentValueEditDialog.qml" line="28"/>
       <source>Valuec requires a connected vehicle for setup.</source>
-      <translation>Valuec 需要连接车辆进行设置。</translation>
+      <translation>Valuec 需要连接无人机进行设置。</translation>
     </message>
     <message>
       <location filename="../src/QmlControls/InstrumentValueEditDialog.qml" line="89"/>
@@ -11417,7 +11461,7 @@ VTOL</source>
     <message>
       <location filename="../src/Toolbar/JoystickIndicator.qml" line="37"/>
       <source>No Vehicle</source>
-      <translation>没有车辆</translation>
+      <translation>没有无人机</translation>
     </message>
     <message>
       <location filename="../src/Toolbar/JoystickIndicator.qml" line="38"/>
@@ -11802,7 +11846,7 @@ VTOL</source>
     <message>
       <location filename="../src/Comms/LinkInterface.cc" line="212"/>
       <source>MAVLink v1 traffic detected on link '%1'. %2 only supports MAVLink v2. Please ensure your vehicle is configured to use MAVLink v2.</source>
-      <translation>在链接“%1”上检测到 MAVLink v1 流量。 %2 仅支持 MAVLink v2。请确保您的车辆配置为使用 MAVLink v2。</translation>
+      <translation>在链接“%1”上检测到 MAVLink v1 流量。 %2 仅支持 MAVLink v2。请确保您的无人机配置为使用 MAVLink v2。</translation>
     </message>
   </context>
   <context>
@@ -12788,7 +12832,7 @@ VTOL</source>
     <message>
       <location filename="../src/AnalyzeView/LogViewer/LogViewerPage.qml" line="135"/>
       <source>Close active vehicle connections before starting telemetry replay.</source>
-      <translation>在开始遥测重播之前关闭活动车辆连接。</translation>
+      <translation>在开始遥测重播之前关闭活动无人机连接。</translation>
     </message>
     <message>
       <location filename="../src/AnalyzeView/LogViewer/LogViewerPage.qml" line="144"/>
@@ -12813,7 +12857,7 @@ VTOL</source>
     <message>
       <location filename="../src/AnalyzeView/LogViewer/LogViewerPage.qml" line="174"/>
       <source>Vehicle:</source>
-      <translation>车辆：</translation>
+      <translation>无人机：</translation>
     </message>
     <message>
       <location filename="../src/AnalyzeView/LogViewer/LogViewerPage.qml" line="189"/>
@@ -13136,7 +13180,7 @@ VTOL</source>
     <message>
       <location filename="../src/AnalyzeView/MAVLinkConsole/MAVLinkConsolePage.qml" line="11"/>
       <source>Provides a connection to the vehicle's system shell.</source>
-      <translation>提供与车辆系统外壳的连接。</translation>
+      <translation>提供与无人机系统外壳的连接。</translation>
     </message>
     <message>
       <location filename="../src/AnalyzeView/MAVLinkConsole/MAVLinkConsolePage.qml" line="237"/>
@@ -13637,7 +13681,7 @@ VTOL</source>
     <message>
       <location filename="../src/Toolbar/MainStatusIndicator.qml" line="362"/>
       <source>Vehicle Messages</source>
-      <translation>车辆消息</translation>
+      <translation>无人机消息</translation>
     </message>
     <message>
       <location filename="../src/Toolbar/MainStatusIndicator.qml" line="371"/>
@@ -13667,7 +13711,7 @@ VTOL</source>
     <message>
       <location filename="../src/Toolbar/MainStatusIndicator.qml" line="312"/>
       <source>Reboot required. Disarm vehicle first.</source>
-      <translation>需要重新启动。首先解除车辆解锁。</translation>
+      <translation>需要重新启动。首先解除无人机解锁。</translation>
     </message>
     <message>
       <location filename="../src/Toolbar/MainStatusIndicator.qml" line="323"/>
@@ -13748,7 +13792,7 @@ VTOL</source>
     <message>
       <location filename="../src/MainWindow/MainWindow.qml" line="161"/>
       <source>Vehicle Configuration</source>
-      <translation>车辆配置</translation>
+      <translation>无人机配置</translation>
     </message>
     <message>
       <location filename="../src/MainWindow/MainWindow.qml" line="178"/>
@@ -13779,17 +13823,17 @@ VTOL</source>
     <message>
       <location filename="../src/MainWindow/MainWindow.qml" line="273"/>
       <source>You have pending parameter updates to a vehicle. If you close you will lose changes. Are you sure you want to close?</source>
-      <translation>您有待处理的车辆参数更新。如果关闭，您将丢失更改。您确定要关闭吗？</translation>
+      <translation>您有待处理的无人机参数更新。如果关闭，您将丢失更改。您确定要关闭吗？</translation>
     </message>
     <message>
       <location filename="../src/MainWindow/MainWindow.qml" line="288"/>
       <source>Active Vehicle Connections</source>
-      <translation>主动车辆连接</translation>
+      <translation>主动无人机连接</translation>
     </message>
     <message>
       <location filename="../src/MainWindow/MainWindow.qml" line="289"/>
       <source>There are still active connections to vehicles. Are you sure you want to exit?</source>
-      <translation>仍然存在与车辆的活动连接。您确定要退出吗？</translation>
+      <translation>仍然存在与无人机的活动连接。您确定要退出吗？</translation>
     </message>
     <message>
       <location filename="../src/MainWindow/MainWindow.qml" line="338"/>
@@ -13815,12 +13859,12 @@ VTOL</source>
     <message>
       <location filename="../src/MainWindow/MainWindow.qml" line="563"/>
       <source>Vehicle Alert - Click to see more</source>
-      <translation>车辆警报 - 点击查看更多</translation>
+      <translation>无人机警报 - 点击查看更多</translation>
     </message>
     <message>
       <location filename="../src/MainWindow/MainWindow.qml" line="564"/>
       <source>Vehicle Alert</source>
-      <translation>车辆警报</translation>
+      <translation>无人机警报</translation>
     </message>
   </context>
   <context>
@@ -14060,12 +14104,12 @@ VTOL</source>
     <message>
       <location filename="../src/Vehicle/MavCommandQueue.cc" line="339"/>
       <source>Unable to send command: Vehicle is not connected.</source>
-      <translation>无法发送命令：车辆未连接。</translation>
+      <translation>无法发送命令：无人机未连接。</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/MavCommandQueue.cc" line="399"/>
       <source>Vehicle did not respond to command: %1</source>
-      <translation>车辆未响应命令：%1</translation>
+      <translation>无人机未响应命令：%1</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/MavCommandQueue.cc" line="499"/>
@@ -14153,7 +14197,7 @@ VTOL</source>
     <message>
       <location filename="../src/AppSettings/MavlinkLinkStatus.qml" line="9"/>
       <source>Link Status (Current Vehicle)</source>
-      <translation>链接状态（当前车辆）</translation>
+      <translation>链接状态（当前无人机）</translation>
     </message>
     <message>
       <location filename="../src/AppSettings/MavlinkLinkStatus.qml" line="12"/>
@@ -14612,7 +14656,7 @@ VTOL</source>
     <message>
       <location filename="../src/AppSettings/MockLink.qml" line="69"/>
       <source>PX4 Vehicle</source>
-      <translation>PX4 车辆</translation>
+      <translation>PX4 无人机</translation>
     </message>
     <message>
       <location filename="../src/AppSettings/MockLink.qml" line="72"/>
@@ -14627,17 +14671,17 @@ VTOL</source>
     <message>
       <location filename="../src/AppSettings/MockLink.qml" line="74"/>
       <source>APM ArduSub Vehicle</source>
-      <translation>APM ArduSub 车辆</translation>
+      <translation>APM ArduSub 无人机</translation>
     </message>
     <message>
       <location filename="../src/AppSettings/MockLink.qml" line="75"/>
       <source>APM ArduRover Vehicle</source>
-      <translation>APM ArduRover 车辆</translation>
+      <translation>APM ArduRover 无人机</translation>
     </message>
     <message>
       <location filename="../src/AppSettings/MockLink.qml" line="77"/>
       <source>Generic Vehicle</source>
-      <translation>通用车辆</translation>
+      <translation>通用无人机</translation>
     </message>
     <message>
       <location filename="../src/AppSettings/MockLink.qml" line="130"/>
@@ -14652,7 +14696,7 @@ VTOL</source>
     <message>
       <location filename="../src/AppSettings/MockLink.qml" line="47"/>
       <source>Enable ADS-B vehicles</source>
-      <translation>启用ADS-B车辆</translation>
+      <translation>启用ADS-B无人机</translation>
     </message>
     <message>
       <location filename="../src/AppSettings/MockLink.qml" line="51"/>
@@ -14662,7 +14706,7 @@ VTOL</source>
     <message>
       <location filename="../src/AppSettings/MockLink.qml" line="62"/>
       <source>Vehicle Type</source>
-      <translation>车辆类型</translation>
+      <translation>无人机类型</translation>
     </message>
     <message>
       <location filename="../src/AppSettings/MockLink.qml" line="87"/>
@@ -14745,7 +14789,7 @@ VTOL</source>
     <message>
       <location filename="../src/AppSettings/MockLinkSettings.qml" line="103"/>
       <source>Increment Vehicle Id</source>
-      <translation>增加车辆 ID</translation>
+      <translation>增加无人机 ID</translation>
     </message>
     <message>
       <location filename="../src/AppSettings/MockLinkSettings.qml" line="110"/>
@@ -14770,7 +14814,7 @@ VTOL</source>
     <message>
       <location filename="../src/AppSettings/MockLinkSettings.qml" line="132"/>
       <source>Vehicle Type</source>
-      <translation>车辆类型</translation>
+      <translation>无人机类型</translation>
     </message>
     <message>
       <location filename="../src/AppSettings/MockLinkSettings.qml" line="133"/>
@@ -14800,7 +14844,7 @@ VTOL</source>
     <message>
       <location filename="../src/AppSettings/MockLinkSettings.qml" line="96"/>
       <source>Enable ADS-B Vehicles</source>
-      <translation>启用 ADS-B 车辆</translation>
+      <translation>启用 ADS-B 无人机</translation>
     </message>
     <message>
       <location filename="../src/AppSettings/MockLinkSettings.qml" line="140"/>
@@ -15157,7 +15201,7 @@ Do you wish to proceed?</source>
     <message>
       <location filename="../src/Toolbar/MultiVehicleSelector.qml" line="84"/>
       <source>Enable Multi-Vehicle Panel</source>
-      <translation>启用多车辆面板</translation>
+      <translation>启用多无人机面板</translation>
     </message>
   </context>
   <context>
@@ -15291,7 +15335,7 @@ Do you wish to proceed?</source>
     <message>
       <location filename="../src/GPS/Qml/NTRIPConnectionStatus.qml" line="143"/>
       <source>Queued to vehicle links (any source)</source>
-      <translation>排队到车辆链接（任何来源）</translation>
+      <translation>排队到无人机链接（任何来源）</translation>
     </message>
     <message>
       <location filename="../src/GPS/Qml/NTRIPConnectionStatus.qml" line="149"/>
@@ -15314,7 +15358,7 @@ Do you wish to proceed?</source>
     <message>
       <location filename="../src/GPS/NTRIP/NTRIPGgaReporter.cc" line="68"/>
       <source>Vehicle EKF</source>
-      <translation>车辆 EKF</translation>
+      <translation>无人机 EKF</translation>
     </message>
     <message>
       <location filename="../src/GPS/NTRIP/NTRIPGgaReporter.cc" line="70"/>
@@ -15941,7 +15985,7 @@ Is this really what you want?</source>
     <message>
       <location filename="../src/AnalyzeView/OnboardLogs/OnboardLogPage.qml" line="11"/>
       <source>Onboard Logs allows you to download binary log files from your vehicle. Click Refresh to get list of available logs.</source>
-      <translation>板载日志允许您从车辆下载二进制日志文件。单击“刷新”以获取可用日志的列表。</translation>
+      <translation>板载日志允许您从无人机下载二进制日志文件。单击“刷新”以获取可用日志的列表。</translation>
     </message>
     <message>
       <location filename="../src/AnalyzeView/OnboardLogs/OnboardLogPage.qml" line="68"/>
@@ -15981,7 +16025,7 @@ Is this really what you want?</source>
     <message>
       <location filename="../src/AnalyzeView/OnboardLogs/OnboardLogPage.qml" line="134"/>
       <source>You must be connected to a vehicle in order to download onboard logs.</source>
-      <translation>您必须连接到车辆才能下载车载日志。</translation>
+      <translation>您必须连接到无人机才能下载车载日志。</translation>
     </message>
     <message>
       <location filename="../src/AnalyzeView/OnboardLogs/OnboardLogPage.qml" line="146"/>
@@ -16271,7 +16315,7 @@ Is this really what you want?</source>
     <message>
       <location filename="../src/FirmwarePlugin/PX4/PX4FirmwarePlugin.cc" line="480"/>
       <source>Unable to pause vehicle.</source>
-      <translation>无法暂停车辆。</translation>
+      <translation>无法暂停无人机。</translation>
     </message>
     <message>
       <location filename="../src/FirmwarePlugin/PX4/PX4FirmwarePlugin.cc" line="489"/>
@@ -16286,17 +16330,17 @@ Is this really what you want?</source>
     <message>
       <location filename="../src/FirmwarePlugin/PX4/PX4FirmwarePlugin.cc" line="554"/>
       <source>Vehicle does not support guided rotate</source>
-      <translation>车辆不支持引导旋转</translation>
+      <translation>无人机不支持引导旋转</translation>
     </message>
     <message>
       <location filename="../src/FirmwarePlugin/PX4/PX4FirmwarePlugin.cc" line="590"/>
       <source>Unable to start takeoff: Vehicle rejected arming.</source>
-      <translation>无法开始起飞：车辆拒绝解锁。</translation>
+      <translation>无法开始起飞：无人机拒绝解锁。</translation>
     </message>
     <message>
       <location filename="../src/FirmwarePlugin/PX4/PX4FirmwarePlugin.cc" line="594"/>
       <source>Unable to start takeoff: Vehicle not changing to %1 flight mode.</source>
-      <translation>无法开始起飞：车辆未更改为 %1 飞行模式。</translation>
+      <translation>无法开始起飞：无人机未更改为 %1 飞行模式。</translation>
     </message>
     <message>
       <location filename="../src/FirmwarePlugin/PX4/PX4FirmwarePlugin.cc" line="602"/>
@@ -16405,12 +16449,12 @@ Is this really what you want?</source>
     <message>
       <location filename="../src/AutoPilotPlugins/PX4/PX4FlightBehaviorCopter.qml" line="41"/>
       <source>A higher value makes the vehicle react faster. Be aware that this affects braking as well, and a combination of slow responsiveness with high maximum velocity will lead to long braking distances.</source>
-      <translation>值越高，车辆反应越快。请注意，这也会影响制动，响应速度慢与最大速度高的结合将导致制动距离变长。</translation>
+      <translation>值越高，无人机反应越快。请注意，这也会影响制动，响应速度慢与最大速度高的结合将导致制动距离变长。</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/PX4/PX4FlightBehaviorCopter.qml" line="77"/>
       <source>Warning: a high responsiveness requires a vehicle with large thrust-to-weight ratio. The vehicle might lose altitude otherwise.</source>
-      <translation>警告：高响应性需要具有大推重比的车辆。否则车辆可能会失去高度。</translation>
+      <translation>警告：高响应性需要具有大推重比的无人机。否则无人机可能会失去高度。</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/PX4/PX4FlightBehaviorCopter.qml" line="116"/>
@@ -17619,7 +17663,7 @@ Is this really what you want?</source>
     <message>
       <location filename="../src/QmlControls/ParameterDiffDialog.qml" line="35"/>
       <source>%1 will be changed (including %2 not currently on the Vehicle)</source>
-      <translation>%1 将被更改（包括当前不在车辆上的 %2）</translation>
+      <translation>%1 将被更改（包括当前不在无人机上的 %2）</translation>
     </message>
     <message>
       <location filename="../src/QmlControls/ParameterDiffDialog.qml" line="37"/>
@@ -17629,12 +17673,12 @@ Is this really what you want?</source>
     <message>
       <location filename="../src/QmlControls/ParameterDiffDialog.qml" line="41"/>
       <source>1 already matches the Vehicle</source>
-      <translation>1 已与车辆匹配</translation>
+      <translation>1 已与无人机匹配</translation>
     </message>
     <message>
       <location filename="../src/QmlControls/ParameterDiffDialog.qml" line="43"/>
       <source>%1 already match the Vehicle</source>
-      <translation>%1 已与车辆匹配</translation>
+      <translation>%1 已与无人机匹配</translation>
     </message>
     <message>
       <location filename="../src/QmlControls/ParameterDiffDialog.qml" line="46"/>
@@ -17649,7 +17693,7 @@ Is this really what you want?</source>
     <message>
       <location filename="../src/QmlControls/ParameterDiffDialog.qml" line="51"/>
       <source>%1 not found on the Vehicle and cannot be sent</source>
-      <translation>车辆上未找到 %1，无法发送</translation>
+      <translation>无人机上未找到 %1，无法发送</translation>
     </message>
     <message>
       <location filename="../src/QmlControls/ParameterDiffDialog.qml" line="54"/>
@@ -17674,27 +17718,27 @@ Is this really what you want?</source>
     <message>
       <location filename="../src/QmlControls/ParameterDiffDialog.qml" line="67"/>
       <source>Click 'Ok' to update the parameters below on the Vehicle.</source>
-      <translation>单击“确定”以更新车辆上的以下参数。</translation>
+      <translation>单击“确定”以更新无人机上的以下参数。</translation>
     </message>
     <message>
       <location filename="../src/QmlControls/ParameterDiffDialog.qml" line="127"/>
       <source>N/A — not on Vehicle</source>
-      <translation>不适用 — 不在车辆上</translation>
+      <translation>不适用 — 不在无人机上</translation>
     </message>
     <message>
       <location filename="../src/QmlControls/ParameterDiffDialog.qml" line="128"/>
       <source>N/A — new to Vehicle</source>
-      <translation>不适用 — 车辆新手</translation>
+      <translation>不适用 — 无人机新手</translation>
     </message>
     <message>
       <location filename="../src/QmlControls/ParameterDiffDialog.qml" line="139"/>
       <source>Parameters marked 'new to Vehicle' have not been reported by the Vehicle. They may only become visible after they are sent and the Vehicle is rebooted.</source>
-      <translation>车辆尚未报告标记为“车辆新”的参数。它们只有在发送并重新启动车辆后才可见。</translation>
+      <translation>无人机尚未报告标记为“无人机新”的参数。它们只有在发送并重新启动无人机后才可见。</translation>
     </message>
     <message>
       <location filename="../src/QmlControls/ParameterDiffDialog.qml" line="147"/>
       <source>Parameters marked 'not on Vehicle' cannot be sent since the file does not include type information. They may only exist after another parameter is changed and the Vehicle is rebooted, after which you can load this file again.</source>
-      <translation>无法发送标记为“不在车辆上”的参数，因为该文件不包括类型信息。它们可能仅在更改另一个参数并重新启动车辆后才存在，之后您可以再次加载该文件。</translation>
+      <translation>无法发送标记为“不在无人机上”的参数，因为该文件不包括类型信息。它们可能仅在更改另一个参数并重新启动无人机后才存在，之后您可以再次加载该文件。</translation>
     </message>
   </context>
   <context>
@@ -17808,7 +17852,7 @@ Is this really what you want?</source>
       <source>Select Reset to reset all parameters to their defaults.
 
 Note that this will also completely reset everything, including UAVCAN nodes, all vehicle settings, setup and calibrations.</source>
-      <translation>选择重置可将所有参数重置为其默认值。  请注意，这也将完全重置所有内容，包括 UAVCAN 节点、所有车辆设置、设置和校准。</translation>
+      <translation>选择重置可将所有参数重置为其默认值。  请注意，这也将完全重置所有内容，包括 UAVCAN 节点、所有无人机设置、设置和校准。</translation>
     </message>
     <message>
       <location filename="../src/QmlControls/ParameterEditor.qml" line="64"/>
@@ -17895,7 +17939,7 @@ Note that this will also completely reset everything, including UAVCAN nodes, al
     <message>
       <location filename="../src/QmlControls/ParameterEditorDialog.qml" line="207"/>
       <source>Vehicle reboot required after change</source>
-      <translation>更改后需要重新启动车辆</translation>
+      <translation>更改后需要重新启动无人机</translation>
     </message>
     <message>
       <location filename="../src/QmlControls/ParameterEditorDialog.qml" line="212"/>
@@ -17963,12 +18007,12 @@ Note that this will also completely reset everything, including UAVCAN nodes, al
     <message>
       <location filename="../src/FactSystem/ParameterManager.cc" line="546"/>
       <source>Vehicle reboot required for changes to take effect. Use the power indicator in the toolbar to reboot.</source>
-      <translation>需要重新启动车辆才能使更改生效。使用工具栏中的电源指示灯重新启动。</translation>
+      <translation>需要重新启动无人机才能使更改生效。使用工具栏中的电源指示灯重新启动。</translation>
     </message>
     <message>
       <location filename="../src/FactSystem/ParameterManager.cc" line="1488"/>
       <source>Vehicle %1: </source>
-      <translation>车辆 %1：</translation>
+      <translation>无人机 %1：</translation>
     </message>
     <message>
       <location filename="../src/FactSystem/ParameterManager.cc" line="1490"/>
@@ -18175,7 +18219,7 @@ Note that this will also completely reset everything, including UAVCAN nodes, al
     <message>
       <location filename="../src/PlanView/PlanInfoEditor.qml" line="61"/>
       <source>Vehicle Info</source>
-      <translation>车辆信息</translation>
+      <translation>无人机信息</translation>
     </message>
     <message>
       <location filename="../src/PlanView/PlanInfoEditor.qml" line="103"/>
@@ -18200,7 +18244,7 @@ Note that this will also completely reset everything, including UAVCAN nodes, al
     <message>
       <location filename="../src/PlanView/PlanInfoEditor.qml" line="167"/>
       <source>Actual position/alt set by vehicle at flight time.</source>
-      <translation>飞行时车辆设置的实际位置/高度。</translation>
+      <translation>飞行时无人机设置的实际位置/高度。</translation>
     </message>
     <message>
       <location filename="../src/PlanView/PlanInfoEditor.qml" line="177"/>
@@ -18273,7 +18317,7 @@ Note that this will also completely reset everything, including UAVCAN nodes, al
     <message>
       <location filename="../src/MissionManager/PlanManager.cc" line="355"/>
       <source>Internal Error: Call to Vehicle _requestNextMissionItem with no more indices to read</source>
-      <translation>内部错误：呼叫车辆_requestNextMission项目没有更多要阅读的索引</translation>
+      <translation>内部错误：呼叫无人机_requestNextMission项目没有更多要阅读的索引</translation>
     </message>
     <message>
       <location filename="../src/MissionManager/PlanManager.cc" line="515"/>
@@ -18283,7 +18327,7 @@ Note that this will also completely reset everything, including UAVCAN nodes, al
     <message>
       <location filename="../src/MissionManager/PlanManager.cc" line="629"/>
       <source>Vehicle remove all failed. Error: %1</source>
-      <translation>车辆移除所有失败。错误： %1</translation>
+      <translation>无人机移除所有失败。错误： %1</translation>
     </message>
     <message>
       <location filename="../src/MissionManager/PlanManager.cc" line="704"/>
@@ -18436,7 +18480,11 @@ Note that this will also completely reset everything, including UAVCAN nodes, al
       <source>Plan Files (*.%1)</source>
       <translation>任务计划文件 (*.%1)</translation>
     </message>
-  </context>
+      <message>
+        <source>Confirm or cancel the orientation preview before saving or uploading.</source>
+        <translation>请先确认或取消朝向预览，再保存或上传。</translation>
+    </message>
+</context>
   <context>
     <name>PlanToolBarIndicators</name>
     <message>
@@ -18448,7 +18496,7 @@ Note that this will also completely reset everything, including UAVCAN nodes, al
     <message>
       <location filename="../src/PlanView/PlanToolBarIndicators.qml" line="40"/>
       <source>You have unsaved changes. Downloading from the Vehicle will lose these changes. Are you sure?</source>
-      <translation>您有未保存的更改。从车辆下载将丢失这些更改。你确定吗？</translation>
+      <translation>您有未保存的更改。从无人机下载将丢失这些更改。你确定吗？</translation>
     </message>
     <message>
       <location filename="../src/PlanView/PlanToolBarIndicators.qml" line="61"/>
@@ -18480,7 +18528,7 @@ Note that this will also completely reset everything, including UAVCAN nodes, al
     <message>
       <location filename="../src/PlanView/PlanToolBarIndicators.qml" line="94"/>
       <source>Are you sure you want to remove the plan from the vehicle and the plan editor?</source>
-      <translation>您确定要从车辆和计划编辑器中删除计划吗？</translation>
+      <translation>您确定要从无人机和计划编辑器中删除计划吗？</translation>
     </message>
     <message>
       <location filename="../src/PlanView/PlanToolBarIndicators.qml" line="113"/>
@@ -18592,22 +18640,22 @@ center</source>
     <message>
       <location filename="../src/PlanView/PlanView.qml" line="902"/>
       <source>Plan View - Vehicle Disconnected</source>
-      <translation>平面图 - 车辆断开连接</translation>
+      <translation>平面图 - 无人机断开连接</translation>
     </message>
     <message>
       <location filename="../src/PlanView/PlanView.qml" line="902"/>
       <source>Plan View - Vehicle Changed</source>
-      <translation>平面图 - 车辆已更改</translation>
+      <translation>平面图 - 无人机已更改</translation>
     </message>
     <message>
       <location filename="../src/PlanView/PlanView.qml" line="910"/>
       <source>The vehicle associated with the plan in the Plan View is no longer available. What would you like to do with that plan?</source>
-      <translation>与平面图中的平面图相关联的车辆不再可用。你想用这个计划做什么？</translation>
+      <translation>与平面图中的平面图相关联的无人机不再可用。你想用这个计划做什么？</translation>
     </message>
     <message>
       <location filename="../src/PlanView/PlanView.qml" line="910"/>
       <source>The plan being worked on in the Plan View is not from the current vehicle. What would you like to do with that plan?</source>
-      <translation>平面图中正在处理的平面图并非来自当前车辆。你想用这个计划做什么？</translation>
+      <translation>平面图中正在处理的平面图并非来自当前无人机。你想用这个计划做什么？</translation>
     </message>
     <message>
       <location filename="../src/PlanView/PlanView.qml" line="917"/>
@@ -18617,12 +18665,12 @@ center</source>
     <message>
       <location filename="../src/PlanView/PlanView.qml" line="917"/>
       <source>Discard Unsaved Changes, Load New Plan From Vehicle</source>
-      <translation>放弃未保存的更改，从车辆加载新计划</translation>
+      <translation>放弃未保存的更改，从无人机加载新计划</translation>
     </message>
     <message>
       <location filename="../src/PlanView/PlanView.qml" line="917"/>
       <source>Load New Plan From Vehicle</source>
-      <translation>从车辆加载新计划</translation>
+      <translation>从无人机加载新计划</translation>
     </message>
     <message>
       <location filename="../src/PlanView/PlanView.qml" line="928"/>
@@ -18632,7 +18680,7 @@ center</source>
     <message>
       <location filename="../src/PlanView/PlanView.qml" line="928"/>
       <source>Keep Current Plan, Don't Update From Vehicle</source>
-      <translation>保持当前计划，不从车辆更新</translation>
+      <translation>保持当前计划，不从无人机更新</translation>
     </message>
     <message>
       <location filename="../src/PlanView/PlanView.qml" line="953"/>
@@ -18649,12 +18697,12 @@ center</source>
       <source>This Plan was created for a different firmware or vehicle type than the firmware/vehicle type of vehicle you are uploading to. This can lead to errors or incorrect behavior. It is recommended to recreate the Plan for the correct firmware/vehicle type.
 
 Click 'Ok' to upload the Plan anyway.</source>
-      <translation>该计划是为与您要上传到的车辆的固件/车辆类型不同的固件或车辆类型创建的。这可能会导致错误或不正确的行为。建议为正确的固件/车辆类型重新创建计划。  无论如何，请点击“确定”上传计划。</translation>
+      <translation>该计划是为与您要上传到的无人机的固件/无人机类型不同的固件或无人机类型创建的。这可能会导致错误或不正确的行为。建议为正确的固件/无人机类型重新创建计划。  无论如何，请点击“确定”上传计划。</translation>
     </message>
     <message>
       <location filename="../src/PlanView/PlanView.qml" line="116"/>
       <source>Send To Vehicle</source>
-      <translation>发送到车辆</translation>
+      <translation>发送到无人机</translation>
     </message>
     <message>
       <location filename="../src/PlanView/PlanView.qml" line="116"/>
@@ -18724,7 +18772,11 @@ Click 'Ok' to upload the Plan anyway.</source>
       <source>Multicopter takeoff</source>
       <translation>多旋翼飞行器起飞</translation>
     </message>
-  </context>
+      <message>
+        <source>Simulation</source>
+        <translation>模拟</translation>
+    </message>
+</context>
   <context>
     <name>PlanViewToolBar</name>
     <message>
@@ -20444,7 +20496,7 @@ Click 'Ok' to upload the Plan anyway.</source>
     <message>
       <location filename="../src/QmlControls/RCToParamDialog.qml" line="35"/>
       <source>Waiting on parameter update from Vehicle.</source>
-      <translation>正在等待车辆的参数更新。</translation>
+      <translation>正在等待无人机的参数更新。</translation>
     </message>
     <message>
       <location filename="../src/QmlControls/RCToParamDialog.qml" line="46"/>
@@ -20755,7 +20807,7 @@ Click 'Ok' to upload the Plan anyway.</source>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/RemoteControlCalibration.qml" line="288"/>
       <source>Please ensure all motor power is disconnected AND all props are removed from the vehicle.</source>
-      <translation>请确保所有电机电源均已断开，并且所有道具均已从车辆上移除。</translation>
+      <translation>请确保所有电机电源均已断开，并且所有道具均已从无人机上移除。</translation>
     </message>
   </context>
   <context>
@@ -20765,7 +20817,7 @@ Click 'Ok' to upload the Plan anyway.</source>
       <source>* Lower the Throttle stick all the way down as shown in diagram
 * Please ensure all motor power is disconnected AND all props are removed from the vehicle.
 * Click Next to continue</source>
-      <translation>* 如图所示将油门杆完全降低 * 请确保所有电机电源均已断开，并且所有支柱均已从车辆上拆下。 * 单击“下一步”继续</translation>
+      <translation>* 如图所示将油门杆完全降低 * 请确保所有电机电源均已断开，并且所有支柱均已从无人机上拆下。 * 单击“下一步”继续</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/RemoteControlCalibrationController.cc" line="26"/>
@@ -20823,7 +20875,7 @@ Click 'Ok' to upload the Plan anyway.</source>
 * Make sure any additional axes are at a neutral position.
 * Please ensure all motor power is disconnected from the vehicle.
 * Click Next to continue</source>
-      <translation>* 如图所示，将所有棒居中。 * 确保所有附加轴均位于中间位置。 * 请确保所有电机电源均已与车辆断开。 * 单击“下一步”继续</translation>
+      <translation>* 如图所示，将所有棒居中。 * 确保所有附加轴均位于中间位置。 * 请确保所有电机电源均已与无人机断开。 * 单击“下一步”继续</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/RemoteControlCalibrationController.cc" line="36"/>
@@ -20952,7 +21004,7 @@ Click 'Ok' to upload the Plan anyway.</source>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/RemoteControlCalibrationController.cc" line="478"/>
       <source>Detected %1 channels. To operate vehicle, you need at least %2 channels.</source>
-      <translation>检测到 %1 个通道。要操作车辆，您至少需要 %2 个通道。</translation>
+      <translation>检测到 %1 个通道。要操作无人机，您至少需要 %2 个通道。</translation>
     </message>
   </context>
   <context>
@@ -21729,7 +21781,7 @@ Click 'Ok' to upload the Plan anyway.</source>
     <message>
       <location filename="../src/AutoPilotPlugins/PX4/SensorsSetup.qml" line="264"/>
       <source>Reboot the vehicle prior to flight.</source>
-      <translation>飞行前重新启动车辆。</translation>
+      <translation>飞行前重新启动无人机。</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/PX4/SensorsSetup.qml" line="269"/>
@@ -21992,7 +22044,7 @@ ROTATION_NONE indicates component points in direction of flight.</source>
     <message>
       <location filename="../src/QmlControls/SetupPage.qml" line="86"/>
       <source>Disabled while the vehicle is %1</source>
-      <translation>当车辆为 %1 时禁用</translation>
+      <translation>当无人机为 %1 时禁用</translation>
     </message>
     <message>
       <location filename="../src/QmlControls/SetupPage.qml" line="68"/>
@@ -22064,17 +22116,17 @@ ROTATION_NONE indicates component points in direction of flight.</source>
     <message>
       <location filename="../src/MAVLink/Signing/SigningController.cc" line="236"/>
       <source>MAVLink signing: %1 consecutive bad signatures while enabling — the chosen key likely does not match the vehicle's stored key. Verify the key on the vehicle, then retry.</source>
-      <translation>MAVLink 签名：启用时有 %1 个连续错误签名 — 所选密钥可能与车辆存储的密钥不匹配。验证车辆上的钥匙，然后重试。</translation>
+      <translation>MAVLink 签名：启用时有 %1 个连续错误签名 — 所选密钥可能与无人机存储的密钥不匹配。验证无人机上的钥匙，然后重试。</translation>
     </message>
     <message>
       <location filename="../src/MAVLink/Signing/SigningController.cc" line="239"/>
       <source>MAVLink signing: %1 consecutive bad signatures on this link — wrong key or vehicle clock drift</source>
-      <translation>MAVLink 签名：此链接上有 %1 个连续错误签名 — 密钥错误或车辆时钟漂移</translation>
+      <translation>MAVLink 签名：此链接上有 %1 个连续错误签名 — 密钥错误或无人机时钟漂移</translation>
     </message>
     <message>
       <location filename="../src/MAVLink/Signing/SigningController.cc" line="294"/>
       <source>Vehicle rejected signing change: %1</source>
-      <translation>车辆拒绝签名更改：%1</translation>
+      <translation>无人机拒绝签名更改：%1</translation>
     </message>
     <message>
       <location filename="../src/MAVLink/Signing/SigningController.cc" line="328"/>
@@ -22084,22 +22136,22 @@ ROTATION_NONE indicates component points in direction of flight.</source>
     <message>
       <location filename="../src/MAVLink/Signing/SigningController.cc" line="370"/>
       <source>Signing disable not confirmed — vehicle is unreachable or still requires signed messages. Local signing remains enabled.</source>
-      <translation>签名禁用未确认 — 车辆无法访问或仍需要签名消息。本地签名保持启用状态。</translation>
+      <translation>签名禁用未确认 — 无人机无法访问或仍需要签名消息。本地签名保持启用状态。</translation>
     </message>
     <message>
       <location filename="../src/MAVLink/Signing/SigningController.cc" line="391"/>
       <source>Signing operation cancelled — primary link changed before vehicle confirmation</source>
-      <translation>签名操作已取消 — 在车辆确认之前主链接已更改</translation>
+      <translation>签名操作已取消 — 在无人机确认之前主链接已更改</translation>
     </message>
     <message>
       <location filename="../src/MAVLink/Signing/SigningController.cc" line="404"/>
       <source>Signing setup not confirmed by vehicle (timeout)</source>
-      <translation>车辆未确认签名设置（超时）</translation>
+      <translation>无人机未确认签名设置（超时）</translation>
     </message>
     <message>
       <location filename="../src/MAVLink/Signing/SigningController.cc" line="405"/>
       <source>Signing disable not confirmed by vehicle (timeout)</source>
-      <translation>车辆未确认签名禁用（超时）</translation>
+      <translation>无人机未确认签名禁用（超时）</translation>
     </message>
   </context>
   <context>
@@ -22132,7 +22184,7 @@ ROTATION_NONE indicates component points in direction of flight.</source>
     <message>
       <location filename="../src/AppSettings/SigningKeyManager.qml" line="15"/>
       <source>Signing keys should only be sent to the vehicle over secure links (e.g. USB).</source>
-      <translation>签名密钥只能通过安全链接（例如 USB）发送到车辆。</translation>
+      <translation>签名密钥只能通过安全链接（例如 USB）发送到无人机。</translation>
     </message>
     <message>
       <location filename="../src/AppSettings/SigningKeyManager.qml" line="56"/>
@@ -22207,7 +22259,7 @@ ROTATION_NONE indicates component points in direction of flight.</source>
     <message>
       <location filename="../src/AppSettings/SigningKeyManager.qml" line="197"/>
       <source>This will transmit key '%1' to the vehicle over '%2'. Only proceed if this link is secure (USB or trusted local network).</source>
-      <translation>这将通过“%2”将密钥“%1”传输到车辆。仅当此链接安全（USB 或受信任的本地网络）时才继续。</translation>
+      <translation>这将通过“%2”将密钥“%1”传输到无人机。仅当此链接安全（USB 或受信任的本地网络）时才继续。</translation>
     </message>
     <message>
       <location filename="../src/AppSettings/SigningKeyManager.qml" line="208"/>
@@ -22229,7 +22281,7 @@ ROTATION_NONE indicates component points in direction of flight.</source>
       <source>Vehicle is armed. ArduPilot will refuse to disable signing while armed and PX4 will not accept the disable packet without a valid signature. The disable attempt will likely time out and leave the link in an inconsistent state.
 
 Disarm the vehicle first.</source>
-      <translation>车辆已解锁。 ArduPilot 将拒绝在解锁时禁用签名，并且 PX4 将不会接受没有有效签名的禁用数据包。禁用尝试可能会超时并使链接处于不一致状态。  首先解除车辆的解锁。</translation>
+      <translation>无人机已解锁。 ArduPilot 将拒绝在解锁时禁用签名，并且 PX4 将不会接受没有有效签名的禁用数据包。禁用尝试可能会超时并使链接处于不一致状态。  首先解除无人机的解锁。</translation>
     </message>
     <message>
       <location filename="../src/AppSettings/SigningKeyManager.qml" line="229"/>
@@ -22261,7 +22313,7 @@ Disarm the vehicle first.</source>
       <source>Are you sure you want to delete '%1'?
 
 If a vehicle still has this key configured, you will no longer be able to communicate with it over a signed connection. Raw or generated keys cannot be recovered — Export the hex first if you may need it later.</source>
-      <translation>您确定要删除“%1”吗？  如果车辆仍然配置了此密钥，您将无法再通过签名连接与其进行通信。原始或生成的密钥无法恢复 - 如果稍后需要，请先导出十六进制。</translation>
+      <translation>您确定要删除“%1”吗？  如果无人机仍然配置了此密钥，您将无法再通过签名连接与其进行通信。原始或生成的密钥无法恢复 - 如果稍后需要，请先导出十六进制。</translation>
     </message>
     <message>
       <location filename="../src/AppSettings/SigningKeyManager.qml" line="259"/>
@@ -23852,7 +23904,7 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
       <location filename="../src/Vehicle/Vehicle.cc" line="3551"/>
       <source>Vehicle %1: </source>
-      <translation>车辆 %1：</translation>
+      <translation>无人机 %1：</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/Vehicle.cc" line="2967"/>
@@ -23887,12 +23939,12 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
       <location filename="../src/Vehicle/Vehicle.cc" line="1799"/>
       <source>Vehicle %1 </source>
-      <translation>车辆 %1</translation>
+      <translation>无人机 %1</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/Vehicle.cc" line="2343"/>
       <source>Vehicle reboot failed.</source>
-      <translation>车辆重启失败。</translation>
+      <translation>无人机重启失败。</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/Vehicle.cc" line="1809"/>
@@ -23912,7 +23964,7 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
       <location filename="../src/Vehicle/Vehicle.cc" line="2070"/>
       <source>Change Heading not supported by Vehicle.</source>
-      <translation>车辆不支持更改航向。</translation>
+      <translation>无人机不支持更改航向。</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/Vehicle.cc" line="2273"/>
@@ -23927,18 +23979,18 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
       <location filename="../src/Vehicle/Vehicle.cc" line="1976"/>
       <source>Orbit mode not supported by Vehicle.</source>
-      <translation>车辆不支持轨道模式。</translation>
+      <translation>无人机不支持轨道模式。</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/Vehicle.cc" line="2011"/>
       <location filename="../src/Vehicle/Vehicle.cc" line="2036"/>
       <source>ROI mode not supported by Vehicle.</source>
-      <translation>车辆不支持 ROI 模式。</translation>
+      <translation>无人机不支持 ROI 模式。</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/Vehicle.cc" line="2080"/>
       <source>Pause not supported by vehicle.</source>
-      <translation>车辆不支持暂停。</translation>
+      <translation>无人机不支持暂停。</translation>
     </message>
   </context>
   <context>
@@ -24002,7 +24054,7 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
       <location filename="../src/Vehicle/VehicleSetup/VehicleConfigView.qml" line="26"/>
       <source>This operation cannot be performed while the vehicle is armed.</source>
-      <translation>当车辆布防时，无法执行此操作。</translation>
+      <translation>当无人机布防时，无法执行此操作。</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/VehicleConfigView.qml" line="30"/>
@@ -24017,17 +24069,17 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
       <location filename="../src/Vehicle/VehicleSetup/VehicleConfigView.qml" line="275"/>
       <source>%1 does not currently support configuration of your vehicle. </source>
-      <translation>%1 当前不支持您的车辆配置。</translation>
+      <translation>%1 当前不支持您的无人机配置。</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/VehicleConfigView.qml" line="296"/>
       <source>Vehicle configuration pages will display after you connect your vehicle and parameters have been downloaded.</source>
-      <translation>连接车辆并下载参数后，将显示车辆配置页面。</translation>
+      <translation>连接无人机并下载参数后，将显示无人机配置页面。</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/VehicleConfigView.qml" line="299"/>
       <source>Waiting for vehicle parameters to download…</source>
-      <translation>正在等待车辆参数下载...</translation>
+      <translation>正在等待无人机参数下载...</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/VehicleConfigView.qml" line="303"/>
@@ -24037,7 +24089,7 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
       <location filename="../src/Vehicle/VehicleSetup/VehicleConfigView.qml" line="325"/>
       <source>Vehicle did not return the full parameter list. </source>
-      <translation>车辆未返回完整参数列表。</translation>
+      <translation>无人机未返回完整参数列表。</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/VehicleConfigView.qml" line="326"/>
@@ -24072,7 +24124,7 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
       <location filename="../src/Vehicle/VehicleSetup/VehicleConfigView.qml" line="298"/>
       <source>Parameter download was skipped because the vehicle is armed. Configuration pages will be available after parameters are downloaded.</source>
-      <translation>由于车辆已布防，参数下载被跳过。下载参数后即可使用配置页面。</translation>
+      <translation>由于无人机已布防，参数下载被跳过。下载参数后即可使用配置页面。</translation>
     </message>
   </context>
   <context>
@@ -24212,12 +24264,12 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
       <location filename="../src/Vehicle/VehicleSigningController.cc" line="92"/>
       <source>Vehicle %1: %2</source>
-      <translation>车辆 %1：%2</translation>
+      <translation>无人机 %1：%2</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/VehicleSigningController.cc" line="170"/>
       <source>Failed to transmit SETUP_SIGNING to vehicle</source>
-      <translation>无法将 SETUP_SIGNING 传输到车辆</translation>
+      <translation>无法将 SETUP_SIGNING 传输到无人机</translation>
     </message>
   </context>
   <context>
@@ -24225,7 +24277,7 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
       <location filename="../src/Vehicle/VehicleSetup/VehicleSummary.qml" line="47"/>
       <source>Your vehicle configuration summary appears below. Select components on the left to review or fine-tune settings.</source>
-      <translation>您的车辆配置摘要如下所示。选择左侧的组件以查看或微调设置。</translation>
+      <translation>您的无人机配置摘要如下所示。选择左侧的组件以查看或微调设置。</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/VehicleSummary.qml" line="48"/>
@@ -24243,7 +24295,7 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
       <location filename="../src/FlyView/VehicleWarnings.qml" line="46"/>
       <source>The vehicle has failed a pre-arm check. In order to arm the vehicle, resolve the failure.</source>
-      <translation>车辆未能进行解锁前检查。为了装备车辆，解决故障。</translation>
+      <translation>无人机未能进行解锁前检查。为了装备无人机，解决故障。</translation>
     </message>
   </context>
   <context>
@@ -24251,7 +24303,7 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
       <location filename="../src/AnalyzeView/Vibration/VibrationPage.qml" line="13"/>
       <source>Analyze vibration associated with your vehicle.</source>
-      <translation>分析与您的车辆相关的振动。</translation>
+      <translation>分析与您的无人机相关的振动。</translation>
     </message>
     <message>
       <location filename="../src/AnalyzeView/Vibration/VibrationPage.qml" line="85"/>
@@ -24531,7 +24583,7 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
       <location filename="../src/Utilities/QGCCommandLineParser.cc" line="184"/>
       <source>Filter tests by label (unit, integration, vehicle, missionmanager, etc.).</source>
-      <translation>按标签（单元、集成、车辆、任务管理器等）过滤测试。</translation>
+      <translation>按标签（单元、集成、无人机、任务管理器等）过滤测试。</translation>
     </message>
     <message>
       <location filename="../src/Utilities/QGCCommandLineParser.cc" line="185"/>
@@ -24732,6 +24784,10 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
         <source>Center aircraft</source>
         <translation>无人机居中</translation>
+    </message>
+    <message>
+        <source>SIMULATION FLIGHT</source>
+        <translation>模拟飞行</translation>
     </message>
 </context>
   <context>
@@ -24953,7 +25009,19 @@ If a vehicle still has this key configured, you will no longer be able to commun
       <source>Add</source>
       <translation>添加</translation>
     </message>
-  </context>
+      <message>
+        <source>Confirm orientation</source>
+        <translation>确认朝向</translation>
+    </message>
+    <message>
+        <source>Cancel rotation</source>
+        <translation>取消旋转</translation>
+    </message>
+    <message>
+        <source>Editing orientation rotates all loaded route points about the reference point. Confirm to save one undoable change; cancel restores their original positions.</source>
+        <translation>修改朝向时，已加载的航线点将绕参考点同步旋转。确认后记录为一次可撤销的修改；取消则恢复原位置。</translation>
+    </message>
+</context>
   <context>
     <name>CaacGlobalSettings</name>
     <message>
@@ -25180,6 +25248,591 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
         <source>Clear measurement</source>
         <translation>清除测量</translation>
+    </message>
+</context>
+  <context>
+    <name>CaacFlightActionList</name>
+    <message>
+      <source>Continue
+route</source>
+      <translation>继续航线任务</translation>
+    </message>
+    <message>
+      <source>Start
+route</source>
+      <translation>开始航线任务</translation>
+    </message>
+    <message>
+      <source>Pause
+route</source>
+      <translation>暂停航线任务</translation>
+    </message>
+    <message>
+      <source>Jump to
+waypoint</source>
+      <translation>跳转航点</translation>
+    </message>
+    <message>
+      <source>Waypoint
+altitude</source>
+      <translation>修改航点高度</translation>
+    </message>
+      <message>
+        <source>Waypoint operations</source>
+        <translation>航点操作</translation>
+    </message>
+</context>
+  <context>
+    <name>CaacMissionActionDialog</name>
+    <message>
+      <source>Modify waypoint altitude</source>
+      <translation>修改航点高度</translation>
+    </message>
+    <message>
+      <source>Jump to waypoint</source>
+      <translation>跳转航点</translation>
+    </message>
+    <message>
+      <source>Waypoint %1</source>
+      <translation>航点 %1</translation>
+    </message>
+    <message>
+      <source>Aircraft or mission changed. Close this window and select again.</source>
+      <translation>飞行器或任务已变化，请关闭窗口后重新选择。</translation>
+    </message>
+    <message>
+      <source>Jumping requires an aircraft in flight.</source>
+      <translation>跳转航点需要飞行器处于飞行状态。</translation>
+    </message>
+    <message>
+      <source>Target waypoint</source>
+      <translation>目标航点</translation>
+    </message>
+    <message>
+      <source>Waypoint altitude (m)</source>
+      <translation>航点高度（米）</translation>
+    </message>
+    <message>
+      <source>Keeps the waypoint's altitude frame. Pause the mission before saving; saving uploads the complete mission to the aircraft.</source>
+      <translation>保持航点原有高度基准。保存前须暂停任务；保存将整条任务重新上传到飞行器。</translation>
+    </message>
+    <message>
+      <source>No downloaded waypoints are available.</source>
+      <translation>没有可用的已下载航点。</translation>
+    </message>
+  </context>
+  <context>
+    <name>CaacCorePlugin</name>
+    <message>
+      <source>Wait for the aircraft and mission transfer to be ready.</source>
+      <translation>请等待飞行器连接和任务传输就绪。</translation>
+    </message>
+    <message>
+      <source>Select a downloaded waypoint.</source>
+      <translation>请选择已下载的航点。</translation>
+    </message>
+    <message>
+      <source>Pause the mission and complete all mission data before uploading.</source>
+      <translation>请暂停任务，并补齐任务数据后再上传。</translation>
+    </message>
+    <message>
+      <source>Enter a valid waypoint altitude.</source>
+      <translation>请输入有效的航点高度。</translation>
+    </message>
+  </context>
+  <context>
+    <name>InstrumentValueLabel</name>
+    <message>
+      <source>Relative altitude</source>
+      <translation>相对高度</translation>
+    </message>
+    <message>
+      <source>Distance to home</source>
+      <translation>距起飞点</translation>
+    </message>
+    <message>
+      <source>Vertical speed</source>
+      <translation>垂直速度</translation>
+    </message>
+    <message>
+      <source>Ground speed</source>
+      <translation>地速</translation>
+    </message>
+    <message>
+      <source>Airspeed</source>
+      <translation>空速</translation>
+    </message>
+    <message>
+      <source>Flight time</source>
+      <translation>飞行时间</translation>
+    </message>
+    <message>
+      <source>Flight distance</source>
+      <translation>飞行里程</translation>
+    </message>
+    <message>
+      <source>Heading</source>
+      <translation>航向角</translation>
+    </message>
+  </context>
+  <context>
+    <name>TelemetryValuesBar</name>
+    <message>
+      <source>Heading</source>
+      <translation>航向角</translation>
+    </message>
+    <message>
+      <source>Unavailable</source>
+      <translation>未获取</translation>
+    </message>
+  </context>
+<context>
+    <name>CaacSimulationController</name>
+    <message>
+        <source>Simulation settings are incomplete.</source>
+        <translation>模拟设置不完整。</translation>
+    </message>
+    <message>
+        <source>Invalid simulation option.</source>
+        <translation>模拟选项无效。</translation>
+    </message>
+    <message>
+        <source>Enter finite simulation values.</source>
+        <translation>请输入有限的模拟数值。</translation>
+    </message>
+    <message>
+        <source>Check the allowed ranges for simulation speeds, angles and counts.</source>
+        <translation>请检查模拟速度、角度和次数的允许范围。</translation>
+    </message>
+    <message>
+        <source>Stop the current simulation and disconnect other aircraft before starting.</source>
+        <translation>启动前请停止当前模拟并断开其他飞行器。</translation>
+    </message>
+    <message>
+        <source>Complete the planned home and mission before simulating.</source>
+        <translation>请先完善计划起飞点和航线。</translation>
+    </message>
+    <message>
+        <source>Built-in flight simulation</source>
+        <translation>内置模拟飞行</translation>
+    </message>
+    <message>
+        <source>Unable to connect the simulation aircraft.</source>
+        <translation>无法连接模拟飞行器。</translation>
+    </message>
+    <message>
+        <source>Connecting the simulation aircraft…</source>
+        <translation>正在连接模拟飞行器…</translation>
+    </message>
+    <message>
+        <source>Simulation stopped</source>
+        <translation>模拟已停止</translation>
+    </message>
+    <message>
+        <source>Simulation connection closed.</source>
+        <translation>模拟连接已关闭。</translation>
+    </message>
+    <message>
+        <source>Disconnect other aircraft before simulating.</source>
+        <translation>模拟前请断开其他飞行器。</translation>
+    </message>
+    <message>
+        <source>Simulation connection timed out.</source>
+        <translation>模拟连接超时。</translation>
+    </message>
+    <message>
+        <source>Uploading the simulation mission…</source>
+        <translation>正在上传模拟任务…</translation>
+    </message>
+    <message>
+        <source>Simulation mission upload timed out.</source>
+        <translation>模拟任务上传超时。</translation>
+    </message>
+    <message>
+        <source>Simulation running · mission item %1</source>
+        <translation>模拟运行中 · 任务项 %1</translation>
+    </message>
+    <message>
+        <source>Simulation mission finished</source>
+        <translation>模拟任务已结束</translation>
+    </message>
+    <message>
+        <source>Simulation paused</source>
+        <translation>模拟已暂停</translation>
+    </message>
+    <message>
+        <source>Unable to prepare the simulation mission: %1</source>
+        <translation>无法准备模拟任务：%1</translation>
+    </message>
+    <message>
+        <source>Simulation flow requires a simple mission without existing jump commands.</source>
+        <translation>模拟流程要求使用简单任务，且不能包含已有跳转命令。</translation>
+    </message>
+    <message>
+        <source>Select existing waypoints for the start and return points.</source>
+        <translation>请选择现有航点作为起始点和返航点。</translation>
+    </message>
+    <message>
+        <source>Unable to create the simulation takeoff.</source>
+        <translation>无法创建模拟起飞任务。</translation>
+    </message>
+    <message>
+        <source>Unable to prepare the simulation mission.</source>
+        <translation>无法准备模拟任务。</translation>
+    </message>
+    <message>
+        <source>Unable to close the simulation route.</source>
+        <translation>无法闭合模拟航线。</translation>
+    </message>
+    <message>
+        <source>Unable to prepare the simulation loop.</source>
+        <translation>无法准备模拟循环。</translation>
+    </message>
+    <message>
+        <source>Unable to prepare the simulation return.</source>
+        <translation>无法准备模拟返航任务。</translation>
+    </message>
+    <message>
+        <source>Unable to prepare the simulation hover.</source>
+        <translation>无法准备模拟悬停任务。</translation>
+    </message>
+    <message>
+        <source>Restarting simulation…</source>
+        <translation>正在重新开始模拟…</translation>
+    </message>
+    <message>
+        <source>Simulation guided flight</source>
+        <translation>模拟指点飞行</translation>
+    </message>
+</context>
+<context>
+    <name>CaacSimulationDialog</name>
+    <message>
+        <source>Simulation flight</source>
+        <translation>模拟飞行</translation>
+    </message>
+    <message>
+        <source>Built-in kinematic training, separate from PX4 SITL. Uploads a copy of the saved planning settings and route to an isolated simulation aircraft. Disconnect other aircraft first.</source>
+        <translation>内置运动学训练模拟，与 PX4 SITL 分开。将规划设置和航线的副本上传至独立的模拟飞行器。请先断开其他飞行器。</translation>
+    </message>
+    <message>
+        <source>Ready to simulate</source>
+        <translation>可以开始模拟</translation>
+    </message>
+    <message>
+        <source>Upload and execute simulation mission</source>
+        <translation>上传并执行模拟任务</translation>
+    </message>
+    <message>
+        <source>View simulation flight</source>
+        <translation>查看模拟飞行</translation>
+    </message>
+    <message>
+        <source>Stop simulation</source>
+        <translation>停止模拟</translation>
+    </message>
+    <message>
+        <source>Restart simulation and clear mileage</source>
+        <translation>重新开始模拟并清零里程</translation>
+    </message>
+</context>
+<context>
+    <name>CaacSimulationEngine</name>
+    <message>
+        <source>Invalid simulation settings or empty mission.</source>
+        <translation>模拟设置无效或任务为空。</translation>
+    </message>
+    <message>
+        <source>Mission sequence is not contiguous.</source>
+        <translation>任务序号不连续。</translation>
+    </message>
+    <message>
+        <source>Unsupported simulation command: %1</source>
+        <translation>不支持的模拟命令：%1</translation>
+    </message>
+    <message>
+        <source>Invalid coordinate, altitude frame or hold time at item %1.</source>
+        <translation>任务项 %1 的坐标、高度坐标系或停留时长无效。</translation>
+    </message>
+    <message>
+        <source>Invalid loop target or count.</source>
+        <translation>循环目标或次数无效。</translation>
+    </message>
+    <message>
+        <source>Invalid speed command.</source>
+        <translation>速度命令无效。</translation>
+    </message>
+    <message>
+        <source>Invalid delay command.</source>
+        <translation>延时命令无效。</translation>
+    </message>
+    <message>
+        <source>Invalid heading command.</source>
+        <translation>航向命令无效。</translation>
+    </message>
+</context>
+<context>
+    <name>CaacSimulationSettings</name>
+    <message>
+        <source>Takeoff point</source>
+        <translation>起飞点</translation>
+    </message>
+    <message>
+        <source>Waypoint %1</source>
+        <translation>航点 %1</translation>
+    </message>
+    <message>
+        <source>Advanced simulation settings</source>
+        <translation>高级模拟设置</translation>
+    </message>
+    <message>
+        <source>These turn and climb modes apply to the built-in kinematic simulation. For aircraft, use firmware-supported mission settings. Waypoint speed commands override the initial speed.</source>
+        <translation>这些转弯和爬升方式适用于内置运动学模拟。实机请使用飞控支持的任务设置。航点速度命令会覆盖初始速度。</translation>
+    </message>
+    <message>
+        <source>Takeoff height (relative, m)</source>
+        <translation>起飞高度（相对起飞点，米）</translation>
+    </message>
+    <message>
+        <source>Vertical speed (m/s)</source>
+        <translation>垂直速度（米/秒）</translation>
+    </message>
+    <message>
+        <source>Turn mode</source>
+        <translation>转弯方式</translation>
+    </message>
+    <message>
+        <source>Point turn</source>
+        <translation>定点转弯</translation>
+    </message>
+    <message>
+        <source>Coordinated turn</source>
+        <translation>协调转弯</translation>
+    </message>
+    <message>
+        <source>Adaptive coordinated turn</source>
+        <translation>自适应协调转弯</translation>
+    </message>
+    <message>
+        <source>No turn</source>
+        <translation>不转弯</translation>
+    </message>
+    <message>
+        <source>Hold duration (s)</source>
+        <translation>停止时长（秒）</translation>
+    </message>
+    <message>
+        <source>Hold heading</source>
+        <translation>停留朝向</translation>
+    </message>
+    <message>
+        <source>Unspecified</source>
+        <translation>不指定</translation>
+    </message>
+    <message>
+        <source>Specified</source>
+        <translation>指定</translation>
+    </message>
+    <message>
+        <source>Specified heading (degrees)</source>
+        <translation>指定角度（度）</translation>
+    </message>
+    <message>
+        <source>Yaw rate (degrees/s)</source>
+        <translation>转向角速度（度/秒）</translation>
+    </message>
+    <message>
+        <source>Climb mode</source>
+        <translation>爬升方式</translation>
+    </message>
+    <message>
+        <source>Point climb</source>
+        <translation>定点爬升</translation>
+    </message>
+    <message>
+        <source>Coordinated climb</source>
+        <translation>协调爬升</translation>
+    </message>
+    <message>
+        <source>Closed route and loops</source>
+        <translation>闭合航线与循环</translation>
+    </message>
+    <message>
+        <source>Close route</source>
+        <translation>闭合航线</translation>
+    </message>
+    <message>
+        <source>Loop behavior</source>
+        <translation>循环行为</translation>
+    </message>
+    <message>
+        <source>No loop</source>
+        <translation>不循环</translation>
+    </message>
+    <message>
+        <source>Specified count</source>
+        <translation>指定循环次数</translation>
+    </message>
+    <message>
+        <source>Loop forever</source>
+        <translation>循环</translation>
+    </message>
+    <message>
+        <source>Total route executions</source>
+        <translation>航线总执行次数</translation>
+    </message>
+    <message>
+        <source>Start point</source>
+        <translation>起始点</translation>
+    </message>
+    <message>
+        <source>End behavior</source>
+        <translation>结束行为</translation>
+    </message>
+    <message>
+        <source>Hover in place</source>
+        <translation>就地悬停</translation>
+    </message>
+    <message>
+        <source>Return</source>
+        <translation>返航</translation>
+    </message>
+    <message>
+        <source>Return point</source>
+        <translation>返航点</translation>
+    </message>
+    <message>
+        <source>Count 1 executes once. Takeoff runs once; loops begin at the selected waypoint. Returning to a waypoint ends in a hover; returning home lands in this simulation.</source>
+        <translation>次数为 1 时执行一轮。起飞仅执行一次，循环从所选航点开始。返回航点后悬停；本模拟中返回起飞点后降落。</translation>
+    </message>
+    <message>
+        <source>Simulation wind</source>
+        <translation>模拟风场</translation>
+    </message>
+    <message>
+        <source>Wind speed (m/s)</source>
+        <translation>风速（米/秒）</translation>
+    </message>
+    <message>
+        <source>Wind direction (towards, degrees)</source>
+        <translation>风吹向（度）</translation>
+    </message>
+    <message>
+        <source>Save simulation settings</source>
+        <translation>保存模拟设置</translation>
+    </message>
+    <message>
+        <source>Simulation flight</source>
+        <translation>模拟飞行</translation>
+    </message>
+</context>
+<context>
+    <name>CaacWaypointMenu</name>
+    <message>
+        <source>Drawing aids</source>
+        <translation>辅助作图</translation>
+    </message>
+    <message>
+        <source>Circle</source>
+        <translation>辅助圆</translation>
+    </message>
+    <message>
+        <source>Radius</source>
+        <translation>半径</translation>
+    </message>
+    <message>
+        <source>Guide line</source>
+        <translation>辅助线</translation>
+    </message>
+    <message>
+        <source>Bearing</source>
+        <translation>方位角</translation>
+    </message>
+    <message>
+        <source>Clear drawing aids</source>
+        <translation>清除辅助作图</translation>
+    </message>
+    <message>
+        <source>Place coordinate axes</source>
+        <translation>放置坐标轴</translation>
+    </message>
+    <message>
+        <source>Delete waypoint %1</source>
+        <translation>删除 %1 号航点</translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation>删除</translation>
+    </message>
+    <message>
+        <source>Clear waypoints</source>
+        <translation>清空航点</translation>
+    </message>
+    <message>
+        <source>Takeoff point</source>
+        <translation>起飞点</translation>
+    </message>
+    <message>
+        <source>Set takeoff point on map</source>
+        <translation>在地图上设置起飞点</translation>
+    </message>
+    <message>
+        <source>Center takeoff point</source>
+        <translation>起飞点居中</translation>
+    </message>
+    <message>
+        <source>Use waypoint %1 as takeoff point</source>
+        <translation>%1 号航点更改为起飞点</translation>
+    </message>
+    <message>
+        <source>Fly to this point</source>
+        <translation>指点飞行</translation>
+    </message>
+    <message>
+        <source>Reverse route</source>
+        <translation>航线反向</translation>
+    </message>
+</context>
+<context>
+    <name>CaacWaypointOverlap</name>
+    <message>
+        <source>Takeoff point</source>
+        <translation>起飞点</translation>
+    </message>
+    <message>
+        <source>Overlapping waypoints: %1</source>
+        <translation>重叠航点：%1</translation>
+    </message>
+</context>
+<context>
+    <name>CaacWaypointPopup</name>
+    <message>
+        <source>Bearing</source>
+        <translation>方位角</translation>
+    </message>
+    <message>
+        <source>Distance</source>
+        <translation>距离</translation>
+    </message>
+    <message>
+        <source>Fine tuning</source>
+        <translation>微调</translation>
+    </message>
+    <message>
+        <source>On</source>
+        <translation>开启</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation>关闭</translation>
+    </message>
+    <message>
+        <source>Up/down: bearing ±0.1°. Left/right: distance ±0.1 m.</source>
+        <translation>上／下键：方位角 ±0.1°；左／右键：距离 ±0.1 米。</translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation>删除</translation>
     </message>
 </context>
 </TS>

@@ -13,6 +13,13 @@ class MockLinkMissionItemHandler : public QObject
     Q_OBJECT
 
 public:
+    QMap<uint16_t, mavlink_mission_item_int_t> uploadedMission() const { return _missionItems; }
+
+signals:
+    void missionUploaded();
+    void missionSequenceRequested(int sequence);
+
+public:
     MockLinkMissionItemHandler(MockLink *mockLink);
     ~MockLinkMissionItemHandler();
 

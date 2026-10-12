@@ -7,6 +7,7 @@
 #include "QGCCorePlugin.h"
 
 class CaacFlightDistance;
+class CaacSimulationController;
 class QQmlAbstractUrlInterceptor;
 class Vehicle;
 
@@ -15,6 +16,9 @@ class CaacCorePlugin : public QGCCorePlugin
     Q_OBJECT
     Q_MOC_INCLUDE("CaacFlightDistance.h")
     Q_MOC_INCLUDE("Vehicle.h")
+    Q_MOC_INCLUDE("PlanMasterController.h")
+    Q_MOC_INCLUDE("CaacSimulationController.h")
+    Q_PROPERTY(CaacSimulationController* simulation READ simulation CONSTANT)
     Q_PROPERTY(CaacFlightDistance* flightDistance READ flightDistance NOTIFY flightDistanceChanged)
     Q_PROPERTY(bool doubleClickAddWaypoint READ doubleClickAddWaypoint WRITE setDoubleClickAddWaypoint NOTIFY
                    mapPreferencesChanged)
@@ -25,7 +29,13 @@ public:
     static QGCCorePlugin* instance();
     void init() override;
     CaacFlightDistance* flightDistance() const;
+
+    CaacSimulationController* simulation() const { return _simulation; }
+
+    Q_INVOKABLE QString refreshFlightMission(PlanMasterController* controller);
     Q_INVOKABLE void resetFlightDistanceForSimulationRestart(Vehicle* vehicle);
+    Q_INVOKABLE QString updateFlightWaypointAltitude(PlanMasterController* controller, QObject* waypoint,
+                                                     double altitude);
 
     bool doubleClickAddWaypoint() const { return _doubleClickAddWaypoint; }
 
@@ -46,6 +56,8 @@ public:
 
     bool showPlanInformation() const override { return false; }
 
+    bool keepCurrentPlanOnVehicleChange(PlanMasterController* controller) const override;
+
     QLocale::Language defaultLanguage() const override { return QLocale::Chinese; }
 
     void postSaveToJson(PlanMasterController* controller, QJsonObject& json) override;
@@ -62,4 +74,5 @@ private:
     bool _initialized = false;
     bool _doubleClickAddWaypoint = true;
     bool _dragWaypoints = true;
+    CaacSimulationController* _simulation = nullptr;
 };

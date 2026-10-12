@@ -6,16 +6,23 @@
 #include <QtCore/QApplicationStatic>
 #include <QtCore/QJsonObject>
 #include <QtCore/QSettings>
+#include <QtGui/QGuiApplication>
 #include <QtPositioning/QGeoCoordinate>
 #include <QtQml/QQmlAbstractUrlInterceptor>
 #include <QtQml/QQmlApplicationEngine>
 
 #include "CaacFlightDistance.h"
+#include "CaacSimulationController.h"
+#include "LinkConfiguration.h"
+#include "LinkInterface.h"
+#include "MissionController.h"
 #include "MultiVehicleManager.h"
 #include "PlanMasterController.h"
 #include "QGCGeo.h"
 #include "QmlObjectListModel.h"
+#include "SimpleMissionItem.h"
 #include "Vehicle.h"
+#include "VehicleLinkManager.h"
 
 Q_APPLICATION_STATIC(CaacCorePlugin, caacCorePluginInstance);
 
@@ -25,8 +32,21 @@ class CaacFlyViewInterceptor : public QQmlAbstractUrlInterceptor
 public:
     QUrl intercept(const QUrl& url, DataType type) override
     {
+        if (type == UrlString && url.scheme() == QStringLiteral("qrc") &&
+            (url.path() == QStringLiteral("/res/QGCLogoFull.svg") ||
+             url.path() == QStringLiteral("/res/QGCLogoWhite.svg"))) {
+            return QUrl(QStringLiteral("qrc:/CAAC/Brand/company-logo.svg"));
+        }
+        if (type == UrlString && url.scheme() == QStringLiteral("qrc") &&
+            url.path() == QStringLiteral("/res/qgroundcontrol.ico")) {
+            return QUrl(QStringLiteral("qrc:/CAAC/Brand/company-logo.ico"));
+        }
         if (type == QmlFile && url == QUrl(QStringLiteral("qrc:/qml/QGroundControl/FlyView/FlyViewCustomLayer.qml"))) {
             return QUrl(QStringLiteral("qrc:/Custom/qml/QGroundControl/FlyView/FlyViewCustomLayer.qml"));
+        }
+        if (type == QmlFile &&
+            url == QUrl(QStringLiteral("qrc:/qml/QGroundControl/FlyView/FlyViewToolStripActionList.qml"))) {
+            return QUrl(QStringLiteral("qrc:/Custom/qml/QGroundControl/FlyView/CaacFlightActionList.qml"));
         }
         return url;
     }
@@ -36,6 +56,7 @@ public:
 CaacCorePlugin::CaacCorePlugin(QObject* parent)
     : QGCCorePlugin(parent)
 {
+    _simulation = new CaacSimulationController(this);
     const QSettings settings;
     _doubleClickAddWaypoint = settings.value(QStringLiteral("CAAC/Map/DoubleClickAddWaypoint"), true).toBool();
     _dragWaypoints = settings.value(QStringLiteral("CAAC/Map/DragWaypoints"), true).toBool();
@@ -116,6 +137,7 @@ QGCCorePlugin* CaacCorePlugin::instance()
 
 void CaacCorePlugin::init()
 {
+    QGuiApplication::setApplicationDisplayName(QStringLiteral("飞虎无人机地面站系统"));
     if (_initialized) {
         return;
     }
@@ -155,9 +177,65 @@ void CaacCorePlugin::resetFlightDistanceForSimulationRestart(Vehicle* vehicle)
     }
 }
 
+QString CaacCorePlugin::refreshFlightMission(PlanMasterController* controller)
+{
+    auto* vehicle = MultiVehicleManager::instance()->activeVehicle();
+    if (!vehicle) {
+        return tr("Wait for the aircraft and mission transfer to be ready.");
+    }
+    if (!controller || controller->managerVehicle() != vehicle || controller->offline() ||
+        controller->syncInProgress() || !vehicle->isInitialConnectComplete()) {
+        return tr("Wait for the aircraft and mission transfer to be ready.");
+    }
+    const auto link = vehicle->vehicleLinkManager()->primaryLink().lock();
+    if (!link) {
+        return tr("Wait for the aircraft and mission transfer to be ready.");
+    }
+    if (link->linkConfiguration()->isHighLatency()) {
+        return QCoreApplication::translate("PlanMasterController", "Download not supported on high latency links.");
+    }
+    controller->missionController()->loadFromVehicle();
+    return {};
+}
+
+QString CaacCorePlugin::updateFlightWaypointAltitude(PlanMasterController* controller, QObject* waypoint,
+                                                     double altitude)
+{
+    auto* vehicle = MultiVehicleManager::instance()->activeVehicle();
+    if (!vehicle) {
+        return tr("Wait for the aircraft and mission transfer to be ready.");
+    }
+    auto* mission = controller ? controller->missionController() : nullptr;
+    auto* item = qobject_cast<SimpleMissionItem*>(waypoint);
+    if (!controller || !mission || controller->managerVehicle() != vehicle || controller->offline() ||
+        controller->syncInProgress() || !vehicle->isInitialConnectComplete()) {
+        return tr("Wait for the aircraft and mission transfer to be ready.");
+    }
+    if (!item || item->command() != MAV_CMD_NAV_WAYPOINT || mission->visualItems()->indexOf(item) <= 0) {
+        return tr("Select a downloaded waypoint.");
+    }
+    if (mission->sendToVehiclePreCheck() != MissionController::SendToVehiclePreCheckStateOk ||
+        mission->readyForSaveState() != VisualMissionItem::ReadyForSave) {
+        return tr("Pause the mission and complete all mission data before uploading.");
+    }
+    auto* fact = item->altitude();
+    if (!std::isfinite(altitude) || std::abs(altitude) > std::numeric_limits<float>::max() ||
+        altitude < fact->rawMin().toDouble() || altitude > fact->rawMax().toDouble()) {
+        return tr("Enter a valid waypoint altitude.");
+    }
+    fact->setRawValue(altitude);
+    mission->sendToVehicle();
+    return {};
+}
+
 QUrl CaacCorePlugin::planViewEditor() const
 {
     return QUrl(QStringLiteral("qrc:/qml/CAAC/Plan/CaacRouteEditor.qml"));
+}
+
+bool CaacCorePlugin::keepCurrentPlanOnVehicleChange(PlanMasterController* controller) const
+{
+    return controller && _simulation->ownsVehicle(controller->managerVehicle());
 }
 
 QQmlApplicationEngine* CaacCorePlugin::createQmlApplicationEngine(QObject* parent)
@@ -181,11 +259,22 @@ void CaacCorePlugin::destroyQmlApplicationEngine(QQmlApplicationEngine* engine)
 
 void CaacCorePlugin::postSaveToJson(PlanMasterController* controller, QJsonObject& json)
 {
+    QJsonObject metadata{{QStringLiteral("version"), 1}};
     const auto center = controller->property("caacRotationCenter").value<QGeoCoordinate>();
     if (center.isValid()) {
-        json[QStringLiteral("caac")] = QJsonObject{{QStringLiteral("version"), 1},
-                                                   {QStringLiteral("centerLatitude"), center.latitude()},
-                                                   {QStringLiteral("centerLongitude"), center.longitude()}};
+        metadata[QStringLiteral("centerLatitude")] = center.latitude();
+        metadata[QStringLiteral("centerLongitude")] = center.longitude();
+    }
+    const auto settings = controller->property("caacSimulationSettings").toMap();
+    if (!settings.isEmpty()) {
+        metadata[QStringLiteral("simulationSettings")] = QJsonObject::fromVariantMap(settings);
+    }
+    const auto orientation = controller->property("caacRouteOrientation");
+    if (orientation.isValid() && std::isfinite(orientation.toDouble())) {
+        metadata[QStringLiteral("routeOrientation")] = orientation.toDouble();
+    }
+    if (metadata.size() > 1) {
+        json[QStringLiteral("caac")] = metadata;
     }
 }
 
@@ -199,5 +288,14 @@ void CaacCorePlugin::postLoadFromJson(PlanMasterController* controller, QJsonObj
         center = QGeoCoordinate(metadata.value(QStringLiteral("centerLatitude")).toDouble(),
                                 metadata.value(QStringLiteral("centerLongitude")).toDouble());
     }
+    const auto orientation = metadata.value(QStringLiteral("routeOrientation"));
+    controller->setProperty("caacRouteOrientation",
+                            metadata.value(QStringLiteral("version")).toInt() == 1 && orientation.isDouble()
+                                ? QVariant(orientation.toDouble())
+                                : QVariant());
     controller->setProperty("caacRotationCenter", QVariant::fromValue(center));
+    controller->setProperty("caacSimulationSettings",
+                            metadata.value(QStringLiteral("version")).toInt() == 1
+                                ? metadata.value(QStringLiteral("simulationSettings")).toObject().toVariantMap()
+                                : QVariantMap());
 }

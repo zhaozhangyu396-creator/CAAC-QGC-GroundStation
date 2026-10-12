@@ -1,0 +1,15 @@
+{
+    "version": 1,
+    "fileType": "SettingsPages",
+    "pages": [
+        {
+            "remove": "Help"
+        },
+        {
+            "remove": "PX4 Log Transfer"
+        },
+        {
+            "remove": "Remote ID"
+        }
+    ]
+}

@@ -9,6 +9,7 @@
 
 #include "CaacRouteGeometry.h"
 #include "CaacRouteTemplates.h"
+#include "CaacSimulationController.h"
 #include "Fact.h"
 #include "MissionController.h"
 #include "MissionSettingsItem.h"
@@ -63,11 +64,146 @@ MissionController* CaacRouteEditorController::_missionController() const
     return _masterController ? _masterController->missionController() : nullptr;
 }
 
+QVariantMap CaacRouteEditorController::simulationSettings() const
+{
+    const auto settings =
+        _masterController ? _masterController->property("caacSimulationSettings").toMap() : QVariantMap();
+    return settings.isEmpty() || !CaacSimulationController::validateSettings(settings).isEmpty()
+               ? CaacSimulationController::defaults()
+               : settings;
+}
+
+double CaacRouteEditorController::routeOrientation() const
+{
+    const auto value = _masterController ? _masterController->property("caacRouteOrientation") : QVariant();
+    bool valid = false;
+    const double heading = value.toDouble(&valid);
+    return valid && std::isfinite(heading) ? CaacRouteGeometry::normalizedAngle(heading) : 0;
+}
+
+bool CaacRouteEditorController::_previewItemsCurrent() const
+{
+    auto* mission = _missionController();
+    if (!mission || !mission->visualItems()) {
+        return false;
+    }
+    for (const auto& item : _previewItems) {
+        if (!item || mission->visualItems()->indexOf(item) < 0) {
+            return false;
+        }
+    }
+    return !_previewItems.isEmpty();
+}
+
+void CaacRouteEditorController::_clearRotationPreview()
+{
+    _rotationPreviewActive = false;
+    _previewCoordinates.clear();
+    _previewItems.clear();
+    if (_masterController) {
+        _masterController->setProperty("caacRotationPreviewActive", false);
+    }
+    emit rotationPreviewChanged();
+}
+
+bool CaacRouteEditorController::previewRouteOrientation(double heading, const QGeoCoordinate& center)
+{
+    if (!_canEdit(true) || !std::isfinite(heading) || !center.isValid()) {
+        return _fail(tr("Check the rotation centre and angle."));
+    }
+    if (!_rotationPreviewActive) {
+        QList<QGeoCoordinate> coordinates;
+        QList<QObject*> items;
+        if (!_rotationCoordinates(coordinates, items)) {
+            return false;
+        }
+        _previewCoordinates = coordinates;
+        for (auto* object : items) {
+            _previewItems.append(qobject_cast<VisualMissionItem*>(object));
+        }
+        _previewCenter = center;
+        _previewBaseOrientation = routeOrientation();
+        _previewDirty = _missionController()->dirty();
+        beginEdit();
+        _rotationPreviewActive = true;
+        _masterController->setProperty("caacRotationPreviewActive", true);
+        emit rotationPreviewChanged();
+    }
+    if (!_previewItemsCurrent()) {
+        _clearRotationPreview();
+        _editDepth = 0;
+        clearHistory();
+        return _fail(tr("The route changed. Start the orientation preview again."));
+    }
+    const auto coordinates =
+        CaacRouteGeometry::rotate(_previewCoordinates, _previewCenter, heading - _previewBaseOrientation);
+    if (!coordinates) {
+        return _fail(tr("Check the rotation centre and angle."));
+    }
+    for (int i = 0; i < _previewItems.size(); ++i) {
+        _previewItems[i]->setCoordinate(coordinates->at(i));
+    }
+    _previewOrientation = CaacRouteGeometry::normalizedAngle(heading);
+    _missionController()->setDirty(true);
+    return true;
+}
+
+bool CaacRouteEditorController::confirmRouteOrientation()
+{
+    if (!_rotationPreviewActive || !_canEdit(true) || !_previewItemsCurrent()) {
+        return false;
+    }
+    _masterController->setProperty("caacRouteOrientation", _previewOrientation);
+    _setCenter(_previewCenter);
+    _clearRotationPreview();
+    endEdit();
+    return true;
+}
+
+void CaacRouteEditorController::cancelRouteOrientation()
+{
+    if (!_rotationPreviewActive) {
+        return;
+    }
+    const bool current = _previewItemsCurrent();
+    if (current) {
+        for (int i = 0; i < _previewItems.size(); ++i) {
+            _previewItems[i]->setCoordinate(_previewCoordinates.at(i));
+        }
+        _missionController()->setDirty(_previewDirty);
+    }
+    _clearRotationPreview();
+    if (current) {
+        endEdit();
+    } else {
+        _editDepth = 0;
+        clearHistory();
+    }
+}
+
+bool CaacRouteEditorController::setSimulationSettings(const QVariantMap& settings)
+{
+    if (!_canEdit()) {
+        return false;
+    }
+    const auto error = CaacSimulationController::validateSettings(settings);
+    if (!error.isEmpty()) {
+        return _fail(error);
+    }
+    beginEdit();
+    const auto finish = qScopeGuard([this]() { endEdit(); });
+    _masterController->setProperty("caacSimulationSettings", settings);
+    _missionController()->setDirty(true);
+    emit simulationSettingsChanged();
+    return true;
+}
+
 void CaacRouteEditorController::setPlanMasterController(PlanMasterController* controller)
 {
     if (_masterController == controller) {
         return;
     }
+    cancelRouteOrientation();
     if (_masterController) {
         _masterController->removeEventFilter(this);
         disconnect(_masterController, nullptr, this, nullptr);
@@ -93,6 +229,9 @@ void CaacRouteEditorController::setPlanMasterController(PlanMasterController* co
             emit selectionChanged();
         });
         connect(controller->missionController(), &MissionController::visualItemsReset, this, [this]() {
+            if (_rotationPreviewActive) {
+                _clearRotationPreview();
+            }
             _watchItems();
             if (!_restoring) {
                 _editDepth = 0;
@@ -110,6 +249,8 @@ void CaacRouteEditorController::setPlanMasterController(PlanMasterController* co
     emit planMasterControllerChanged();
     emit selectionChanged();
     emit rotationCenterChanged();
+    emit simulationSettingsChanged();
+    emit routeOrientationChanged();
 }
 
 SimpleMissionItem* CaacRouteEditorController::currentItem() const
@@ -133,7 +274,7 @@ void CaacRouteEditorController::_clearError()
     }
 }
 
-bool CaacRouteEditorController::_canEdit()
+bool CaacRouteEditorController::_canEdit(bool allowRotationPreview)
 {
     _clearError();
     if (!_masterController || !_missionController() || !_missionController()->visualItems() ||
@@ -142,6 +283,10 @@ bool CaacRouteEditorController::_canEdit()
     }
     if (_masterController->syncInProgress()) {
         return _fail(tr("Wait for the vehicle transfer to finish before editing."));
+    }
+    if (_rotationPreviewActive && !allowRotationPreview) {
+        return _fail(QCoreApplication::translate(
+            "PlanMasterController", "Confirm or cancel the orientation preview before saving or uploading."));
     }
     return true;
 }
@@ -344,6 +489,101 @@ QVariantMap CaacRouteEditorController::waypointLeg(QObject* object) const
     return result;
 }
 
+bool CaacRouteEditorController::updateWaypointLeg(QObject* object, double bearing, double distance)
+{
+    if (!_canEdit() || _rotationPreviewActive) {
+        return false;
+    }
+    auto* item = qobject_cast<SimpleMissionItem*>(object);
+    auto* mission = _missionController();
+    const int index = item ? mission->visualItemIndexForObject(item) : -1;
+    auto* previous = _previousCoordinateItem(index);
+    if (!item || item->command() != MAV_CMD_NAV_WAYPOINT || !previous || !std::isfinite(bearing) ||
+        !std::isfinite(distance) || distance < 0 || distance > 20000000) {
+        return _fail(tr("Enter a valid bearing and distance in metres for an ordinary waypoint."));
+    }
+    const auto target = distance == 0 ? std::optional<QGeoCoordinate>(previous->coordinate())
+                                      : CaacRouteGeometry::relativePoint(previous->coordinate(), bearing, distance);
+    if (!target) {
+        return _fail(tr("Enter a valid bearing and distance in metres for an ordinary waypoint."));
+    }
+    auto coordinate = *target;
+    coordinate.setAltitude(item->coordinate().altitude());
+    beginEdit();
+    const auto finish = qScopeGuard([this]() { endEdit(); });
+    item->setCoordinate(coordinate);
+    return true;
+}
+
+bool CaacRouteEditorController::clearWaypoints()
+{
+    if (!_canChangeOrder() || _rotationPreviewActive) {
+        return false;
+    }
+    auto* mission = _missionController();
+    beginEdit();
+    const auto finish = qScopeGuard([this]() { endEdit(); });
+    for (int i = mission->visualItems()->count() - 1; i > 0; --i) {
+        mission->removeVisualItem(i);
+    }
+    return true;
+}
+
+bool CaacRouteEditorController::reverseWaypoints()
+{
+    if (!_canChangeOrder()) {
+        return false;
+    }
+    auto* mission = _missionController();
+    auto* model = mission->visualItems();
+    int first = 1;
+    int last = model->count() - 1;
+    if (const auto* takeoff = first <= last ? model->value<SimpleMissionItem*>(first) : nullptr;
+        takeoff && (takeoff->command() == MAV_CMD_NAV_TAKEOFF || takeoff->command() == MAV_CMD_NAV_VTOL_TAKEOFF)) {
+        ++first;
+    }
+    if (const auto* landing = first <= last ? model->value<SimpleMissionItem*>(last) : nullptr;
+        landing && (landing->command() == MAV_CMD_NAV_LAND || landing->command() == MAV_CMD_NAV_VTOL_LAND ||
+                    landing->command() == MAV_CMD_NAV_RETURN_TO_LAUNCH)) {
+        --last;
+    }
+    for (int i = first; i <= last; ++i) {
+        const auto* item = model->value<SimpleMissionItem*>(i);
+        if (!item || item->command() != MAV_CMD_NAV_WAYPOINT) {
+            return _fail(tr("Route reversal requires ordinary waypoints only."));
+        }
+    }
+    beginEdit();
+    const auto finish = qScopeGuard([this]() { endEdit(); });
+    for (int i = first; i < last; ++i) {
+        if (!mission->moveVisualItem(last, i)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool CaacRouteEditorController::useWaypointAsHome(QObject* object)
+{
+    if (!_canChangeOrder() || _rotationPreviewActive) {
+        return false;
+    }
+    auto* item = qobject_cast<SimpleMissionItem*>(object);
+    auto* mission = _missionController();
+    if (!item || mission->visualItemIndexForObject(item) < 1 || item->command() != MAV_CMD_NAV_WAYPOINT) {
+        return _fail(tr("Select an ordinary waypoint to use as the takeoff point."));
+    }
+    const auto position = item->coordinate();
+    const double altitude = mission->plannedHomePosition().altitude();
+    beginEdit();
+    const auto finish = qScopeGuard([this]() { endEdit(); });
+    if (!updatePlannedHome(position.latitude(), position.longitude(), altitude)) {
+        return false;
+    }
+    mission->removeVisualItem(mission->visualItemIndexForObject(item));
+    return true;
+}
+
 bool CaacRouteEditorController::updateRelativeWaypoint(QObject* object, double angle, double distance,
                                                        bool interiorAngle, double altitude, bool specifySpeed,
                                                        double speed)
@@ -488,6 +728,8 @@ bool CaacRouteEditorController::rotateRouteAround(const QGeoCoordinate& center, 
     beginEdit();
     const auto finish = qScopeGuard([this]() { endEdit(); });
     _setCenter(center);
+    _masterController->setProperty("caacRouteOrientation",
+                                   CaacRouteGeometry::normalizedAngle(routeOrientation() + clockwiseDegrees));
     for (int i = 0; i < items.size(); ++i) {
         auto* item = qobject_cast<VisualMissionItem*>(items[i]);
         item->setCoordinate(result->at(i));
@@ -616,6 +858,8 @@ bool CaacRouteEditorController::insertTemplate(int shape, int referenceIndex, co
     beginEdit();
     const auto finish = qScopeGuard([this]() { endEdit(); });
     _masterController->setUserSelectedManualCreation(true);
+    _masterController->setProperty("caacRouteOrientation",
+                                   CaacRouteGeometry::normalizedAngle(options.value("bearing", 0).toDouble()));
     for (int i = 0; i < coordinates.size(); ++i) {
         _missionController()->insertSimpleMissionItem(coordinates[i].value<QGeoCoordinate>(), referenceIndex + i + 1,
                                                       i == coordinates.size() - 1);
@@ -686,6 +930,9 @@ CaacRouteEditorController::Snapshot CaacRouteEditorController::_snapshot() const
 {
     Snapshot result;
     result.center = _rotationCenter;
+    result.orientation = _masterController ? _masterController->property("caacRouteOrientation") : QVariant();
+    result.simulation =
+        _masterController ? _masterController->property("caacSimulationSettings").toMap() : QVariantMap();
     auto* mission = _missionController();
     if (mission && mission->visualItems() && mission->visualItems()->count() > 0) {
         mission->save(result.mission);
@@ -748,7 +995,8 @@ void CaacRouteEditorController::_capture()
         return;
     }
     if (_historyIndex >= 0 && _history[_historyIndex].mission == state.mission &&
-        _history[_historyIndex].center == state.center) {
+        _history[_historyIndex].center == state.center && _history[_historyIndex].simulation == state.simulation &&
+        _history[_historyIndex].orientation == state.orientation) {
         return;
     }
     _history = _history.mid(0, _historyIndex + 1);
@@ -806,6 +1054,9 @@ bool CaacRouteEditorController::_restore(int index)
         return _fail(tr("Unable to restore the route: %1").arg(error));
     }
     _setCenter(state.center);
+    _masterController->setProperty("caacSimulationSettings", state.simulation);
+    _masterController->setProperty("caacRouteOrientation", state.orientation);
+    emit simulationSettingsChanged();
     _historyIndex = index;
     auto* mission = _missionController();
     const int selection = std::clamp(state.selection, 0, mission->visualItems()->count() - 1);
@@ -820,12 +1071,20 @@ bool CaacRouteEditorController::_restore(int index)
 
 bool CaacRouteEditorController::undo()
 {
+    if (_rotationPreviewActive) {
+        cancelRouteOrientation();
+        return true;
+    }
     _capture();
     return _restore(_historyIndex - 1);
 }
 
 bool CaacRouteEditorController::redo()
 {
+    if (_rotationPreviewActive) {
+        cancelRouteOrientation();
+        return false;
+    }
     _capture();
     return _restore(_historyIndex + 1);
 }
@@ -848,6 +1107,16 @@ bool CaacRouteEditorController::eventFilter(QObject* watched, QEvent* event)
             if (center != _rotationCenter) {
                 _rotationCenter = center;
                 emit rotationCenterChanged();
+                clearHistory();
+            }
+        } else if (change->propertyName() == "caacRouteOrientation") {
+            emit routeOrientationChanged();
+            if (!_restoring && _editDepth == 0) {
+                clearHistory();
+            }
+        } else if (change->propertyName() == "caacSimulationSettings") {
+            emit simulationSettingsChanged();
+            if (!_restoring && _editDepth == 0) {
                 clearHistory();
             }
         }

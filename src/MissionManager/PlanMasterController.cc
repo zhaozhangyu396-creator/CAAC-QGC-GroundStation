@@ -318,6 +318,11 @@ void PlanMasterController::_sendRallyPointsComplete(void)
 
 void PlanMasterController::sendToVehicle(void)
 {
+    if (this->property("caacRotationPreviewActive").toBool()) {
+        QGC::showAppMessage(QCoreApplication::translate(
+            "PlanMasterController", "Confirm or cancel the orientation preview before saving or uploading."));
+        return;
+    }
     SharedLinkInterfacePtr sharedLink = _managerVehicle->vehicleLinkManager()->primaryLink().lock();
     if (sharedLink) {
         if (sharedLink->linkConfiguration()->isHighLatency()) {
@@ -448,6 +453,11 @@ PlanMasterController::saveToCurrent()
 
 bool PlanMasterController::saveToFile(const QString& filename)
 {
+    if (this->property("caacRotationPreviewActive").toBool()) {
+        QGC::showAppMessage(QCoreApplication::translate(
+            "PlanMasterController", "Confirm or cancel the orientation preview before saving or uploading."));
+        return false;
+    }
     if (filename.isEmpty()) {
         return false;
     }

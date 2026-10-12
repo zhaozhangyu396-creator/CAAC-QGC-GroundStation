@@ -38,6 +38,12 @@ if ($Phase -eq 'Install') {
       Get-ChildItem -Path $installDir -Recurse | Select-Object FullName
       exit 1
     }
+    if ($env:CAAC_CHINESE_INSTALLER -eq "true") {
+      $versionInfo = (Get-Item -LiteralPath $binary).VersionInfo
+      if ($versionInfo.ProductName -ne "飞虎无人机地面站系统" -or $versionInfo.FileDescription -ne "飞虎无人机地面站系统") {
+        throw "Installed executable branding does not match the company application name"
+      }
+    }
     $expectGstreamer = $env:EXPECT_GSTREAMER -eq "true"
     $pluginDir = Join-Path $installDir "lib\gstreamer-1.0"
     if (-not $expectGstreamer) {
@@ -97,10 +103,10 @@ if ($Phase -eq 'Install') {
     $startMenuDir = Join-Path $startMenuRoot $uninstallProperties.StartMenu
     $safeModeName = "QGroundControl (GPU Safe Mode).lnk"
     if ($env:CAAC_CHINESE_INSTALLER -eq "true") {
-      $safeModeName = "QGroundControl (显卡兼容模式).lnk"
+      $safeModeName = "飞虎无人机地面站系统 (显卡兼容模式).lnk"
     }
     $shortcuts = @(
-      (Join-Path $startMenuDir "QGroundControl.lnk"),
+      (Join-Path $startMenuDir $(if ($env:CAAC_CHINESE_INSTALLER -eq "true") { "飞虎无人机地面站系统.lnk" } else { "QGroundControl.lnk" })),
       (Join-Path $startMenuDir $safeModeName)
     )
     foreach ($shortcut in $shortcuts) {

@@ -78,6 +78,9 @@ Item {
         }
 
         onPromptForPlanUsageOnVehicleChange: {
+            if (QGroundControl.corePlugin.keepCurrentPlanOnVehicleChange(_planMasterController)) {
+                return
+            }
             if (!_promptForPlanUsageShowing) {
                 _promptForPlanUsageShowing = true
                 promptForPlanUsageOnVehicleChangePopupFactory.open()
@@ -521,6 +524,14 @@ Item {
                                 editorMap.center = _missionController.plannedHomePosition
                             }
                         }
+                    },
+                    ToolStripAction {
+                        objectName: "planToolStrip_simulationButton"
+                        text: qsTr("Simulation")
+                        iconSource: "/InstrumentValueIcons/play.svg"
+                        visible: QGroundControl.corePlugin.directMissionItemEditing && toolStrip._isMissionLayer
+                        enabled: visible && (QGroundControl.corePlugin.simulation.active || _visualItems.count > 1)
+                        onTriggered: editorMap.simulationRequested()
                     },
                     ToolStripAction {
                         objectName: "planToolStrip_landButton"

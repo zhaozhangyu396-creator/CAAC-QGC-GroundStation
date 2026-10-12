@@ -21,6 +21,10 @@ set(QGC_APP_NAME
     "QGroundControl"
     CACHE STRING "Application name"
 )
+set(QGC_APP_DISPLAY_NAME
+    "${QGC_APP_NAME}"
+    CACHE STRING "Product display name"
+)
 string(TIMESTAMP _copyright_year "%Y")
 set(QGC_APP_COPYRIGHT
     "Copyright (c) ${_copyright_year} QGroundControl. All rights reserved."

@@ -15,9 +15,12 @@
 #include "AppMessages.h"
 #include "QGCMath.h"
 
-#ifdef QGC_GST_STREAMING
+#if defined(QGC_GST_STREAMING) && defined(QT_DEBUG)
 #include "MockVideoStreamServer.h"
 #endif
+
+#include <cmath>
+#include <cstring>
 
 #include <QtCore/QFile>
 #include <QtCore/QJsonArray>
@@ -25,14 +28,12 @@
 #include <QtCore/QJsonObject>
 #include <QtCore/QLatin1StringView>
 #include <QtCore/QMutexLocker>
-#include <QtCore/QSet>
 #include <QtCore/QRandomGenerator>
+#include <QtCore/QSet>
 #include <QtCore/QTemporaryFile>
 #include <QtCore/QThread>
 #include <QtCore/QTimer>
-
-#include <cmath>
-#include <cstring>
+#include <QtPositioning/QGeoCoordinate>
 
 QGC_LOGGING_CATEGORY(MockLinkLog, "Comms.MockLink.MockLink")
 QGC_LOGGING_CATEGORY(MockLinkVerboseLog, "Comms.MockLink.MockLink:verbose")
@@ -325,7 +326,7 @@ void MockLink::disconnect()
 
 void MockLink::_startVideoStreamServer()
 {
-#ifdef QGC_GST_STREAMING
+#if defined(QGC_GST_STREAMING) && defined(QT_DEBUG)
     // Only serve a stream when a camera advertising a video stream is present and a type was requested.
     if (_videoStreamServer || !_mockLinkCamera || !_mockConfig->cameraHasVideoStream()
             || _requestedVideoStreamType == MockConfiguration::VideoStreamNone) {
@@ -378,7 +379,7 @@ void MockLink::_startVideoStreamServer()
 
 void MockLink::_stopVideoStreamServer()
 {
-#ifdef QGC_GST_STREAMING
+#if defined(QGC_GST_STREAMING) && defined(QT_DEBUG)
     // Clear the served-stream snapshot first so observers (servedVideoStream) stop
     // advertising the URI before the server actually goes away.
     {
@@ -402,6 +403,10 @@ void MockLink::servedVideoStream(MockConfiguration::VideoStreamType &type, QStri
 
 void MockLink::run1HzTasks()
 {
+    if (_caacSimulation && QThread::currentThread() != thread()) {
+        QMetaObject::invokeMethod(this, &MockLink::run1HzTasks, Qt::QueuedConnection);
+        return;
+    }
     if (!_mavlinkStarted || !_connected || !mavlinkChannelIsSet()) {
         return;
     }
@@ -456,6 +461,10 @@ void MockLink::run1HzTasks()
 
 void MockLink::run10HzTasks()
 {
+    if (_caacSimulation && QThread::currentThread() != thread()) {
+        QMetaObject::invokeMethod(this, &MockLink::run10HzTasks, Qt::QueuedConnection);
+        return;
+    }
     if (linkConfiguration()->isHighLatency()) {
         return;
     }
@@ -490,6 +499,10 @@ void MockLink::run10HzTasks()
 
 void MockLink::run500HzTasks()
 {
+    if (_caacSimulation && QThread::currentThread() != thread()) {
+        QMetaObject::invokeMethod(this, &MockLink::run500HzTasks, Qt::QueuedConnection);
+        return;
+    }
     if (_mavlinkStarted && _connected && mavlinkChannelIsSet()) {
         // Standard modes are served even on high-latency links since the request is still accepted there.
         _availableModesWorker();
@@ -1099,8 +1112,17 @@ void MockLink::_sendDistanceSensors()
     }
 }
 
-void MockLink::respondWithMavlinkMessage(const mavlink_message_t &msg)
+void MockLink::respondWithMavlinkMessage(const mavlink_message_t& msg, bool simulationMessage)
 {
+    if (_caacSimulation && !simulationMessage &&
+        (msg.msgid == MAVLINK_MSG_ID_OPEN_DRONE_ID_ARM_STATUS || msg.msgid == MAVLINK_MSG_ID_HEARTBEAT ||
+         msg.msgid == MAVLINK_MSG_ID_GLOBAL_POSITION_INT || msg.msgid == MAVLINK_MSG_ID_GPS_RAW_INT ||
+         msg.msgid == MAVLINK_MSG_ID_HOME_POSITION || msg.msgid == MAVLINK_MSG_ID_ATTITUDE_QUATERNION ||
+         msg.msgid == MAVLINK_MSG_ID_ATTITUDE || msg.msgid == MAVLINK_MSG_ID_LOCAL_POSITION_NED ||
+         msg.msgid == MAVLINK_MSG_ID_POSITION_TARGET_LOCAL_NED || msg.msgid == MAVLINK_MSG_ID_EXTENDED_SYS_STATE ||
+         msg.msgid == MAVLINK_MSG_ID_VFR_HUD)) {
+        return;
+    }
     if (!_commLost) {
         uint8_t buffer[MAVLINK_MAX_PACKET_LEN]{};
         const int cBuffer = mavlink_msg_to_send_buffer(buffer, &msg);
@@ -2162,94 +2184,105 @@ void MockLink::_handleCommandLong(const mavlink_message_t &msg)
     uint8_t commandResult = MAV_RESULT_UNSUPPORTED;
 
     switch (request.command) {
-    case MAV_CMD_COMPONENT_ARM_DISARM:
-        if (request.param1 == 0.0f) {
-            _mavBaseMode &= ~MAV_MODE_FLAG_SAFETY_ARMED;
-        } else {
-            _mavBaseMode |= MAV_MODE_FLAG_SAFETY_ARMED;
-        }
-        commandResult = MAV_RESULT_ACCEPTED;
-        break;
-    case MAV_CMD_DO_SET_MODE:
-        // Preserve the armed flag like real firmware does
-        _mavBaseMode = (_mavBaseMode & MAV_MODE_FLAG_SAFETY_ARMED) | static_cast<uint8_t>(request.param1);
-        _mavCustomMode = static_cast<uint32_t>(request.param2);
-        commandResult = MAV_RESULT_ACCEPTED;
-        break;
-    case MAV_CMD_MISSION_START:
-        commandResult = MAV_RESULT_ACCEPTED;
-        break;
-    case MAV_CMD_PREFLIGHT_CALIBRATION:
-        _handlePreFlightCalibration(request);
-        commandResult = MAV_RESULT_ACCEPTED;
-        break;
-    case MAV_CMD_DO_MOTOR_TEST:
-        commandResult = MAV_RESULT_ACCEPTED;
-        break;
-    case MAV_CMD_DO_START_MAG_CAL:
-        // APM onboard compass calibration: start sending MAG_CAL_PROGRESS then MAG_CAL_REPORT.
-        // Note: does NOT stop stale failed report streaming - like real ArduPilot, only
-        // MAV_CMD_DO_CANCEL_MAG_CAL stops the failed report stream.
-        if (_firmwareType == MAV_AUTOPILOT_ARDUPILOTMEGA) {
-            if (_apmMagCalStartFailureMode) {
-                commandResult = MAV_RESULT_FAILED;
+        case MAV_CMD_DO_REPOSITION:
+            if (_caacSimulation) {
+                const QGeoCoordinate target(request.param5, request.param6, request.param7);
+                const bool hold = std::isnan(request.param5) && std::isnan(request.param6);
+                if (hold || (target.isValid() && std::isfinite(target.altitude()))) {
+                    setProperty("caacGuidedTarget", QVariant::fromValue(hold ? QGeoCoordinate() : target));
+                    _mavCustomMode = PX4CustomMode::AUTO_LOITER;
+                    emit simulationAltitudeRequested(request.param7);
+                    commandResult = MAV_RESULT_ACCEPTED;
+                }
+            }
+            break;
+        case MAV_CMD_COMPONENT_ARM_DISARM:
+            if (request.param1 == 0.0f) {
+                _mavBaseMode &= ~MAV_MODE_FLAG_SAFETY_ARMED;
             } else {
+                _mavBaseMode |= MAV_MODE_FLAG_SAFETY_ARMED;
+            }
+            commandResult = MAV_RESULT_ACCEPTED;
+            break;
+        case MAV_CMD_DO_SET_MODE:
+            // Preserve the armed flag like real firmware does
+            _mavBaseMode = (_mavBaseMode & MAV_MODE_FLAG_SAFETY_ARMED) | static_cast<uint8_t>(request.param1);
+            _mavCustomMode = static_cast<uint32_t>(request.param2);
+            commandResult = MAV_RESULT_ACCEPTED;
+            break;
+        case MAV_CMD_MISSION_START:
+            commandResult = MAV_RESULT_ACCEPTED;
+            break;
+        case MAV_CMD_PREFLIGHT_CALIBRATION:
+            _handlePreFlightCalibration(request);
+            commandResult = MAV_RESULT_ACCEPTED;
+            break;
+        case MAV_CMD_DO_MOTOR_TEST:
+            commandResult = MAV_RESULT_ACCEPTED;
+            break;
+        case MAV_CMD_DO_START_MAG_CAL:
+            // APM onboard compass calibration: start sending MAG_CAL_PROGRESS then MAG_CAL_REPORT.
+            // Note: does NOT stop stale failed report streaming - like real ArduPilot, only
+            // MAV_CMD_DO_CANCEL_MAG_CAL stops the failed report stream.
+            if (_firmwareType == MAV_AUTOPILOT_ARDUPILOTMEGA) {
+                if (_apmMagCalStartFailureMode) {
+                    commandResult = MAV_RESULT_FAILED;
+                } else {
+                    QMutexLocker locker(&_apmCompassCalMutex);
+                    _apmCompassCalProgress = 0;
+                    _apmCompassCalTickCount = 0;
+                    commandResult = MAV_RESULT_ACCEPTED;
+                }
+            }
+            break;
+        case MAV_CMD_DO_CANCEL_MAG_CAL:
+            // Stop APM compass calibration worker
+            if (_firmwareType == MAV_AUTOPILOT_ARDUPILOTMEGA) {
                 QMutexLocker locker(&_apmCompassCalMutex);
-                _apmCompassCalProgress  = 0;
-                _apmCompassCalTickCount = 0;
+                _apmStaleFailedMagCalReportStreaming = false;
+                _apmCompassCalProgress = -1;
                 commandResult = MAV_RESULT_ACCEPTED;
             }
-        }
-        break;
-    case MAV_CMD_DO_CANCEL_MAG_CAL:
-        // Stop APM compass calibration worker
-        if (_firmwareType == MAV_AUTOPILOT_ARDUPILOTMEGA) {
-            QMutexLocker locker(&_apmCompassCalMutex);
-            _apmStaleFailedMagCalReportStreaming = false;
-            _apmCompassCalProgress = -1;
+            break;
+        case MAV_CMD_CONTROL_HIGH_LATENCY:
+            if (linkConfiguration()->isHighLatency()) {
+                _highLatencyTransmissionEnabled = static_cast<int>(request.param1) != 0;
+                emit highLatencyTransmissionEnabledChanged(_highLatencyTransmissionEnabled);
+                commandResult = MAV_RESULT_ACCEPTED;
+            } else {
+                commandResult = MAV_RESULT_FAILED;
+            }
+            break;
+        case MAV_CMD_PREFLIGHT_STORAGE:
+            if (static_cast<int>(request.param1) == 2) {
+                // Reset all parameters to firmware defaults (unit test support)
+                _resetParamsToDefaults();
+            }
             commandResult = MAV_RESULT_ACCEPTED;
-        }
-        break;
-    case MAV_CMD_CONTROL_HIGH_LATENCY:
-        if (linkConfiguration()->isHighLatency()) {
-            _highLatencyTransmissionEnabled = static_cast<int>(request.param1) != 0;
-            emit highLatencyTransmissionEnabledChanged(_highLatencyTransmissionEnabled);
+            break;
+        case MAV_CMD_PREFLIGHT_REBOOT_SHUTDOWN:
+            // Unit test support: accept the reboot command so tests can exercise
+            // flows which restart the vehicle (e.g. airframe Apply and Restart).
+            // The actual reboot is not simulated.
             commandResult = MAV_RESULT_ACCEPTED;
-        } else {
-            commandResult = MAV_RESULT_FAILED;
-        }
-        break;
-    case MAV_CMD_PREFLIGHT_STORAGE:
-        if (static_cast<int>(request.param1) == 2) {
-            // Reset all parameters to firmware defaults (unit test support)
-            _resetParamsToDefaults();
-        }
-        commandResult = MAV_RESULT_ACCEPTED;
-        break;
-    case MAV_CMD_PREFLIGHT_REBOOT_SHUTDOWN:
-        // Unit test support: accept the reboot command so tests can exercise
-        // flows which restart the vehicle (e.g. airframe Apply and Restart).
-        // The actual reboot is not simulated.
-        commandResult = MAV_RESULT_ACCEPTED;
-        break;
-    case MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES:
-        commandResult = MAV_RESULT_ACCEPTED;
-        _respondWithAutopilotVersion();
-        break;
-    case MAV_CMD_REQUEST_MESSAGE:
-    {
-        bool accepted = false;
-        bool noAck = false;
-        _handleRequestMessage(request, accepted, noAck);
-        if (noAck) {
-            // FailRequestMessageCommandNoResponse: don't send any ack, let vehicle timeout
-            return;
-        }
-        if (accepted) {
+            break;
+        case MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES:
             commandResult = MAV_RESULT_ACCEPTED;
+            _respondWithAutopilotVersion();
+            break;
+        case MAV_CMD_REQUEST_MESSAGE: {
+            bool accepted = false;
+            bool noAck = false;
+            _handleRequestMessage(request, accepted, noAck);
+            if (noAck) {
+                // FailRequestMessageCommandNoResponse: don't send any ack, let vehicle timeout
+                return;
+            }
+            if (accepted) {
+                commandResult = MAV_RESULT_ACCEPTED;
+            }
+            break;
         }
-        break;
-    }
     case MAV_CMD_NAV_TAKEOFF:
         _handleTakeoff(request);
         commandResult = MAV_RESULT_ACCEPTED;
@@ -2330,21 +2363,32 @@ void MockLink::_handleCommandInt(const mavlink_message_t &msg)
     uint8_t commandResult = MAV_RESULT_UNSUPPORTED;
 
     switch (request.command) {
-    case MAV_CMD_DO_SET_ROI_LOCATION:
-        // Unit test support: accept ROI commands so tests can verify Vehicle::guidedModeROI
-        commandResult = MAV_RESULT_ACCEPTED;
-        break;
-    case MAV_CMD_DO_SET_MODE:
-        // Preserve the armed flag like real firmware does
-        _mavBaseMode = (_mavBaseMode & MAV_MODE_FLAG_SAFETY_ARMED) | static_cast<uint8_t>(request.param1);
-        _mavCustomMode = static_cast<uint32_t>(request.param2);
-        commandResult = MAV_RESULT_ACCEPTED;
-        break;
-    case MAV_CMD_MISSION_START:
-        commandResult = MAV_RESULT_ACCEPTED;
-        break;
-    default:
-        break;
+        case MAV_CMD_DO_REPOSITION:
+            if (_caacSimulation && (request.frame == MAV_FRAME_GLOBAL || request.frame == MAV_FRAME_GLOBAL_INT)) {
+                const QGeoCoordinate target(request.x / 1e7, request.y / 1e7, request.z);
+                if (target.isValid() && std::isfinite(target.altitude())) {
+                    setProperty("caacGuidedTarget", QVariant::fromValue(target));
+                    _mavCustomMode = PX4CustomMode::AUTO_LOITER;
+                    emit simulationAltitudeRequested(request.z);
+                    commandResult = MAV_RESULT_ACCEPTED;
+                }
+            }
+            break;
+        case MAV_CMD_DO_SET_ROI_LOCATION:
+            // Unit test support: accept ROI commands so tests can verify Vehicle::guidedModeROI
+            commandResult = MAV_RESULT_ACCEPTED;
+            break;
+        case MAV_CMD_DO_SET_MODE:
+            // Preserve the armed flag like real firmware does
+            _mavBaseMode = (_mavBaseMode & MAV_MODE_FLAG_SAFETY_ARMED) | static_cast<uint8_t>(request.param1);
+            _mavCustomMode = static_cast<uint32_t>(request.param2);
+            commandResult = MAV_RESULT_ACCEPTED;
+            break;
+        case MAV_CMD_MISSION_START:
+            commandResult = MAV_RESULT_ACCEPTED;
+            break;
+        default:
+            break;
     }
 
     mavlink_message_t commandAck{};

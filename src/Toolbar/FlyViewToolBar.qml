@@ -78,8 +78,8 @@ Item {
                             id:                 qgcButton
                             objectName:         "toolbar_qgcLogo"
                             Layout.fillHeight:  true
-                            icon.source:        "/res/QGCLogoFull.svg"
-                            logo:               true
+                            icon.source:        "/res/gear-white.svg"
+                            logo:               false
                             onClicked:          mainWindow.showToolSelectDialog()
                         }
 

@@ -632,6 +632,12 @@ bool QmlUITestBase::scrollIntoView(QQuickItem* item, const QString& flickableObj
             // Add current contentY to get the absolute content-space position, then
             // target a contentY that centres the item in the flickable.
             const QPointF itemInFlickable = guardedItem->mapToItem(guardedFlickable, QPointF(0, 0));
+            const double currentContentX = guardedFlickable->property("contentX").toDouble();
+            const double targetX =
+                itemInFlickable.x() + currentContentX + guardedItem->width() / 2.0 - guardedFlickable->width() / 2.0;
+            const double maxContentX =
+                guardedFlickable->property("contentWidth").toDouble() - guardedFlickable->width();
+            guardedFlickable->setProperty("contentX", qBound(0.0, targetX, qMax(0.0, maxContentX)));
             const double currentContentY = guardedFlickable->property("contentY").toDouble();
             const double absoluteY = itemInFlickable.y() + currentContentY;
             const double targetY = absoluteY + guardedItem->height() / 2.0 - guardedFlickable->height() / 2.0;

@@ -42,6 +42,7 @@ class QGCCorePlugin : public QObject
     Q_OBJECT
     QML_UNCREATABLE("")
     Q_MOC_INCLUDE("QGCOptions.h")
+    Q_MOC_INCLUDE("PlanMasterController.h")
     Q_MOC_INCLUDE("QmlObjectListModel.h")
     Q_PROPERTY(bool showAdvancedUI                      READ showAdvancedUI                     WRITE _setShowAdvancedUI    NOTIFY showAdvancedUIChanged)
     Q_PROPERTY(bool showTouchAreas                      READ showTouchAreas                     WRITE _setShowTouchAreas    NOTIFY showTouchAreasChanged)
@@ -159,6 +160,9 @@ public:
 
     /// Controls whether the plan tree includes the plan information group.
     virtual bool showPlanInformation() const { return true; }
+
+    /// Lets a custom simulation attach without replacing the user's local plan.
+    Q_INVOKABLE virtual bool keepCurrentPlanOnVehicleChange(PlanMasterController*) const { return false; }
 
     /// Allows custom builds to add custom items to the plan file before the document is created.
     virtual void preSaveToJson(PlanMasterController *pController, QJsonObject &json) { Q_UNUSED(pController); Q_UNUSED(json); }

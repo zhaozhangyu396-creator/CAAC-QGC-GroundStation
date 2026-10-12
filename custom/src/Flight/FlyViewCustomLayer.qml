@@ -99,6 +99,29 @@ Item {
         }
     }
 
+    QGCLabel {
+        objectName: "caacSimulationBanner"
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+        anchors.topMargin: root._margin
+        width: parent.width / 3
+        wrapMode: Text.WordWrap
+        horizontalAlignment: Text.AlignHCenter
+        visible: root._corePlugin.simulation.active
+        text: qsTr("SIMULATION FLIGHT")
+        font.pointSize: ScreenTools.menuFontPointSize
+        font.bold: true
+        color: caacPalette.colorYellowGreen
+    }
+
+    CaacWaypointOverlap {
+        anchors.fill: parent
+        z: QGroundControl.zOrderMapItems + 1
+        mapControl: root.mapControl
+        missionController: root._missionController
+        blockedAreas: root.occluders ? root.occluders.all.concat(root.customOccluders) : root.customOccluders
+    }
+
     CaacRouteLegLabels {
         anchors.fill: parent
         mapControl: root.mapControl

@@ -1,0 +1,151 @@
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import QtQuick.Layouts
+
+import QGroundControl
+import QGroundControl.Controls
+
+ColumnLayout {
+    id: root
+    required property var routeController
+    required property var editor
+    readonly property var _settings: routeController.simulationSettings
+    readonly property var _items: editor.planMasterController ? editor.planMasterController.missionController.visualItems : null
+    readonly property var _points: {
+        const points = [{label: qsTr("Takeoff point"), sequence: 0}]
+        if (_items) {
+            for (let i = 1; i < _items.count; ++i) {
+                const item = _items.get(i)
+                if (item.isSimpleItem && item.command === 16) {
+                    points.push({label: qsTr("Waypoint %1").arg(item.sequenceNumber), sequence: item.sequenceNumber})
+                }
+            }
+        }
+        return points
+    }
+    function pointIndex(sequence) { return _points.findIndex(point => point.sequence === sequence) }
+    function number(value) { return value.trim().length ? Number(value) : NaN }
+    function values() {
+        return {horizontalSpeed: _settings.horizontalSpeed, verticalSpeed: number(vertical.text),
+            yawRate: number(yawRate.text), windSpeed: number(windSpeed.text), windBearing: number(windBearing.text),
+            turnMode: turn.currentIndex, climbMode: climb.currentIndex, holdSeconds: hold.visible ? number(hold.text) : _settings.holdSeconds,
+            specifyYaw: yawMode.currentIndex === 1, yaw: yaw.visible ? number(yaw.text) : _settings.yaw, closed: closed.checked,
+            loopMode: loop.currentIndex, loopCount: loopCount.visible ? number(loopCount.text) : _settings.loopCount, endBehavior: ending.currentIndex,
+            startSequence: start.currentIndex >= 0 ? _points[start.currentIndex].sequence : NaN,
+            returnSequence: ending.currentIndex === 0 ? _settings.returnSequence
+                : returning.currentIndex >= 0 ? _points[returning.currentIndex].sequence : NaN,
+            takeoffHeight: number(takeoffHeight.text)}
+    }
+    component NumberField: QGCTextField {
+        Layout.fillWidth: true
+        Layout.minimumWidth: 0
+        validator: DoubleValidator { locale: "C" }
+    }
+    spacing: ScreenTools.defaultFontPixelHeight * 0.5
+    QGCLabel { text: qsTr("Advanced simulation settings"); font.bold: true }
+    QGCLabel {
+        Layout.fillWidth: true
+        wrapMode: Text.WordWrap
+        text: qsTr("These turn and climb modes apply to the built-in kinematic simulation. For aircraft, use firmware-supported mission settings. Waypoint speed commands override the initial speed.")
+    }
+    GridLayout {
+        columns: root.width < ScreenTools.defaultFontPixelWidth * 35 ? 1 : 2
+        Layout.fillWidth: true
+        QGCLabel { text: qsTr("Takeoff height (relative, m)") }
+        NumberField { id: takeoffHeight; objectName: "caacSimTakeoffHeight"; text: root._settings.takeoffHeight.toString() }
+        QGCLabel { text: qsTr("Vertical speed (m/s)") }
+        NumberField { id: vertical; objectName: "caacSimVerticalSpeed"; text: root._settings.verticalSpeed.toString() }
+        QGCLabel { text: qsTr("Turn mode") }
+        QGCComboBox {
+            id: turn
+            objectName: "caacSimTurnMode"
+            Layout.fillWidth: true
+            model: [qsTr("Point turn"), qsTr("Coordinated turn"), qsTr("Adaptive coordinated turn"), qsTr("No turn")]
+            currentIndex: root._settings.turnMode
+        }
+        QGCLabel { text: qsTr("Hold duration (s)"); visible: turn.currentIndex === 0 || turn.currentIndex === 3 }
+        NumberField {
+            id: hold; objectName: "caacSimHoldDuration"; text: root._settings.holdSeconds.toString()
+            visible: turn.currentIndex === 0 || turn.currentIndex === 3
+        }
+        QGCLabel { text: qsTr("Hold heading"); visible: hold.visible }
+        QGCComboBox {
+            id: yawMode; objectName: "caacSimSpecifyYaw"; Layout.fillWidth: true
+            model: [qsTr("Unspecified"), qsTr("Specified")]
+            currentIndex: root._settings.specifyYaw ? 1 : 0
+            visible: hold.visible
+        }
+        QGCLabel { text: qsTr("Specified heading (degrees)"); visible: yawMode.visible && yawMode.currentIndex === 1 }
+        NumberField {
+            id: yaw; objectName: "caacSimYaw"; text: root._settings.yaw.toString()
+            visible: yawMode.visible && yawMode.currentIndex === 1
+        }
+        QGCLabel { text: qsTr("Yaw rate (degrees/s)") }
+        NumberField { id: yawRate; objectName: "caacSimYawRate"; text: root._settings.yawRate.toString() }
+        QGCLabel { text: qsTr("Climb mode") }
+        QGCComboBox {
+            id: climb; objectName: "caacSimClimbMode"; Layout.fillWidth: true
+            model: [qsTr("Point climb"), qsTr("Coordinated climb")]
+            currentIndex: root._settings.climbMode
+        }
+    }
+    QGCLabel { text: qsTr("Closed route and loops"); font.bold: true }
+    QGCCheckBox { id: closed; objectName: "caacSimClosedRoute"; text: qsTr("Close route"); checked: root._settings.closed }
+    GridLayout {
+        columns: root.width < ScreenTools.defaultFontPixelWidth * 35 ? 1 : 2
+        Layout.fillWidth: true
+        QGCLabel { text: qsTr("Loop behavior") }
+        QGCComboBox {
+            id: loop; objectName: "caacSimLoopMode"; Layout.fillWidth: true
+            model: [qsTr("No loop"), qsTr("Specified count"), qsTr("Loop forever")]
+            currentIndex: root._settings.loopMode
+        }
+        QGCLabel { text: qsTr("Total route executions"); visible: loop.currentIndex === 1 }
+        NumberField {
+            id: loopCount; objectName: "caacSimLoopCount"; text: root._settings.loopCount.toString()
+            visible: loop.currentIndex === 1
+        }
+        QGCLabel { text: qsTr("Start point") }
+        QGCComboBox {
+            id: start; objectName: "caacSimStartPoint"; Layout.fillWidth: true
+            model: root._points; textRole: "label"; currentIndex: root.pointIndex(root._settings.startSequence)
+        }
+        QGCLabel { text: qsTr("End behavior") }
+        QGCComboBox {
+            id: ending; objectName: "caacSimEndBehavior"; Layout.fillWidth: true
+            model: [qsTr("Hover in place"), qsTr("Return")]; currentIndex: root._settings.endBehavior
+        }
+        QGCLabel { text: qsTr("Return point"); visible: ending.currentIndex === 1 }
+        QGCComboBox {
+            id: returning; objectName: "caacSimReturnPoint"; Layout.fillWidth: true
+            visible: ending.currentIndex === 1
+            model: root._points; textRole: "label"; currentIndex: root.pointIndex(root._settings.returnSequence)
+        }
+    }
+    QGCLabel {
+        Layout.fillWidth: true; wrapMode: Text.WordWrap
+        text: qsTr("Count 1 executes once. Takeoff runs once; loops begin at the selected waypoint. Returning to a waypoint ends in a hover; returning home lands in this simulation.")
+    }
+    QGCLabel { text: qsTr("Simulation wind"); font.bold: true }
+    GridLayout {
+        columns: root.width < ScreenTools.defaultFontPixelWidth * 35 ? 1 : 2
+        Layout.fillWidth: true
+        QGCLabel { text: qsTr("Wind speed (m/s)") }
+        NumberField { id: windSpeed; objectName: "caacSimWindSpeed"; text: root._settings.windSpeed.toString() }
+        QGCLabel { text: qsTr("Wind direction (towards, degrees)") }
+        NumberField { id: windBearing; objectName: "caacSimWindBearing"; text: root._settings.windBearing.toString() }
+    }
+    QGCButton {
+        objectName: "caacSaveSimulationSettings"
+        Layout.fillWidth: true
+        text: qsTr("Save simulation settings")
+        onClicked: root.routeController.setSimulationSettings(root.values())
+    }
+    QGCButton {
+        objectName: "caacOpenSimulation"
+        Layout.fillWidth: true
+        text: qsTr("Simulation flight")
+        onClicked: root.editor.openSimulation()
+    }
+}

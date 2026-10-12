@@ -114,6 +114,9 @@ public:
         TypeMock,       ///< Mock Link for Unitesting
 #endif
         TypeLogReplay,
+#if defined(QGC_CAAC_SIMULATION) && !defined(QT_DEBUG)
+        TypeMock,       ///< Keeps existing Release link type numbers unchanged.
+#endif
         TypeLast        // Last type value (type >= TypeLast == invalid)
     };
     Q_ENUM(LinkType)

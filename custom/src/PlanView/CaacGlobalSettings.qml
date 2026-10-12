@@ -110,6 +110,11 @@ Item {
                 font.pointSize: ScreenTools.smallFontPointSize
                 wrapMode: Text.WordWrap
             }
+            CaacSimulationSettings {
+                Layout.fillWidth: true
+                routeController: root.routeController
+                editor: root.editor
+            }
             QGCLabel { text: qsTr("Route rotation"); font.bold: true }
             QGCButton {
                 objectName: "caacGlobalRotate"

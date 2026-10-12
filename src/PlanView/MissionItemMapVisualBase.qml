@@ -147,6 +147,10 @@ Item {
                 }
             }
             onClicked: {
+                if (control.map.directMissionItemEditing) {
+                    control.map.missionItemPropertiesRequested(control._missionItem)
+                    return
+                }
                 const indicator = itemVisualLoader.item
                 if (indicator && indicator.activate) {
                     indicator.activate()

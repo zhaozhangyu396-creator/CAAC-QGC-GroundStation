@@ -1,8 +1,13 @@
 target_sources(
     ${CMAKE_PROJECT_NAME}
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/CaacRouteEditorTest.cc ${CMAKE_CURRENT_SOURCE_DIR}/CaacRouteEditorUITest.cc
-            ${CMAKE_CURRENT_SOURCE_DIR}/CaacFlightDistanceTest.cc ${CMAKE_CURRENT_SOURCE_DIR}/CaacFlightDataUITest.cc
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/CaacRouteEditorTest.cc
+            ${CMAKE_CURRENT_SOURCE_DIR}/CaacRouteEditorUITest.cc
+            ${CMAKE_CURRENT_SOURCE_DIR}/CaacFlightDistanceTest.cc
+            ${CMAKE_CURRENT_SOURCE_DIR}/CaacFlightDataUITest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacPlanningToolsTest.cc
+            ${CMAKE_CURRENT_SOURCE_DIR}/CaacSimulationEngineTest.cc
+            ${CMAKE_CURRENT_SOURCE_DIR}/CaacSimulationUITest.cc
+            ${CMAKE_CURRENT_SOURCE_DIR}/CaacPlanningInteractionUITest.cc
 )
 if(WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
     qt_add_executable(CaacFocusTestWindow WIN32 CaacFocusTestWindow.cc)
@@ -69,3 +74,36 @@ if(WIN32)
         PROPERTY ENVIRONMENT_MODIFICATION "QT_QPA_PLATFORM=set:windows"
     )
 endif()
+
+add_qgc_test(CaacSimulationEngineTest LABELS Unit MissionManager)
+add_qgc_test(
+    CaacSimulationUITest
+    LABELS
+    Integration
+    Vehicle
+    NoSanitizer
+    TIMEOUT
+    120
+    ENV_MODIFICATION
+    "QGC_TEST_LOCALE=set:zh_CN"
+)
+if(WIN32)
+    set_property(
+        TEST CaacSimulationUITest
+        APPEND
+        PROPERTY ENVIRONMENT_MODIFICATION "QT_QPA_PLATFORM=set:windows"
+    )
+endif()
+
+add_qgc_test(
+    CaacPlanningInteractionUITest
+    LABELS
+    Integration
+    MissionManager
+    NoSanitizer
+    TIMEOUT
+    120
+    ENV_MODIFICATION
+    "QGC_TEST_LOCALE=set:zh_CN"
+    ${_caac_ui_env}
+)

@@ -35,7 +35,7 @@ Button {
         QGCVectorImage {
             visible:                button.logo
             height:                 ScreenTools.defaultFontPixelHeight * 2
-            width:                  height
+            width:                  implicitHeight > 0 ? height * implicitWidth / implicitHeight : height
             source:                 visible ? button.icon.source : ""
             anchors.verticalCenter: parent.verticalCenter
 

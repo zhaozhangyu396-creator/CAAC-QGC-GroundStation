@@ -27,12 +27,19 @@ Column {
     onActivePanelChanged: showMissionTree = false
     readonly property var currentItem: editorController.currentItem
     readonly property var routeController: editorController
+    readonly property var _managerVehicle: planMasterController ? planMasterController.managerVehicle : null
+    readonly property bool _canTransfer: planMasterController && !planMasterController.offline
+        && _managerVehicle && _managerVehicle === QGroundControl.multiVehicleManager.activeVehicle
+        && _managerVehicle.initialConnectComplete && !planMasterController.syncInProgress
+        && !editorController.rotationPreviewActive
+    readonly property real _transferHeight: waypointTransfer.visible ? waypointTransfer.height : 0
     property bool _pickingCenter: false
+    property bool _pickingHome: false
     property int measurePick: 0
     property var measureA: QtPositioning.coordinate()
     property var measureB: QtPositioning.coordinate()
-    onVisibleChanged: { if (!visible) { measurePick = 0 } }
-    onEnabledChanged: { if (!enabled) { measurePick = 0 } }
+    onVisibleChanged: { if (!visible) { measurePick = 0; _pickingHome = false } }
+    onEnabledChanged: { if (!enabled) { measurePick = 0; _pickingHome = false } }
     property int _pendingOperation: 0
     property var _draggedWaypoint: null
     readonly property var _dragLeg: _draggedWaypoint && editorController.coordinateItems.length > 0
@@ -44,6 +51,7 @@ Column {
         root.activePanel = 3
         root.showMissionTree = true
     }
+    function openSimulation() { simulationDialogFactory.open() }
 
     Rectangle {
         parent: root.parent
@@ -67,6 +75,71 @@ Column {
         const x = Math.max(0, Math.min(position.x + delta.x, editorMap.width - width))
         const y = Math.max(0, Math.min(position.y + delta.y, editorMap.height - panelNavigation.height - listHeader.height))
         _panelDragOffset = Qt.point(_panelDragOffset.x + x - position.x, _panelDragOffset.y + y - position.y)
+    }
+
+    CaacWaypointOverlap {
+        parent: root.editorMap
+        anchors.fill: parent
+        visible: root.visible && root.enabled
+        z: QGroundControl.zOrderMapItems + 1
+        enabled: !waypointPopup.visible && !waypointMenu.visible
+        blockedAreas: {
+            void root._panelDragOffset
+            void root.x
+            void root.y
+            const point = root.editorMap ? root.mapToItem(root.editorMap, 0, 0) : Qt.point(0, 0)
+            return [Qt.rect(point.x, point.y, root.width, root.height)]
+        }
+        mapControl: root.editorMap
+        missionController: root.planMasterController ? root.planMasterController.missionController : null
+    }
+
+    CaacWaypointPopup { id: waypointPopup; editor: root }
+    CaacWaypointMenu { id: waypointMenu; editor: root }
+    CaacDrawingAids {
+        id: drawingAids
+        mapControl: root.editorMap
+        showAids: root.visible && root.enabled
+    }
+    function closeWaypointProperties() { waypointPopup.close() }
+    function addDrawingAid(origin, radius, bearing, axes) { drawingAids.add(origin, radius, bearing, axes) }
+    function clearDrawingAids() { drawingAids.clear() }
+    function pickPlannedHome() {
+        _pickingCenter = false
+        measurePick = 0
+        _pickingHome = true
+    }
+    function centerPlannedHome() {
+        if (editorMap && planMasterController && planMasterController.missionController.plannedHomePosition.isValid) {
+            editorMap.center = planMasterController.missionController.plannedHomePosition
+        }
+    }
+    function confirmClearWaypoints() { clearWaypointsFactory.open() }
+    function confirmGoto(coordinate) {
+        const vehicle = QGroundControl.multiVehicleManager.activeVehicle
+        if (!vehicle || !vehicle.armed || !vehicle.airborne || !vehicle.supports.guidedMode) { return }
+        mainWindow.showFlyView()
+        Qt.callLater(() => {
+            const guided = globals.guidedControllerFlyView
+            if (guided && vehicle === QGroundControl.multiVehicleManager.activeVehicle && guided.confirmDialog) {
+                guided.confirmAction(guided.actionGoto, coordinate)
+            }
+        })
+    }
+    QGCPopupDialogFactory {
+        id: clearWaypointsFactory
+        dialogComponent: Component {
+            QGCPopupDialog {
+                title: qsTr("Clear waypoints")
+                buttons: Dialog.Ok | Dialog.Cancel
+                QGCLabel {
+                    text: qsTr("Remove all mission items and keep the planned takeoff point? This can be undone.")
+                    wrapMode: Text.WordWrap
+                    width: ScreenTools.defaultFontPixelWidth * 40
+                }
+                onAccepted: preventClose = !editorController.clearWaypoints()
+            }
+        }
     }
 
     CaacRouteLegLabels {
@@ -141,6 +214,8 @@ Column {
     }
 
     function editWaypoint(item) {
+        waypointPopup.close()
+        editorController.cancelRouteOrientation()
         if (editorController.selectWaypoint(item)) {
             waypointDialogFactory.open({ waypoint: item })
         }
@@ -461,7 +536,7 @@ Column {
         objectName: "caacWaypointList"
         width: root.width
         height: Math.max(ScreenTools.defaultFontPixelHeight * 5,
-            root.height - panelNavigation.height - listHeader.height - pointActions.height - root._settingsButtonHeight - helpLabel.height
+            root.height - panelNavigation.height - listHeader.height - pointActions.height - root._transferHeight - root._settingsButtonHeight - helpLabel.height
             - root.spacing * 5)
         visible: !root.showMissionTree && root.activePanel === 3
         clip: true
@@ -490,6 +565,13 @@ Column {
             radius: ScreenTools.defaultBorderRadius
             color: object.isCurrentItem ? dragPalette.buttonHighlight : dragPalette.windowShade
             readonly property color _textColor: object.isCurrentItem ? dragPalette.buttonHighlightText : dragPalette.text
+
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.LeftButton
+                enabled: card.index > 0
+                onClicked: editorController.selectWaypoint(card.object)
+            }
 
             RowLayout {
                 id: cardContent
@@ -534,17 +616,25 @@ Column {
                         wrapMode: Text.WordWrap
                     }
                 }
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                acceptedButtons: Qt.LeftButton | Qt.RightButton
-                enabled: card.index > 0
-                onClicked: (mouse) => {
-                    if (mouse.button === Qt.RightButton) {
-                        root.editWaypoint(card.object)
-                    } else {
-                        editorController.selectWaypoint(card.object)
+                ColumnLayout {
+                    visible: card.index > 0
+                    spacing: ScreenTools.defaultFontPixelHeight * 0.2
+                    QGCButton {
+                        objectName: "caacEditWaypoint_" + card.object.sequenceNumber
+                        text: qsTr("Edit")
+                        heightFactor: 0.2
+                        onClicked: root.editWaypoint(card.object)
+                    }
+                    QGCButton {
+                        objectName: "caacRemoveWaypoint_" + card.object.sequenceNumber
+                        text: qsTr("Delete")
+                        enabled: card.object.command === 16
+                        heightFactor: 0.2
+                        onClicked: {
+                            waypointPopup.close()
+                            editorController.cancelRouteOrientation()
+                            if (editorController.selectWaypoint(card.object)) { editorController.removeCurrentWaypoint() }
+                        }
                     }
                 }
             }
@@ -556,30 +646,6 @@ Column {
         visible: root.activePanel === 3 && !root.showMissionTree
         width: root.width
         spacing: ScreenTools.defaultFontPixelWidth * 0.3
-        QGCButton {
-            objectName: "caacEditWaypoint"
-            pointSize: ScreenTools.menuFontPointSize
-            Layout.fillWidth: true
-            Layout.minimumWidth: 0
-            text: qsTr("Edit")
-            leftPadding: ScreenTools.defaultFontPixelWidth * 0.5
-            rightPadding: leftPadding
-            heightFactor: 0.25
-            enabled: root.currentItem && root.currentItem.specifiesCoordinate
-            onClicked: root.editWaypoint(root.currentItem)
-        }
-        QGCButton {
-            objectName: "caacRemoveWaypoint"
-            pointSize: ScreenTools.menuFontPointSize
-            Layout.fillWidth: true
-            Layout.minimumWidth: 0
-            text: qsTr("Delete")
-            leftPadding: ScreenTools.defaultFontPixelWidth * 0.5
-            rightPadding: leftPadding
-            heightFactor: 0.25
-            enabled: root.currentItem !== null
-            onClicked: editorController.removeCurrentWaypoint()
-        }
         QGCButton {
             objectName: "caacMoveWaypointUp"
             pointSize: ScreenTools.menuFontPointSize
@@ -610,6 +676,64 @@ Column {
         }
     }
 
+    RowLayout {
+        id: waypointTransfer
+        objectName: "caacWaypointTransferActions"
+        width: root.width
+        visible: root.activePanel === 3 && !root.showMissionTree
+        spacing: ScreenTools.defaultFontPixelWidth
+        QGCButton {
+            objectName: "caacReadWaypoints"
+            Layout.fillWidth: true
+            Layout.minimumWidth: 0
+            pointSize: ScreenTools.menuFontPointSize
+            text: qsTr("Read waypoints")
+            enabled: root._canTransfer
+            onClicked: {
+                waypointPopup.close()
+                if (root.planMasterController.dirtyForSave) { readWaypointsFactory.open() }
+                else { root.planMasterController.loadFromVehicle() }
+            }
+        }
+        QGCButton {
+            objectName: "caacUploadWaypoints"
+            Layout.fillWidth: true
+            Layout.minimumWidth: 0
+            pointSize: ScreenTools.menuFontPointSize
+            primary: true
+            text: qsTr("Upload waypoints")
+            enabled: root._canTransfer && root.planMasterController.containsItems
+            onClicked: { waypointPopup.close(); root.planMasterController.upload() }
+        }
+    }
+    QGCPopupDialogFactory {
+        id: readWaypointsFactory
+        dialogComponent: Component {
+            QGCPopupDialog {
+                id: readDialog
+                title: qsTr("Read waypoints")
+                buttons: Dialog.Yes | Dialog.Cancel
+                property var vehicleAtOpen: null
+                property var masterAtOpen: null
+                Component.onCompleted: { vehicleAtOpen = root._managerVehicle; masterAtOpen = root.planMasterController }
+                QGCLabel {
+                    width: ScreenTools.defaultFontPixelWidth * 40
+                    wrapMode: Text.WordWrap
+                    text: qsTr("Reading from the drone will replace the current unsaved plan. Continue?")
+                }
+                onAccepted: {
+                    if (root._canTransfer && root._managerVehicle === vehicleAtOpen && root.planMasterController === masterAtOpen) {
+                        root.planMasterController.loadFromVehicle()
+                    }
+                }
+                Connections {
+                    target: QGroundControl.multiVehicleManager
+                    function onActiveVehicleChanged() { if (readDialog.vehicleAtOpen !== root._managerVehicle) { readDialog.close() } }
+                }
+            }
+        }
+    }
+
     QGCButton {
         id: settingsButton
         objectName: "caacReturnToWaypoints"
@@ -630,10 +754,20 @@ Column {
         font.pointSize: ScreenTools.smallFontPointSize
         text: root.showMissionTree ? qsTr("Camera, fence, rally points and other mission commands. Uses the same mission as the four main panels.")
             : root.measurePick > 0 ? qsTr("Click the map to choose point %1. Esc cancels.").arg(root.measurePick === 1 ? "A" : "B")
+            : root._pickingHome ? qsTr("Click the map to set the planned takeoff point. Esc cancels.")
             : root._pickingCenter ? qsTr("Click the map to choose a rotation centre. Esc cancels.")
             : editorController.lastError || (root.routeDragMode
                 ? qsTr("Left-drag the route to move all points. Turn off route dragging to edit individual points.")
-                : qsTr("Double-click to add · Drag to move · Right-click to edit"))
+                : qsTr("Double-click to add · Drag to move · Left-click properties · Right-click actions"))
+    }
+
+    QGCPopupDialogFactory {
+        id: simulationDialogFactory
+        dialogComponent: Component { CaacSimulationDialog { editor: root } }
+    }
+    Connections {
+        target: root.editorMap
+        function onSimulationRequested() { root.openSimulation() }
     }
 
     QGCPopupDialogFactory {
@@ -665,8 +799,8 @@ Column {
 
     Shortcut {
         sequence: "Esc"
-        enabled: root._pickingCenter || root.measurePick > 0
-        onActivated: { root._pickingCenter = false; root.measurePick = 0 }
+        enabled: root._pickingCenter || root._pickingHome || root.measurePick > 0
+        onActivated: { root._pickingCenter = false; root._pickingHome = false; root.measurePick = 0 }
     }
 
     Connections {
@@ -685,7 +819,14 @@ Column {
             }
         }
         function onMapClicked(position) {
-            if (root.enabled && root.visible && root.measurePick > 0) {
+            if (!root.enabled || !root.visible) { return }
+            if (root._pickingHome) {
+                const coordinate = root.editorMap.toCoordinate(position, false)
+                const home = root.planMasterController.missionController.plannedHomePosition
+                if (editorController.updatePlannedHome(coordinate.latitude, coordinate.longitude, home.altitude)) {
+                    root._pickingHome = false
+                }
+            } else if (root.measurePick > 0) {
                 const coordinate = root.editorMap.toCoordinate(position, false)
                 if (!coordinate.isValid) { return }
                 if (root.measurePick === 1) {
@@ -704,6 +845,8 @@ Column {
             }
         }
         function onMissionItemDragStarted(item) {
+            waypointPopup.close()
+            editorController.cancelRouteOrientation()
             root._draggedWaypoint = item
             editorController.beginEdit()
         }
@@ -713,7 +856,12 @@ Column {
         }
         function onMissionItemEditRequested(item) {
             if (root.enabled && root.visible && root.editorMap.directMissionItemEditing) {
-                root.editWaypoint(item)
+                waypointMenu.show(item)
+            }
+        }
+        function onMissionItemPropertiesRequested(item) {
+            if (root.enabled && root.visible && root.editorMap.directMissionItemEditing) {
+                waypointPopup.show(item)
             }
         }
     }

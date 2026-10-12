@@ -160,25 +160,25 @@
       <extracomment>.groups[AutoConnect].keywords[1]</extracomment>
       <location filename="../src/AppSettings/pages/CommLinks.SettingsUI.json"/>
       <source>pixhawk</source>
-      <translation>像素鹰</translation>
+      <translation>Pixhawk 飞控</translation>
     </message>
     <message>
       <extracomment>.groups[AutoConnect].keywords[2]</extracomment>
       <location filename="../src/AppSettings/pages/CommLinks.SettingsUI.json"/>
       <source>sik radio</source>
-      <translation>植广播电台</translation>
+      <translation>SiK 数传电台</translation>
     </message>
     <message>
       <extracomment>.groups[AutoConnect].keywords[3]</extracomment>
       <location filename="../src/AppSettings/pages/CommLinks.SettingsUI.json"/>
       <source>librepilot</source>
-      <translation>自由飞行员</translation>
+      <translation>LibrePilot 飞控</translation>
     </message>
     <message>
       <extracomment>.groups[AutoConnect].keywords[5]</extracomment>
       <location filename="../src/AppSettings/pages/CommLinks.SettingsUI.json"/>
       <source>usb</source>
-      <translation>连接 usb</translation>
+      <translation>USB 接口</translation>
     </message>
   </context>
   <context>
@@ -793,7 +793,7 @@
       <extracomment>.groups[Vehicle Preferences].keywords[3]</extracomment>
       <location filename="../src/AppSettings/pages/General.SettingsUI.json"/>
       <source>vehicle</source>
-      <translation>车辆</translation>
+      <translation>无人机</translation>
     </message>
     <message>
       <extracomment>.groups[Vehicle Preferences].keywords[4]</extracomment>
@@ -1087,7 +1087,7 @@
       <extracomment>.groups[Tokens].heading</extracomment>
       <location filename="../src/AppSettings/pages/Maps.SettingsUI.json"/>
       <source>Tokens</source>
-      <translation>代币</translation>
+      <translation>访问令牌</translation>
     </message>
     <message>
       <extracomment>.groups[Tokens].keywords[0]</extracomment>
@@ -1849,7 +1849,7 @@
       <extracomment>.groups[EU Vehicle Info].heading</extracomment>
       <location filename="../src/AppSettings/pages/RemoteID.SettingsUI.json"/>
       <source>EU Vehicle Info</source>
-      <translation>欧盟车辆信息</translation>
+      <translation>欧盟无人机信息</translation>
     </message>
     <message>
       <extracomment>.groups[EU Vehicle Info].keywords[1]</extracomment>
@@ -2452,19 +2452,19 @@
       <extracomment>.QGC.MetaData.Facts[angle].shortDesc</extracomment>
       <location filename="../src/AutoPilotPlugins/APM/APMFollowComponent.FactMetaData.json"/>
       <source>Angle from ground station to vehicle</source>
-      <translation>地面站到车辆的角度</translation>
+      <translation>地面站到无人机的角度</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[distance].shortDesc</extracomment>
       <location filename="../src/AutoPilotPlugins/APM/APMFollowComponent.FactMetaData.json"/>
       <source>Horizontal distance from ground station to vehicle</source>
-      <translation>地面站到车辆的水平距离</translation>
+      <translation>地面站到无人机的水平距离</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[height].shortDesc</extracomment>
       <location filename="../src/AutoPilotPlugins/APM/APMFollowComponent.FactMetaData.json"/>
       <source>Vertical distance from Launch (home) position to vehicle</source>
-      <translation>从发射（起始）位置到车辆的垂直距离</translation>
+      <translation>从发射（起始）位置到无人机的垂直距离</translation>
     </message>
   </context>
   <context>
@@ -3322,7 +3322,7 @@
       <extracomment>.sections[Arming Checks].controls[0].label</extracomment>
       <location filename="../src/AutoPilotPlugins/APM/VehicleConfig/APMFlightSafety.VehicleConfig.json"/>
       <source>Warning: Skipping arming checks can lead to loss of Vehicle control.</source>
-      <translation>警告：跳过布防检查可能会导致车辆失去控制。</translation>
+      <translation>警告：跳过布防检查可能会导致无人机失去控制。</translation>
     </message>
     <message>
       <extracomment>.sections[Arming Checks].controls[1].label</extracomment>
@@ -4012,7 +4012,7 @@
       <extracomment>.sections[ESC PWM Calibration].controls[0].label</extracomment>
       <location filename="../src/AutoPilotPlugins/PX4/VehicleConfig/Power.VehicleConfig.json"/>
       <source>WARNING: Propellers must be removed from vehicle prior to performing ESC calibration.</source>
-      <translation>警告：在执行 ESC 校准之前，必须从车辆上拆下螺旋桨。</translation>
+      <translation>警告：在执行 ESC 校准之前，必须从无人机上拆下螺旋桨。</translation>
     </message>
     <message>
       <extracomment>.sections[ESC PWM Calibration].controls[1].label</extracomment>
@@ -4702,7 +4702,7 @@
       <extracomment>.QGC.MetaData.Facts[DistanceToSurface].shortDesc</extracomment>
       <location filename="../src/MissionManager/CameraCalc.FactMetaData.json"/>
       <source>Distance vehicle is away from surface.</source>
-      <translation>车辆距地面的距离。</translation>
+      <translation>无人机距地面的距离。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[ImageDensity].shortDesc</extracomment>
@@ -4818,7 +4818,7 @@
       <extracomment>.QGC.MetaData.Facts[Landscape].shortDesc</extracomment>
       <location filename="../src/MissionManager/CameraSpec.FactMetaData.json"/>
       <source>Camera on vehicle is in landscape orientation.</source>
-      <translation>车辆上的相机处于横向方向。</translation>
+      <translation>无人机上的相机处于横向方向。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[FixedOrientation].shortDesc</extracomment>
@@ -4863,7 +4863,7 @@
       <extracomment>.QGC.MetaData.Facts[TurnaroundDistance].shortDesc</extracomment>
       <location filename="../src/MissionManager/CorridorScan.SettingsGroup.json"/>
       <source>Amount of additional distance to add outside the survey area for vehicle turnaround.</source>
-      <translation>在调查区域外为车辆周转而添加的额外距离量。</translation>
+      <translation>在调查区域外为无人机周转而添加的额外距离量。</translation>
     </message>
   </context>
   <context>
@@ -6661,7 +6661,7 @@
       <extracomment>.QGC.MetaData.Facts[TurnAroundDistance].shortDesc, .QGC.MetaData.Facts[TurnAroundDistanceMultiRotor].shortDesc</extracomment>
       <location filename="../src/MissionManager/TransectStyle.SettingsGroup.json"/>
       <source>Amount of additional distance to add outside the survey area for vehicle turn around.</source>
-      <translation>在车辆掉头的调查区域之外添加的额外距离量。</translation>
+      <translation>在无人机掉头的调查区域之外添加的额外距离量。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[CameraTriggerInTurnAround].shortDesc</extracomment>
@@ -6994,13 +6994,13 @@
       <extracomment>.QGC.MetaData.Facts[preferredVehicleClass].shortDesc</extracomment>
       <location filename="../src/Settings/App.SettingsGroup.json"/>
       <source>Tailors the interface to a specific vehicle type for a simpler experience.</source>
-      <translation>针对特定车辆类型定制界面以获得更简单的体验。</translation>
+      <translation>针对特定无人机类型定制界面以获得更简单的体验。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[preferredVehicleClass].longDesc</extracomment>
       <location filename="../src/Settings/App.SettingsGroup.json"/>
       <source>When set to a specific vehicle class, the interface is streamlined for that vehicle type.</source>
-      <translation>当设置为特定车辆类别时，针对该车辆类型简化了界面。</translation>
+      <translation>当设置为特定无人机类别时，针对该无人机类型简化了界面。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[preferredVehicleClass].enumStrings</extracomment>
@@ -7013,14 +7013,14 @@
       <extracomment>.QGC.MetaData.Facts[preferredVehicleClass].label</extracomment>
       <location filename="../src/Settings/App.SettingsGroup.json"/>
       <source>Preferred Vehicle</source>
-      <translation>首选车辆</translation>
+      <translation>首选机型</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[preferredVehicleClass].keywords</extracomment>
       <translatorcomment>Only use english comma ',' to separate strings</translatorcomment>
       <location filename="../src/Settings/App.SettingsGroup.json"/>
       <source>vehicle,multirotor,fixed wing,vtol,rover,sub</source>
-      <translation>车辆,多旋翼,固定翼,垂直起降,流动站,潜艇</translation>
+      <translation>无人机,多旋翼,固定翼,垂直起降,流动站,潜艇</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[offlineEditingFirmwareClass].shortDesc, .QGC.MetaData.Facts[offlineEditingFirmwareClass].label</extracomment>
@@ -7039,7 +7039,7 @@
       <extracomment>.QGC.MetaData.Facts[offlineEditingVehicleClass].shortDesc, .QGC.MetaData.Facts[offlineEditingVehicleClass].label</extracomment>
       <location filename="../src/Settings/App.SettingsGroup.json"/>
       <source>Offline editing vehicle class</source>
-      <translation>离线编辑车辆类别</translation>
+      <translation>离线编辑无人机类别</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[offlineEditingVehicleClass].enumStrings</extracomment>
@@ -7058,7 +7058,7 @@
       <extracomment>.QGC.MetaData.Facts[offlineEditingCruiseSpeed].longDesc</extracomment>
       <location filename="../src/Settings/App.SettingsGroup.json"/>
       <source>This value defines the default speed for calculating mission statistics for vehicles which do not support hover or VTOL vehicles in fixed wing mode. It does not modify the flight speed for a specific flight plan.</source>
-      <translation>该值定义了用于计算不支持悬停或固定翼模式下的 VTOL 车辆的任务统计数据的默认速度。它不会修改特定飞行计划的飞行速度。</translation>
+      <translation>该值定义了用于计算不支持悬停或固定翼模式下的 VTOL 无人机的任务统计数据的默认速度。它不会修改特定飞行计划的飞行速度。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[offlineEditingHoverSpeed].shortDesc, .QGC.MetaData.Facts[offlineEditingHoverSpeed].label</extracomment>
@@ -7187,7 +7187,7 @@
       <extracomment>.QGC.MetaData.Facts[virtualJoystick].shortDesc</extracomment>
       <location filename="../src/Settings/App.SettingsGroup.json"/>
       <source>Displays an on-screen virtual joystick in the Fly view for manual vehicle control.</source>
-      <translation>在飞行视图中显示屏幕虚拟操纵杆，以进行手动车辆控制。</translation>
+      <translation>在飞行视图中显示屏幕虚拟操纵杆，以进行手动无人机控制。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[virtualJoystick].longDesc</extracomment>
@@ -7319,7 +7319,7 @@
       <extracomment>.QGC.MetaData.Facts[enforceChecklist].shortDesc</extracomment>
       <location filename="../src/Settings/App.SettingsGroup.json"/>
       <source>Prevents the vehicle from arming until all preflight checklist items pass.</source>
-      <translation>防止车辆布防，直至所有飞行前检查表项目均通过。</translation>
+      <translation>防止无人机布防，直至所有飞行前检查表项目均通过。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[enforceChecklist].longDesc</extracomment>
@@ -7337,19 +7337,19 @@
       <extracomment>.QGC.MetaData.Facts[enableMultiVehiclePanel].shortDesc</extracomment>
       <location filename="../src/Settings/App.SettingsGroup.json"/>
       <source>Shows a panel for managing multiple connected vehicles simultaneously.</source>
-      <translation>显示用于同时管理多个连接的车辆的面板。</translation>
+      <translation>显示用于同时管理多个连接的无人机的面板。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[enableMultiVehiclePanel].longDesc</extracomment>
       <location filename="../src/Settings/App.SettingsGroup.json"/>
       <source>Enable Multi-Vehicle Panel when multiple vehicles are connected.</source>
-      <translation>连接多辆车时启用多车辆面板。</translation>
+      <translation>连接多架无人机时启用多无人机面板。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[enableMultiVehiclePanel].label</extracomment>
       <location filename="../src/Settings/App.SettingsGroup.json"/>
       <source>Enable Multi-Vehicle Panel</source>
-      <translation>启用多车辆面板</translation>
+      <translation>启用多无人机面板</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[enableMultiVehiclePanel].keywords</extracomment>
@@ -7688,7 +7688,7 @@
       <extracomment>.QGC.MetaData.Facts[followTarget].shortDesc</extracomment>
       <location filename="../src/Settings/App.SettingsGroup.json"/>
       <source>Streams the ground station GPS location to the vehicle for Follow Me mode.</source>
-      <translation>将地面站 GPS 位置传输到车辆以实现“跟随我”模式。</translation>
+      <translation>将地面站 GPS 位置传输到无人机以实现“跟随我”模式。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[followTarget].enumStrings</extracomment>
@@ -7816,13 +7816,13 @@
       <extracomment>.QGC.MetaData.Facts[autoConnectUDP].shortDesc</extracomment>
       <location filename="../src/Settings/AutoConnect.SettingsGroup.json"/>
       <source>Automatically connect to vehicles detected on UDP network connections.</source>
-      <translation>自动连接到在 UDP 网络连接上检测到的车辆。</translation>
+      <translation>自动连接到在 UDP 网络连接上检测到的无人机。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[autoConnectUDP].longDesc</extracomment>
       <location filename="../src/Settings/AutoConnect.SettingsGroup.json"/>
       <source>If this option is enabled GroundControl will automatically connect to a vehicle which is detected on a UDP communication link.</source>
-      <translation>如果启用此选项，GroundControl 将自动连接到在 UDP 通信链路上检测到的车辆。</translation>
+      <translation>如果启用此选项，GroundControl 将自动连接到在 UDP 通信链路上检测到的无人机。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[autoConnectUDP].label</extracomment>
@@ -7872,7 +7872,7 @@
       <extracomment>.QGC.MetaData.Facts[autoConnectSiKRadio].longDesc</extracomment>
       <location filename="../src/Settings/AutoConnect.SettingsGroup.json"/>
       <source>If this option is enabled GroundControl will automatically connect to a vehicle which is detected on a SiK Radio communication link.</source>
-      <translation>如果启用此选项，GroundControl 将自动连接到在 SiK 无线电通信链路上检测到的车辆。</translation>
+      <translation>如果启用此选项，GroundControl 将自动连接到在 SiK 无线电通信链路上检测到的无人机。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[autoConnectSiKRadio].label</extracomment>
@@ -7922,7 +7922,7 @@
       <extracomment>.QGC.MetaData.Facts[autoConnectZeroConf].longDesc</extracomment>
       <location filename="../src/Settings/AutoConnect.SettingsGroup.json"/>
       <source>If this option is enabled GroundControl will automatically connect to a vehicle which is detected over Zero-Conf.</source>
-      <translation>如果启用此选项，GroundControl 将自动连接到通过零配置检测到的车辆。</translation>
+      <translation>如果启用此选项，GroundControl 将自动连接到通过零配置检测到的无人机。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[udpListenPort].shortDesc, .QGC.MetaData.Facts[udpListenPort].label</extracomment>
@@ -8009,7 +8009,7 @@
       <extracomment>.QGC.MetaData.Facts[apmVehicleType].label</extracomment>
       <location filename="../src/Settings/FirmwareUpgrade.SettingsGroup.json"/>
       <source>apmVehicleType</source>
-      <translation>apm车辆类型</translation>
+      <translation>apm无人机类型</translation>
     </message>
   </context>
   <context>
@@ -8211,7 +8211,7 @@
       <extracomment>.QGC.MetaData.Facts[lockNoseUpCompass].shortDesc</extracomment>
       <location filename="../src/Settings/FlyView.SettingsGroup.json"/>
       <source>Always show north pointing up on the compass instead of rotating with vehicle heading.</source>
-      <translation>指南针上始终显示北向，而不是随车辆航向旋转。</translation>
+      <translation>指南针上始终显示北向，而不是随无人机航向旋转。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[lockNoseUpCompass].label</extracomment>
@@ -8236,7 +8236,7 @@
       <extracomment>.QGC.MetaData.Facts[keepMapCenteredOnVehicle].label</extracomment>
       <location filename="../src/Settings/FlyView.SettingsGroup.json"/>
       <source>Keep Map Centered On Vehicle</source>
-      <translation>保持地图以车辆为中心</translation>
+      <translation>保持地图以无人机为中心</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[keepMapCenteredOnVehicle].keywords</extracomment>
@@ -8274,7 +8274,7 @@
       <extracomment>.QGC.MetaData.Facts[maxGoToLocationDistance].shortDesc</extracomment>
       <location filename="../src/Settings/FlyView.SettingsGroup.json"/>
       <source>Maximum allowed distance for go-to-location commands from the vehicle.</source>
-      <translation>车辆发出前往位置命令的最大允许距离。</translation>
+      <translation>无人机发出前往位置命令的最大允许距离。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[maxGoToLocationDistance].label</extracomment>
@@ -8331,7 +8331,7 @@
       <extracomment>.QGC.MetaData.Facts[updateHomePosition].shortDesc</extracomment>
       <location filename="../src/Settings/FlyView.SettingsGroup.json"/>
       <source>Automatically update the vehicle return-to-home position from the GCS GPS location.</source>
-      <translation>根据GCS GPS位置自动更新车辆返航位置。</translation>
+      <translation>根据GCS GPS位置自动更新无人机返航位置。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[updateHomePosition].label</extracomment>
@@ -8376,7 +8376,7 @@
       <extracomment>.QGC.MetaData.Facts[requestControlAllowTakeover].shortDesc, .QGC.MetaData.Facts[requestControlAllowTakeover].label</extracomment>
       <location filename="../src/Settings/FlyView.SettingsGroup.json"/>
       <source>When requesting vehicle control, allow other GCS to override control automatically, or require this GCS to accept the request first.</source>
-      <translation>当请求车辆控制时，允许其他GCS自动超越控制，或者要求该GCS首先接受请求。</translation>
+      <translation>当请求无人机控制时，允许其他GCS自动超越控制，或者要求该GCS首先接受请求。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[requestControlTimeout].shortDesc, .QGC.MetaData.Facts[requestControlTimeout].label</extracomment>
@@ -8429,7 +8429,7 @@
       <extracomment>.QGC.MetaData.Facts[correctionSource].shortDesc</extracomment>
       <location filename="../src/Settings/GPSCorrection.SettingsGroup.json"/>
       <source>Highest priority sends one fresh stream to vehicles, preferring the local base station, then NTRIP, then UDP. Choosing a source never falls back to another. UDP forwarding sends the same stream.</source>
-      <translation>最高优先级向车辆发送一个新的流，优先选择本地基站，然后是NTRIP，然后是UDP。选择一个来源永远不会回到另一个来源。 UDP转发发送相同的流。</translation>
+      <translation>最高优先级向无人机发送一个新的流，优先选择本地基站，然后是NTRIP，然后是UDP。选择一个来源永远不会回到另一个来源。 UDP转发发送相同的流。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[correctionSource].enumStrings</extracomment>
@@ -8442,7 +8442,7 @@
       <extracomment>.QGC.MetaData.Facts[correctionSource].label</extracomment>
       <location filename="../src/Settings/GPSCorrection.SettingsGroup.json"/>
       <source>Vehicle correction source</source>
-      <translation>车辆校正源</translation>
+      <translation>无人机校正源</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[rtcmUdpInputEnabled].shortDesc</extracomment>
@@ -8454,7 +8454,7 @@
       <extracomment>.QGC.MetaData.Facts[rtcmUdpInputEnabled].longDesc</extracomment>
       <location filename="../src/Settings/GPSCorrection.SettingsGroup.json"/>
       <source>Listen on a UDP port for incoming RTCM3 correction data and forward it to connected vehicles via MAVLink GPS_RTCM_DATA.</source>
-      <translation>在 UDP 端口上侦听传入的 RTCM3 校正数据，并通过 MAVLink GPS_RTCM_DATA 将其转发到连接的车辆。</translation>
+      <translation>在 UDP 端口上侦听传入的 RTCM3 校正数据，并通过 MAVLink GPS_RTCM_DATA 将其转发到连接的无人机。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[rtcmUdpInputEnabled].label</extracomment>
@@ -8484,7 +8484,7 @@
       <extracomment>.QGC.MetaData.Facts[rtcmUdpOutputEnabled].shortDesc</extracomment>
       <location filename="../src/Settings/GPSCorrection.SettingsGroup.json"/>
       <source>Forward the correction stream selected for vehicles to another application over UDP.</source>
-      <translation>通过UDP将为车辆选择的校正流转发到另一个应用程序。</translation>
+      <translation>通过UDP将为无人机选择的校正流转发到另一个应用程序。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[rtcmUdpOutputEnabled].label</extracomment>
@@ -8567,7 +8567,7 @@
       <extracomment>.QGC.MetaData.Facts[showAzimuthIndicatorOnMap].shortDesc, .QGC.MetaData.Facts[showAzimuthIndicatorOnMap].label</extracomment>
       <location filename="../src/Settings/GimbalController.SettingsGroup.json"/>
       <source>Show gimbal Azimuth indicator over vehicle icon in map</source>
-      <translation>在地图中的车辆图标上显示云台方位指示器</translation>
+      <translation>在地图中的无人机图标上显示云台方位指示器</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[toolbarIndicatorShowAzimuth].shortDesc, .QGC.MetaData.Facts[toolbarIndicatorShowAzimuth].label</extracomment>
@@ -8748,7 +8748,7 @@
       <extracomment>.QGC.MetaData.Facts[joystickEnabledVehiclesIds].shortDesc, .QGC.MetaData.Facts[joystickEnabledVehiclesIds].label</extracomment>
       <location filename="../src/Settings/JoystickManager.SettingsGroup.json"/>
       <source>Comma separated list of vehicle IDs with joystick enabled</source>
-      <translation>启用操纵杆的车辆 ID 的逗号分隔列表</translation>
+      <translation>启用操纵杆的无人机 ID 的逗号分隔列表</translation>
     </message>
   </context>
   <context>
@@ -8896,19 +8896,19 @@
       <extracomment>.QGC.MetaData.Facts[telemetrySaveNotArmed].shortDesc</extracomment>
       <location filename="../src/Settings/Mavlink.SettingsGroup.json"/>
       <source>Also save telemetry logs from sessions where the vehicle was never armed.</source>
-      <translation>还保存车辆从未解锁过的会话中的遥测日志。</translation>
+      <translation>还保存无人机从未解锁过的会话中的遥测日志。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[telemetrySaveNotArmed].longDesc</extracomment>
       <location filename="../src/Settings/Mavlink.SettingsGroup.json"/>
       <source>If this option is enabled a telemetry log will be saved even if vehicle was never armed.</source>
-      <translation>如果启用此选项，即使车辆从未布防，也会保存遥测日志。</translation>
+      <translation>如果启用此选项，即使无人机从未布防，也会保存遥测日志。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[telemetrySaveNotArmed].label</extracomment>
       <location filename="../src/Settings/Mavlink.SettingsGroup.json"/>
       <source>Save logs even if vehicle was not armed</source>
-      <translation>即使车辆未解锁也保存日志</translation>
+      <translation>即使无人机未解锁也保存日志</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[telemetrySaveNotArmed].keywords</extracomment>
@@ -8940,7 +8940,7 @@
       <extracomment>.QGC.MetaData.Facts[saveCsvTelemetry].shortDesc</extracomment>
       <location filename="../src/Settings/Mavlink.SettingsGroup.json"/>
       <source>Save all vehicle parameters to CSV files at 1 Hz during flight.</source>
-      <translation>飞行期间以 1 Hz 将所有车辆参数保存到 CSV 文件。</translation>
+      <translation>飞行期间以 1 Hz 将所有无人机参数保存到 CSV 文件。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[saveCsvTelemetry].longDesc</extracomment>
@@ -9027,7 +9027,7 @@
       <extracomment>.QGC.MetaData.Facts[sendGCSHeartbeat].shortDesc</extracomment>
       <location filename="../src/Settings/Mavlink.SettingsGroup.json"/>
       <source>Periodically transmit heartbeat messages to inform vehicles that QGC is connected.</source>
-      <translation>定期发送心跳消息以通知车辆QGC已连接。</translation>
+      <translation>定期发送心跳消息以通知无人机QGC已连接。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[sendGCSHeartbeat].label</extracomment>
@@ -9065,19 +9065,19 @@
       <extracomment>.QGC.MetaData.Facts[noInitialDownloadWhenArmed].shortDesc</extracomment>
       <location filename="../src/Settings/Mavlink.SettingsGroup.json"/>
       <source>Skip downloading parameters and missions when connecting to a vehicle that is already armed.</source>
-      <translation>连接到已解锁的车辆时，跳过下载参数和任务。</translation>
+      <translation>连接到已解锁的无人机时，跳过下载参数和任务。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[noInitialDownloadWhenArmed].longDesc</extracomment>
       <location filename="../src/Settings/Mavlink.SettingsGroup.json"/>
       <source>When enabled, parameter and mission plan downloads are skipped when connecting to a vehicle that is already armed. This prevents bandwidth-heavy transfers from disrupting an active flight.</source>
-      <translation>启用后，当连接到已布防的车辆时，将跳过参数和任务计划下载。这可以防止占用大量带宽的传输中断正在运行的航班。</translation>
+      <translation>启用后，当连接到已布防的无人机时，将跳过参数和任务计划下载。这可以防止占用大量带宽的传输中断正在运行的航班。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[noInitialDownloadWhenArmed].label</extracomment>
       <location filename="../src/Settings/Mavlink.SettingsGroup.json"/>
       <source>Skip param/plan download if vehicle is armed on connect</source>
-      <translation>如果车辆在连接时已布防，则跳过参数/计划下载</translation>
+      <translation>如果无人机在连接时已布防，则跳过参数/计划下载</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[noInitialDownloadWhenArmed].keywords</extracomment>
@@ -9377,7 +9377,7 @@
       <extracomment>.QGC.MetaData.Facts[vtolTransitionDistance].shortDesc</extracomment>
       <location filename="../src/Settings/PlanView.SettingsGroup.json"/>
       <source>Distance required for VTOL vehicles to complete altitude and speed transitions.</source>
-      <translation>VTOL 车辆完成高度和速度转换所需的距离。</translation>
+      <translation>VTOL 无人机完成高度和速度转换所需的距离。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[vtolTransitionDistance].label</extracomment>
@@ -9405,7 +9405,7 @@
       <extracomment>.QGC.MetaData.Facts[receiverRole].longDesc</extracomment>
       <location filename="../src/Settings/RTK.SettingsGroup.json"/>
       <source>Passive uses the receiver's existing output without configuring it: its NMEA, u-blox UBX or Septentrio SBF position output provides the ground station position, and its RTCM output can be forwarded to vehicles. Configured base sets up a supported receiver as an RTK base station.</source>
-      <translation>无源使用接收器的现有输出而不对其进行配置：其NMEA、u-blox UBX或Septentrio SBF位置输出提供地面站位置，并且其RTCM输出可转发至车辆。配置的基站将支持的接收器设置为 RTK 基站。</translation>
+      <translation>无源使用接收器的现有输出而不对其进行配置：其NMEA、u-blox UBX或Septentrio SBF位置输出提供地面站位置，并且其RTCM输出可转发至无人机。配置的基站将支持的接收器设置为 RTK 基站。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[receiverRole].enumStrings</extracomment>
@@ -9418,7 +9418,7 @@
       <extracomment>.QGC.MetaData.Facts[forwardReceiverRtcm].shortDesc</extracomment>
       <location filename="../src/Settings/RTK.SettingsGroup.json"/>
       <source>Makes a passive receiver that already outputs RTCM, such as a pre-configured base station, a correction source for vehicles.</source>
-      <translation>使已经输出RTCM的无源接收器（例如预先配置的基站）成为车辆的校正源。</translation>
+      <translation>使已经输出RTCM的无源接收器（例如预先配置的基站）成为无人机的校正源。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[forwardReceiverRtcm].label</extracomment>
@@ -10218,7 +10218,7 @@
       <extracomment>.QGC.MetaData.Facts[videoSource].longDesc</extracomment>
       <location filename="../src/Settings/Video.SettingsGroup.json"/>
       <source>Source for video. UDP, TCP, RTSP and UVC Cameras may be supported depending on Vehicle and ground station version.</source>
-      <translation>视频来源。根据车辆和地面站版本，可能支持 UDP、TCP、RTSP 和 UVC 摄像机。</translation>
+      <translation>视频来源。根据无人机和地面站版本，可能支持 UDP、TCP、RTSP 和 UVC 摄像机。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[videoSource].label</extracomment>
@@ -10498,13 +10498,13 @@
       <extracomment>.QGC.MetaData.Facts[disableWhenDisarmed].shortDesc</extracomment>
       <location filename="../src/Settings/Video.SettingsGroup.json"/>
       <source>Disables the video stream when the vehicle is disarmed to save bandwidth.</source>
-      <translation>当车辆撤防时禁用视频流以节省带宽。</translation>
+      <translation>当无人机撤防时禁用视频流以节省带宽。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[disableWhenDisarmed].longDesc</extracomment>
       <location filename="../src/Settings/Video.SettingsGroup.json"/>
       <source>Disables the video stream when the vehicle is disarmed. Any active recording is also stopped.</source>
-      <translation>当车辆撤防时禁用视频流。任何活动录制也会停止。</translation>
+      <translation>当无人机撤防时禁用视频流。任何活动录制也会停止。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[disableWhenDisarmed].label</extracomment>
@@ -10791,13 +10791,13 @@
       <extracomment>.QGC.MetaData.Facts[altitudeBias].shortDesc</extracomment>
       <location filename="../src/Settings/Viewer3D.SettingsGroup.json"/>
       <source>Vertical offset for vehicle rendering in the 3D viewer.</source>
-      <translation>3D 查看器中车辆渲染的垂直偏移。</translation>
+      <translation>3D 查看器中无人机渲染的垂直偏移。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[altitudeBias].label</extracomment>
       <location filename="../src/Settings/Viewer3D.SettingsGroup.json"/>
       <source>Altitude bias for vehicles in the 3D View</source>
-      <translation>3D 视图中车辆的高度偏差</translation>
+      <translation>3D 视图中无人机的高度偏差</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[altitudeBias].keywords</extracomment>
@@ -11413,7 +11413,7 @@
       <extracomment>.QGC.MetaData.Facts[rtkBaseline].longDesc</extracomment>
       <location filename="../src/Vehicle/FactGroups/GPSFact.json"/>
       <source>Distance from the RTK base to the vehicle receiver reported in GPS_RTK. Unavailable when the vehicle does not report RTK baseline data.</source>
-      <translation>GPS_RTK中报告的从RTK基站到车辆接收器的距离。当车辆未上报RTK基线数据时不可用。</translation>
+      <translation>GPS_RTK中报告的从RTK基站到无人机接收器的距离。当无人机未上报RTK基线数据时不可用。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[rtkRate].shortDesc</extracomment>
@@ -11425,7 +11425,7 @@
       <extracomment>.QGC.MetaData.Facts[rtkRate].longDesc</extracomment>
       <location filename="../src/Vehicle/FactGroups/GPSFact.json"/>
       <source>Rate at which the vehicle receiver is receiving correction (baseline) messages.</source>
-      <translation>车辆接收器接收校正（基线）消息的速率。</translation>
+      <translation>无人机接收器接收校正（基线）消息的速率。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[rtkSatellites].shortDesc</extracomment>
@@ -11437,7 +11437,7 @@
       <extracomment>.QGC.MetaData.Facts[rtkSatellites].longDesc</extracomment>
       <location filename="../src/Vehicle/FactGroups/GPSFact.json"/>
       <source>Satellites used in the vehicle receiver's RTK solution, or -1 when unavailable.</source>
-      <translation>车辆接收器 RTK 解决方案中使用的卫星，如果不可用，则为 -1。</translation>
+      <translation>无人机接收器 RTK 解决方案中使用的卫星，如果不可用，则为 -1。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[spoofingState].shortDesc</extracomment>

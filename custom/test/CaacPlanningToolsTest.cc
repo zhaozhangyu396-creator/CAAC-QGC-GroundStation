@@ -25,6 +25,8 @@ private slots:
     void _coordinateFormats();
     void _advancedWaypointProperties();
     void _missionSpeedTransaction();
+    void _orientationPreview();
+    void _quickWaypointOperations();
 };
 
 class CaacRouteTemplateGeometryTest : public UnitTest
@@ -111,6 +113,98 @@ void CaacRouteTemplateGeometryTest::_templateGeometry()
             QVERIFY(std::abs(QGCGeo::geodesicDistance(anchor, result->first()) - 100) < 0.001);
         }
     }
+}
+
+void CaacPlanningToolsTest::_orientationPreview()
+{
+    CaacRouteEditorController editor;
+    editor.setPlanMasterController(planController());
+    const QGeoCoordinate home(30, 120, 20);
+    missionController()->setHomePosition(home);
+    QVERIFY(editor.addWaypoint(QGCGeo::geodesicDestination(home, 0, 100)));
+    QVERIFY(editor.addWaypoint(QGCGeo::geodesicDestination(home, 90, 150)));
+    const auto center = editor.currentItem()->coordinate();
+    const auto original = planController()->saveToJson();
+    missionController()->setDirty(false);
+    editor.clearHistory();
+    QVERIFY(editor.previewRouteOrientation(56, center));
+    const auto firstPreview = planController()->saveToJson();
+    QCOMPARE(editor.currentItem()->coordinate(), center);
+    QVERIFY(editor.previewRouteOrientation(90, center));
+    QVERIFY(editor.previewRouteOrientation(56, center));
+    QCOMPARE(planController()->saveToJson(), firstPreview);
+    QVERIFY(!editor.previewRouteOrientation(std::numeric_limits<double>::quiet_NaN(), center));
+    QCOMPARE(planController()->saveToJson(), firstPreview);
+    QVERIFY(editor.rotationPreviewActive());
+    QVERIFY(!editor.addWaypoint(home));
+    QCOMPARE(planController()->saveToJson(), firstPreview);
+    QVERIFY(editor.undo());
+    QCOMPARE(planController()->saveToJson(), original);
+    QVERIFY(!missionController()->dirty());
+    QVERIFY(!editor.canUndo());
+    QVERIFY(editor.previewRouteOrientation(90, center));
+    QVERIFY(editor.confirmRouteOrientation());
+    QCOMPARE(editor.routeOrientation(), 90.0);
+    QVERIFY(!editor.rotationPreviewActive());
+    const auto confirmed = planController()->saveToJson();
+    QVERIFY(editor.undo());
+    QCOMPARE(planController()->saveToJson(), original);
+    QVERIFY(!editor.canUndo());
+    QVERIFY(editor.redo());
+    QCOMPARE(planController()->saveToJson(), confirmed);
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+    const auto path = directory.filePath(QStringLiteral("orientation.plan"));
+    QVERIFY(planController()->saveToFile(path));
+    editor.clearWaypoints();
+    planController()->loadFromFile(path);
+    QCOMPARE(editor.routeOrientation(), 90.0);
+    QCOMPARE(planController()->saveToJson(), confirmed);
+}
+
+void CaacPlanningToolsTest::_quickWaypointOperations()
+{
+    CaacRouteEditorController editor;
+    editor.setPlanMasterController(planController());
+    const QGeoCoordinate home(30, 120, 20);
+    missionController()->setHomePosition(home);
+    QVERIFY(editor.addWaypoint(QGCGeo::geodesicDestination(home, 0, 100)));
+    auto* first = editor.currentItem();
+    QVERIFY(editor.updateWaypoint(first, first->coordinate().latitude(), first->coordinate().longitude(), 65, true, 7));
+    const auto frame = first->missionItem().frame();
+    QVERIFY(editor.updateWaypointLeg(first, 90, 50));
+    const auto leg = editor.waypointLeg(first);
+    QVERIFY(std::abs(leg.value("distance").toDouble() - 50) < 0.001);
+    QVERIFY(std::abs(leg.value("bearing").toDouble() - 90) < 0.001);
+    QCOMPARE(first->altitude()->rawValue().toDouble(), 65.0);
+    QCOMPARE(first->missionItem().frame(), frame);
+    QCOMPARE(first->speedSection()->flightSpeed()->rawValue().toDouble(), 7.0);
+    const auto valid = planController()->saveToJson();
+    QVERIFY(!editor.updateWaypointLeg(first, 0, -1));
+    QVERIFY(!editor.updateWaypointLeg(first, std::numeric_limits<double>::quiet_NaN(), 1));
+    QCOMPARE(planController()->saveToJson(), valid);
+    QVERIFY(editor.updateWaypointLeg(first, 90, 0));
+    QCOMPARE(first->coordinate().latitude(), home.latitude());
+    QCOMPARE(first->coordinate().longitude(), home.longitude());
+    QVERIFY(editor.addWaypoint(QGCGeo::geodesicDestination(home, 180, 80)));
+    const auto secondCoordinate = editor.currentItem()->coordinate();
+    const auto original = planController()->saveToJson();
+    editor.clearHistory();
+    QVERIFY(editor.reverseWaypoints());
+    QCOMPARE(missionController()->visualItems()->value<SimpleMissionItem*>(1)->coordinate(), secondCoordinate);
+    QVERIFY(editor.undo());
+    QCOMPARE(planController()->saveToJson(), original);
+    QVERIFY(editor.useWaypointAsHome(missionController()->visualItems()->value<SimpleMissionItem*>(2)));
+    QCOMPARE(missionController()->visualItems()->count(), 2);
+    QVERIFY(QGCGeo::geodesicDistance(missionController()->plannedHomePosition(), secondCoordinate) < 0.001);
+    QCOMPARE(missionController()->plannedHomePosition().altitude(), 20.0);
+    QVERIFY(editor.undo());
+    QCOMPARE(planController()->saveToJson(), original);
+    QVERIFY(editor.clearWaypoints());
+    QCOMPARE(missionController()->visualItems()->count(), 1);
+    QCOMPARE(missionController()->plannedHomePosition(), home);
+    QVERIFY(editor.undo());
+    QCOMPARE(planController()->saveToJson(), original);
 }
 
 void CaacPlanningToolsTest::_templateTransactions()

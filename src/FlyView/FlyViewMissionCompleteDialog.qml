@@ -22,7 +22,7 @@ Item {
     property bool _vehicleInMissionFlightMode:      _activeVehicle ? (_activeVehicle.flightMode === _activeVehicle.missionFlightMode) : false
     property bool _vehicleWasInMissionFlightMode:   false
     property bool _showMissionCompleteDialog:       _vehicleWasArmed && _vehicleWasInMissionFlightMode &&
-                                                    (missionController.containsItems || geoFenceController.containsItems || rallyPointController.containsItems ||
+                                                    ((missionController && missionController.containsItems) || (geoFenceController && geoFenceController.containsItems) || (rallyPointController && rallyPointController.containsItems) ||
                                                      (_activeVehicle ? _activeVehicle.cameraTriggerPoints.count !== 0 : false))
 
     on_VehicleArmedChanged: {
@@ -71,17 +71,17 @@ Item {
 
                 QGCLabel {
                     Layout.fillWidth:       true
-                    text:                   qsTr("%1 Images Taken").arg(_activeVehicle.cameraTriggerPoints.count)
+                    text:                   qsTr("%1 Images Taken").arg(_activeVehicle ? _activeVehicle.cameraTriggerPoints.count : 0)
                     horizontalAlignment:    Text.AlignHCenter
-                    visible:                _activeVehicle.cameraTriggerPoints.count !== 0
+                    visible:                _activeVehicle && _activeVehicle.cameraTriggerPoints.count !== 0
                 }
 
                 QGCButton {
                     Layout.fillWidth:   true
                     text:               qsTr("Remove plan from vehicle")
-                    visible:            !_activeVehicle.communicationLost// && !_activeVehicle.apmFirmware  // ArduPilot has a bug somewhere with mission clear
+                    visible:            (_activeVehicle && !_activeVehicle.communicationLost)// && !_activeVehicle.apmFirmware  // ArduPilot has a bug somewhere with mission clear
                     onClicked: {
-                        _planController.removeAllFromVehicle()
+                        if (globals.planMasterControllerFlyView && _activeVehicle) { globals.planMasterControllerFlyView.removeAllFromVehicle() }
                         missionCompleteDialog.close()
                     }
                 }
@@ -103,7 +103,7 @@ Item {
                 ColumnLayout {
                     Layout.fillWidth:   true
                     spacing:            ScreenTools.defaultFontPixelHeight
-                    visible:            !_activeVehicle.communicationLost && globals.guidedControllerFlyView.showResumeMission
+                    visible:            (_activeVehicle && !_activeVehicle.communicationLost) && globals.guidedControllerFlyView.showResumeMission
 
                     QGCButton {
                         Layout.fillWidth:   true

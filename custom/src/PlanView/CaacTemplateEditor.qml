@@ -19,6 +19,18 @@ Item {
         bearing: number(bearing.text), close: closeRoute.checked
     })
     readonly property var _preview: routeController.templateCoordinates(tabs.currentIndex, _reference, _options)
+    property bool _restoringBearing: false
+    function resetBearing() {
+        _restoringBearing = true
+        bearing.text = Qt.binding(() => root.routeController.routeOrientation.toString())
+        _restoringBearing = false
+    }
+    function cancelOrientation() {
+        routeController.cancelRouteOrientation()
+        resetBearing()
+    }
+    onVisibleChanged: { if (!visible) { cancelOrientation() } }
+    Component.onDestruction: { if (routeController) { routeController.cancelRouteOrientation() } }
     function number(value) { return value.trim().length ? Number(value) : NaN }
 
     component NumberField: QGCTextField {
@@ -62,6 +74,7 @@ Item {
                     Layout.minimumWidth: 0
                     model: root._points
                     textRole: "label"
+                    onActivated: root.cancelOrientation()
                 }
                 QGCLabel { text: tabs.currentIndex === 0 ? qsTr("Diameter (m)") : tabs.currentIndex === 2 ? qsTr("Length (m)") : qsTr("Side length (m)") }
                 NumberField { id: size; objectName: "caacTemplateSize"; text: "100" }
@@ -111,7 +124,41 @@ Item {
                     visible: tabs.currentIndex === 2
                 }
                 QGCLabel { text: qsTr("Orientation (°)") }
-                NumberField { id: bearing; objectName: "caacTemplateBearing"; text: "0" }
+                NumberField {
+                    id: bearing
+                    objectName: "caacTemplateBearing"
+                    text: root.routeController.routeOrientation.toString()
+                    onTextEdited: {
+                        const angle = root.number(text)
+                        if (!root._restoringBearing && isFinite(angle) && root._points.length > 1
+                                && reference.currentIndex >= 0 && reference.currentIndex < root._points.length) {
+                            root.routeController.previewRouteOrientation(angle, root._points[reference.currentIndex].coordinate)
+                        }
+                    }
+                }
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                visible: root.routeController.rotationPreviewActive
+                QGCButton {
+                    objectName: "caacConfirmOrientation"
+                    Layout.fillWidth: true
+                    text: qsTr("Confirm orientation")
+                    primary: true
+                    enabled: isFinite(root.number(bearing.text))
+                    onClicked: { if (root.routeController.confirmRouteOrientation()) { root.resetBearing() } }
+                }
+                QGCButton {
+                    objectName: "caacCancelOrientation"
+                    Layout.fillWidth: true
+                    text: qsTr("Cancel rotation")
+                    onClicked: root.cancelOrientation()
+                }
+            }
+            QGCLabel {
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                text: qsTr("Editing orientation rotates all loaded route points about the reference point. Confirm to save one undoable change; cancel restores their original positions.")
             }
             QGCCheckBox { id: closeRoute; text: qsTr("Close route with a final waypoint") }
             QGCLabel {
@@ -171,7 +218,7 @@ Item {
         anchors.bottom: parent.bottom
         text: qsTr("Add")
         primary: true
-        enabled: root._preview.length > 0
+        enabled: root._preview.length > 0 && !root.routeController.rotationPreviewActive
         onClicked: root.routeController.insertTemplate(tabs.currentIndex, root._reference, root._options)
     }
 }
