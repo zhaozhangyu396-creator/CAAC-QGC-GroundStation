@@ -34,6 +34,12 @@ Item {
             spacing: ScreenTools.defaultFontPixelHeight
             QGCLabel { text: qsTr("Planning tools"); font.bold: true }
             QGCButton {
+                objectName: "caacMissionSettings"
+                Layout.fillWidth: true
+                text: qsTr("Advanced mission settings")
+                onClicked: root.editor.openAdvancedMissionSettings()
+            }
+            QGCButton {
                 objectName: "caacMeasureTool"
                 Layout.fillWidth: true
                 text: qsTr("A/B measurement")

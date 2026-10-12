@@ -33,7 +33,6 @@ Item {
     property var    _appSettings: QGroundControl.settingsManager.appSettings
     property var    _planViewSettings: QGroundControl.settingsManager.planViewSettings
     property bool   _promptForPlanUsageShowing: false
-    property bool   _addROIOnClick: false
     property bool   _addWaypointOnClick: false
 
     readonly property int _layerMission: PlanEditLayers.layerMission
@@ -51,7 +50,6 @@ Item {
         target: planToolBar
         function onToolbarButtonClicked() {
             _addWaypointOnClick = false
-            _addROIOnClick = false
         }
     }
 
@@ -175,16 +173,6 @@ Item {
         _missionController.insertSimpleMissionItem(coordinate, nextIndex, true /* makeCurrentItem */)
     }
 
-    function insertROIAfterCurrent(coordinate) {
-        var nextIndex = _missionController.currentPlanViewVIIndex + 1
-        _missionController.insertROIMissionItem(coordinate, nextIndex, true /* makeCurrentItem */)
-    }
-
-    function insertCancelROIAfterCurrent() {
-        var nextIndex = _missionController.currentPlanViewVIIndex + 1
-        _missionController.insertCancelROIMissionItem(nextIndex, true /* makeCurrentItem */)
-    }
-
     function insertComplexItemAfterCurrent(complexItemName) {
         var nextIndex = _missionController.currentPlanViewVIIndex + 1
         _missionController.insertComplexMissionItem(complexItemName, mapCenter(), nextIndex, true /* makeCurrentItem */)
@@ -263,7 +251,7 @@ Item {
             allowVehicleLocationCenter: true
             planView: true
             directMissionItemEditing: QGroundControl.corePlugin.directMissionItemEditing
-                                      && _editingLayer === _layerMission && !_addROIOnClick
+                                      && _editingLayer === _layerMission
 
             zoomLevel: QGroundControl.flightMapZoom
             center: QGroundControl.flightMapPosition
@@ -308,17 +296,6 @@ Item {
                     }
                     if (_planMasterController.showCreateFromTemplate) {
                         _missionController.setHomePosition(coordinate)
-                    } else if (_addROIOnClick) {
-                        _addROIOnClick = false
-                        if (_missionController.isROIActive) {
-                            var pos = Qt.point(mouse.x, mouse.y)
-                            // For some strange reason using mainWindow in mapToItem doesn't work, so we use globals.parent instead which also gets us mainWindow
-                            pos = editorMap.mapToItem(globals.parent, pos)
-                            var dropPanel = insertOrCancelROIDropPanelComponent.createObject(mainWindow, { mapClickCoord: coordinate, clickRect: Qt.rect(pos.x, pos.y, 0, 0) })
-                            dropPanel.open()
-                        } else {
-                            insertROIAfterCurrent(coordinate)
-                        }
                     } else if (_addWaypointOnClick) {
                         insertSimpleItemAfterCurrent(coordinate)
                     }
@@ -486,12 +463,6 @@ Item {
                 value: _addWaypointOnClick
             }
 
-            Binding {
-                target: roiButton
-                property: "checked"
-                value: _addROIOnClick
-            }
-
             ToolStripActionList {
                 id: toolStripActionList
                 model: [
@@ -532,7 +503,6 @@ Item {
                         onTriggered: {
                             _addWaypointOnClick = !_addWaypointOnClick
                             if (_addWaypointOnClick) {
-                                _addROIOnClick = false
                                 // Arming an insert tool leaves template-creation mode, otherwise
                                 // map clicks keep moving the home position instead of inserting
                                 _planMasterController.userSelectedManualCreation = true
@@ -540,18 +510,15 @@ Item {
                         }
                     },
                     ToolStripAction {
-                        id: roiButton
-                        objectName: "planToolStrip_roiButton"
-                        text: _missionController.isROIActive ? qsTr("Cancel ROI") : qsTr("ROI")
+                        objectName: "planToolStrip_homeCenterButton"
+                        text: qsTr("Takeoff\ncenter")
                         iconSource: "/qmlimages/roi.svg"
-                        enabled: _missionController.isInsertROIValid
-                        visible: toolStrip._isMissionLayer && _planMasterController.controllerVehicle.supports.roiMode
-                        checkable: true
+                        enabled: _missionController.plannedHomePosition.isValid
+                        visible: toolStrip._isMissionLayer
                         onTriggered: {
-                            _addROIOnClick = !_addROIOnClick
-                            if (_addROIOnClick) {
+                            if (_missionController.plannedHomePosition.isValid) {
                                 _addWaypointOnClick = false
-                                _planMasterController.userSelectedManualCreation = true
+                                editorMap.center = _missionController.plannedHomePosition
                             }
                         }
                     },
@@ -936,40 +903,4 @@ Item {
         }
     }
 
-    Component {
-        id: insertOrCancelROIDropPanelComponent
-
-        DropPanel {
-            id: insertOrCancelROIDropPanel
-            onClosed: destroy()
-
-            property var mapClickCoord
-
-            sourceComponent: Component {
-                ColumnLayout {
-                    spacing: ScreenTools.defaultFontPixelWidth / 2
-
-                    QGCButton {
-                        Layout.fillWidth: true
-                        text: qsTr("Insert ROI")
-
-                        onClicked: {
-                            insertOrCancelROIDropPanel.close()
-                            insertROIAfterCurrent(mapClickCoord)
-                        }
-                    }
-
-                    QGCButton {
-                        Layout.fillWidth: true
-                        text: qsTr("Insert Cancel ROI")
-
-                        onClicked: {
-                            insertOrCancelROIDropPanel.close()
-                            insertCancelROIAfterCurrent()
-                        }
-                    }
-                }
-            }
-        }
-    }
 }

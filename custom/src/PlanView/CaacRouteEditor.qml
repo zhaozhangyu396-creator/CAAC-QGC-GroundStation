@@ -18,6 +18,7 @@ Column {
     property var editorMap: null
     property var planMasterController: null
     property bool showMissionTree: false
+    readonly property real _settingsButtonHeight: settingsButton.visible ? settingsButton.height : 0
     property int activePanel: 3
     readonly property bool relativeEditorVisible: activePanel === 1
     property bool routeDragMode: false
@@ -38,6 +39,11 @@ Column {
         ? editorController.waypointLeg(_draggedWaypoint) : ({})
 
     QGCPalette { id: dragPalette; colorGroupEnabled: root.enabled }
+
+    function openAdvancedMissionSettings() {
+        root.activePanel = 3
+        root.showMissionTree = true
+    }
 
     Rectangle {
         parent: root.parent
@@ -308,7 +314,7 @@ Column {
             Layout.minimumWidth: 0
             Layout.preferredHeight: Math.min(ScreenTools.defaultFontPixelHeight * 3,
                 (root.width - panelNavigation.spacing * 3) / 4)
-            checked: root.activePanel === panelIndex
+            checked: !root.showMissionTree && root.activePanel === panelIndex
             Accessible.name: text
             ToolTip.visible: hovered
             ToolTip.text: text
@@ -376,7 +382,10 @@ Column {
                     }
                 }
             }
-            onClicked: root.activePanel = panelIndex
+            onClicked: {
+                root.showMissionTree = false
+                root.activePanel = panelIndex
+            }
         }
         PanelButton { objectName: "caacGlobalSettingsButton"; panelIndex: 0; text: qsTr("Global") }
         PanelButton { objectName: "caacRelativeEditorButton"; panelIndex: 1; text: qsTr("Relative") }
@@ -407,7 +416,7 @@ Column {
                 Layout.fillWidth: true
                 text: root.activePanel === 0 ? qsTr("Global settings") : root.activePanel === 2 ? qsTr("Template editor")
                     : root.relativeEditorVisible ? qsTr("Relative coordinate editor")
-                    : root.showMissionTree ? qsTr("Mission settings") : qsTr("Waypoint list")
+                    : root.showMissionTree ? qsTr("Advanced mission settings") : qsTr("Waypoint list")
                 font.bold: true
                 wrapMode: Text.WordWrap
                 horizontalAlignment: Text.AlignHCenter
@@ -424,7 +433,7 @@ Column {
         objectName: "caacGlobalSettingsPanel"
         width: root.width
         height: Math.max(ScreenTools.defaultFontPixelHeight * 8,
-            root.height - panelNavigation.height - listHeader.height - settingsButton.height - helpLabel.height - root.spacing * 4)
+            root.height - panelNavigation.height - listHeader.height - root._settingsButtonHeight - helpLabel.height - root.spacing * 4)
         visible: root.activePanel === 0
         routeController: editorController
         editor: root
@@ -434,7 +443,7 @@ Column {
         objectName: "caacTemplateEditorPanel"
         width: root.width
         height: Math.max(ScreenTools.defaultFontPixelHeight * 8,
-            root.height - panelNavigation.height - listHeader.height - settingsButton.height - helpLabel.height - root.spacing * 4)
+            root.height - panelNavigation.height - listHeader.height - root._settingsButtonHeight - helpLabel.height - root.spacing * 4)
         visible: root.activePanel === 2
         routeController: editorController
     }
@@ -442,7 +451,7 @@ Column {
     CaacRelativeEditor {
         width: root.width
         height: Math.max(ScreenTools.defaultFontPixelHeight * 8,
-            root.height - panelNavigation.height - listHeader.height - settingsButton.height - helpLabel.height - root.spacing * 4)
+            root.height - panelNavigation.height - listHeader.height - root._settingsButtonHeight - helpLabel.height - root.spacing * 4)
         visible: root.relativeEditorVisible
         routeController: editorController
     }
@@ -452,7 +461,7 @@ Column {
         objectName: "caacWaypointList"
         width: root.width
         height: Math.max(ScreenTools.defaultFontPixelHeight * 5,
-            root.height - panelNavigation.height - listHeader.height - pointActions.height - settingsButton.height - helpLabel.height
+            root.height - panelNavigation.height - listHeader.height - pointActions.height - root._settingsButtonHeight - helpLabel.height
             - root.spacing * 5)
         visible: !root.showMissionTree && root.activePanel === 3
         clip: true
@@ -544,7 +553,7 @@ Column {
 
     RowLayout {
         id: pointActions
-        visible: root.activePanel === 3
+        visible: root.activePanel === 3 && !root.showMissionTree
         width: root.width
         spacing: ScreenTools.defaultFontPixelWidth * 0.3
         QGCButton {
@@ -603,17 +612,14 @@ Column {
 
     QGCButton {
         id: settingsButton
-        objectName: "caacMissionSettings"
+        objectName: "caacReturnToWaypoints"
+        visible: root.showMissionTree
         pointSize: ScreenTools.menuFontPointSize
         width: root.width
-        text: root.activePanel !== 3 || root.showMissionTree ? qsTr("Waypoint list") : qsTr("Mission settings")
+        text: qsTr("Return to waypoint list")
         heightFactor: 0.25
         onClicked: {
-            if (root.activePanel !== 3) {
-                root.activePanel = 3
-            } else {
-                root.showMissionTree = !root.showMissionTree
-            }
+            root.showMissionTree = false
         }
     }
 
@@ -622,7 +628,8 @@ Column {
         width: root.width
         wrapMode: Text.WordWrap
         font.pointSize: ScreenTools.smallFontPointSize
-        text: root.measurePick > 0 ? qsTr("Click the map to choose point %1. Esc cancels.").arg(root.measurePick === 1 ? "A" : "B")
+        text: root.showMissionTree ? qsTr("Camera, fence, rally points and other mission commands. Uses the same mission as the four main panels.")
+            : root.measurePick > 0 ? qsTr("Click the map to choose point %1. Esc cancels.").arg(root.measurePick === 1 ? "A" : "B")
             : root._pickingCenter ? qsTr("Click the map to choose a rotation centre. Esc cancels.")
             : editorController.lastError || (root.routeDragMode
                 ? qsTr("Left-drag the route to move all points. Turn off route dragging to edit individual points.")

@@ -5693,8 +5693,16 @@ Click Ok to start the auto-tuning process.
       <translation>方位角：无法计算（两点重合）</translation>
     </message>
     <message>
-      <source>Mission settings</source>
-      <translation>任务参数</translation>
+      <source>Advanced mission settings</source>
+      <translation>高级任务设置</translation>
+    </message>
+    <message>
+      <source>Return to waypoint list</source>
+      <translation>返回航点列表</translation>
+    </message>
+    <message>
+      <source>Camera, fence, rally points and other mission commands. Uses the same mission as the four main panels.</source>
+      <translation>相机、围栏、集结点及其他任务命令，与四入口共用同一份任务数据。</translation>
     </message>
     <message>
       <source>Waypoint list</source>
@@ -18562,8 +18570,9 @@ Note that this will also completely reset everything, including UAVCAN nodes, al
     </message>
     <message>
       <location filename="../src/PlanView/PlanView.qml" line="544"/>
-      <source>ROI</source>
-      <translation>兴趣区域</translation>
+      <source>Takeoff
+center</source>
+      <translation>起飞点居中</translation>
     </message>
     <message>
       <location filename="../src/PlanView/PlanView.qml" line="512"/>
@@ -22331,7 +22340,7 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
       <location filename="../src/PlanView/SimpleItemEditor.qml" line="172"/>
       <source>Altitude%1</source>
-      <translation>海拔%1</translation>
+      <translation>高度%1</translation>
     </message>
     <message>
       <location filename="../src/PlanView/SimpleItemEditor.qml" line="176"/>
@@ -24947,6 +24956,10 @@ If a vehicle still has this key configured, you will no longer be able to commun
   </context>
   <context>
     <name>CaacGlobalSettings</name>
+    <message>
+      <source>Advanced mission settings</source>
+      <translation>高级任务设置</translation>
+    </message>
     <message>
       <source>Planned home</source>
       <translation>计划起飞点</translation>

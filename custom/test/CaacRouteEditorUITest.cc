@@ -132,7 +132,7 @@ class CaacRouteEditorUITest : public QmlUITestBase
 private slots:
     void _testMouseEditing_data();
     void _testMouseEditing();
-    void _roiWindowFocus();
+    void _homeCenterWindowFocus();
     void _planningUtilities();
 };
 
@@ -327,9 +327,12 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QCOMPARE(firstNumber->property("text").toString(), QStringLiteral("1"));
     auto* planTree = findItem(_rootItem, QStringLiteral("planView_planTree"));
     QVERIFY(planTree && !planTree->isVisible());
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacMissionSettings")));
+    QVERIFY(clickButton(QStringLiteral("caacGlobalSettingsButton")));
     QVERIFY(clickButton(QStringLiteral("caacMissionSettings")));
     QTRY_VERIFY_WITH_TIMEOUT(planTree->isVisible(), TestTimeout::mediumMs());
-    QVERIFY(clickButton(QStringLiteral("caacMissionSettings")));
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacEditWaypoint")));
+    QVERIFY(clickButton(QStringLiteral("caacWaypointListButton")));
     QTRY_VERIFY_WITH_TIMEOUT(!planTree->isVisible(), TestTimeout::mediumMs());
     auto* dragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_1"), TestTimeout::mediumMs());
     QVERIFY(dragger);
@@ -545,8 +548,21 @@ void CaacRouteEditorUITest::_testMouseEditing()
     if (!relativeScreenshot.isEmpty() && chinese) {
         QVERIFY(_window->grabWindow().save(relativeScreenshot));
     }
+    const auto beforeAdvancedNavigation = master->saveToJson();
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacMissionSettings")));
+    QVERIFY(clickButton(QStringLiteral("caacGlobalSettingsButton")));
     QVERIFY(clickButton(QStringLiteral("caacMissionSettings")));
+    QTRY_VERIFY_WITH_TIMEOUT(planTree->isVisible(), TestTimeout::mediumMs());
     QVERIFY(!editorPanel->property("relativeEditorVisible").toBool());
+    QCOMPARE(panelTitle->property("text").toString(),
+             chinese ? QStringLiteral("高级任务设置") : QStringLiteral("Advanced mission settings"));
+    auto* returnToWaypoints = findVisibleItem(_rootItem, QStringLiteral("caacReturnToWaypoints"));
+    QVERIFY(returnToWaypoints);
+    QCOMPARE(returnToWaypoints->property("text").toString(),
+             chinese ? QStringLiteral("返回航点列表") : QStringLiteral("Return to waypoint list"));
+    QVERIFY(clickButton(QStringLiteral("caacReturnToWaypoints")));
+    QTRY_VERIFY_WITH_TIMEOUT(!planTree->isVisible(), TestTimeout::mediumMs());
+    QCOMPARE(master->saveToJson(), beforeAdvancedNavigation);
 
     step("edit existing waypoint by distance and angle");
     auto* target = mission->visualItems()->value<SimpleMissionItem*>(2);
@@ -725,7 +741,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     master->removeAll();
 }
 
-void CaacRouteEditorUITest::_roiWindowFocus()
+void CaacRouteEditorUITest::_homeCenterWindowFocus()
 {
     startUI();
     if (QTest::currentTestFailed()) {
@@ -791,7 +807,7 @@ void CaacRouteEditorUITest::_roiWindowFocus()
 #else
     // Other native platforms retain the second-window regression until an external focus helper is available.
     QQuickWindow otherWindow;
-    otherWindow.setTitle(QStringLiteral("ROI focus regression"));
+    otherWindow.setTitle(QStringLiteral("Map focus regression"));
     otherWindow.resize(320, 240);
     otherWindow.show();
     const auto changeFocus = [&] {
@@ -801,29 +817,35 @@ void CaacRouteEditorUITest::_roiWindowFocus()
         QTRY_VERIFY_WITH_TIMEOUT(_window->isActive() && !otherWindow.isActive(), TestTimeout::mediumMs());
     };
 #endif
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("planToolStrip_roiButton")));
+    const auto beforeCenter = master->saveToJson();
+    const auto home = mission->plannedHomePosition();
+    QVERIFY(home.isValid());
+    const auto initialZoom = map->property("zoomLevel").toDouble();
     for (int i = 0; i < 3; ++i) {
-        QVERIFY(clickButton(QStringLiteral("planToolStrip_roiButton")));
-        QTRY_VERIFY_WITH_TIMEOUT(plan->property("_addROIOnClick").toBool(), TestTimeout::mediumMs());
-        QVERIFY(!map->property("directMissionItemEditing").toBool());
+        map->setProperty("center", QVariant::fromValue(home.atDistanceAndAzimuth(500, 90)));
+        QVERIFY(clickButton(QStringLiteral("planToolStrip_homeCenterButton")));
+        QTRY_VERIFY_WITH_TIMEOUT(map->property("center").value<QGeoCoordinate>().distanceTo(home) < 0.1,
+                                 TestTimeout::mediumMs());
+        QCOMPARE(map->property("zoomLevel").toDouble(), initialZoom);
+        QVERIFY(map->property("directMissionItemEditing").toBool());
         changeFocus();
         if (QTest::currentTestFailed()) {
             return;
         }
-        QVERIFY(plan->property("_addROIOnClick").toBool());
-        QCOMPARE(mission->visualItems()->count(), 3);
-        QVERIFY(clickButton(QStringLiteral("planToolStrip_roiButton")));
-        QTRY_VERIFY_WITH_TIMEOUT(!plan->property("_addROIOnClick").toBool(), TestTimeout::mediumMs());
-        QTRY_VERIFY_WITH_TIMEOUT(map->property("directMissionItemEditing").toBool(), TestTimeout::mediumMs());
+        QVERIFY(clickItemFraction(QStringLiteral("planView_map"), 0.45, 0.35));
+        QCOMPARE(master->saveToJson(), beforeCenter);
+        QVERIFY(!mission->property("isROIActive").toBool());
     }
-    QVERIFY(clickButton(QStringLiteral("planToolStrip_roiButton")));
-    QVERIFY(clickItemFraction(QStringLiteral("planView_map"), 0.45, 0.35));
+    QTest::mouseDClick(_window, Qt::LeftButton, Qt::NoModifier,
+                       map->mapToScene(QPointF(map->width() * 0.45, map->height() * 0.35)).toPoint());
     QTRY_COMPARE_WITH_TIMEOUT(mission->visualItems()->count(), 4, TestTimeout::mediumMs());
-    QVERIFY(mission->property("isROIActive").toBool());
     changeFocus();
     if (QTest::currentTestFailed()) {
         return;
     }
-    QVERIFY(mission->property("isROIActive").toBool());
+    QVERIFY(!mission->property("isROIActive").toBool());
+    QCOMPARE(mission->visualItems()->count(), 4);
     master->removeAll();
 }
 
