@@ -1,6 +1,7 @@
 # Exercise installation, upgrade preservation, and uninstallation on a CI runner.
 param([Parameter(Mandatory)][ValidateSet('Install', 'Uninstall')][string]$Phase)
 $ErrorActionPreference = 'Stop'
+. "$PSScriptRoot/read-shortcut.ps1"
 
 function Assert-DesktopShortcut([string]$Binary) {
     $desktop = [Environment]::GetFolderPath([Environment+SpecialFolder]::CommonDesktopDirectory)
@@ -11,25 +12,18 @@ function Assert-DesktopShortcut([string]$Binary) {
     if (-not (Test-Path -LiteralPath $shortcutPath -PathType Leaf)) {
       throw "Desktop shortcut not found: $shortcutPath"
     }
-    $shell = New-Object -ComObject WScript.Shell
-    $shortcut = $null
-    try {
-      $shortcut = $shell.CreateShortcut($shortcutPath)
-      if (-not [StringComparer]::OrdinalIgnoreCase.Equals($shortcut.TargetPath, $Binary)) {
-        throw "Desktop shortcut target mismatch: $($shortcut.TargetPath)"
-      }
-      if ($shortcut.Arguments -ne "") {
-        throw "Unexpected desktop shortcut arguments: $($shortcut.Arguments)"
-      }
-      if (-not [StringComparer]::OrdinalIgnoreCase.Equals($shortcut.WorkingDirectory, (Split-Path $Binary))) {
-        throw "Desktop shortcut working directory mismatch: $($shortcut.WorkingDirectory)"
-      }
-      if (-not [StringComparer]::OrdinalIgnoreCase.Equals($shortcut.IconLocation, "$Binary,0")) {
-        throw "Desktop shortcut does not use the company executable icon: $($shortcut.IconLocation)"
-      }
-    } finally {
-      if ($null -ne $shortcut) { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($shortcut) }
-      [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($shell)
+    $shortcut = [QgcWindowsShortcut]::Read($shortcutPath)
+    if (-not [StringComparer]::OrdinalIgnoreCase.Equals($shortcut.TargetPath, $Binary)) {
+      throw "Desktop shortcut target mismatch: $($shortcut.TargetPath)"
+    }
+    if ($shortcut.Arguments -ne "") {
+      throw "Unexpected desktop shortcut arguments: $($shortcut.Arguments)"
+    }
+    if (-not [StringComparer]::OrdinalIgnoreCase.Equals($shortcut.WorkingDirectory, (Split-Path $Binary))) {
+      throw "Desktop shortcut working directory mismatch: $($shortcut.WorkingDirectory)"
+    }
+    if (-not [StringComparer]::OrdinalIgnoreCase.Equals($shortcut.IconLocation, "$Binary,0")) {
+      throw "Desktop shortcut does not use the company executable icon: $($shortcut.IconLocation)"
     }
     Write-Host "Verified desktop shortcut: $shortcutPath"
     return $shortcutPath

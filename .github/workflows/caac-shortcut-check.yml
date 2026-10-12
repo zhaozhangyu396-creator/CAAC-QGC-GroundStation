@@ -9,6 +9,7 @@ on:
       - 'custom/tools/test_windows_shortcut.ps1'
       - 'cmake/install/CPack/CreateCPackNSIS.cmake'
       - 'deploy/windows/verify-installer.ps1'
+      - 'deploy/windows/read-shortcut.ps1'
   workflow_dispatch:
 
 permissions:

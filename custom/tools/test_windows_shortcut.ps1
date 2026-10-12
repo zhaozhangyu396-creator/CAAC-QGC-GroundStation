@@ -1,7 +1,8 @@
 $ErrorActionPreference = 'Stop'
+. "$env:GITHUB_WORKSPACE/deploy/windows/read-shortcut.ps1"
 $fixture = Join-Path $env:RUNNER_TEMP 'caac-shortcut-fixture'
 New-Item -ItemType Directory -Force -Path $fixture | Out-Null
-$referencePath = Join-Path $fixture 'reference飞虎.lnk'
+$referencePath = Join-Path $fixture 'reference.lnk'
 $shell = New-Object -ComObject WScript.Shell
 $reference = $shell.CreateShortcut($referencePath)
 $reference.TargetPath = Join-Path $env:WINDIR 'System32\notepad.exe'
@@ -61,4 +62,22 @@ $ast = [Management.Automation.Language.Parser]::ParseFile(
     "$env:GITHUB_WORKSPACE/deploy/windows/verify-installer.ps1", [ref]$tokens, [ref]$parseErrors)
 $function = $ast.Find({param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Assert-DesktopShortcut'}, $true)
 . ([scriptblock]::Create($function.Extent.Text))
+[void](Assert-DesktopShortcut (Join-Path $installDir 'bin\QGroundControl.exe'))
+
+$backup = Join-Path $fixture 'valid-company.lnk'
+Copy-Item $desktopShortcut $backup
+try {
+    Copy-Item $referencePath $desktopShortcut -Force
+    $rejected = $false
+    try {
+        [void](Assert-DesktopShortcut (Join-Path $installDir 'bin\QGroundControl.exe'))
+    } catch {
+        if ($_.Exception.Message -notlike 'Desktop shortcut target mismatch:*') { throw }
+        $rejected = $true
+    }
+    if (-not $rejected) { throw 'The validator accepted a shortcut to the wrong executable' }
+    Write-Host 'Wrong shortcut target rejected as expected'
+} finally {
+    Copy-Item $backup $desktopShortcut -Force
+}
 [void](Assert-DesktopShortcut (Join-Path $installDir 'bin\QGroundControl.exe'))
