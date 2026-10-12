@@ -23,8 +23,8 @@ Item {
     }
 
     function _setDefaultDesktopWindowSize() {
-        window.width = Math.min(250 * Screen.pixelDensity, Screen.width);
-        window.height = Math.min(150 * Screen.pixelDensity, Screen.height);
+        window.width = Math.min(Math.max(250 * Screen.pixelDensity, window.minimumWidth), Screen.width);
+        window.height = Math.min(Math.max(150 * Screen.pixelDensity, window.minimumHeight), Screen.height);
         window.x = Screen.virtualX + (Screen.width - window.width) / 2;
         window.y = Screen.virtualY + (Screen.height - window.height) / 2;
     }
@@ -41,8 +41,8 @@ Item {
             if (s.width && s.height) {
                 window.x = s.x;
                 window.y = s.y;
-                window.width = s.width;
-                window.height = s.height;
+                window.width = Math.min(Math.max(s.width, window.minimumWidth), Screen.width);
+                window.height = Math.min(Math.max(s.height, window.minimumHeight), Screen.height);
                 window.visibility = s.visibility;
             } else {
                 _setDefaultDesktopWindowSize()

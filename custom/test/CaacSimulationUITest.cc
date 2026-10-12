@@ -49,6 +49,8 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     QCOMPARE(SettingsManager::instance()->appSettings()->uiScalePercent()->rawValue().toUInt(), 120U);
     QCOMPARE(QGuiApplication::applicationDisplayName(), QStringLiteral("飞虎无人机地面站系统"));
     QCOMPARE(_window->title(), QStringLiteral("飞虎无人机地面站系统"));
+    QVERIFY(_window->width() >= _window->minimumWidth());
+    QVERIFY(_window->height() >= _window->minimumHeight());
     QVERIFY(verifyText(QStringLiteral("caacDashboardHeadingValue"),
                        QCoreApplication::translate("TelemetryValuesBar", "Unavailable"), QStringLiteral("no heading")));
     QVERIFY(verifyText(QStringLiteral("caacAttitudeHeading"),
@@ -265,18 +267,34 @@ void CaacSimulationUITest::_uploadAndFlightControls()
         return nullptr;
     };
     step("live altitude change");
+    // Exercise scrolling at the compact desktop size used by Windows runners.
+    const QSize previousWindowSize = _window->size();
+    const QSize previousMinimumSize = _window->minimumSize();
+    _window->setMinimumSize(QSize(0, 0));
+    _window->resize(1000, 500);
     QVERIFY(clickButtonScrolled(QStringLiteral("caacModifyWaypointAltitude"),
                                 QStringLiteral("flyViewToolStrip_flickable")));
-    QVERIFY(clickButton(QStringLiteral("caacChangeFlightAltitude")));
+    step("height dialog opened");
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacChangeFlightAltitude"),
+                                QStringLiteral("popupDialog_contentFlickable")));
     auto* liveAltitudeSlider = findVisibleItem(_rootItem, QStringLiteral("guidedValueSlider"));
     QVERIFY(liveAltitudeSlider);
+    step("live height slider opened");
     QVERIFY(QMetaObject::invokeMethod(liveAltitudeSlider, "setCurrentValue", Q_ARG(QVariant, QVariant(4.0)),
                                       Q_ARG(QVariant, QVariant(false))));
+    QVariant sliderValue;
+    QVERIFY(QMetaObject::invokeMethod(liveAltitudeSlider, "getOutputValue", Q_RETURN_ARG(QVariant, sliderValue)));
+    QCOMPARE(sliderValue.toDouble(), 4.0);
     confirmation = findVisibleItem(_rootItem, QStringLiteral("guidedActionConfirmButton"));
     QVERIFY(confirmation);
+    mock->clearReceivedMavCommandCounts();
     QVERIFY(QMetaObject::invokeMethod(confirmation, "activated"));
+    step("live height command confirmed");
+    QTRY_VERIFY_WITH_TIMEOUT(mock->receivedMavCommandCount(MAV_CMD_DO_REPOSITION) > 0, TestTimeout::mediumMs());
     QTRY_VERIFY_WITH_TIMEOUT(std::abs(vehicle->altitudeRelative()->rawValue().toDouble() - 4) < 0.1,
                              TestTimeout::longMs());
+    _window->setMinimumSize(previousMinimumSize);
+    _window->resize(previousWindowSize);
     step("height edit");
     auto* target = chooseLastWaypoint();
     QVERIFY(target);

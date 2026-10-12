@@ -54,7 +54,7 @@ Item {
             ctx.strokeStyle = "white"
             ctx.fillStyle = "white"
             ctx.lineWidth = radius * 0.009
-            ctx.font = Math.round(radius * 0.09) + "px " + ScreenTools.normalFontFamily
+            ctx.font = Math.round(radius * 0.09) + 'px "' + ScreenTools.normalFontFamily + '"'
             ctx.textAlign = "center"
             ctx.textBaseline = "middle"
             for (let angle = -90; angle <= 90; angle += 5) {
@@ -73,7 +73,7 @@ Item {
             ctx.restore()
             ctx.strokeStyle = "white"
             ctx.fillStyle = "white"
-            ctx.font = Math.round(radius * 0.09) + "px " + ScreenTools.normalFontFamily
+            ctx.font = Math.round(radius * 0.09) + 'px "' + ScreenTools.normalFontFamily + '"'
             ctx.textAlign = "center"
             ctx.textBaseline = "middle"
             ctx.rotate(-root.rollAngle * Math.PI / 180)
