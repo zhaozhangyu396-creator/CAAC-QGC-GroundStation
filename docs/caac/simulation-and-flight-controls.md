@@ -40,4 +40,4 @@
 
 并行单元回归曾出现一次原生 `SubMachineStateTest` 在断言全部通过后的退出超时；该项单独复测及完整串行回归均正常退出，失败日志与复测记录分别保留。
 
-Windows 新安装包仍待完成本批构建和安装验证。上一版安装包不能作为本批新功能的验证结果；完成后更新 [安装包验证记录](desktop-installer-validation.md)。本地及 Windows 模拟测试不表示实机已验收。
+Windows Debug 界面／任务回归 11/11 与 Portable 10/10 均通过，无失败或跳过；额外验证米和英尺两种单位下的当前航高命令。Windows Release 安装包完成初装、更换目录升级、中文桌面快捷方式、排除构建 SDK 后独立启动及卸载验证。测试提交只更正单位换算，与安装包的应用代码、资源和安装脚本完全相同，详见 [安装包验证记录](desktop-installer-validation.md)。本地及 Windows 模拟测试不表示实机已验收。
