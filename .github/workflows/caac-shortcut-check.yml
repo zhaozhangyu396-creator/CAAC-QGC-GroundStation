@@ -1,0 +1,34 @@
+name: CAAC Shortcut Check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shortcut:
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Test native installer shortcut
+        shell: pwsh
+        run: ./custom/tools/test_windows_shortcut.ps1
+      - name: Upload diagnostic fixture
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: caac-shortcut-fixture
+          path: |
+            ${{ runner.temp }}/caac-shortcut-fixture/*.lnk
+            ${{ runner.temp }}/caac-shortcut-fixture/build/_CPack_Packages/**/*.nsi
+          if-no-files-found: warn
+          retention-days: 14
