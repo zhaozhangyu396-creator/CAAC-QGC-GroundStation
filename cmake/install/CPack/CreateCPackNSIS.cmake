@@ -246,11 +246,16 @@ set(_qgc_nsis_create_icons
     !insertmacro QGCDemoteShortCut \
         "$SMPROGRAMS\$STARTMENU_FOLDER\@QGC_APP_DISPLAY_NAME@ (GPU Safe Mode).lnk"
     ${If} $INSTALL_DESKTOP == "1"
-        CreateShortCut "$DESKTOP\@QGC_APP_DISPLAY_NAME@.lnk" "$INSTDIR\bin\@CMAKE_PROJECT_NAME@.exe"
+        CreateShortCut "$DESKTOP\@QGC_APP_DISPLAY_NAME@.lnk" "$INSTDIR\bin\@CMAKE_PROJECT_NAME@.exe" "" \
+            "$INSTDIR\bin\@CMAKE_PROJECT_NAME@.exe" 0
     ${EndIf}
 ]=]
 )
 if(QGC_CAAC_BUILD)
+    # The PATH options page is disabled, so desktop creation must also work without its checkbox.
+    set(_qgc_nsis_create_icons
+        "    StrCpy $INSTALL_DESKTOP \"1\"\n    SetOutPath \"$INSTDIR\\bin\"\n${_qgc_nsis_create_icons}"
+    )
     string(REPLACE "GPU Safe Mode" "显卡兼容模式" _qgc_nsis_create_icons "${_qgc_nsis_create_icons}")
 endif()
 string(CONFIGURE "${_qgc_nsis_create_icons}" CPACK_NSIS_CREATE_ICONS_EXTRA @ONLY)

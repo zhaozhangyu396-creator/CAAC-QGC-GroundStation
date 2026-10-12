@@ -2,6 +2,39 @@
 param([Parameter(Mandatory)][ValidateSet('Install', 'Uninstall')][string]$Phase)
 $ErrorActionPreference = 'Stop'
 
+function Assert-DesktopShortcut([string]$Binary) {
+    $desktop = [Environment]::GetFolderPath([Environment+SpecialFolder]::CommonDesktopDirectory)
+    if ([String]::IsNullOrWhiteSpace($desktop)) {
+      throw "Unable to resolve the public desktop directory"
+    }
+    $shortcutPath = Join-Path $desktop "飞虎无人机地面站系统.lnk"
+    if (-not (Test-Path -LiteralPath $shortcutPath -PathType Leaf)) {
+      throw "Desktop shortcut not found: $shortcutPath"
+    }
+    $shell = New-Object -ComObject WScript.Shell
+    $shortcut = $null
+    try {
+      $shortcut = $shell.CreateShortcut($shortcutPath)
+      if (-not [StringComparer]::OrdinalIgnoreCase.Equals($shortcut.TargetPath, $Binary)) {
+        throw "Desktop shortcut target mismatch: $($shortcut.TargetPath)"
+      }
+      if ($shortcut.Arguments -ne "") {
+        throw "Unexpected desktop shortcut arguments: $($shortcut.Arguments)"
+      }
+      if (-not [StringComparer]::OrdinalIgnoreCase.Equals($shortcut.WorkingDirectory, (Split-Path $Binary))) {
+        throw "Desktop shortcut working directory mismatch: $($shortcut.WorkingDirectory)"
+      }
+      if (-not [StringComparer]::OrdinalIgnoreCase.Equals($shortcut.IconLocation, "$Binary,0")) {
+        throw "Desktop shortcut does not use the company executable icon: $($shortcut.IconLocation)"
+      }
+    } finally {
+      if ($null -ne $shortcut) { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($shortcut) }
+      [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($shell)
+    }
+    Write-Host "Verified desktop shortcut: $shortcutPath"
+    return $shortcutPath
+}
+
 if ($Phase -eq 'Install') {
     $installerExe = Get-Item -LiteralPath $env:INSTALLER_PATH
     $oldInstallDir = $env:OLD_INSTALL_DIR
@@ -12,6 +45,9 @@ if ($Phase -eq 'Install') {
     if (-not (Test-Path $oldBinary)) {
       Write-Error "QGroundControl.exe not found at $oldBinary after initial install"
       exit 1
+    }
+    if ($env:CAAC_CHINESE_INSTALLER -eq "true") {
+      [void](Assert-DesktopShortcut $oldBinary)
     }
     $settingsRoot = [Environment]::GetFolderPath([Environment+SpecialFolder]::ApplicationData)
     if ([String]::IsNullOrWhiteSpace($settingsRoot)) {
@@ -39,6 +75,8 @@ if ($Phase -eq 'Install') {
       exit 1
     }
     if ($env:CAAC_CHINESE_INSTALLER -eq "true") {
+      $desktopShortcut = Assert-DesktopShortcut $binary
+      "QGC_INSTALL_TEST_DESKTOP_SHORTCUT=$desktopShortcut" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
       $versionInfo = (Get-Item -LiteralPath $binary).VersionInfo
       if ($versionInfo.ProductName -ne "飞虎无人机地面站系统" -or $versionInfo.FileDescription -ne "飞虎无人机地面站系统") {
         throw "Installed executable branding does not match the company application name"
@@ -146,6 +184,9 @@ if ($Phase -eq 'Uninstall') {
     if (Test-Path -LiteralPath $env:QGC_INSTALL_TEST_WER_KEY) {
       Write-Error "Windows Error Reporting registry key remains after uninstall"
       exit 1
+    }
+    if ($env:QGC_INSTALL_TEST_DESKTOP_SHORTCUT -and (Test-Path -LiteralPath $env:QGC_INSTALL_TEST_DESKTOP_SHORTCUT)) {
+      throw "Desktop shortcut remains after uninstall"
     }
     if (Test-Path -LiteralPath $env:QGC_INSTALL_TEST_START_MENU) {
       Write-Error "Start Menu directory remains after uninstall"

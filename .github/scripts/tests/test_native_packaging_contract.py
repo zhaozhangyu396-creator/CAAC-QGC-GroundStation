@@ -174,6 +174,7 @@ set(CMAKE_CROSSCOMPILING {cross_compiling})
 set(CMAKE_HOST_SYSTEM_PROCESSOR {host_processor})
 set(CMAKE_SYSTEM_PROCESSOR {target_processor})
 set(QGC_ORG_NAME QGroundControl)
+set(QGC_APP_DISPLAY_NAME "{"飞虎无人机地面站系统" if case == "caac-amd64" else "QGroundControl"}")
 set(QGC_CAAC_BUILD {"TRUE" if case == "caac-amd64" else "FALSE"})
 set(CPACK_INSTALL_SCRIPTS "{source_dir.as_posix()}/reset-module-path.cmake")
 set(QGC_WINDOWS_ICON_PATH "{(REPO_ROOT / "deploy/windows/WindowsQGC.ico").as_posix()}")
@@ -251,9 +252,17 @@ include(CreateCPackNSIS)
                 assert "Set install registry entry:" not in final_script
                 assert "显卡兼容模式" in final_script
                 assert "Var Runtime_selected" in final_script
+                desktop_enabled = final_script.index('StrCpy $INSTALL_DESKTOP "1"')
+                desktop_created = final_script.index(
+                    'CreateShortCut "$DESKTOP\\飞虎无人机地面站系统.lnk"'
+                )
+                assert desktop_enabled < desktop_created
+                assert 'SetOutPath "$INSTDIR\\bin"' in final_script[desktop_enabled:desktop_created]
+                assert '"$INSTDIR\\bin\\QGroundControl.exe" 0' in final_script[desktop_created:]
         else:
             assert "GPU Safe Mode" in config
             assert "CaacChineseGuiInit" not in config
+            assert 'StrCpy $INSTALL_DESKTOP "1"' not in config
 
 
 def test_docker_workflow_requires_and_validates_native_packages() -> None:
