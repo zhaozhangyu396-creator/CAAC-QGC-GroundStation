@@ -22,7 +22,7 @@
 - 模型检查验证生成原生速度命令、非法输入的原子拒绝、撤销/重做和 `.plan` 保存/加载。
 - 最新 lupdate 源码中文审计：6625 条消息、30 个技术标识、1 条空来源、0 错误。
 - 全部单元测试 344/344，43.40 秒；记录 `caac-utilities-unit.xml`。
-- 本批静态检查通过；Windows 构建结果完成后补充。
+- 本批静态检查、精确源码重建和启动检查通过；生成类型的 qmllint 四文件通过，保留原生 QGCCorePlugin 类型声明未解析的警告，未掩盖运行时错误。
 - 截图 `/workspace/caac-measure-125.png` 已检查 A/B 标记及连线；地图是离线测试占位瓦片，不构成在线地图或实机验证。
 
 初次 UI 检查发现 Repeater 对重新挂接到地图的标记执行错误的兄弟节点排序，已改用 Instantiator；未屏蔽相关警告。
@@ -30,3 +30,26 @@
 
 记录位于 `/workspace/caac-utilities-*` 和 `/workspace/build/qgc-baseline/caac-utilities-*.xml`。
 完整转弯/爬升、闭合循环、任务结束、模拟应急、教学/考试与 UOM 接入仍待后续开发；本批不称为完整凌动等效软件。
+
+## Windows 验证与安装包
+
+应用源码 `969955fd42d0d9fe07f2df44ad3df5e0e2bef749`。
+Debug 运行 `38195468118`，x64 作业 `114637084626`，8/8，0 失败、0 跳过，214 秒。
+本地 JUnit `/workspace/caac-969-debug-results/junit-caac.xml`。
+Release 运行 `38195637051`，x64 作业 `114637570630` 成功：Portable 10/10、编译后启动、实际 NSIS 中文审计、安装校验值、
+安装与升级、排除 Qt/GStreamer 构建 SDK 路径后的安装版启动、卸载与清理均通过。
+两份包内中文审计均为 6625 条消息、30 个技术标识、1 条空来源、0 错误。
+
+[下载新版 Windows x64 Release 验证包](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38195637051/artifacts/11723707501)。
+登录 GitHub 下载 ZIP，解压运行 `build/QGroundControl-installer-AMD64.exe`。
+Artifact `11723707501`，名称 `caac-validation-amd64-Release`，有效期至 2026-10-26 10:40:26（北京时间）。
+
+| 文件 | 字节数 | SHA256 |
+| --- | --- | --- |
+| 下载 ZIP | 135255387 | `0acebb8cef875ad191b3ffe21e9ffdc5975842de87a501c78ee455b34133d589` |
+| 安装 EXE | 135264754 | `6569c99b7e9a4ac31b87833736ce0caa7d16a7a17fefc64cd710e4e2f9c09a39` |
+
+ZIP 与 GitHub API digest 一致，EXE 与包内校验值一致；包名也与校验文件一致。
+记录为 `/workspace/caac-969-package-proof.json`、`caac-969-release-validation.json` 和 `caac-969-portable/junit-portable.xml`。
+此包包含此前 ROI 修复、凌动式规划/飞行面板、航段标注、窗口拖动、模板、度分秒及高级航点参数，以及本批三项功能。
+先前源 `28fe957425` 的包没有本批测量、换算与任务初始速度功能；测试不代替 Windows 人工 DPI、实机飞行或 SITL 验收。
