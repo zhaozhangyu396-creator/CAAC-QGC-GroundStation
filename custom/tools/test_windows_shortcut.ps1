@@ -31,8 +31,8 @@ Set-Content "$source\.github\COPYING.md" 'fixture license'
 Set-Content "$source\README.md" 'fixture readme'
 $modulePath = "$env:GITHUB_WORKSPACE/cmake/install/CPack".Replace('\', '/')
 $payload = "$env:WINDIR/System32/notepad.exe".Replace('\', '/')
-$icon = (Get-ChildItem "$env:GITHUB_WORKSPACE/custom" -Filter '*.ico' -Recurse | Select-Object -First 1).FullName.Replace('\', '/')
-$header = (Get-ChildItem "$env:GITHUB_WORKSPACE/custom" -Filter '*.bmp' -Recurse | Select-Object -First 1).FullName.Replace('\', '/')
+$icon = (Get-ChildItem "$env:GITHUB_WORKSPACE/custom" -Filter '*.ico' -Recurse | Select-Object -First 1).FullName.Replace('\', '\\')
+$header = (Get-ChildItem "$env:GITHUB_WORKSPACE/custom" -Filter '*.bmp' -Recurse | Select-Object -First 1).FullName.Replace('\', '\\')
 @"
 cmake_minimum_required(VERSION 3.25)
 project(QGroundControl VERSION 5.0.0 DESCRIPTION "Shortcut fixture" LANGUAGES NONE)
