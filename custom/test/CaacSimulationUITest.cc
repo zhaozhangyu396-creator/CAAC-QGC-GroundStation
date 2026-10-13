@@ -6,6 +6,7 @@
 #include <QtCore/QRegularExpression>
 #include <QtCore/QScopeGuard>
 #include <QtGui/QGuiApplication>
+#include <QtGui/QScreen>
 #include <QtQuick/QQuickItem>
 #include <QtQuick/QQuickWindow>
 #include <QtTest/QSignalSpy>
@@ -441,8 +442,14 @@ void CaacSimulationUITest::_uploadAndFlightControls()
             header->mapToScene(QPointF(0, header->height())).y() + 1);
     QVERIFY(host->mapToScene(QPointF(host->width(), 0)).x() <= indicators->mapToScene(QPointF(0, 0)).x() + 1);
     const auto originalWindowSize = _window->size();
+    QVERIFY(_window->screen());
+    const auto frameMargins = _window->frameMargins();
+    const int availableWidth =
+        _window->screen()->availableGeometry().width() - frameMargins.left() - frameMargins.right();
+    QVERIFY(availableWidth >= _window->minimumWidth());
     for (const int requestedWidth : {800, 1600}) {
-        _window->resize(std::max(_window->minimumWidth(), requestedWidth), originalWindowSize.height());
+        _window->resize(std::clamp(requestedWidth, _window->minimumWidth(), availableWidth),
+                        originalWindowSize.height());
         QTRY_VERIFY_WITH_TIMEOUT(flightActions->property("contentWidth").toDouble() <= flightActions->width(),
                                  TestTimeout::mediumMs());
         QCOMPARE(header->height(), header->property("_statusHeight").toDouble());
