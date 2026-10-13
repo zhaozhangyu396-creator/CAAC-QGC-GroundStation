@@ -72,7 +72,8 @@ Button {
 
         Column {
             anchors.horizontalCenter: parent.horizontalCenter
-            y: control.roundStyle ? control.roundDiameter * 0.225 : (parent.height - height) / 2
+            y: control.compactLabel ? (parent.height - control.roundDiameter * 0.55) / 2
+                : control.roundStyle ? control.roundDiameter * 0.225 : (parent.height - height) / 2
             spacing:            control.roundStyle ? control.roundDiameter * 0.3 : 0
 
             Image {
@@ -92,6 +93,7 @@ Button {
 
             QGCColoredImage {
                 id:                         innerImage
+                objectName:                 control.objectName + "_icon"
                 height:                     control.roundStyle ? control.roundDiameter * 0.55 : contentLayoutItem.height * imageScale
                 width:                      control.roundStyle ? height : contentLayoutItem.width  * imageScale
                 smooth:                     true

@@ -421,6 +421,11 @@ void CaacSimulationUITest::_uploadAndFlightControls()
         QVERIFY(std::abs(position.y() - firstPosition.y()) < 1);
         QVERIFY(std::abs(action->property("roundDiameter").toDouble() -
                          firstAction->property("roundDiameter").toDouble()) < 1);
+        auto* icon = findVisibleItem(_rootItem, name + QStringLiteral("_icon"));
+        QVERIFY(icon);
+        QTRY_VERIFY_WITH_TIMEOUT(std::abs(icon->mapToScene(QPointF(icon->width() / 2, icon->height() / 2)).y() -
+                                          host->mapToScene(QPointF(0, host->height() / 2)).y()) < 1,
+                                 TestTimeout::mediumMs());
         QVERIFY(position.y() + action->height() <= host->mapToScene(QPointF(0, host->height())).y() + 1);
         previousX = position.x();
     }

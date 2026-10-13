@@ -180,8 +180,9 @@ Item {
             maxWidth: parent.width
             maxHeight: parent.height
             roundButtonHeight: Math.max(0, maxHeight - ScreenTools.defaultFontPixelWidth * 0.8)
-            roundButtonMaximumDiameter: Math.max(0, (roundButtonHeight - ScreenTools.defaultFontPixelWidth * 0.6
-                - ScreenTools.defaultFontPixelHeight * 0.85) / 1.075)
+            roundButtonMaximumDiameter: Math.max(0, Math.min(ScreenTools.defaultFontPixelHeight * 1.2,
+                (roundButtonHeight - ScreenTools.defaultFontPixelWidth * 0.6
+                    - ScreenTools.defaultFontPixelHeight * 0.85) / 1.075))
             compactLabels: true
             onDisplayPreFlightChecklist: control.displayPreFlightChecklist()
         }
