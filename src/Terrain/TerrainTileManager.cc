@@ -240,11 +240,14 @@ void TerrainTileManager::addCarpetQuery(TerrainQueryInterface *terrainQueryInter
     terrainQueryInterface->signalCarpetHeights(true, minHeight, maxHeight, carpet);
 }
 
-QList<QGeoCoordinate> TerrainTileManager::_pathQueryToCoords(const QGeoCoordinate &fromCoord, const QGeoCoordinate &toCoord, double &distanceBetween, double &finalDistanceBetween)
+QList<QGeoCoordinate> TerrainTileManager::_pathQueryToCoords(const QGeoCoordinate& fromCoord,
+                                                             const QGeoCoordinate& toCoord, double& distanceBetween,
+                                                             double& finalDistanceBetween)
 {
     const double totalDistance = QGCGeo::geodesicDistance(fromCoord, toCoord);
     // TODO: get spacing from terrainQueryInterface
-    const int numPoints = qMax(2, qCeil(totalDistance / TerrainTileCopernicus::kTileValueSpacingMeters) + 1);
+    const int numPoints = qBound(2, qCeil(totalDistance / TerrainTileCopernicus::kTileValueSpacingMeters) + 1,
+                                 QGCGeo::MAX_INTERPOLATION_POINTS);
 
     QList<QGeoCoordinate> coordinates = QGCGeo::interpolatePath(fromCoord, toCoord, numPoints);
 

@@ -33,7 +33,9 @@ private slots:
     void _terrainDone();
 
 private:
-    /// Returns a list of individual coordinates along the requested path spaced according to the terrain tile value spacing
+    friend class TerrainQueryTest;
+
+    /// Samples the path at terrain spacing, bounded by the interpolation sample limit.
     static QList<QGeoCoordinate> _pathQueryToCoords(const QGeoCoordinate &fromCoord, const QGeoCoordinate &toCoord, double &distanceBetween, double &finalDistanceBetween);
     void _tileFailed();
     void _cacheTile(const QByteArray &data, const QString &hash);

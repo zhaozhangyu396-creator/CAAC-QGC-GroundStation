@@ -134,19 +134,23 @@ Item {
         readonly property real sideInset: root.occluders
             ? root.occluders.toolStrip.x + root.occluders.toolStrip.width + root._margin : root._margin
         readonly property real availableWidth: Math.max(0, root.width - sideInset - root._margin)
+        readonly property real maximumDiameter: Math.max(0, root.height
+            - 2 * (emergencyControls.height + root._margin) - emergencyValues.implicitHeight - spacing)
         x: sideInset + (availableWidth - width) / 2
         y: (root.height - height) / 2
-        width: Math.min(availableWidth, root.height * 0.7)
+        width: availableWidth
         spacing: ScreenTools.defaultFontPixelHeight
         visible: root._simulationEmergency
 
         CaacAttitudeInstrument {
             objectName: "caacEmergencyAttitude"
-            Layout.fillWidth: true
-            Layout.preferredHeight: width
+            Layout.alignment: Qt.AlignHCenter
+            Layout.preferredWidth: Math.min(emergencyInstruments.availableWidth, root.height * 0.7, emergencyInstruments.maximumDiameter)
+            Layout.preferredHeight: Layout.preferredWidth
             vehicle: root._vehicle
         }
         RowLayout {
+            id: emergencyValues
             Layout.alignment: Qt.AlignHCenter
             Layout.fillWidth: true
             spacing: ScreenTools.defaultFontPixelWidth * 2
@@ -161,6 +165,7 @@ Item {
                     objectName: "caacEmergency" + modelData.key + "Value"
                     Layout.fillWidth: true
                     horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.WordWrap
                     font.pointSize: ScreenTools.largeFontPointSize
                     text: modelData.label + ": " + (modelData.fact && isFinite(Number(modelData.fact.rawValue))
                         ? modelData.fact.valueString + " " + modelData.fact.units : "—")
@@ -170,6 +175,7 @@ Item {
     }
 
     QGCButton {
+        id: emergencyControls
         objectName: "caacSimulationManagement"
         anchors.right: parent.right
         anchors.bottom: parent.bottom

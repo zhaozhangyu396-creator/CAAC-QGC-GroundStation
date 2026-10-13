@@ -310,7 +310,7 @@ QList<QGeoCoordinate> interpolatePath(const QGeoCoordinate &from, const QGeoCoor
     QList<QGeoCoordinate> result;
 
     // Clamp to reasonable bounds to prevent excessive memory allocation
-    constexpr int kMaxPoints = 10000;
+    constexpr int kMaxPoints = MAX_INTERPOLATION_POINTS;
     if (numPoints < 2) {
         numPoints = 2;
     } else if (numPoints > kMaxPoints) {

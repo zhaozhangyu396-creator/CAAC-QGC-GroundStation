@@ -12,6 +12,7 @@ private slots:
     void _testRequestCoordinateHeightsOutsideRegions();
     void _testRequestPathHeights();
     void _testRequestPathHeightsSpacing();
+    void _testLongPathSampleSpacing();
     void _testRequestCarpetHeights();
     void _testRequestCarpetHeightsStatsOnly();
     void _testRequestCarpetHeightsInvalidBounds();

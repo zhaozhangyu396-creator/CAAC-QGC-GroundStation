@@ -1,12 +1,16 @@
 #include "TerrainQueryTest.h"
 
+#include <cmath>
+
 #include <QtCore/QMetaObject>
 #include <QtCore/QRegularExpression>
 #include <QtTest/QSignalSpy>
 
+#include "QGCGeo.h"
 #include "TerrainQuery.h"
 #include "TerrainQueryInterface.h"
 #include "TerrainTileCopernicus.h"
+#include "TerrainTileManager.h"
 
 // These tests run the full production terrain pipeline: query classes route through
 // TerrainTileManager, whose elevation tile cache misses are served synthetic tiles
@@ -93,6 +97,21 @@ void TerrainQueryTest::_testRequestPathHeights()
     QVERIFY(pathHeightInfo.heights.size() > 2);
     QCOMPARE(pathHeightInfo.heights.constFirst(), UnitTestTerrainData::Flat10Region::amslElevation);
     QCOMPARE(pathHeightInfo.heights.constLast(), UnitTestTerrainData::Flat10Region::amslElevation);
+}
+
+void TerrainQueryTest::_testLongPathSampleSpacing()
+{
+    const QGeoCoordinate from(30, 120, 20);
+    const QGeoCoordinate to(-47.3982382440215, -8.54525860115325, 50);
+    double spacing = 0;
+    double finalSpacing = 0;
+    const auto points = TerrainTileManager::_pathQueryToCoords(from, to, spacing, finalSpacing);
+    QCOMPARE(points.count(), QGCGeo::MAX_INTERPOLATION_POINTS);
+    QVERIFY(QGCGeo::geodesicDistance(points.first(), from) < 0.001);
+    QVERIFY(QGCGeo::geodesicDistance(points.last(), to) < 0.001);
+    QVERIFY(spacing > TerrainTileCopernicus::kTileValueSpacingMeters);
+    QVERIFY(std::abs(spacing - finalSpacing) < 0.001);
+    QVERIFY(std::abs(spacing * (points.count() - 1) - QGCGeo::geodesicDistance(from, to)) < 0.01);
 }
 
 void TerrainQueryTest::_testRequestPathHeightsSpacing()

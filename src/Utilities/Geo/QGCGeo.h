@@ -173,6 +173,8 @@ double polygonArea(const QList<QGeoCoordinate> &polygon);
 /// @return Perimeter in meters, or 0 if fewer than 2 points.
 double polygonPerimeter(const QList<QGeoCoordinate> &polygon);
 
+inline constexpr int MAX_INTERPOLATION_POINTS = 10000;
+
 /// Interpolate evenly-spaced points along a geodesic path using WGS84 ellipsoid.
 /// @param from Starting coordinate.
 /// @param to Ending coordinate.
