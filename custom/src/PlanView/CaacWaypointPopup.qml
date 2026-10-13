@@ -16,11 +16,13 @@ Popup {
     property var _homeReference: null
     readonly property bool _isHome: waypoint && waypoint.homePosition
     readonly property var _homePoints: controller.coordinateItems.filter(point => {
-        const item = controller.planMasterController.missionController.visualItems.get(point.index)
+        const model = controller.planMasterController.missionController.visualItems
+        const item = point.index >= 0 && point.index < model.count ? model.get(point.index) : null
         return item && item.isSimpleItem && item.command === 16 && point.coordinate.isValid
     })
     readonly property int _referenceIndex: _homePoints.findIndex(point =>
-        controller.planMasterController.missionController.visualItems.get(point.index) === _homeReference)
+        point.index < controller.planMasterController.missionController.visualItems.count
+            && controller.planMasterController.missionController.visualItems.get(point.index) === _homeReference)
     readonly property var controller: editor.routeController
     readonly property var _leg: {
         void controller.coordinateItems
@@ -90,6 +92,7 @@ Popup {
 
     component QuickNumberField: QGCTextField {
         id: field
+        property bool edited: false
         font.pointSize: ScreenTools.menuFontPointSize
         color: palette.text
         horizontalAlignment: TextInput.AlignHCenter
@@ -97,7 +100,7 @@ Popup {
         background: Rectangle {
             color: palette.windowShadeDark
             radius: ScreenTools.defaultBorderRadius
-            implicitHeight: ScreenTools.defaultFontPixelHeight * 3
+            implicitHeight: ScreenTools.defaultFontPixelHeight * (root._isHome ? 2 : 3)
             implicitWidth: ScreenTools.implicitTextFieldWidth
             QGCLabel {
                 anchors.right: parent.right
@@ -120,6 +123,8 @@ Popup {
         open()
     }
     function syncFields() {
+        bearing.edited = false
+        distance.edited = false
         bearing.text = _leg.bearing === undefined ? "0" : _leg.bearing.toFixed(2)
         distance.text = _leg.distance === undefined ? "0" : _leg.distance.toFixed(2)
     }
@@ -208,8 +213,13 @@ Popup {
                     unitsLabel: "°"
                     inputMethodHints: Qt.ImhFormattedNumbersOnly
                     Keys.forwardTo: [keyTarget]
-                    onTextEdited: root.apply()
-                    onEditingFinished: { if (root.apply()) { root.syncFields() } }
+                    onTextEdited: { bearing.edited = true; root.apply() }
+                    onEditingFinished: {
+                        if (bearing.edited) {
+                            bearing.edited = false
+                            if (root.apply()) { root.syncFields() }
+                        }
+                    }
                 }
                 QGCLabel { text: qsTr("Distance"); font.pointSize: ScreenTools.menuFontPointSize }
                 QuickNumberField {
@@ -220,12 +230,19 @@ Popup {
                     unitsLabel: "m"
                     inputMethodHints: Qt.ImhFormattedNumbersOnly
                     Keys.forwardTo: [keyTarget]
-                    onTextEdited: root.apply()
-                    onEditingFinished: { if (root.apply()) { root.syncFields() } }
+                    onTextEdited: { distance.edited = true; root.apply() }
+                    onEditingFinished: {
+                        if (distance.edited) {
+                            distance.edited = false
+                            if (root.apply()) { root.syncFields() }
+                        }
+                    }
                 }
                 QGCLabel { text: qsTr("Fine tuning"); font.pointSize: ScreenTools.menuFontPointSize }
                 QGCButton {
                     objectName: "caacWaypointFineTuning"
+                    ToolTip.visible: root._isHome && hovered
+                    ToolTip.text: qsTr("Up/down: bearing ±0.01°. Left/right: distance ±0.01 m.")
                     pointSize: ScreenTools.menuFontPointSize
                     Layout.fillWidth: true
                     enabled: root._editable
@@ -235,6 +252,7 @@ Popup {
             }
             QGCLabel {
                 Layout.fillWidth: true
+                visible: !root._isHome
                 opacity: root.fineTuning ? 1 : 0
                 text: qsTr("Up/down: bearing ±0.01°. Left/right: distance ±0.01 m.")
                 wrapMode: Text.WordWrap

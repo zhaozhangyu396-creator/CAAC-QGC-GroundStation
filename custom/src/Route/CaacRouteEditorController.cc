@@ -8,6 +8,7 @@
 #include <QtCore/QJsonArray>
 #include <QtCore/QScopeGuard>
 #include <QtCore/QSet>
+#include <QtPositioning/QGeoRectangle>
 
 #include "CaacRouteGeometry.h"
 #include "CaacRouteTemplates.h"
@@ -645,6 +646,41 @@ bool CaacRouteEditorController::reverseWaypoints()
     for (int i = first; i < last; ++i) {
         if (!mission->moveVisualItem(last, i)) {
             return false;
+        }
+    }
+    return true;
+}
+
+bool CaacRouteEditorController::centerHomeOnRoute()
+{
+    if (!_canEdit()) {
+        return false;
+    }
+    auto* mission = _missionController();
+    auto* model = mission->visualItems();
+    QList<QGeoCoordinate> coordinates;
+    for (int i = 1; i < model->count(); ++i) {
+        auto* item = model->value<SimpleMissionItem*>(i);
+        if (item && item->command() == MAV_CMD_NAV_WAYPOINT && item->coordinate().isValid()) {
+            coordinates.append(item->coordinate());
+        }
+    }
+    if (coordinates.isEmpty()) {
+        return _fail(tr("Add a waypoint before centering the takeoff point."));
+    }
+    const auto center = QGeoRectangle(coordinates).center();
+    const auto previous = mission->plannedHomePosition();
+    beginEdit();
+    const auto finish = qScopeGuard([this]() { endEdit(); });
+    if (!updatePlannedHome(center.latitude(), center.longitude(), previous.altitude())) {
+        return false;
+    }
+    for (int i = 1; i < model->count(); ++i) {
+        auto* item = model->value<SimpleMissionItem*>(i);
+        if (item && item->isTakeoffItem() && QGCGeo::geodesicDistance(item->coordinate(), previous) < 0.01) {
+            auto position = center;
+            position.setAltitude(item->coordinate().altitude());
+            item->setCoordinate(position);
         }
     }
     return true;

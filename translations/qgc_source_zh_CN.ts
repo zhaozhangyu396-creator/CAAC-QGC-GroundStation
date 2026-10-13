@@ -5788,6 +5788,10 @@ Click Ok to start the auto-tuning process.
   <context>
     <name>CaacRouteEditorController</name>
     <message>
+        <source>Add a waypoint before centering the takeoff point.</source>
+        <translation>请先添加航点，再将起飞点移至航线中心。</translation>
+    </message>
+    <message>
         <source>Enter a nonnegative hold duration and a valid waypoint yaw.</source>
         <translation>请输入非负的停留时长和有效的航点朝向。</translation>
     </message>

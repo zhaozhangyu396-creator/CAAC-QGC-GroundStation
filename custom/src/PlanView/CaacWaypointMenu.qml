@@ -33,7 +33,7 @@ Menu {
     function show(item) {
         editor.closeWaypointProperties()
         controller.cancelRouteOrientation()
-        if (!controller.selectWaypoint(item)) { return }
+        if (!item || (!item.homePosition && !controller.selectWaypoint(item))) { return }
         waypoint = item
         const point = editor.editorMap.fromCoordinate(item.coordinate, false)
         x = Math.max(0, Math.min(point.x, parent.width - width))
@@ -101,6 +101,7 @@ Menu {
     MenuSeparator { }
     MenuItem {
         objectName: "caacContextDeleteWaypoint"
+        visible: root.waypoint && !root.waypoint.homePosition
         text: root.waypoint ? qsTr("Delete waypoint %1").arg(root.waypoint.sequenceNumber) : qsTr("Delete")
         enabled: root.waypoint && root.waypoint.command === 16
         onTriggered: {
@@ -128,6 +129,7 @@ Menu {
         }
         MenuItem {
             objectName: "caacContextWaypointHome"
+            visible: root.waypoint && !root.waypoint.homePosition
             text: root.waypoint ? qsTr("Use waypoint %1 as takeoff point").arg(root.waypoint.sequenceNumber) : ""
             enabled: root.waypoint && root.waypoint.command === 16
             onTriggered: root.controller.useWaypointAsHome(root.waypoint)

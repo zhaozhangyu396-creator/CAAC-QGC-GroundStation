@@ -361,48 +361,76 @@ Item {
                 }
             }
 
+            HoverHandler {
+                id: routeHover
+                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+            }
+
             MapQuickItem {
-                id: homeSplitItem
-                readonly property var points: rightPanel.routeController
-                    ? rightPanel.routeController.coordinateItems : []
-                readonly property var firstPoint: {
+                id: routeSplitItem
+                readonly property var points: rightPanel.routeController ? rightPanel.routeController.coordinateItems : []
+                readonly property var segments: {
+                    const model = _missionController.visualItems
+                    const legs = []
+                    let previous = null
+                    let first = null
+                    let last = null
                     for (const point of points) {
-                        if (point.index === 0) { continue }
-                        const item = _missionController.visualItems.get(point.index)
-                        if (item && item.command === 16) { return point }
-                        if (!item || !item.isTakeoffItem || point.coordinate.distanceTo(_missionController.plannedHomePosition) >= 0.01) {
-                            return null
-                        }
+                        if (point.index < 0 || point.index >= model.count || !point.coordinate.isValid) { continue }
+                        if (point.index === 0) { previous = point; continue }
+                        const item = model.get(point.index)
+                        if (item.isTakeoffItem) { previous = point; continue }
+                        if (item.command !== 16) { continue }
+                        if (!first) { first = point }
+                        if (previous) { legs.push({ from: previous, to: point, after: point.index - 1 }) }
+                        previous = point
+                        last = point
                     }
-                    return null
+                    if (first && last && first !== last && rightPanel.simulationPreviewActive) {
+                        legs.push({ from: last, to: first, after: last.index })
+                    }
+                    return legs.filter(leg => !rightPanel.simulationPreviewActive
+                        || rightPanel.simulationPreviewSegments.some(segment =>
+                            segment.coordinate1.distanceTo(leg.from.coordinate) < 0.01
+                            && segment.coordinate2.distanceTo(leg.to.coordinate) < 0.01))
                 }
-                readonly property var metrics: firstPoint
-                    ? QGroundControl.corePlugin.routeLegMetrics(_missionController.plannedHomePosition, firstPoint.coordinate) : ({})
-                readonly property real screenLegLength: {
+                readonly property var hoveredSegment: {
                     void editorMap.center
                     void editorMap.zoomLevel
-                    if (!firstPoint) { return 0 }
-                    const from = editorMap.fromCoordinate(_missionController.plannedHomePosition, false)
-                    const to = editorMap.fromCoordinate(firstPoint.coordinate, false)
-                    return Math.hypot(to.x - from.x, to.y - from.y)
+                    if (!routeHover.hovered || !rightPanel.routeInsertionEnabled || _editingLayer !== _layerMission) { return null }
+                    const pointer = routeHover.point.position
+                    const radius = ScreenTools.defaultFontPixelWidth
+                    let nearest = null
+                    let closest = radius
+                    for (const segment of segments) {
+                        const from = editorMap.fromCoordinate(segment.from.coordinate, false)
+                        const to = editorMap.fromCoordinate(segment.to.coordinate, false)
+                        const dx = to.x - from.x
+                        const dy = to.y - from.y
+                        const length = Math.hypot(dx, dy)
+                        if (length <= _missionItemIndicatorGroup.groupingDistance * 2) { continue }
+                        const ratio = ((pointer.x - from.x) * dx + (pointer.y - from.y) * dy) / (length * length)
+                        if (ratio < 0 || ratio > 1) { continue }
+                        const offset = Math.hypot(pointer.x - from.x - ratio * dx, pointer.y - from.y - ratio * dy)
+                        if (offset <= closest) { closest = offset; nearest = segment }
+                    }
+                    return nearest
                 }
-                readonly property bool previewIncludesLeg: !rightPanel.simulationPreviewActive
-                    || (!!firstPoint && rightPanel.simulationPreviewSegments.some(segment =>
-                        segment.coordinate1.distanceTo(_missionController.plannedHomePosition) < 0.01
-                        && segment.coordinate2.distanceTo(firstPoint.coordinate) < 0.01))
+                readonly property var metrics: hoveredSegment
+                    ? QGroundControl.corePlugin.routeLegMetrics(hoveredSegment.from.coordinate, hoveredSegment.to.coordinate) : ({})
                 coordinate: metrics.midpoint || QtPositioning.coordinate()
                 anchorPoint.x: sourceItem.width / 2
                 anchorPoint.y: sourceItem.height / 2
                 z: QGroundControl.zOrderWaypointLines + 1
-                visible: _editingLayer === _layerMission && !!firstPoint && previewIncludesLeg
-                    && screenLegLength > _missionItemIndicatorGroup.groupingDistance * 2
+                visible: !!hoveredSegment && metrics.distance > 0
                 sourceItem: SplitIndicator {
-                    objectName: "caacHomeSplitButton"
+                    objectName: "caacRouteSplitButton"
                     enabled: !_planMasterController.syncInProgress
                     onClicked: {
-                        if (homeSplitItem.firstPoint && homeSplitItem.metrics.distance > 0) {
-                            rightPanel.routeController.insertRelativeWaypoint(0, homeSplitItem.firstPoint.index - 1,
-                                homeSplitItem.metrics.bearing, homeSplitItem.metrics.distance / 2, false)
+                        const segment = routeSplitItem.hoveredSegment
+                        if (segment && routeSplitItem.metrics.distance > 0) {
+                            rightPanel.routeController.insertRelativeWaypoint(segment.from.index, segment.after,
+                                routeSplitItem.metrics.bearing, routeSplitItem.metrics.distance / 2, false)
                         }
                     }
                 }
@@ -417,7 +445,8 @@ Item {
                 anchorPoint.x: sourceItem.width / 2
                 anchorPoint.y: sourceItem.height / 2
                 z: QGroundControl.zOrderWaypointLines + 1
-                visible: _editingLayer == _layerMission
+                visible: !QGroundControl.corePlugin.directMissionItemEditing
+                         && _editingLayer == _layerMission
                          && !rightPanel.simulationPreviewActive
                          && _screenLegLength > _missionItemIndicatorGroup.groupingDistance * 2
 
@@ -510,6 +539,7 @@ Item {
         // Left tool strip
         ToolStrip {
             id: toolStrip
+            fontSize: ScreenTools.menuFontPointSize * (editorMap.directMissionItemEditing ? 0.9 : 1)
             anchors.margins: _toolsMargin
             anchors.left: parent.left
             anchors.top: parent.top
@@ -578,8 +608,10 @@ Item {
                         enabled: _missionController.plannedHomePosition.isValid
                         visible: toolStrip._isMissionLayer
                         onTriggered: {
-                            if (_missionController.plannedHomePosition.isValid) {
-                                _addWaypointOnClick = false
+                            _addWaypointOnClick = false
+                            if (editorMap.directMissionItemEditing && rightPanel.routeController) {
+                                rightPanel.routeController.centerHomeOnRoute()
+                            } else if (_missionController.plannedHomePosition.isValid) {
                                 editorMap.center = _missionController.plannedHomePosition
                             }
                         }

@@ -29,7 +29,58 @@ private slots:
     void _quickWaypointOperations();
     void _relativeEndpointEditing();
     void _batchWaypointDeletion();
+    void _centerHomeOnRoute();
 };
+
+void CaacPlanningToolsTest::_centerHomeOnRoute()
+{
+    for (const double longitude : {120.0, 179.999}) {
+        PlanMasterController master;
+        master.start();
+        CaacRouteEditorController editor;
+        editor.setPlanMasterController(&master);
+        auto* mission = master.missionController();
+        const QGeoCoordinate home(30, longitude, 20);
+        mission->setHomePosition(home);
+        const auto empty = master.saveToJson();
+        QVERIFY(!editor.centerHomeOnRoute());
+        QCOMPARE(master.saveToJson(), empty);
+        const auto center = QGCGeo::geodesicDestination(home, 90, 500);
+        QList<QGeoCoordinate> points;
+        for (double bearing : {45.0, 135.0, 225.0, 315.0}) {
+            points.append(QGCGeo::geodesicDestination(center, bearing, 100));
+            QVERIFY(editor.addWaypoint(points.last()));
+        }
+        auto* takeoff = qobject_cast<SimpleMissionItem*>(mission->insertTakeoffItem(home, 1, false));
+        QVERIFY(takeoff);
+        takeoff->setCoordinate(home);
+        const auto takeoffAltitude = takeoff->altitude()->rawValue();
+        auto* jump = qobject_cast<SimpleMissionItem*>(
+            mission->insertSimpleMissionItem(home, mission->visualItems()->count(), false));
+        QVERIFY(jump);
+        jump->setCommand(MAV_CMD_DO_JUMP);
+        jump->missionItem().setParam1(2);
+        const auto jumpCommand = jump->missionItem().command();
+        editor.clearHistory();
+        const auto original = master.saveToJson();
+        QVERIFY(editor.centerHomeOnRoute());
+        QVERIFY(QGCGeo::geodesicDistance(mission->plannedHomePosition(), center) < 0.01);
+        QCOMPARE(mission->plannedHomePosition().altitude(), 20.0);
+        QCOMPARE(takeoff->altitude()->rawValue(), takeoffAltitude);
+        QCOMPARE(jump->missionItem().command(), jumpCommand);
+        QCOMPARE(jump->missionItem().param1(), 2.0);
+        QVERIFY(QGCGeo::geodesicDistance(takeoff->coordinate(), center) < 0.01);
+        for (int i = 0; i < points.count(); ++i) {
+            QVERIFY(QGCGeo::geodesicDistance(mission->visualItems()->value<SimpleMissionItem*>(i + 2)->coordinate(),
+                                             points[i]) < 0.001);
+        }
+        const auto centered = master.saveToJson();
+        QVERIFY(editor.undo());
+        QCOMPARE(master.saveToJson(), original);
+        QVERIFY(editor.redo());
+        QCOMPARE(master.saveToJson(), centered);
+    }
+}
 
 void CaacPlanningToolsTest::_batchWaypointDeletion()
 {

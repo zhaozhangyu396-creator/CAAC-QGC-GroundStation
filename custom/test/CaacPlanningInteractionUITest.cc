@@ -54,13 +54,26 @@ void CaacPlanningInteractionUITest::_homeRelativeEditing()
     map->setProperty("zoomLevel", 18);
     const auto midpoint = QGCGeo::geodesicDestination(home, 90, 50);
     map->setProperty("center", QVariant::fromValue(midpoint));
-    auto* split = findVisibleItem(_rootItem, QStringLiteral("caacHomeSplitButton"), TestTimeout::mediumMs());
+    const auto mapMiddle = map->mapToScene(QPointF(map->width() / 2, map->height() / 2));
+    QTest::mouseMove(_window, (mapMiddle + QPointF(-80, -80)).toPoint());
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacRouteSplitButton"), 0));
+    QPointF hoverPoint;
+    QVERIFY(QMetaObject::invokeMethod(map, "fromCoordinate", Q_RETURN_ARG(QPointF, hoverPoint),
+                                      Q_ARG(QGeoCoordinate, QGCGeo::geodesicDestination(home, 90, 25)),
+                                      Q_ARG(bool, false)));
+    QTest::mouseMove(_window, map->mapToScene(hoverPoint).toPoint());
+    auto* split = findVisibleItem(_rootItem, QStringLiteral("caacRouteSplitButton"), TestTimeout::mediumMs());
     QVERIFY(split);
     QTRY_VERIFY_WITH_TIMEOUT(QLineF(split->mapToScene(QPointF(split->width() / 2, split->height() / 2)),
                                     map->mapToScene(QPointF(map->width() / 2, map->height() / 2)))
                                      .length() < 1,
                              TestTimeout::mediumMs());
-    QVERIFY(clickButton(QStringLiteral("caacHomeSplitButton")));
+    panel->setProperty("measurePick", 1);
+    QTRY_VERIFY_WITH_TIMEOUT(!findVisibleItem(_rootItem, QStringLiteral("caacRouteSplitButton"), 0),
+                             TestTimeout::mediumMs());
+    QCOMPARE(mission->visualItems()->count(), 3);
+    panel->setProperty("measurePick", 0);
+    QVERIFY(clickButton(QStringLiteral("caacRouteSplitButton")));
     QTRY_COMPARE_WITH_TIMEOUT(mission->visualItems()->count(), 4, TestTimeout::mediumMs());
     auto* inserted = mission->visualItems()->value<SimpleMissionItem*>(1);
     QVERIFY(inserted && inserted->command() == MAV_CMD_NAV_WAYPOINT);
@@ -68,8 +81,10 @@ void CaacPlanningInteractionUITest::_homeRelativeEditing()
     QVERIFY(QGCGeo::geodesicDistance(mission->visualItems()->value<SimpleMissionItem*>(2)->coordinate(), reference) <
             0.01);
     QCOMPARE(mission->plannedHomePosition().altitude(), 20.0);
-    QVERIFY(clickButton(QStringLiteral("caacUndo")));
-    QCOMPARE(master->saveToJson(), original);
+    _window->requestActivate();
+    QTRY_VERIFY_WITH_TIMEOUT(_window->isActive(), TestTimeout::mediumMs());
+    QTest::keyClick(_window, Qt::Key_Z, Qt::ControlModifier);
+    QTRY_COMPARE_WITH_TIMEOUT(master->saveToJson(), original, TestTimeout::mediumMs());
     map->setProperty("center", QVariant::fromValue(home));
     auto* dragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_0"), TestTimeout::mediumMs());
     QVERIFY(dragger);
@@ -78,11 +93,24 @@ void CaacPlanningInteractionUITest::_homeRelativeEditing()
         QLineF(position(), map->mapToScene(QPointF(map->width() / 2, map->height() / 2))).length() < 1,
         TestTimeout::mediumMs());
     QVERIFY(!_window->grabWindow().isNull());
+    QTest::mouseClick(_window, Qt::RightButton, Qt::NoModifier, position().toPoint());
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacDrawingAidButton")));
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacPlaceCoordinateAxes")));
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacContextClearWaypoints")));
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacContextReverse")));
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacContextDeleteWaypoint"), 0));
+    QTest::keyClick(_window, Qt::Key_Escape);
     QTest::mouseClick(_window, Qt::LeftButton, Qt::NoModifier, position().toPoint());
     auto* combo = findVisibleItem(_rootItem, QStringLiteral("caacHomeRelativeReference"));
     auto* bearing = findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickBearing"));
     auto* distance = findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickDistance"));
     QVERIFY(combo && bearing && distance);
+    auto* homeContent = findVisibleItem(_rootItem, QStringLiteral("caacWaypointPopupContent"));
+    QVERIFY(homeContent);
+    QTRY_VERIFY_WITH_TIMEOUT(homeContent->property("popupGeometry").toRectF().height() > 0 &&
+                                 homeContent->property("popupGeometry").toRectF().height() <= map->height(),
+                             TestTimeout::mediumMs());
+    QVERIFY(homeContent->property("popupGeometry").toRectF().width() <= map->width());
     QCOMPARE(combo->property("count").toInt(), 2);
     QCOMPARE(combo->property("currentIndex").toInt(), 0);
     QVERIFY(std::abs(distance->property("text").toString().toDouble() - 100) < 0.01);
@@ -101,6 +129,35 @@ void CaacPlanningInteractionUITest::_homeRelativeEditing()
         std::abs(QGCGeo::geodesicDistance(reference, mission->plannedHomePosition()) - 100.01) < 0.001,
         TestTimeout::mediumMs());
     QCOMPARE(mission->plannedHomePosition().altitude(), 20.0);
+    auto* undoShortcut = panel->findChild<QObject*>(QStringLiteral("caacRouteUndoShortcut"));
+    QVERIFY(undoShortcut);
+    QVERIFY(undoShortcut->property("enabled").toBool());
+    auto* homePopup = panel->findChild<QObject*>(QStringLiteral("caacWaypointPopup"));
+    QVERIFY(homePopup);
+    QSignalSpy popupClosed(homePopup, SIGNAL(closed()));
+    QSignalSpy undoActivated(undoShortcut, SIGNAL(activated()));
+    QTest::keyClick(_window, Qt::Key_Z, Qt::ControlModifier);
+    QTRY_COMPARE_WITH_TIMEOUT(undoActivated.count(), 1, TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(master->saveToJson(), original, TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(popupClosed.count(), 1, TestTimeout::mediumMs());
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickBearing"), 0));
+    auto* restoredHome = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_0"));
+    QVERIFY(restoredHome);
+    QTRY_VERIFY_WITH_TIMEOUT(
+        QLineF(restoredHome->mapToScene(QPointF(restoredHome->width() / 2, restoredHome->height() / 2)),
+               map->mapToScene(QPointF(map->width() / 2, map->height() / 2)))
+                .length() < 1,
+        TestTimeout::mediumMs());
+    QVERIFY(!_window->grabWindow().isNull());
+    QTest::mouseClick(
+        _window, Qt::LeftButton, Qt::NoModifier,
+        restoredHome->mapToScene(QPointF(restoredHome->width() / 2, restoredHome->height() / 2)).toPoint());
+    bearing = findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickBearing"));
+    distance = findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickDistance"));
+    QVERIFY(bearing && distance);
+    if (const auto screenshot = qgetenv("CAAC_HOME_UI_SCREENSHOT"); !screenshot.isEmpty()) {
+        QVERIFY(_window->grabWindow().save(QString::fromUtf8(screenshot)));
+    }
     bearing->setProperty("text", QStringLiteral("238"));
     distance->setProperty("text", QStringLiteral("28.1"));
     QVERIFY(clickButton(QStringLiteral("caacWaypointQuickConfirm")));
@@ -110,6 +167,26 @@ void CaacPlanningInteractionUITest::_homeRelativeEditing()
     QCOMPARE(mission->visualItems()->value<SimpleMissionItem*>(1)->coordinate().latitude(), reference.latitude());
     QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), original);
+    map->setProperty("center", QVariant::fromValue(reference));
+    auto* firstDragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_1"));
+    QVERIFY(firstDragger);
+    const auto firstPosition = [&]() {
+        return firstDragger->mapToScene(QPointF(firstDragger->width() / 2, firstDragger->height() / 2));
+    };
+    QTRY_VERIFY_WITH_TIMEOUT(QLineF(firstPosition(), mapMiddle).length() < 1, TestTimeout::mediumMs());
+    QTest::mouseClick(_window, Qt::RightButton, Qt::NoModifier, firstPosition().toPoint());
+    QVERIFY(clickButton(QStringLiteral("caacTakeoffPointButton")));
+    const auto cameraBeforeCenter = map->property("center").value<QGeoCoordinate>();
+    QVERIFY(clickButton(QStringLiteral("caacContextCenterHome")));
+    const QGeoCoordinate expectedCenter(
+        (reference.latitude() + QGCGeo::geodesicDestination(home, 180, 130).latitude()) / 2,
+        (reference.longitude() + home.longitude()) / 2, 20);
+    QTRY_VERIFY_WITH_TIMEOUT(QGCGeo::geodesicDistance(mission->plannedHomePosition(), expectedCenter) < 0.01,
+                             TestTimeout::mediumMs());
+    QCOMPARE(map->property("center").value<QGeoCoordinate>(), cameraBeforeCenter);
+    QCOMPARE(mission->plannedHomePosition().altitude(), 20.0);
+    QTest::keyClick(_window, Qt::Key_Z, Qt::ControlModifier);
+    QTRY_COMPARE_WITH_TIMEOUT(master->saveToJson(), original, TestTimeout::mediumMs());
 }
 
 void CaacPlanningInteractionUITest::_liveRoutePreview()

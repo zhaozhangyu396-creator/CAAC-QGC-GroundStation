@@ -846,12 +846,24 @@ void CaacRouteEditorUITest::_homeCenterWindowFocus()
     const auto beforeCenter = master->saveToJson();
     const auto home = mission->plannedHomePosition();
     QVERIFY(home.isValid());
+    const auto firstCoordinate = mission->visualItems()->value<SimpleMissionItem*>(1)->coordinate();
+    const auto secondCoordinate = mission->visualItems()->value<SimpleMissionItem*>(2)->coordinate();
+    const QGeoCoordinate routeCenter((firstCoordinate.latitude() + secondCoordinate.latitude()) / 2,
+                                     (firstCoordinate.longitude() + secondCoordinate.longitude()) / 2);
     const auto initialZoom = map->property("zoomLevel").toDouble();
+    auto centeredPlan = beforeCenter;
     for (int i = 0; i < 3; ++i) {
         map->setProperty("center", QVariant::fromValue(home.atDistanceAndAzimuth(500, 90)));
+        const auto camera = map->property("center").value<QGeoCoordinate>();
         QVERIFY(clickButton(QStringLiteral("planToolStrip_homeCenterButton")));
-        QTRY_VERIFY_WITH_TIMEOUT(map->property("center").value<QGeoCoordinate>().distanceTo(home) < 0.1,
-                                 TestTimeout::mediumMs());
+        QTRY_VERIFY_WITH_TIMEOUT(mission->plannedHomePosition().distanceTo(routeCenter) < 0.1, TestTimeout::mediumMs());
+        QCOMPARE(map->property("center").value<QGeoCoordinate>(), camera);
+        QCOMPARE(mission->plannedHomePosition().altitude(), home.altitude());
+        QCOMPARE(mission->visualItems()->value<SimpleMissionItem*>(1)->coordinate(), firstCoordinate);
+        QCOMPARE(mission->visualItems()->value<SimpleMissionItem*>(2)->coordinate(), secondCoordinate);
+        if (i == 0) {
+            centeredPlan = master->saveToJson();
+        }
         QCOMPARE(map->property("zoomLevel").toDouble(), initialZoom);
         QVERIFY(map->property("directMissionItemEditing").toBool());
         changeFocus();
@@ -859,9 +871,11 @@ void CaacRouteEditorUITest::_homeCenterWindowFocus()
             return;
         }
         QVERIFY(clickItemFraction(QStringLiteral("planView_map"), 0.45, 0.35));
-        QCOMPARE(master->saveToJson(), beforeCenter);
+        QCOMPARE(master->saveToJson(), centeredPlan);
         QVERIFY(!mission->property("isROIActive").toBool());
     }
+    QTest::keyClick(_window, Qt::Key_Z, Qt::ControlModifier);
+    QTRY_COMPARE_WITH_TIMEOUT(master->saveToJson(), beforeCenter, TestTimeout::mediumMs());
     QTest::mouseDClick(_window, Qt::LeftButton, Qt::NoModifier,
                        map->mapToScene(QPointF(map->width() * 0.45, map->height() * 0.35)).toPoint());
     QTRY_COMPARE_WITH_TIMEOUT(mission->visualItems()->count(), 4, TestTimeout::mediumMs());

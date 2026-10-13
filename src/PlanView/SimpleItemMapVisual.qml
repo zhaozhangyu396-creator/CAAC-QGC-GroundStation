@@ -115,7 +115,7 @@ MissionItemMapVisualBase {
                 QGCMapCircle {
                     id:                         _mapCircle
                     center:                     loiterMapQuickItem.coordinate
-                    interactive:                _root.interactive && _missionItem.isCurrentItem && map.planView
+                    interactive:                loiterMapQuickItem.visible && _missionItem.isCurrentItem && map.planView
                     showRotation:               true
                     onClockwiseRotationChanged: if(!blockSignals) loiterMapCircleVisuals.updateMissionItem()
                 }

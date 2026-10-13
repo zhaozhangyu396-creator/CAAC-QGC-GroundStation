@@ -21,7 +21,7 @@ Rectangle {
     property bool editOnRightClick: false
     property bool dragEnabled: true
     readonly property bool missionItemDragger: true
-    property var gestureTarget: itemDragger
+    property Item gestureTarget: itemDragger
     property int gesturePriority: -1
     property bool _externalDragActive: false
 
@@ -76,11 +76,13 @@ Rectangle {
             itemDragger.gestureTarget = itemDragger
             if (!itemDragger.editOnRightClick || !itemDragger.itemIndicator) { return }
             const point = itemDrag.mapToItem(itemDragger.mapControl, Qt.point(mouse.x, mouse.y))
-            const ownCenter = itemDragger.mapControl.fromCoordinate(itemDragger.itemCoordinate, false)
-            let nearestDistance = Math.pow(point.x - ownCenter.x, 2) + Math.pow(point.y - ownCenter.y, 2)
+            const ownCenter = itemDragger.itemCoordinate && itemDragger.itemCoordinate.isValid
+                ? itemDragger.mapControl.fromCoordinate(itemDragger.itemCoordinate, false) : null
+            let nearestDistance = ownCenter ? Math.pow(point.x - ownCenter.x, 2) + Math.pow(point.y - ownCenter.y, 2) : Infinity
             // Expanded hit areas must not intercept a nearer visible marker.
             for (const other of itemDragger.mapControl.children) {
                 if (other === itemDragger || other.missionItemDragger !== true || !other.visible || !other.enabled || !other.itemIndicator
+                    || !other.itemCoordinate || !other.itemCoordinate.isValid || other.gesturePriority < 0
                     || point.x < other.x || point.y < other.y || point.x > other.x + other.width || point.y > other.y + other.height) {
                     continue
                 }

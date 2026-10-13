@@ -117,6 +117,8 @@ Column {
     property bool _pickingCenter: false
     property bool _pickingHome: false
     property int measurePick: 0
+    readonly property bool routeInsertionEnabled: visible && enabled && !_pickingCenter && !_pickingHome
+        && measurePick === 0 && !routeDragMode
     property var measureA: QtPositioning.coordinate()
     property var measureB: QtPositioning.coordinate()
     onVisibleChanged: { if (!visible) { measurePick = 0; _pickingHome = false } }
@@ -207,11 +209,7 @@ Column {
         measurePick = 0
         _pickingHome = true
     }
-    function centerPlannedHome() {
-        if (editorMap && planMasterController && planMasterController.missionController.plannedHomePosition.isValid) {
-            editorMap.center = planMasterController.missionController.plannedHomePosition
-        }
-    }
+    function centerPlannedHome() { editorController.centerHomeOnRoute() }
     function confirmClearWaypoints() { clearWaypointsFactory.open() }
     function confirmGoto(coordinate) {
         const vehicle = QGroundControl.multiVehicleManager.activeVehicle
@@ -939,6 +937,18 @@ Column {
                 routeController: editorController
                 editor: root
             }
+        }
+    }
+
+    Shortcut {
+        objectName: "caacRouteUndoShortcut"
+        sequences: [StandardKey.Undo]
+        context: Qt.ApplicationShortcut
+        enabled: root.visible && root.enabled && editorController.canUndo
+        onActivated: {
+            waypointPopup.fineTuning = false
+            waypointPopup.close()
+            editorController.undo()
         }
     }
 

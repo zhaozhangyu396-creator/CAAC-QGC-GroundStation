@@ -17,6 +17,8 @@ Item {
     readonly property bool showNativeEditor: !customEditor.enabled || !customEditor.editorItem || customEditor.editorItem.showMissionTree !== false
     readonly property bool simulationPreviewActive: customEditor.enabled && customEditor.editorItem
         && customEditor.editorItem.simulationPreviewActive === true
+    readonly property bool routeInsertionEnabled: customEditor.enabled && !!customEditor.editorItem
+        && customEditor.editorItem.routeInsertionEnabled === true
     readonly property var routeController: customEditor.enabled && customEditor.editorItem
         ? customEditor.editorItem.routeController || null : null
     readonly property var simulationPreviewSegments: simulationPreviewActive
