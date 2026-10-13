@@ -142,10 +142,14 @@ void CaacFlightDataUITest::_liveFlightData()
     QVERIFY(layer);
     auto* map = layer->property("mapControl").value<QObject*>();
     QVERIFY(map);
+    // Model a user pan so automatic following does not animate over the button's one-shot centering.
+    QVERIFY(QMetaObject::invokeMethod(map, "mapPanStart"));
     QVERIFY(map->setProperty("center", QVariant::fromValue(QGeoCoordinate(-30, -120))));
+    QVERIFY(QMetaObject::invokeMethod(map, "mapPanStop"));
     QVERIFY(clickButton(QStringLiteral("caacCenterVehicleButton")));
-    const auto centered = map->property("center").value<QGeoCoordinate>();
-    QVERIFY(QGCGeo::geodesicDistance(centered, vehicle->coordinate()) < 0.01);
+    QTRY_VERIFY_WITH_TIMEOUT(
+        QGCGeo::geodesicDistance(map->property("center").value<QGeoCoordinate>(), vehicle->coordinate()) < 0.01,
+        TestTimeout::mediumMs());
     disconnectMockLink(mock);
     mock.clear();
     QVERIFY(verifyText(QStringLiteral("caacNorthDistanceValue"), unavailable, QStringLiteral("aircraft disconnected")));
