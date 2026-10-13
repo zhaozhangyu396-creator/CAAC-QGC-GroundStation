@@ -20,6 +20,9 @@ Rectangle {
     property var itemCoordinate ///< Coordinate we are updating during drag
     property bool editOnRightClick: false
     property bool dragEnabled: true
+    readonly property bool missionItemDragger: true
+    property var gestureTarget: itemDragger
+    property bool _externalDragActive: false
 
     signal clicked
     signal rightClicked
@@ -43,7 +46,7 @@ Rectangle {
     onYChanged: liveDrag()
 
     function liveDrag() {
-        if (!itemDragger._preventCoordinateBindingLoop && itemDrag.drag.active) {
+        if (!itemDragger._preventCoordinateBindingLoop && (itemDrag.drag.active || _externalDragActive)) {
             var point = Qt.point(itemDragger.x + _touchMarginHorizontal + itemIndicator.anchorPoint.x, itemDragger.y + _touchMarginVertical + itemIndicator.anchorPoint.y)
             var coordinate = mapControl.toCoordinate(point, false /* clipToViewPort */)
             itemDragger._preventCoordinateBindingLoop = true
@@ -53,12 +56,12 @@ Rectangle {
         }
     }
 
-    Drag.active: itemDrag.drag.active
+    Drag.active: itemDrag.drag.active || _externalDragActive
 
     QGCMouseArea {
         id:                 itemDrag
         anchors.fill:       parent
-        drag.target:        itemDragger.dragEnabled && (pressedButtons & Qt.LeftButton) ? parent : null
+        drag.target:        itemDragger.gestureTarget && itemDragger.gestureTarget.dragEnabled && (pressedButtons & Qt.LeftButton) ? itemDragger.gestureTarget : null
         acceptedButtons:    itemDragger.editOnRightClick ? Qt.LeftButton | Qt.RightButton : Qt.LeftButton
         drag.minimumX:      0
         drag.minimumY:      0
@@ -68,26 +71,52 @@ Rectangle {
         enabled:            itemDragger.visible
         cursorShape:        drag.active ? Qt.ClosedHandCursor : Qt.OpenHandCursor
 
+        onPressed: (mouse) => {
+            itemDragger.gestureTarget = itemDragger
+            if (!itemDragger.editOnRightClick || !itemDragger.itemIndicator) { return }
+            const point = itemDrag.mapToItem(itemDragger.mapControl, Qt.point(mouse.x, mouse.y))
+            const ownCenter = Qt.point(itemDragger.x + itemDragger._touchMarginHorizontal + itemDragger.itemIndicator.anchorPoint.x,
+                                       itemDragger.y + itemDragger._touchMarginVertical + itemDragger.itemIndicator.anchorPoint.y)
+            let nearestDistance = Math.pow(point.x - ownCenter.x, 2) + Math.pow(point.y - ownCenter.y, 2)
+            // Expanded hit areas must not intercept a nearer visible marker.
+            for (const other of itemDragger.mapControl.children) {
+                if (other === itemDragger || other.missionItemDragger !== true || !other.visible || !other.enabled || !other.itemIndicator
+                    || point.x < other.x || point.y < other.y || point.x > other.x + other.width || point.y > other.y + other.height) {
+                    continue
+                }
+                const center = Qt.point(other.x + other._touchMarginHorizontal + other.itemIndicator.anchorPoint.x,
+                                        other.y + other._touchMarginVertical + other.itemIndicator.anchorPoint.y)
+                const distance = Math.pow(point.x - center.x, 2) + Math.pow(point.y - center.y, 2)
+                if (distance + 0.01 < nearestDistance) {
+                    nearestDistance = distance
+                    itemDragger.gestureTarget = other
+                }
+            }
+        }
+
         onClicked: (mouse) => {
             focus = true
             if (mouse.button === Qt.RightButton) {
-                itemDragger.rightClicked()
+                if (itemDragger.gestureTarget) { itemDragger.gestureTarget.rightClicked() }
             } else {
-                itemDragger.clicked()
+                if (itemDragger.gestureTarget) { itemDragger.gestureTarget.clicked() }
             }
         }
 
         property bool dragActive: drag.active
         onDragActiveChanged: {
+            const target = itemDragger.gestureTarget
+            if (!target) { return }
+            target._externalDragActive = dragActive && target !== itemDragger
             if (dragActive) {
                 focus = true
                 if (!_dragStartSignalled) {
                     _dragStartSignalled = true
-                    dragStart()
+                    target.dragStart()
                 }
             } else {
                 _dragStartSignalled = false
-                dragStop()
+                target.dragStop()
             }
         }
     }

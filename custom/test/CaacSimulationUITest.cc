@@ -76,6 +76,12 @@ void CaacSimulationUITest::_defaultStartPosition()
         QVERIFY(QGCGeo::geodesicDistance(map->property("center").value<QGeoCoordinate>(), expected) < 0.02);
         auto* marker = findVisibleItem(_rootItem, QStringLiteral("planView_vehicle_%1").arg(vehicle->id()));
         QVERIFY(marker);
+        auto* homeDragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_0"));
+        QVERIFY(homeDragger);
+        auto* homeIndicator = homeDragger->property("itemIndicator").value<QQuickItem*>();
+        QVERIFY(homeIndicator);
+        QVERIFY(marker->z() > homeIndicator->z());
+        QVERIFY(marker->z() < homeDragger->z());
         QTRY_COMPARE_WITH_TIMEOUT(marker->property("coordinate").value<QGeoCoordinate>(), expected,
                                   TestTimeout::mediumMs());
         auto movedHome = QGCGeo::geodesicDestination(expected, 90, 30);

@@ -159,6 +159,7 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     auto* homeDragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_0"), TestTimeout::mediumMs());
     QVERIFY(homeDragger);
     const auto beforeHomeDrag = master->saveToJson();
+    const auto neighborBeforeHomeDrag = mission->visualItems()->value<SimpleMissionItem*>(2)->coordinate();
     const auto homeMapCenter = map->property("center").value<QGeoCoordinate>();
     QTRY_VERIFY_WITH_TIMEOUT(
         QLineF(homeDragger->mapToScene(QPointF(homeDragger->width() / 2, homeDragger->height() / 2)),
@@ -183,7 +184,10 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
         TestTimeout::shortMs(), QStringLiteral("Home drag position settled")));
     const auto homePress = homeScenePosition().toPoint();
     QTest::mousePress(_window, Qt::LeftButton, Qt::NoModifier, homePress);
-    QTRY_VERIFY_WITH_TIMEOUT(homeDragger->childItems().first()->property("pressed").toBool(), TestTimeout::mediumMs());
+    auto* homeGrabber = _window->mouseGrabberItem();
+    QVERIFY(homeGrabber);
+    QTRY_VERIFY_WITH_TIMEOUT(homeGrabber->property("pressed").toBool(), TestTimeout::mediumMs());
+    QCOMPARE(homeGrabber->parentItem()->property("gestureTarget").value<QObject*>(), homeDragger);
     for (int step = 1; step <= 5; ++step) {
         QTest::mouseMove(_window, homePress + QPoint(step * 8, step * 4));
     }
@@ -193,6 +197,7 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     QTRY_VERIFY_WITH_TIMEOUT(QGCGeo::geodesicDistance(mission->plannedHomePosition(), home) > 1,
                              TestTimeout::mediumMs());
     QCOMPARE(mission->plannedHomePosition().altitude(), home.altitude());
+    QCOMPARE(mission->visualItems()->value<SimpleMissionItem*>(2)->coordinate(), neighborBeforeHomeDrag);
     QVERIFY(QGCGeo::geodesicDistance(homeMapCenter, map->property("center").value<QGeoCoordinate>()) < 0.02);
     QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), beforeHomeDrag);

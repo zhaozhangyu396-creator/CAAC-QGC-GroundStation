@@ -434,7 +434,7 @@ Item {
                         : vehicle ? vehicle.coordinate : QtPositioning.coordinate()
                     map: editorMap
                     size: ScreenTools.defaultFontPixelHeight * 3
-                    z: QGroundControl.zOrderMapItems - 1
+                    z: QGroundControl.zOrderMapItems + (previewHome ? 0.75 : -1)
                 }
             }
 
