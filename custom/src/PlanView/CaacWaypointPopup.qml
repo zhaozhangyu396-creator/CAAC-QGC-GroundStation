@@ -200,6 +200,16 @@ Popup {
             }
             Rectangle { Layout.fillWidth: true; height: 1; color: palette.text; opacity: 0.25 }
             QGCButton {
+                objectName: "caacWaypointQuickConfirm"
+                pointSize: ScreenTools.menuFontPointSize
+                Layout.fillWidth: true
+                enabled: root._editable
+                text: qsTr("Confirm")
+                onClicked: {
+                    if (root.apply()) { root.close() }
+                }
+            }
+            QGCButton {
                 objectName: "caacWaypointQuickDelete"
                 pointSize: ScreenTools.menuFontPointSize
                 textColor: palette.colorRed

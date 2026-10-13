@@ -904,25 +904,34 @@ void CaacRouteEditorUITest::_planningUtilities()
         TestTimeout::mediumMs());
     QVERIFY(rejectDialog());
     QVERIFY(clickButton(QStringLiteral("caacMeasureTool")));
-    auto* format = findVisibleItem(_rootItem, QStringLiteral("caacMeasureALatitudeFormatToggle"));
-    QVERIFY(format);
-    QVERIFY(scrollIntoView(format, QStringLiteral("popupDialog_contentFlickable")));
-    QVERIFY(clickButton(QStringLiteral("caacMeasureALatitudeFormatToggle")));
-    auto* blankDegrees = findVisibleItem(_rootItem, QStringLiteral("caacMeasureALatitudeDegrees"));
-    QVERIFY2(blankDegrees, qPrintable(QStringLiteral("dirty=%1 canonical=%2 dms=%3")
-                                          .arg(format->parentItem()->property("_dirty").toBool())
-                                          .arg(format->parentItem()->property("_canonicalValue").toDouble())
-                                          .arg(format->parentItem()->property("displayDms").toBool())));
-    QVERIFY(clickButton(QStringLiteral("caacMeasureALatitudeFormatToggle")));
-    auto* pickA = findVisibleItem(_rootItem, QStringLiteral("caacMeasurePickA"));
-    QVERIFY(pickA);
-    QVERIFY(scrollIntoView(pickA, QStringLiteral("popupDialog_contentFlickable")));
-    QVERIFY(clickButton(QStringLiteral("caacMeasurePickA")));
     QTRY_COMPARE_WITH_TIMEOUT(panel->property("measurePick").toInt(), 1, TestTimeout::mediumMs());
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacMeasureDialog"), 0));
     QVERIFY(clickItemFraction(QStringLiteral("planView_map"), 0.3, 0.4));
     QTRY_COMPARE_WITH_TIMEOUT(panel->property("measurePick").toInt(), 2, TestTimeout::mediumMs());
     QVERIFY(clickItemFraction(QStringLiteral("planView_map"), 0.4, 0.4));
     QTRY_COMPARE_WITH_TIMEOUT(panel->property("measurePick").toInt(), 0, TestTimeout::mediumMs());
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacMeasureDialog"), 0));
+    auto* markerA = findVisibleItem(_rootItem, QStringLiteral("caacMeasureMarkerA"));
+    auto* dragA = findVisibleItem(_rootItem, QStringLiteral("caacMeasureDragA"));
+    QVERIFY(markerA && dragA);
+    const auto originalA = panel->property("measureA").value<QGeoCoordinate>();
+    const auto markerCenter = markerA->mapToScene(QPointF(markerA->width() / 2, markerA->height() / 2)).toPoint();
+    QTest::mousePress(_window, Qt::LeftButton, Qt::NoModifier, markerCenter);
+    QTRY_VERIFY_WITH_TIMEOUT(dragA->property("dragging").toBool(), TestTimeout::mediumMs());
+    QTest::mouseMove(_window, markerCenter + QPoint(20, 15));
+    QTRY_VERIFY_WITH_TIMEOUT(
+        QGCGeo::geodesicDistance(originalA, panel->property("measureA").value<QGeoCoordinate>()) > 0.1,
+        TestTimeout::mediumMs());
+    QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, markerCenter + QPoint(20, 15));
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacMeasureMapValues")));
+    QTest::mouseClick(_window, Qt::RightButton, Qt::NoModifier,
+                      markerA->mapToScene(QPointF(markerA->width() / 2, markerA->height() / 2)).toPoint());
+    auto* format = findVisibleItem(_rootItem, QStringLiteral("caacMeasureALatitudeFormatToggle"));
+    QVERIFY(format);
+    QVERIFY(scrollIntoView(format, QStringLiteral("popupDialog_contentFlickable")));
+    QVERIFY(clickButton(QStringLiteral("caacMeasureALatitudeFormatToggle")));
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacMeasureALatitudeDegrees")));
+    QVERIFY(clickButton(QStringLiteral("caacMeasureALatitudeFormatToggle")));
     const auto a = panel->property("measureA").value<QGeoCoordinate>();
     const auto b = panel->property("measureB").value<QGeoCoordinate>();
     QVERIFY(a.isValid() && b.isValid());

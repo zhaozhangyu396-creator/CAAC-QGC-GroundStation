@@ -55,7 +55,10 @@ Button {
     }
 
     onClicked: { if (!doubleClickRequired) { triggerAction() } }
-    onDoubleClicked: { if (doubleClickRequired) { triggerAction() } }
+    Connections {
+        target: control.doubleClickRequired ? control : null
+        function onDoubleClicked() { control.triggerAction() }
+    }
 
     QGCPalette { id: qgcPal; colorGroupEnabled: control.roundStyle || control.enabled }
 

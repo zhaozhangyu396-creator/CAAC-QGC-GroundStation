@@ -18796,6 +18796,10 @@ Click 'Ok' to upload the Plan anyway.</source>
         <source>Simulation</source>
         <translation>模拟</translation>
     </message>
+    <message>
+        <source>Cancel simulation</source>
+        <translation>取消模拟</translation>
+    </message>
 </context>
   <context>
     <name>PlanViewToolBar</name>
@@ -26046,6 +26050,10 @@ altitude</source>
         <source>Delete</source>
         <translation>删除</translation>
     </message>
+    <message>
+        <source>Confirm</source>
+        <translation>确认</translation>
+    </message>
 </context>
 <context>
     <name>CaacDrawingAids</name>
@@ -26084,4 +26092,11 @@ altitude</source>
       <translation>未获取</translation>
     </message>
   </context>
+<context>
+    <name>CaacMeasureMap</name>
+    <message>
+        <source>A → B: %1 m · %2°</source>
+        <translation>A → B：%1 米 · %2°</translation>
+    </message>
+</context>
 </TS>

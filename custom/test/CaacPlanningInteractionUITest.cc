@@ -116,7 +116,14 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     if (const auto screenshot = qgetenv("CAAC_POINT_UI_SCREENSHOT"); !screenshot.isEmpty()) {
         QVERIFY(_window->grabWindow().save(QString::fromUtf8(screenshot)));
     }
-    QTest::keyClick(_window, Qt::Key_Escape);
+    auto* quickBearing = findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickBearing"));
+    auto* quickDistance = findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickDistance"));
+    QVERIFY(quickBearing && quickDistance);
+    quickBearing->setProperty("text", QStringLiteral("90.44"));
+    quickDistance->setProperty("text", QStringLiteral("360.65"));
+    QVERIFY(clickButton(QStringLiteral("caacWaypointQuickConfirm")));
+    QVERIFY(std::abs(editor->waypointLeg(waypoint).value("distance").toDouble() - 360.65) < 0.001);
+    QVERIFY(std::abs(editor->waypointLeg(waypoint).value("bearing").toDouble() - 90.44) < 0.001);
     QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickBearing"), 0));
     map->setProperty("center", QVariant::fromValue(waypoint->coordinate()));
     QTRY_VERIFY_WITH_TIMEOUT(QLineF(markerPosition(), middle).length() < 1, TestTimeout::mediumMs());

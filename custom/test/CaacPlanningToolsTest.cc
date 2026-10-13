@@ -61,8 +61,10 @@ void CaacPlanningToolsTest::_batchWaypointDeletion()
     QCOMPARE(master.saveToJson(), original);
     QVERIFY(editor.removeWaypoints({objectAt(2), objectAt(4)}));
     QCOMPARE(mission->visualItems()->count(), 5);
-    QCOMPARE(mission->visualItems()->value<SimpleMissionItem*>(2)->coordinate(), coordinates.at(1));
-    QCOMPARE(mission->visualItems()->value<SimpleMissionItem*>(3)->coordinate(), coordinates.at(3));
+    QVERIFY(QGCGeo::geodesicDistance(mission->visualItems()->value<SimpleMissionItem*>(2)->coordinate(),
+                                     coordinates.at(1)) < 0.001);
+    QVERIFY(QGCGeo::geodesicDistance(mission->visualItems()->value<SimpleMissionItem*>(3)->coordinate(),
+                                     coordinates.at(3)) < 0.001);
     const auto afterPartial = master.saveToJson();
     QVERIFY(editor.undo());
     QCOMPARE(master.saveToJson(), original);

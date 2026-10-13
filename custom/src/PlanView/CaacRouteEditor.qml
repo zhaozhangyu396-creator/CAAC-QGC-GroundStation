@@ -77,7 +77,7 @@ Column {
     }
     function openSimulation() {
         const simulation = QGroundControl.corePlugin.simulation
-        if (simulation.active) { simulationDialogFactory.open() }
+        if (simulation.active) { simulation.stop() }
         else if (!simulation.start(root.planMasterController)) {
             QGroundControl.showMessageDialog(mainWindow, qsTr("Simulation flight"), simulation.status)
         }
@@ -192,6 +192,11 @@ Column {
         pointA: root.measureA
         pointB: root.measureB
         showMeasurement: root.enabled && root.visible
+        onPointMoved: (label, coordinate) => {
+            if (label === "A") { root.measureA = coordinate }
+            else { root.measureB = coordinate }
+        }
+        onSettingsRequested: root.showMeasurementSettings()
     }
 
     Rectangle {
@@ -238,7 +243,12 @@ Column {
         geometryDialogFactory.open({operation: operation})
     }
 
-    function openMeasurement() { measureDialogFactory.open() }
+    function openMeasurement() {
+        clearMeasurement()
+        _pickingHome = false
+        pickMeasurement(1)
+    }
+    function showMeasurementSettings() { measureDialogFactory.open() }
     function openUnitConverter() { unitDialogFactory.open() }
     function pickMeasurement(point) {
         _pickingCenter = false
@@ -909,7 +919,6 @@ Column {
                     root.measureB = coordinate
                     root.measurePick = 0
                 }
-                if (root.measurePick === 0) { root.openMeasurement() }
             } else if (root._pickingCenter) {
                 if (editorController.setRotationCenter(root.editorMap.toCoordinate(position, false))) {
                     root._pickingCenter = false

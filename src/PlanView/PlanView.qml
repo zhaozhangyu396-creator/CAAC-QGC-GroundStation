@@ -532,8 +532,8 @@ Item {
                     },
                     ToolStripAction {
                         objectName: "planToolStrip_simulationButton"
-                        text: qsTr("Simulation")
-                        iconSource: "/InstrumentValueIcons/play.svg"
+                        text: QGroundControl.corePlugin.simulation.active ? qsTr("Cancel simulation") : qsTr("Simulation")
+                        iconSource: QGroundControl.corePlugin.simulation.active ? "/res/XDelete.svg" : "/InstrumentValueIcons/play.svg"
                         visible: QGroundControl.corePlugin.directMissionItemEditing && toolStrip._isMissionLayer
                         enabled: visible
                         onTriggered: editorMap.simulationRequested()

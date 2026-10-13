@@ -286,15 +286,29 @@ void CaacSimulationController::stop()
 {
     _timer.stop();
     setEmergencyMode(false);
+    if (_planningPlan) {
+        auto* manager = MultiVehicleManager::instance();
+        if (ownsVehicle(manager->activeVehicle())) {
+            const QPointer<PlanMasterController> plan = _planningPlan;
+            // Keep the planning flag through queued vehicle removal so intentional simulation stops retain the plan.
+            connect(
+                manager, &MultiVehicleManager::activeVehicleChanged, plan,
+                [plan](Vehicle*) {
+                    if (plan) {
+                        plan->setProperty("caacSimulationPlanning", false);
+                    }
+                },
+                Qt::SingleShotConnection);
+        } else {
+            _planningPlan->setProperty("caacSimulationPlanning", false);
+        }
+    }
     if (_link) {
         const auto config = _link->linkConfiguration();
         LinkManager::instance()->disconnectLink(_link);
         if (config) {
             LinkManager::instance()->removeConfiguration(config.get());
         }
-    }
-    if (_planningPlan) {
-        _planningPlan->setProperty("caacSimulationPlanning", false);
     }
     _planningPlan.clear();
     _uploadSent = false;
@@ -598,7 +612,7 @@ bool CaacSimulationController::_prepareFlightPlan()
     }
     auto* finishPoint = waypoints.last();
     if (_settings.value("closed").toBool()) {
-        finishPoint = append(MAV_CMD_NAV_WAYPOINT, selectedStart);
+        finishPoint = append(MAV_CMD_NAV_WAYPOINT, waypoints.first());
         if (!finishPoint) {
             _fail(tr("Unable to close the simulation route."));
             return false;

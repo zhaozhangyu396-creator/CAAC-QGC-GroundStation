@@ -35,7 +35,103 @@ class CaacSimulationUITest : public QmlUITestBase
     Q_OBJECT
 private slots:
     void _uploadAndFlightControls();
+    void _closedRouteAndSimulationToggle();
 };
+
+void CaacSimulationUITest::_closedRouteAndSimulationToggle()
+{
+    const auto step = [](const char* label) {
+        std::fprintf(stderr, "CAAC closed-route step: %s\n", label);
+        std::fflush(stderr);
+    };
+    step("start UI");
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewPlan")));
+    step("plan opened");
+    auto* plan = findVisibleItem(_rootItem, QStringLiteral("mainView_plan"));
+    QVERIFY(plan);
+    auto* master = plan->property("_planMasterController").value<PlanMasterController*>();
+    QVERIFY(master);
+    auto* mission = master->missionController();
+    const QGeoCoordinate home(30, 120, 20);
+    mission->setHomePosition(home);
+    QList<QGeoCoordinate> coordinates;
+    for (int bearing : {0, 90, 180}) {
+        coordinates.append(QGCGeo::geodesicDestination(home, bearing, 10));
+        auto* waypoint = qobject_cast<SimpleMissionItem*>(
+            mission->insertSimpleMissionItem(coordinates.last(), mission->visualItems()->count(), false));
+        QVERIFY(waypoint);
+        waypoint->altitude()->setRawValue(2);
+    }
+    CaacRouteEditorController editor;
+    editor.setPlanMasterController(master);
+    auto settings = CaacSimulationController::defaults();
+    settings["startSequence"] = 2;
+    settings["closed"] = true;
+    settings["endBehavior"] = 0;
+    settings["takeoffHeight"] = 2.0;
+    settings["horizontalSpeed"] = 20.0;
+    settings["verticalSpeed"] = 10.0;
+    settings["turnMode"] = 3;
+    settings["holdSeconds"] = 0.1;
+    QVERIFY(editor.setSimulationSettings(settings));
+    const auto original = master->saveToJson();
+    auto* plugin = qobject_cast<CaacCorePlugin*>(CaacCorePlugin::instance());
+    QVERIFY(plugin);
+    auto* simulation = plugin->simulation();
+    QVERIFY(simulation);
+    const auto stop = qScopeGuard([simulation]() { simulation->stop(); });
+    ignoreLogMessage("Utilities.QGCSensors", QtWarningMsg,
+                     QRegularExpression(QStringLiteral("Failed to connect to pressure backend")));
+    ignoreLogMessage("Utilities.QGCSensors", QtWarningMsg,
+                     QRegularExpression(QStringLiteral("Error Initializing Pressure Sensor")));
+    const auto clickSimulation = [&]() {
+        return clickButtonScrolled(QStringLiteral("planToolStrip_simulationButton"),
+                                   QStringLiteral("toolStrip_flickable"));
+    };
+    QVERIFY(clickSimulation());
+    step("connection requested");
+    QTRY_VERIFY_WITH_TIMEOUT(simulation->vehicle() && simulation->vehicle()->isInitialConnectComplete(),
+                             TestTimeout::longMs());
+    QVERIFY(verifyText(QStringLiteral("planToolStrip_simulationButton"),
+                       QCoreApplication::translate("PlanView", "Cancel simulation"),
+                       QStringLiteral("active simulation")));
+    QVERIFY(clickSimulation());
+    step("cancel requested");
+    QTRY_VERIFY_WITH_TIMEOUT(!simulation->active() && !MultiVehicleManager::instance()->activeVehicle(),
+                             TestTimeout::mediumMs());
+    QVERIFY(verifyText(QStringLiteral("planToolStrip_simulationButton"),
+                       QCoreApplication::translate("PlanView", "Simulation"),
+                       QStringLiteral("simulation disconnected")));
+    QVERIFY(clickSimulation());
+    step("reconnection requested");
+    QVERIFY2(simulation->active(), qPrintable(simulation->status()));
+    QTRY_VERIFY_WITH_TIMEOUT(simulation->vehicle() && simulation->vehicle()->isInitialConnectComplete(),
+                             TestTimeout::longMs());
+    QSignalSpy uploaded(simulation, &CaacSimulationController::missionUploaded);
+    QVERIFY(simulation->upload(master));
+    step("upload requested");
+    QVERIFY(uploaded.wait(TestTimeout::longMs()));
+    QList<const MissionItem*> uploadedWaypoints;
+    for (const auto* item : simulation->vehicle()->missionManager()->missionItems()) {
+        if (item->command() == MAV_CMD_NAV_WAYPOINT) {
+            uploadedWaypoints.append(item);
+        }
+    }
+    QCOMPARE(uploadedWaypoints.size(), 4);
+    QVERIFY(QGCGeo::geodesicDistance(uploadedWaypoints.last()->coordinate(), coordinates.first()) < 0.02);
+    QVERIFY(QGCGeo::geodesicDistance(uploadedWaypoints.last()->coordinate(), coordinates.at(1)) > 1);
+    QVERIFY(QGCGeo::geodesicDistance(uploadedWaypoints.last()->coordinate(), home) > 1);
+    simulation->vehicle()->startMission();
+    step("mission started");
+    QTRY_VERIFY_WITH_TIMEOUT(simulation->vehicle()->airborne(), TestTimeout::longMs());
+    QTRY_VERIFY_WITH_TIMEOUT(QGCGeo::geodesicDistance(simulation->vehicle()->coordinate(), coordinates.first()) < 0.2,
+                             TestTimeout::longMs());
+    QCOMPARE(master->saveToJson(), original);
+}
 
 void CaacSimulationUITest::_uploadAndFlightControls()
 {
