@@ -5,6 +5,7 @@
 #include <memory>
 
 #include <QtCore/QByteArray>
+#include <QtCore/QElapsedTimer>
 #include <QtCore/QFile>
 #include <QtCore/QFileInfo>
 #include <QtCore/QLineF>
@@ -20,6 +21,7 @@
 #include <QtNetwork/QLocalSocket>
 #include <QtQml/QQmlApplicationEngine>
 #include <QtQml/QQmlComponent>
+#include <QtQml/QQmlExpression>
 #include <QtQuick/QQuickItem>
 #include <QtQuick/QQuickWindow>
 #include <QtTest/QTest>
@@ -569,7 +571,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     auto* returnToWaypoints = findVisibleItem(_rootItem, QStringLiteral("caacReturnToWaypoints"));
     QVERIFY(returnToWaypoints);
     QCOMPARE(returnToWaypoints->property("text").toString(),
-             chinese ? QStringLiteral("返回航点列表") : QStringLiteral("Return to waypoint list"));
+             chinese ? QStringLiteral("退出高级任务设置") : QStringLiteral("Exit advanced mission settings"));
     QVERIFY(clickButton(QStringLiteral("caacReturnToWaypoints")));
     QTRY_VERIFY_WITH_TIMEOUT(!planTree->isVisible(), TestTimeout::mediumMs());
     QCOMPARE(master->saveToJson(), beforeAdvancedNavigation);
@@ -912,17 +914,36 @@ void CaacRouteEditorUITest::_planningUtilities()
     QTRY_COMPARE_WITH_TIMEOUT(panel->property("measurePick").toInt(), 0, TestTimeout::mediumMs());
     QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacMeasureDialog"), 0));
     auto* markerA = findVisibleItem(_rootItem, QStringLiteral("caacMeasureMarkerA"));
-    auto* dragA = findVisibleItem(_rootItem, QStringLiteral("caacMeasureDragA"));
-    QVERIFY(markerA && dragA);
-    const auto originalA = panel->property("measureA").value<QGeoCoordinate>();
-    const auto markerCenter = markerA->mapToScene(QPointF(markerA->width() / 2, markerA->height() / 2)).toPoint();
-    QTest::mousePress(_window, Qt::LeftButton, Qt::NoModifier, markerCenter);
-    QTRY_VERIFY_WITH_TIMEOUT(dragA->property("dragging").toBool(), TestTimeout::mediumMs());
-    QTest::mouseMove(_window, markerCenter + QPoint(20, 15));
-    QTRY_VERIFY_WITH_TIMEOUT(
-        QGCGeo::geodesicDistance(originalA, panel->property("measureA").value<QGeoCoordinate>()) > 0.1,
-        TestTimeout::mediumMs());
-    QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, markerCenter + QPoint(20, 15));
+    QVERIFY(markerA);
+    for (const auto& label : {QStringLiteral("A"), QStringLiteral("B")}) {
+        auto* marker = findVisibleItem(_rootItem, QStringLiteral("caacMeasureMarker") + label);
+        auto* drag = findVisibleItem(_rootItem, QStringLiteral("caacMeasureDrag") + label);
+        QVERIFY(marker && drag);
+        const auto original = panel->property(qPrintable(QStringLiteral("measure") + label)).value<QGeoCoordinate>();
+        const auto mapCenter = map->property("center").value<QGeoCoordinate>();
+        const auto press = marker->mapToScene(QPointF(marker->width() / 2, marker->height() / 2)).toPoint();
+        QElapsedTimer held;
+        held.start();
+        QTest::mousePress(_window, Qt::LeftButton, Qt::NoModifier, press);
+        QTest::mouseMove(_window, press + QPoint(1, 1));
+        QTRY_VERIFY_WITH_TIMEOUT(held.elapsed() >= drag->property("pressAndHoldInterval").toInt(),
+                                 TestTimeout::mediumMs());
+        QVERIFY(drag->property("dragging").toBool());
+        for (int step = 1; step <= 5; ++step) {
+            const QPoint position = press + QPoint(step * 8, step * 3);
+            QTest::mouseMove(_window, position);
+            QTRY_VERIFY_WITH_TIMEOUT(
+                QLineF(marker->mapToScene(QPointF(marker->width() / 2, marker->height() / 2)), position).length() < 2,
+                TestTimeout::mediumMs());
+        }
+        QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, press + QPoint(40, 15));
+        QVERIFY(QGCGeo::geodesicDistance(
+                    original, panel->property(qPrintable(QStringLiteral("measure") + label)).value<QGeoCoordinate>()) >
+                0.1);
+        QVERIFY(QGCGeo::geodesicDistance(mapCenter, map->property("center").value<QGeoCoordinate>()) < 0.02);
+        QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacMeasureDialog"), 0));
+        QCOMPARE(master->saveToJson(), before);
+    }
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacMeasureMapValues")));
     QTest::mouseClick(_window, Qt::RightButton, Qt::NoModifier,
                       markerA->mapToScene(QPointF(markerA->width() / 2, markerA->height() / 2)).toPoint());
@@ -944,6 +965,12 @@ void CaacRouteEditorUITest::_planningUtilities()
     QCOMPARE(master->saveToJson(), before);
     auto* aLatitude = findVisibleItem(_rootItem, QStringLiteral("caacMeasureALatitude"));
     QVERIFY(aLatitude);
+    QQmlExpression contextMenu(qmlContext(aLatitude), aLatitude, QStringLiteral("ContextMenu.menu === null"));
+    QVERIFY(contextMenu.evaluate().toBool());
+    QVERIFY(!contextMenu.hasError());
+    QTest::mouseClick(_window, Qt::RightButton, Qt::NoModifier,
+                      aLatitude->mapToScene(QPointF(aLatitude->width() / 2, aLatitude->height() / 2)).toPoint());
+    QVERIFY(contextMenu.evaluate().toBool());
     aLatitude->setProperty("text", QStringLiteral("91"));
     auto* apply = findVisibleItem(_rootItem, QStringLiteral("caacMeasureApply"));
     QVERIFY(apply);
@@ -959,6 +986,18 @@ void CaacRouteEditorUITest::_planningUtilities()
         QVERIFY(frame.wait(TestTimeout::mediumMs()));
         QVERIFY(_window->grabWindow().save(screenshot));
     }
+    QTest::mouseClick(_window, Qt::RightButton, Qt::NoModifier,
+                      markerA->mapToScene(QPointF(markerA->width() / 2, markerA->height() / 2)).toPoint());
+    auto* clear = findVisibleItem(_rootItem, QStringLiteral("caacMeasureClear"));
+    QVERIFY(clear);
+    QVERIFY(scrollIntoView(clear, QStringLiteral("popupDialog_contentFlickable")));
+    QVERIFY(clickButton(QStringLiteral("caacMeasureClear")));
+    QTRY_VERIFY_WITH_TIMEOUT(!findVisibleItem(_rootItem, QStringLiteral("caacMeasureDialog"), 0),
+                             TestTimeout::mediumMs());
+    QVERIFY(!panel->property("measureA").value<QGeoCoordinate>().isValid());
+    QVERIFY(!panel->property("measureB").value<QGeoCoordinate>().isValid());
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacMeasureMapValues"), 0));
+    QCOMPARE(master->saveToJson(), before);
     auto* specify = findVisibleItem(_rootItem, QStringLiteral("caacSpecifyMissionSpeed"));
     QVERIFY(specify);
     QVERIFY(scrollIntoView(specify, QStringLiteral("caacGlobalSettingsScroller")));

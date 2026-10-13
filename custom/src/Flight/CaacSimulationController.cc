@@ -170,7 +170,9 @@ bool CaacSimulationController::start(PlanMasterController* plan)
     _planningPlan->setProperty("caacSimulationPlanning", true);
     _link->_caacSimulation = true;
     if (!_home.isValid()) {
-        _home = _link->_homeCoordinate;
+        const double altitude = std::isfinite(_home.altitude()) ? _home.altitude() : 0;
+        _home = QGeoCoordinate(25.137898058569604, 102.7212769885262, altitude);
+        plan->missionController()->setHomePosition(_home);
     }
     if (!std::isfinite(_home.altitude())) {
         _home.setAltitude(0);
@@ -393,6 +395,10 @@ void CaacSimulationController::_tick()
             _fail(tr("Simulation connection timed out."));
         }
         return;
+    }
+    if (_planningPlan && _planningPlan->missionController()->visualItems()->count() == 1 &&
+        !_planningPlan->missionController()->plannedHomePosition().isValid()) {
+        _planningPlan->missionController()->setHomePosition(_home);
     }
     if (_uploadSent) {
         if (_missionReady && !_vehicle->missionManager()->inProgress()) {

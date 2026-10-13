@@ -1,11 +1,14 @@
 #include "MissionSettingsItem.h"
-#include "PlanMasterController.h"
-#include "MissionItem.h"
-#include "QGCMath.h"
-#include "Vehicle.h"
-#include "QGCLoggingCategory.h"
+
+#include <cmath>
 
 #include <QtCore/QJsonArray>
+
+#include "MissionItem.h"
+#include "PlanMasterController.h"
+#include "QGCLoggingCategory.h"
+#include "QGCMath.h"
+#include "Vehicle.h"
 
 QGC_LOGGING_CATEGORY(MissionSettingsItemLog, "Plan.MissionSettingsItem")
 
@@ -177,6 +180,9 @@ void MissionSettingsItem::setCoordinate(const QGeoCoordinate& coordinate)
 {
     if (_plannedHomePositionCoordinate != coordinate) {
         _plannedHomePositionCoordinate = coordinate;
+        if (std::isfinite(coordinate.altitude())) {
+            _plannedHomePositionAltitudeFact.setRawValue(coordinate.altitude());
+        }
         emit coordinateChanged(coordinate);
     }
 }
@@ -226,9 +232,10 @@ double MissionSettingsItem::specifiedFlightSpeed(void)
 
 void MissionSettingsItem::_setHomeAltFromTerrain(double terrainAltitude)
 {
-    if (!qIsNaN(terrainAltitude)) {
+    if (!std::isfinite(_plannedHomePositionCoordinate.altitude()) && std::isfinite(terrainAltitude)) {
         qCDebug(MissionSettingsItemLog) << "MissionSettingsItem::_setHomeAltFromTerrain" << terrainAltitude;
         _plannedHomePositionAltitudeFact.setRawValue(terrainAltitude);
+        _updateAltitudeInCoordinate(terrainAltitude);
     }
 }
 

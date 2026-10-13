@@ -83,6 +83,91 @@ double CaacRouteEditorController::routeOrientation() const
     return valid && std::isfinite(heading) ? CaacRouteGeometry::normalizedAngle(heading) : 0;
 }
 
+bool CaacRouteEditorController::hasSimulationSettings() const
+{
+    return _masterController && !_masterController->property("caacSimulationSettings").toMap().isEmpty();
+}
+
+QVariantList CaacRouteEditorController::simulationPreviewSegments(const QVariantMap& settings) const
+{
+    auto* mission = _missionController();
+    if (!mission || !mission->plannedHomePosition().isValid() ||
+        !CaacSimulationController::validateSettings(settings).isEmpty()) {
+        return {};
+    }
+    QList<SimpleMissionItem*> waypoints;
+    QGeoCoordinate departure = mission->plannedHomePosition();
+    for (int i = 1; i < mission->visualItems()->count(); ++i) {
+        auto* item = mission->visualItems()->value<SimpleMissionItem*>(i);
+        if (!item || item->command() == MAV_CMD_DO_JUMP) {
+            return {};
+        }
+        if (item->command() == MAV_CMD_NAV_WAYPOINT) {
+            if (!item->coordinate().isValid()) {
+                return {};
+            }
+            waypoints.append(item);
+        } else if (item->isTakeoffItem() && item->coordinate().isValid()) {
+            departure = item->coordinate();
+        } else if (item->specifiesCoordinate() && item->command() != MAV_CMD_NAV_LAND &&
+                   item->command() != MAV_CMD_NAV_LOITER_UNLIM) {
+            return {};
+        }
+    }
+    if (waypoints.isEmpty()) {
+        return {};
+    }
+    int start = 0;
+    QGeoCoordinate returning = mission->plannedHomePosition();
+    const int startSequence = settings.value("startSequence").toInt();
+    const int returnSequence = settings.value("returnSequence").toInt();
+    bool foundStart = startSequence == 0;
+    bool foundReturn = returnSequence == 0;
+    for (int i = 0; i < waypoints.count(); ++i) {
+        if (waypoints.at(i)->sequenceNumber() == startSequence) {
+            start = i;
+            foundStart = true;
+        }
+        if (waypoints.at(i)->sequenceNumber() == returnSequence) {
+            returning = waypoints.at(i)->coordinate();
+            foundReturn = true;
+        }
+    }
+    if (!foundStart || (settings.value("endBehavior").toInt() == 1 && !foundReturn)) {
+        return {};
+    }
+    QVariantList result;
+    const auto append = [&result](const QGeoCoordinate& from, const QGeoCoordinate& to, const QString& kind) {
+        if (QGCGeo::geodesicDistance(from, to) >= 0.01) {
+            result.append(QVariantMap{{QStringLiteral("coordinate1"), QVariant::fromValue(from)},
+                                      {QStringLiteral("coordinate2"), QVariant::fromValue(to)},
+                                      {QStringLiteral("kind"), kind}});
+        }
+    };
+    append(mission->plannedHomePosition(), departure, QStringLiteral("takeoff"));
+    const auto first = waypoints.at(start)->coordinate();
+    append(departure, first, QStringLiteral("start"));
+    auto last = first;
+    const bool closed = settings.value("closed").toBool();
+    const int count = closed ? waypoints.count() : waypoints.count() - start;
+    for (int i = 1; i < count; ++i) {
+        const auto next = waypoints.at((start + i) % waypoints.count())->coordinate();
+        append(last, next, QStringLiteral("body"));
+        last = next;
+    }
+    if (closed) {
+        append(last, first, QStringLiteral("closure"));
+        last = first;
+    } else if (settings.value("loopMode").toInt() == 2 ||
+               (settings.value("loopMode").toInt() == 1 && settings.value("loopCount").toInt() > 1)) {
+        append(last, first, QStringLiteral("loop"));
+    }
+    if (settings.value("loopMode").toInt() != 2 && settings.value("endBehavior").toInt() == 1) {
+        append(last, returning, QStringLiteral("return"));
+    }
+    return result;
+}
+
 bool CaacRouteEditorController::_previewItemsCurrent() const
 {
     auto* mission = _missionController();

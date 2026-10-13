@@ -49,8 +49,8 @@ Item {
     }
 
     function updateDragArea() {
-        const directDrag = map.directMissionItemEditing && _missionItem.isSimpleItem
-                           && !_missionItem.isStandaloneCoordinate
+        const directDrag = map.directMissionItemEditing && (_missionItem.homePosition
+                           || (_missionItem.isSimpleItem && !_missionItem.isStandaloneCoordinate))
         if ((_missionItem.isCurrentItem || directDrag) && map.planView
             && _missionItem.specifiesCoordinate && itemVisualLoader.item) {
             showDragArea()
@@ -158,7 +158,10 @@ Item {
                     control.clicked(control._missionItem.sequenceNumber)
                 }
             }
-            onItemCoordinateChanged: _missionItem.coordinate = itemCoordinate
+            onItemCoordinateChanged: {
+                if (!_missionItem || !itemCoordinate.isValid) { return }
+                _missionItem.coordinate = itemCoordinate
+            }
         }
     }
 }

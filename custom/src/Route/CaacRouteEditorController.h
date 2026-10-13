@@ -30,6 +30,7 @@ class CaacRouteEditorController : public QObject
     Q_PROPERTY(QGeoCoordinate rotationCenter READ rotationCenter NOTIFY rotationCenterChanged)
     Q_PROPERTY(QVariantList coordinateItems READ coordinateItems NOTIFY coordinateItemsChanged)
     Q_PROPERTY(QVariantMap simulationSettings READ simulationSettings NOTIFY simulationSettingsChanged)
+    Q_PROPERTY(bool hasSimulationSettings READ hasSimulationSettings NOTIFY simulationSettingsChanged)
     Q_PROPERTY(double routeOrientation READ routeOrientation NOTIFY routeOrientationChanged)
     Q_PROPERTY(bool rotationPreviewActive READ rotationPreviewActive NOTIFY rotationPreviewChanged)
 
@@ -50,6 +51,8 @@ public:
 
     QVariantList coordinateItems() const;
     QVariantMap simulationSettings() const;
+    bool hasSimulationSettings() const;
+    Q_INVOKABLE QVariantList simulationPreviewSegments(const QVariantMap& settings) const;
     Q_INVOKABLE bool setSimulationSettings(const QVariantMap& settings);
     double routeOrientation() const;
 

@@ -36,9 +36,65 @@ class CaacSimulationUITest : public QmlUITestBase
 {
     Q_OBJECT
 private slots:
+    void _defaultStartPosition();
     void _uploadAndFlightControls();
     void _closedRouteAndSimulationToggle();
 };
+
+void CaacSimulationUITest::_defaultStartPosition()
+{
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewPlan")));
+    auto* plan = findVisibleItem(_rootItem, QStringLiteral("mainView_plan"));
+    QVERIFY(plan);
+    auto* master = plan->property("_planMasterController").value<PlanMasterController*>();
+    QVERIFY(master);
+    auto* mission = master->missionController();
+    QVERIFY(!mission->plannedHomePosition().isValid());
+    auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
+    QVERIFY(plugin);
+    auto* simulation = plugin->simulation();
+    QVERIFY(simulation);
+    const auto stop = qScopeGuard([simulation]() { simulation->stop(); });
+    const QGeoCoordinate expected(25.137898058569604, 102.7212769885262, 0);
+    for (int attempt = 0; attempt < 2; ++attempt) {
+        QVERIFY(clickButtonScrolled(QStringLiteral("planToolStrip_simulationButton"),
+                                    QStringLiteral("toolStrip_flickable")));
+        QTRY_VERIFY_WITH_TIMEOUT(simulation->vehicle() && simulation->vehicle()->isInitialConnectComplete(),
+                                 TestTimeout::longMs());
+        auto* vehicle = simulation->vehicle();
+        QTRY_VERIFY_WITH_TIMEOUT(QGCGeo::geodesicDistance(vehicle->coordinate(), expected) < 0.02,
+                                 TestTimeout::mediumMs());
+        QTRY_VERIFY_WITH_TIMEOUT(QGCGeo::geodesicDistance(vehicle->homePosition(), expected) < 0.02,
+                                 TestTimeout::mediumMs());
+        QTRY_COMPARE_WITH_TIMEOUT(mission->plannedHomePosition(), expected, TestTimeout::mediumMs());
+        auto* map = findVisibleItem(_rootItem, QStringLiteral("planView_map"));
+        QVERIFY(map);
+        QVERIFY(QGCGeo::geodesicDistance(map->property("center").value<QGeoCoordinate>(), expected) < 0.02);
+        auto* marker = findVisibleItem(_rootItem, QStringLiteral("planView_vehicle_%1").arg(vehicle->id()));
+        QVERIFY(marker);
+        QTRY_COMPARE_WITH_TIMEOUT(marker->property("coordinate").value<QGeoCoordinate>(), expected,
+                                  TestTimeout::mediumMs());
+        auto movedHome = QGCGeo::geodesicDestination(expected, 90, 30);
+        movedHome.setAltitude(expected.altitude());
+        mission->setHomePosition(movedHome);
+        QTRY_COMPARE_WITH_TIMEOUT(marker->property("coordinate").value<QGeoCoordinate>(), movedHome,
+                                  TestTimeout::mediumMs());
+        QVERIFY(QGCGeo::geodesicDistance(vehicle->coordinate(), expected) < 0.02);
+        mission->setHomePosition(expected);
+        QTRY_COMPARE_WITH_TIMEOUT(marker->property("coordinate").value<QGeoCoordinate>(), expected,
+                                  TestTimeout::mediumMs());
+        QCOMPARE(vehicle->altitudeRelative()->rawValue().toDouble(), 0.0);
+        QVERIFY(!vehicle->armed());
+        QVERIFY(!vehicle->airborne());
+        QVERIFY(!simulation->missionReady());
+        simulation->stop();
+        QTRY_COMPARE_WITH_TIMEOUT(MultiVehicleManager::instance()->vehicles()->count(), 0, TestTimeout::longMs());
+    }
+}
 
 void CaacSimulationUITest::_closedRouteAndSimulationToggle()
 {
@@ -137,6 +193,34 @@ void CaacSimulationUITest::_closedRouteAndSimulationToggle()
         variant["endBehavior"] = flow.returnPoint < 0 ? 0 : 1;
         variant["returnSequence"] = qMax(flow.returnPoint, 0);
         QVERIFY(editor.setSimulationSettings(variant));
+        const auto beforePreview = master->saveToJson();
+        const auto preview = editor.simulationPreviewSegments(variant);
+        QVERIFY(!preview.isEmpty());
+        QCOMPARE(master->saveToJson(), beforePreview);
+        const auto hasSegment = [&preview](const QString& kind, const QGeoCoordinate& from, const QGeoCoordinate& to) {
+            for (const auto& value : preview) {
+                const auto segment = value.toMap();
+                if (segment.value("kind").toString() == kind &&
+                    QGCGeo::geodesicDistance(segment.value("coordinate1").value<QGeoCoordinate>(), from) < 0.02 &&
+                    QGCGeo::geodesicDistance(segment.value("coordinate2").value<QGeoCoordinate>(), to) < 0.02) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        const auto selectedStart = coordinates.at(flow.start - 1);
+        QVERIFY(hasSegment(QStringLiteral("start"), home, selectedStart));
+        if (flow.closed) {
+            const auto previous = coordinates.at((flow.start - 2 + coordinates.count()) % coordinates.count());
+            QVERIFY(hasSegment(QStringLiteral("closure"), previous, selectedStart));
+        } else if (flow.loopMode == 2 || flow.cycles > 1) {
+            QVERIFY(hasSegment(QStringLiteral("loop"), coordinates.last(), selectedStart));
+        }
+        const auto finish = flow.closed ? selectedStart : coordinates.last();
+        const auto returned = flow.returnPoint == 0 ? home : coordinates.at(qMax(flow.returnPoint - 1, 0));
+        if (flow.loopMode != 2 && flow.returnPoint >= 0 && QGCGeo::geodesicDistance(finish, returned) >= 0.01) {
+            QVERIFY(hasSegment(QStringLiteral("return"), finish, returned));
+        }
         QSignalSpy variantUpload(simulation, &CaacSimulationController::missionUploaded);
         QVERIFY(simulation->upload(master));
         QTRY_VERIFY_WITH_TIMEOUT(!variantUpload.isEmpty(), TestTimeout::longMs());
@@ -362,6 +446,8 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     QVERIFY(!simulation->vehicle()->armed());
     QVERIFY(!simulation->vehicle()->airborne());
     QVERIFY(!simulation->missionReady());
+    QTRY_VERIFY_WITH_TIMEOUT(QGCGeo::geodesicDistance(simulation->vehicle()->coordinate(), home) < 0.02,
+                             TestTimeout::mediumMs());
     QVERIFY(QGCGeo::geodesicDistance(mission->plannedHomePosition(), home) < 0.02);
     QCOMPARE(mission->plannedHomePosition().altitude(), home.altitude());
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("mainView_plan")));

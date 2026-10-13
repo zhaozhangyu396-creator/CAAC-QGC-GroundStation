@@ -15,6 +15,8 @@ Item {
     z: QGroundControl.zOrderWidgets + 1
 
     readonly property bool showNativeEditor: !customEditor.enabled || !customEditor.editorItem || customEditor.editorItem.showMissionTree !== false
+    readonly property bool simulationPreviewActive: customEditor.enabled && customEditor.editorItem
+        && customEditor.editorItem.simulationPreviewActive === true
     property var  _missionController: planMasterController.missionController
     property real _toolsMargin:       ScreenTools.defaultFontPixelWidth * 0.75
 

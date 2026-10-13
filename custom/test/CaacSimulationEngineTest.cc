@@ -34,6 +34,7 @@ class CaacSimulationEngineTest : public OfflineMissionTest
 private slots:
     void _climbGeometry();
     void _attitudeRespondsToMotion();
+    void _levelFlightPitch();
     void _turnModes();
     void _loopsAndReturn();
     void _windComponents();
@@ -116,13 +117,42 @@ void CaacSimulationEngineTest::_attitudeRespondsToMotion()
             engine.advance(0.1);
             QVERIFY(std::isfinite(engine.state().roll) && std::isfinite(engine.state().pitch));
             QVERIFY(bearing == 90 ? engine.state().roll > 0 : engine.state().roll < 0);
-            QVERIFY(altitude == 10 ? engine.state().pitch > 0 : engine.state().pitch < 0);
+            QVERIFY(engine.state().pitch < 0);
             QVERIFY(std::abs(engine.state().roll) <= 35);
             QVERIFY(std::abs(engine.state().pitch) <= 30);
             engine.pause();
             QCOMPARE(engine.state().roll, 0.0);
             QCOMPARE(engine.state().pitch, 0.0);
         }
+    }
+}
+
+void CaacSimulationEngineTest::_levelFlightPitch()
+{
+    const QGeoCoordinate home(30, 120, 20);
+    double slowerPitch = 0;
+    for (double speed : {5.0, 10.0}) {
+        CaacSimulationEngine engine;
+        QString error;
+        const auto target = QGCGeo::geodesicDestination(home, 0, 100);
+        QVERIFY(engine.load({{0, waypoint(0, target, 5)}}, home, {.horizontalSpeed = speed, .turnMode = 1}, error));
+        engine.setAltitude(25);
+        engine.advance(0.1);
+        QCOMPARE(engine.state().climbSpeed, 0.0);
+        QCOMPARE(engine.state().roll, 0.0);
+        QVERIFY(engine.state().pitch < -1);
+        const double pitch = engine.state().pitch;
+        engine.advance(0.1);
+        QVERIFY(std::abs(engine.state().pitch - pitch) < 0.01);
+        if (speed == 5) {
+            slowerPitch = pitch;
+        } else {
+            QVERIFY(pitch < slowerPitch);
+        }
+        engine.pause();
+        QCOMPARE(engine.state().pitch, 0.0);
+        engine.advanceHoldAltitude(25, 0.1);
+        QCOMPARE(engine.state().pitch, 0.0);
     }
 }
 

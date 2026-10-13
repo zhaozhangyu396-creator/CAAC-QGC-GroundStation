@@ -12,9 +12,26 @@ Item {
     required property var routeController
     readonly property bool _compact: width < ScreenTools.defaultFontPixelWidth * 38
     readonly property var _points: routeController ? routeController.coordinateItems : []
+    property var _referenceItem: null
+    property var _insertAfterItem: null
 
     function selectedIndex(combo) {
         return combo.currentIndex >= 0 && combo.currentIndex < _points.length ? _points[combo.currentIndex].index : -1
+    }
+
+    function itemAt(index) {
+        const plan = routeController ? routeController.planMasterController : null
+        return plan && index >= 0 ? plan.missionController.visualItems.get(index) : null
+    }
+
+    function itemIndex(item) {
+        const index = item ? _points.findIndex(point => itemAt(point.index) === item) : -1
+        return index >= 0 ? index : 0
+    }
+
+    function restoreSelections() {
+        reference.currentIndex = itemIndex(_referenceItem)
+        insertAfter.currentIndex = itemIndex(_insertAfterItem)
     }
 
     function addWaypoint() {
@@ -24,9 +41,16 @@ Item {
                 distance.text.trim().length ? Number(distance.text) : NaN, target.currentIndex === 2,
                 angleType.currentIndex === 1)
         }
-        return routeController.insertRelativeWaypoint(selectedIndex(reference), selectedIndex(insertAfter),
+        const afterIndex = selectedIndex(insertAfter)
+        const added = routeController.insertRelativeWaypoint(selectedIndex(reference), afterIndex,
             angle.text.trim().length ? Number(angle.text) : NaN,
             distance.text.trim().length ? Number(distance.text) : NaN, angleType.currentIndex === 1)
+        if (added) {
+            _referenceItem = itemAt(afterIndex + 1)
+            _insertAfterItem = _referenceItem
+            restoreSelections()
+        }
+        return added
     }
 
     QGCPalette { id: qgcPal; colorGroupEnabled: root.enabled }
@@ -73,6 +97,8 @@ Item {
                     Layout.minimumWidth: 0
                     model: root._points
                     textRole: "label"
+                    onModelChanged: Qt.callLater(root.restoreSelections)
+                    onActivated: root._referenceItem = root.itemAt(root.selectedIndex(reference))
                 }
                 QGCLabel { text: qsTr("Angle type") }
                 QGCComboBox {
@@ -140,6 +166,8 @@ Item {
                     Layout.minimumWidth: 0
                     model: root._points
                     textRole: "label"
+                    onModelChanged: Qt.callLater(root.restoreSelections)
+                    onActivated: root._insertAfterItem = root.itemAt(root.selectedIndex(insertAfter))
                 }
             }
             QGCLabel {

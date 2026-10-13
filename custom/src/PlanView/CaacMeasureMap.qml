@@ -76,7 +76,8 @@ Item {
                     acceptedButtons: Qt.LeftButton | Qt.RightButton
                     preventStealing: true
                     property bool dragging: false
-                    onPressAndHold: (mouse) => { if (mouse.button === Qt.LeftButton) { dragging = true } }
+                    onPressed: (mouse) => { dragging = mouse.button === Qt.LeftButton }
+                    onPressAndHold: dragging = !!(pressedButtons & Qt.LeftButton)
                     onPositionChanged: (mouse) => {
                         if (!dragging || !(pressedButtons & Qt.LeftButton) || !root.mapControl) { return }
                         const position = mapToItem(root.mapControl, mouse.x, mouse.y)

@@ -13,6 +13,25 @@ ColumnLayout {
     required property real takeoffHeight
     required property real horizontalSpeed
     readonly property var _settings: routeController.simulationSettings
+    property bool _previewReady: false
+    readonly property var _previewValues: {
+        const settings = Object.assign({}, _settings)
+        settings.closed = closed.checked
+        settings.loopMode = loop.currentIndex
+        const count = number(loopCount.text)
+        settings.loopCount = isFinite(count) && count >= 1 && Math.floor(count) === count ? count : _settings.loopCount
+        settings.startSequence = start.currentIndex >= 0 ? _points[start.currentIndex].sequence : _settings.startSequence
+        settings.endBehavior = ending.currentIndex
+        settings.returnSequence = returning.currentIndex >= 0 ? _points[returning.currentIndex].sequence : _settings.returnSequence
+        return settings
+    }
+    function updatePreview() {
+        if (_previewReady) { editor.simulationPreviewSettings = visible ? _previewValues : null }
+    }
+    on_PreviewValuesChanged: updatePreview()
+    onVisibleChanged: updatePreview()
+    Component.onCompleted: { _previewReady = true; updatePreview() }
+    Component.onDestruction: editor.simulationPreviewSettings = null
     readonly property var _items: editor.planMasterController ? editor.planMasterController.missionController.visualItems : null
     readonly property var _points: {
         const points = [{label: qsTr("Takeoff point"), sequence: 0}]

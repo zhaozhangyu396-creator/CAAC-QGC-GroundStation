@@ -41,6 +41,7 @@ QGCPopupDialog {
                 Layout.fillWidth: true
                 fieldName: "caacMeasureALatitude"
                 maximumDegrees: 90
+                textContextMenuEnabled: false
                 value: root.editor.measureA.latitude
             }
             QGCLabel { text: qsTr("A longitude") }
@@ -49,6 +50,7 @@ QGCPopupDialog {
                 Layout.fillWidth: true
                 fieldName: "caacMeasureALongitude"
                 maximumDegrees: 180
+                textContextMenuEnabled: false
                 value: root.editor.measureA.longitude
             }
             QGCLabel { text: qsTr("B latitude") }
@@ -57,6 +59,7 @@ QGCPopupDialog {
                 Layout.fillWidth: true
                 fieldName: "caacMeasureBLatitude"
                 maximumDegrees: 90
+                textContextMenuEnabled: false
                 value: root.editor.measureB.latitude
             }
             QGCLabel { text: qsTr("B longitude") }
@@ -65,6 +68,7 @@ QGCPopupDialog {
                 Layout.fillWidth: true
                 fieldName: "caacMeasureBLongitude"
                 maximumDegrees: 180
+                textContextMenuEnabled: false
                 value: root.editor.measureB.longitude
             }
         }
@@ -118,7 +122,7 @@ QGCPopupDialog {
             objectName: "caacMeasureClear"
             Layout.fillWidth: true
             text: qsTr("Clear measurement")
-            onClicked: { root._error = ""; root.editor.clearMeasurement() }
+            onClicked: { root._error = ""; root.editor.clearMeasurement(); root.close() }
         }
     }
 }

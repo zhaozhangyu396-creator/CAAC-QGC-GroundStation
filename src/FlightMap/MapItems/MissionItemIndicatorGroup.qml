@@ -34,6 +34,7 @@ Item {
                 coordinateValid: coordinate && coordinate.isValid,
                 latitude: coordinate && coordinate.isValid ? coordinate.latitude : NaN,
                 longitude: coordinate && coordinate.isValid ? coordinate.longitude : NaN,
+                displayNumber: _displayNumber(item),
                 current: item.isCurrentItem || item.hasCurrentChildItem
             })
         }
@@ -83,6 +84,15 @@ Item {
         return item.isTakeoffItem && !item.specifiesCoordinate ? item.launchCoordinate : item.coordinate
     }
 
+    function _displayNumber(item) {
+        if (QGroundControl.corePlugin.directMissionItemEditing && item.flyView) {
+            const simulation = QGroundControl.corePlugin.simulation
+            void simulation.waypointNumberRevision
+            return simulation.waypointNumber(item.sequenceNumber, item.coordinate)
+        }
+        return item.sequenceNumber
+    }
+
     function _closeSelectionPanel() {
         if (_selectionPanel) {
             _selectionPanel.close()
@@ -119,11 +129,15 @@ Item {
             entries.push({
                 item: item,
                 point: point,
+                displayNumber: _displayNumber(item),
                 current: item.isCurrentItem || item.hasCurrentChildItem
             })
         }
 
         entries.sort((first, second) => {
+            if (QGroundControl.corePlugin.directMissionItemEditing) {
+                return second.displayNumber - first.displayNumber || second.item.sequenceNumber - first.item.sequenceNumber
+            }
             if (first.current !== second.current) {
                 return first.current ? -1 : 1
             }

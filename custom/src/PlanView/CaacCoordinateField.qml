@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Layouts
 
 import QGroundControl
@@ -11,6 +12,7 @@ GridLayout {
     property real value: NaN
     property bool displayDms: false
     property bool compact: false
+    property bool textContextMenuEnabled: true
     readonly property bool _compactDms: displayDms && compact && width < ScreenTools.defaultFontPixelWidth * 52
     property real _canonicalValue: NaN
     property bool _dirty: false
@@ -51,6 +53,17 @@ GridLayout {
     }
     onValueChanged: { if (_ready) { _canonicalValue = value; render() } }
     Component.onCompleted: { _canonicalValue = value; render(); _ready = true }
+
+    Instantiator {
+        model: [decimal, degrees, minutes, seconds]
+        delegate: Binding {
+            required property var modelData
+            target: modelData.ContextMenu
+            property: "menu"
+            value: null
+            when: !root.textContextMenuEnabled
+        }
+    }
 
     QGCTextField {
         id: decimal

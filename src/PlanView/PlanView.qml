@@ -344,13 +344,13 @@ Item {
             // Add lines between waypoints
             MissionLineView {
                 showSpecialVisual: _missionController.isROIBeginCurrentItem
-                model: _missionController.simpleFlightPathSegments
+                model: rightPanel.simulationPreviewActive ? null : _missionController.simpleFlightPathSegments
                 opacity: _editingLayer == _layerMission ? 1 : editorMap._nonInteractiveOpacity
             }
 
             // Direction arrows in waypoint lines
             MapItemView {
-                model: _editingLayer == _layerMission ? _missionController.directionArrows : undefined
+                model: _editingLayer == _layerMission && !rightPanel.simulationPreviewActive ? _missionController.directionArrows : undefined
 
                 delegate: MapLineArrow {
                     fromCoord: object ? object.coordinate1 : undefined
@@ -371,6 +371,7 @@ Item {
                 anchorPoint.y: sourceItem.height / 2
                 z: QGroundControl.zOrderWaypointLines + 1
                 visible: _editingLayer == _layerMission
+                         && !rightPanel.simulationPreviewActive
                          && _screenLegLength > _missionItemIndicatorGroup.groupingDistance * 2
 
                 sourceItem: SplitIndicator {
@@ -423,8 +424,14 @@ Item {
             MapItemView {
                 model: QGroundControl.multiVehicleManager.vehicles
                 delegate: VehicleMapItem {
+                    objectName: "planView_vehicle_" + (vehicle ? vehicle.id : "")
                     vehicle: object
-                    coordinate: object.coordinate
+                    readonly property var planningSimulation: QGroundControl.corePlugin.directMissionItemEditing
+                        ? QGroundControl.corePlugin.simulation : null
+                    readonly property bool previewHome: vehicle && planningSimulation && planningSimulation.vehicle === vehicle
+                        && !vehicle.airborne && !vehicle.armed && _missionController.plannedHomePosition.isValid
+                    coordinate: previewHome ? _missionController.plannedHomePosition
+                        : vehicle ? vehicle.coordinate : QtPositioning.coordinate()
                     map: editorMap
                     size: ScreenTools.defaultFontPixelHeight * 3
                     z: QGroundControl.zOrderMapItems - 1

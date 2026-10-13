@@ -5697,8 +5697,8 @@ Click Ok to start the auto-tuning process.
       <translation>高级任务设置</translation>
     </message>
     <message>
-      <source>Return to waypoint list</source>
-      <translation>返回航点列表</translation>
+      <source>Exit advanced mission settings</source>
+      <translation>退出高级任务设置</translation>
     </message>
     <message>
       <source>Camera, fence, rally points and other mission commands. Uses the same mission as the four main panels.</source>

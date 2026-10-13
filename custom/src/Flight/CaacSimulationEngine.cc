@@ -268,11 +268,11 @@ bool CaacSimulationEngine::_move(const QGeoCoordinate& target, double seconds, b
     _state.climbSpeed = (_state.position.altitude() - before.altitude()) / seconds;
     const double horizontalSpeed = moved / seconds;
     const double yawRate = std::remainder(_state.heading - previousHeading, 360.0) * M_PI / (180.0 * seconds);
-    // Estimate training attitude from turn rate and flight-path slope, rather than aircraft dynamics.
+    // A multirotor tilts to oppose horizontal drag even during level flight.
     _state.roll = std::clamp(std::atan2(horizontalSpeed * yawRate, 9.80665) * 180.0 / M_PI, -35.0, 35.0);
-    _state.pitch = horizontalSpeed > 0.05
-                       ? std::clamp(std::atan2(_state.climbSpeed, horizontalSpeed) * 180.0 / M_PI, -30.0, 30.0)
-                       : 0;
+    const double forwardSpeed = distance * fraction / seconds * std::cos((bearing - _state.heading) * M_PI / 180.0);
+    _state.pitch =
+        std::clamp(-std::atan2(0.06 * forwardSpeed * std::abs(forwardSpeed), 9.80665) * 180.0 / M_PI, -30.0, 30.0);
     _state.airborne = _state.position.altitude() > _home.altitude() + 0.01;
     const bool arrived =
         QGCGeo::geodesicDistance(_state.position, target) < std::max(0.05, _options.windSpeed * seconds + 0.01) &&

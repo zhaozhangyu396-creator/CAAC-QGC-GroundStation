@@ -3,11 +3,13 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtLocation
 import QtPositioning
 
 import QGC
 import QGroundControl
 import QGroundControl.Controls
+import QGroundControl.FlightMap
 import CAAC.Plan
 
 Column {
@@ -27,6 +29,61 @@ Column {
     onActivePanelChanged: showMissionTree = false
     readonly property var currentItem: editorController.currentItem
     readonly property var routeController: editorController
+    property var simulationPreviewSettings: null
+    readonly property var simulationPreviewSegments: {
+        void editorController.coordinateItems
+        return editorController.simulationPreviewSegments(simulationPreviewSettings || editorController.simulationSettings)
+    }
+    readonly property bool simulationPreviewActive: simulationPreviewSegments.length > 0
+        && (simulationPreviewSettings !== null || editorController.hasSimulationSettings)
+
+    function attachPreviewItem(item) {
+        if (editorMap && item.attachedMap !== editorMap) {
+            if (item.attachedMap) { item.attachedMap.removeMapItem(item) }
+            editorMap.addMapItem(item)
+            item.attachedMap = editorMap
+        }
+    }
+    onEditorMapChanged: {
+        for (let i = 0; i < previewItems.count; ++i) {
+            const item = previewItems.objectAt(i)
+            if (item) { item.attach() }
+        }
+    }
+
+    Instantiator {
+        id: previewItems
+        model: root.simulationPreviewActive ? root.simulationPreviewSegments : []
+        delegate: Item {
+            id: preview
+            required property var modelData
+            required property int index
+            function attach() { root.attachPreviewItem(line); root.attachPreviewItem(arrow) }
+            MapPolyline {
+                id: line
+                objectName: "caacSimulationPreview_" + preview.modelData.kind + (preview.modelData.kind === "body" ? "_" + preview.index : "")
+                property var attachedMap: null
+                path: [preview.modelData.coordinate1, preview.modelData.coordinate2]
+                visible: root.visible && root.enabled
+                line.color: QGroundControl.globalPalette.mapMissionTrajectory
+                line.width: ScreenTools.defaultFontPixelWidth * 0.3
+                z: QGroundControl.zOrderWaypointLines
+                Component.onDestruction: { if (attachedMap) { attachedMap.removeMapItem(line) } }
+            }
+            MapLineArrow {
+                id: arrow
+                property var attachedMap: null
+                mapControl: root.editorMap
+                fromCoord: preview.modelData.coordinate1
+                toCoord: preview.modelData.coordinate2
+                arrowPosition: 3
+                visible: root.visible && root.enabled
+                z: QGroundControl.zOrderWaypointLines + 1
+                Component.onDestruction: { if (attachedMap) { attachedMap.removeMapItem(arrow) } }
+            }
+            Component.onCompleted: attach()
+        }
+    }
     property var selectedWaypointItems: []
     readonly property int selectedWaypointCount: selectedWaypointItems.length
     readonly property var _selectableWaypoints: {
@@ -78,8 +135,12 @@ Column {
     function openSimulation() {
         const simulation = QGroundControl.corePlugin.simulation
         if (simulation.active) { simulation.stop() }
-        else if (!simulation.start(root.planMasterController)) {
-            QGroundControl.showMessageDialog(mainWindow, qsTr("Simulation flight"), simulation.status)
+        else {
+            if (!simulation.start(root.planMasterController)) {
+                QGroundControl.showMessageDialog(mainWindow, qsTr("Simulation flight"), simulation.status)
+            } else if (root.editorMap && root.planMasterController.missionController.visualItems.count === 1) {
+                root.editorMap.center = root.planMasterController.missionController.plannedHomePosition
+            }
         }
     }
     Connections {
@@ -185,6 +246,7 @@ Column {
         visible: root.enabled && root.visible
         mapControl: root.editorMap
         segments: root.planMasterController ? root.planMasterController.missionController.simpleFlightPathSegments : null
+        previewSegments: root.simulationPreviewActive ? root.simulationPreviewSegments : []
     }
 
     CaacMeasureMap {
@@ -823,7 +885,7 @@ Column {
         visible: root.showMissionTree
         pointSize: ScreenTools.menuFontPointSize
         width: root.width
-        text: qsTr("Return to waypoint list")
+        text: qsTr("Exit advanced mission settings")
         heightFactor: 0.25
         onClicked: {
             root.showMissionTree = false
