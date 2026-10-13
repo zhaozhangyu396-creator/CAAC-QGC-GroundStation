@@ -41,6 +41,12 @@ Rectangle {
         return speed
     }
     readonly property string _unavailable: qsTr("Unavailable")
+    readonly property string _targetNumber: {
+        if (!targetItem) { return _unavailable }
+        const simulation = QGroundControl.corePlugin.simulation
+        void simulation.waypointNumberRevision
+        return simulation.waypointNumber(targetItem.sequenceNumber, targetItem.coordinate).toString()
+    }
     implicitHeight: contents.implicitHeight + ScreenTools.defaultFontPixelHeight
     color: palette.windowShadeDark
     radius: ScreenTools.defaultBorderRadius
@@ -75,7 +81,7 @@ Rectangle {
             columnSpacing: ScreenTools.defaultFontPixelWidth
             Repeater {
                 model: [
-                    { key: "Target", label: qsTr("Target waypoint"), value: root.targetItem ? root.targetItem.sequenceNumber.toString() : root._unavailable },
+                    { key: "Target", label: qsTr("Target waypoint"), value: root._targetNumber },
                     { key: "Speed", label: qsTr("Waypoint speed"), value: isFinite(root._speed) ? root._speed.toFixed(1) + " m/s" : root._unavailable },
                     { key: "Altitude", label: qsTr("Target altitude"), value: root.targetItem && root.targetItem.isSimpleItem && root.targetItem.specifiesAltitude ? root.targetItem.altitude.rawValue.toFixed(1) + " m" : root._unavailable },
                     { key: "Heading", label: qsTr("Route heading"), value: root.targetItem && isFinite(root.targetItem.missionVehicleYaw) ? root.targetItem.missionVehicleYaw.toFixed(1) + "°" : root._unavailable },

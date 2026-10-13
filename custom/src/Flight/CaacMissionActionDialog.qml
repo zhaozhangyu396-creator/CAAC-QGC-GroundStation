@@ -25,17 +25,34 @@ QGCPopupDialog {
         _openedVehicle = _vehicle
         // Freeze the choices so a downloaded replacement mission cannot retarget an open dialog.
         const choices = []
+        const simulation = QGroundControl.corePlugin.simulation
         if (editAltitude) { choices.push({all: true, label: qsTr("All waypoints")}) }
         if (_items) {
             for (let i = 1; i < _items.count; ++i) {
                 const item = _items.get(i)
                 if (item.isSimpleItem && item.command === 16) {
-                    choices.push({item: item, sequence: item.sequenceNumber, altitude: item.altitude.rawValue,
-                        label: qsTr("Waypoint %1").arg(item.sequenceNumber)})
+                    const number = simulation.waypointNumber(item.sequenceNumber, item.coordinate)
+                    const member = {item: item, sequence: item.sequenceNumber}
+                    const existing = choices.find(entry => !entry.all && entry.number === number)
+                    if (existing) { existing.members.push(member) }
+                    else {
+                        choices.push({item: item, sequence: item.sequenceNumber, altitude: item.altitude.rawValue,
+                            number: number, members: [member], label: qsTr("Waypoint %1").arg(number)})
+                    }
                 }
             }
         }
+        choices.sort((a, b) => a.all ? -1 : b.all ? 1 : a.number - b.number)
         _choices = choices
+    }
+
+    function choiceMembers(choice) {
+        const groups = choice.all ? _choices.filter(entry => !entry.all) : [choice]
+        const members = []
+        for (const group of groups) {
+            for (const member of group.members) { members.push(member) }
+        }
+        return members
     }
 
     function selectedItemIsCurrent() {
@@ -44,7 +61,7 @@ QGCPopupDialog {
             return false
         }
         const choice = _choices[waypoint.currentIndex]
-        const selected = choice.all ? _choices.filter(entry => !entry.all) : [choice]
+        const selected = choiceMembers(choice)
         if (!selected.length) { return false }
         for (const entry of selected) {
             let found = false
@@ -87,8 +104,8 @@ QGCPopupDialog {
         }
         const choice = _choices[waypoint.currentIndex]
         if (editAltitude) {
-            const selected = choice.all ? _choices.filter(entry => !entry.all) : [choice]
-            _error = QGroundControl.corePlugin.updateFlightWaypointAltitudes(_master, selected.map(entry => entry.item),
+            _error = QGroundControl.corePlugin.updateFlightWaypointAltitudes(_master,
+                choiceMembers(choice).map(member => member.item),
                 altitude.text.trim().length ? Number(altitude.text) : NaN)
             preventClose = _error.length > 0
         } else {

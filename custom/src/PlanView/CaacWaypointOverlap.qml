@@ -39,14 +39,15 @@ Item {
             const projected = mapControl.fromCoordinate(item.coordinate, false)
             const point = mapControl.mapToItem(root, projected.x, projected.y)
             if (!isFinite(point.x) || !isFinite(point.y)) { continue }
-            const candidate = {point: point, label: i === 0 ? qsTr("Takeoff point") : item.sequenceNumber.toString()}
+            const candidate = {point: point, coordinate: item.coordinate,
+                label: i === 0 ? qsTr("Takeoff point") : item.sequenceNumber.toString()}
             points.push(candidate)
             const offset = Math.hypot(point.x - position.x, point.y - position.y)
             if (offset <= distance) { closest = candidate; distance = offset }
         }
         if (!closest) { return [] }
-        return points.filter(candidate => Math.hypot(candidate.point.x - closest.point.x,
-            candidate.point.y - closest.point.y) <= root._radius * 2).map(candidate => candidate.label)
+        return points.filter(candidate => candidate.coordinate.distanceTo(closest.coordinate) < 0.01)
+            .map(candidate => candidate.label)
     }
     QGCPalette { id: palette; colorGroupEnabled: root.enabled }
     HoverHandler { id: hover; acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad }

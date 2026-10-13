@@ -16,6 +16,7 @@
 #include "CaacFlightDistance.h"
 #include "CaacRouteEditorController.h"
 #include "CaacSimulationController.h"
+#include "CaacSimulationEngine.h"
 #include "MissionController.h"
 #include "MissionManager.h"
 #include "MockLink.h"
@@ -71,7 +72,10 @@ void CaacSimulationUITest::_closedRouteAndSimulationToggle()
     auto settings = CaacSimulationController::defaults();
     settings["startSequence"] = 2;
     settings["closed"] = true;
-    settings["endBehavior"] = 0;
+    settings["loopMode"] = 1;
+    settings["loopCount"] = 10;
+    settings["endBehavior"] = 1;
+    settings["returnSequence"] = 2;
     settings["takeoffHeight"] = 2.0;
     settings["horizontalSpeed"] = 20.0;
     settings["verticalSpeed"] = 10.0;
@@ -111,25 +115,171 @@ void CaacSimulationUITest::_closedRouteAndSimulationToggle()
     QVERIFY2(simulation->active(), qPrintable(simulation->status()));
     QTRY_VERIFY_WITH_TIMEOUT(simulation->vehicle() && simulation->vehicle()->isInitialConnectComplete(),
                              TestTimeout::longMs());
+
+    struct FlowCase
+    {
+        bool closed;
+        int start;
+        int loopMode;
+        int cycles;
+        int returnPoint;
+    };
+
+    const QList<FlowCase> flowCases{{false, 1, 0, 1, -1}, {false, 2, 1, 2, 3}, {false, 2, 2, 1, -1}, {true, 3, 0, 1, 0},
+                                    {true, 1, 1, 1, -1},  {true, 3, 1, 2, 1},  {true, 2, 2, 1, -1}};
+    for (const auto& flow : flowCases) {
+        auto variant = settings;
+        variant["closed"] = flow.closed;
+        variant["startSequence"] = flow.start;
+        variant["loopMode"] = flow.loopMode;
+        variant["loopCount"] = flow.cycles;
+        variant["endBehavior"] = flow.returnPoint < 0 ? 0 : 1;
+        variant["returnSequence"] = qMax(flow.returnPoint, 0);
+        QVERIFY(editor.setSimulationSettings(variant));
+        QSignalSpy variantUpload(simulation, &CaacSimulationController::missionUploaded);
+        QVERIFY(simulation->upload(master));
+        QVERIFY(variantUpload.wait(TestTimeout::longMs()));
+        QMap<uint16_t, mavlink_mission_item_int_t> compiled;
+        for (const auto* item : simulation->vehicle()->missionManager()->missionItems()) {
+            mavlink_mission_item_int_t wire{};
+            wire.seq = static_cast<uint16_t>(item->sequenceNumber());
+            wire.command = static_cast<uint16_t>(item->command());
+            wire.frame = static_cast<uint8_t>(item->frame());
+            wire.param1 = item->param1();
+            wire.param2 = item->param2();
+            wire.param3 = item->param3();
+            wire.param4 = item->param4();
+            wire.x = static_cast<int32_t>(std::llround(item->param5() * 1e7));
+            wire.y = static_cast<int32_t>(std::llround(item->param6() * 1e7));
+            wire.z = item->param7();
+            compiled.insert(wire.seq, wire);
+        }
+        CaacSimulationEngine engine;
+        QString error;
+        QVERIFY2(engine.load(compiled, home, {.horizontalSpeed = 20, .verticalSpeed = 10, .turnMode = 3}, error),
+                 qPrintable(error));
+        QList<int> visits{0, 0, 0};
+        int nearWaypoint = -1;
+        for (int tick = 0; tick < 8000 && !engine.state().finished; ++tick) {
+            engine.advance(0.05);
+            int closest = -1;
+            for (int i = 0; i < coordinates.size(); ++i) {
+                if (QGCGeo::geodesicDistance(engine.state().position, coordinates.at(i)) < 0.2) {
+                    closest = i;
+                    break;
+                }
+            }
+            if (closest >= 0 && closest != nearWaypoint) {
+                ++visits[closest];
+            }
+            nearWaypoint = closest;
+        }
+        if (flow.loopMode == 2) {
+            QVERIFY(!engine.state().finished);
+            QVERIFY(visits.at(flow.start - 1) > 3);
+        } else {
+            QVERIFY(engine.state().finished);
+            for (int i = 0; i < coordinates.size(); ++i) {
+                int expected = flow.closed || i >= flow.start - 1 ? flow.cycles : 0;
+                if (flow.closed && i == flow.start - 1) {
+                    ++expected;
+                }
+                const int finalBodyPoint = flow.closed ? flow.start : coordinates.size();
+                if (flow.returnPoint > 0 && flow.returnPoint != finalBodyPoint && i == flow.returnPoint - 1) {
+                    ++expected;
+                }
+                QCOMPARE(visits.at(i), expected);
+            }
+            const int finalPoint =
+                flow.returnPoint < 0 ? (flow.closed ? flow.start : coordinates.size()) : flow.returnPoint;
+            QVERIFY(QGCGeo::geodesicDistance(engine.state().position,
+                                             finalPoint == 0 ? home : coordinates.at(finalPoint - 1)) < 0.02);
+            QCOMPARE(engine.state().airborne, finalPoint != 0);
+        }
+    }
+    auto readSettings = settings;
+    readSettings["startSequence"] = 1;
+    readSettings["returnSequence"] = 1;
+    readSettings["loopCount"] = 2;
+    QVERIFY(editor.setSimulationSettings(readSettings));
+    QSignalSpy beforeReadUpload(simulation, &CaacSimulationController::missionUploaded);
+    QVERIFY(simulation->upload(master));
+    QVERIFY(beforeReadUpload.wait(TestTimeout::longMs()));
+    QSignalSpy readCompleted(mission, &MissionController::newItemsFromVehicle);
+    mission->loadFromVehicle();
+    QVERIFY(readCompleted.wait(TestTimeout::longMs()));
+    QSignalSpy readUpload(simulation, &CaacSimulationController::missionUploaded);
+    QVERIFY2(simulation->upload(master), qPrintable(simulation->status()));
+    QVERIFY(readUpload.wait(TestTimeout::longMs()));
+    int readWaypoints = 0;
+    for (const auto* item : simulation->vehicle()->missionManager()->missionItems()) {
+        if (item->command() == MAV_CMD_NAV_WAYPOINT) {
+            const int expected = readWaypoints < 3 ? readWaypoints + 1 : 1;
+            QCOMPARE(simulation->waypointNumber(item->sequenceNumber() + 1, item->coordinate()), expected);
+            ++readWaypoints;
+        }
+    }
+    QCOMPARE(readWaypoints, 4);
+    QString restoreError;
+    QVERIFY2(mission->load(original.object().value("mission").toObject(), restoreError), qPrintable(restoreError));
+    QVERIFY(editor.setSimulationSettings(settings));
+    QCOMPARE(master->saveToJson(), original);
+    step("compiled flow variants and read/reupload verified");
     QSignalSpy uploaded(simulation, &CaacSimulationController::missionUploaded);
     QVERIFY(simulation->upload(master));
     step("upload requested");
     QVERIFY(uploaded.wait(TestTimeout::longMs()));
+    auto* vehicle = simulation->vehicle();
     QList<const MissionItem*> uploadedWaypoints;
-    for (const auto* item : simulation->vehicle()->missionManager()->missionItems()) {
+    int takeoffs = 0;
+    int jumps = 0;
+    for (const auto* item : vehicle->missionManager()->missionItems()) {
         if (item->command() == MAV_CMD_NAV_WAYPOINT) {
             uploadedWaypoints.append(item);
+        } else if (item->command() == MAV_CMD_NAV_TAKEOFF) {
+            ++takeoffs;
+        } else if (item->command() == MAV_CMD_DO_JUMP) {
+            ++jumps;
+            QCOMPARE(item->param2(), 9.0);
+            QCOMPARE(item->param1(), uploadedWaypoints.first()->sequenceNumber() + 1.0);
         }
     }
+    QCOMPARE(takeoffs, 1);
+    QCOMPARE(jumps, 1);
     QCOMPARE(uploadedWaypoints.size(), 4);
-    QVERIFY(QGCGeo::geodesicDistance(uploadedWaypoints.last()->coordinate(), coordinates.first()) < 0.02);
-    QVERIFY(QGCGeo::geodesicDistance(uploadedWaypoints.last()->coordinate(), coordinates.at(1)) > 1);
-    QVERIFY(QGCGeo::geodesicDistance(uploadedWaypoints.last()->coordinate(), home) > 1);
-    simulation->vehicle()->startMission();
-    step("mission started");
-    QTRY_VERIFY_WITH_TIMEOUT(simulation->vehicle()->airborne(), TestTimeout::longMs());
-    QTRY_VERIFY_WITH_TIMEOUT(QGCGeo::geodesicDistance(simulation->vehicle()->coordinate(), coordinates.first()) < 0.2,
-                             TestTimeout::longMs());
+    const QList<int> expectedOrder{1, 2, 0, 1};
+    for (int i = 0; i < expectedOrder.size(); ++i) {
+        const auto* item = uploadedWaypoints.at(i);
+        QVERIFY(QGCGeo::geodesicDistance(item->coordinate(), coordinates.at(expectedOrder.at(i))) < 0.02);
+        QCOMPARE(simulation->waypointNumber(item->sequenceNumber() + 1, item->coordinate()), expectedOrder.at(i) + 1);
+    }
+    QList<int> arrivals{0, 0, 0};
+    int near = -1;
+    const auto arrivalConnection = connect(vehicle, &Vehicle::coordinateChanged, this, [&]() {
+        int closest = -1;
+        for (int i = 0; i < coordinates.size(); ++i) {
+            if (QGCGeo::geodesicDistance(vehicle->coordinate(), coordinates.at(i)) < 0.2) {
+                closest = i;
+                break;
+            }
+        }
+        if (closest >= 0 && closest != near) {
+            ++arrivals[closest];
+        }
+        near = closest;
+    });
+    const auto disconnectArrivals = qScopeGuard([&]() { disconnect(arrivalConnection); });
+    vehicle->startMission();
+    step("ten-cycle mission started");
+    QTRY_VERIFY_WITH_TIMEOUT(vehicle->airborne(), TestTimeout::longMs());
+    QTRY_COMPARE_WITH_TIMEOUT(simulation->status(),
+                              QCoreApplication::translate("CaacSimulationController", "Simulation mission finished"),
+                              60000);
+    QCOMPARE(arrivals, QList<int>({10, 11, 10}));
+    QVERIFY(QGCGeo::geodesicDistance(vehicle->coordinate(), coordinates.at(1)) < 0.2);
+    QVERIFY(vehicle->airborne());
+    QVERIFY(vehicle->armed());
+    QVERIFY(std::abs(vehicle->altitudeRelative()->rawValue().toDouble() - 2) < 0.1);
     QCOMPARE(master->saveToJson(), original);
 }
 
@@ -337,7 +487,7 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     QCOMPARE(takeoffs, 1);
     QCOMPARE(jumps, 1);
     QVERIFY(firstWaypointSequence > 0);
-    QCOMPARE(loopTarget, firstWaypointSequence);
+    QCOMPARE(loopTarget, firstWaypointSequence + 1);
     QCOMPARE(master->saveToJson(), original);
 
     QVERIFY(!findItem(_rootItem, QStringLiteral("caacSimulationBanner")));
@@ -394,14 +544,35 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     auto* flyMaster = map->property("planMasterController").value<PlanMasterController*>();
     QVERIFY(flyMaster);
     auto* flyMission = flyMaster->missionController();
+    for (int i = 1; i < flyMission->visualItems()->count(); ++i) {
+        auto* item = flyMission->visualItems()->value<SimpleMissionItem*>(i);
+        if (item && item->command() == MAV_CMD_NAV_WAYPOINT) {
+            const int expected =
+                QGCGeo::geodesicDistance(item->coordinate(),
+                                         mission->visualItems()->value<SimpleMissionItem*>(1)->coordinate()) < 0.02
+                    ? 1
+                    : 2;
+            QCOMPARE(simulation->waypointNumber(item->sequenceNumber(), item->coordinate()), expected);
+            auto* mapLabel = findItem(qobject_cast<QQuickItem*>(map),
+                                      QStringLiteral("missionItemMapLabel_%1").arg(item->sequenceNumber()));
+            QVERIFY(mapLabel);
+            QCOMPARE(mapLabel->property("index").toInt(), expected);
+        }
+    }
     const auto chooseLastWaypoint = [&]() -> SimpleMissionItem* {
-        for (int i = flyMission->visualItems()->count() - 1; i > 0; --i) {
+        SimpleMissionItem* last = nullptr;
+        int lastNumber = -1;
+        for (int i = 1; i < flyMission->visualItems()->count(); ++i) {
             auto* item = flyMission->visualItems()->value<SimpleMissionItem*>(i);
             if (item && item->command() == MAV_CMD_NAV_WAYPOINT) {
-                return item;
+                const int number = simulation->waypointNumber(item->sequenceNumber(), item->coordinate());
+                if (number > lastNumber) {
+                    last = item;
+                    lastNumber = number;
+                }
             }
         }
-        return nullptr;
+        return last;
     };
     step("live altitude change");
     // Exercise scrolling at the compact desktop size used by Windows runners.
@@ -453,7 +624,10 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     QVERIFY(doubleClickAction(QStringLiteral("caacModifyWaypointAltitude")));
     auto* choices = findVisibleItem(_rootItem, QStringLiteral("caacFlightWaypointChoice"));
     QVERIFY(choices);
+    QCOMPARE(choices->property("count").toInt(), 3);
     QVERIFY(choices->setProperty("currentIndex", choices->property("count").toInt() - 1));
+    QCOMPARE(choices->property("currentText").toString(),
+             QCoreApplication::translate("CaacMissionActionDialog", "Waypoint %1").arg(2));
     auto* altitude = findVisibleItem(_rootItem, QStringLiteral("caacFlightWaypointAltitude"));
     QVERIFY(altitude);
     QVERIFY(altitude->setProperty("text", "3"));
@@ -476,6 +650,7 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacChangeFlightAltitude"), 0));
     choices = findVisibleItem(_rootItem, QStringLiteral("caacFlightWaypointChoice"));
     QVERIFY(choices);
+    QCOMPARE(choices->property("count").toInt(), 2);
     QVERIFY(choices->setProperty("currentIndex", choices->property("count").toInt() - 1));
     QVERIFY(acceptDialog());
     QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("guidedActionConfirmButton"), 0));
@@ -514,6 +689,9 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->missionFlightMode(), TestTimeout::longMs());
     int updatedWaypoints = 0;
     for (const auto* item : manager->missionItems()) {
+        if (item->command() == MAV_CMD_NAV_LOITER_UNLIM) {
+            QCOMPARE(item->param7(), 100.0);
+        }
         if (item->command() == MAV_CMD_NAV_WAYPOINT) {
             QCOMPARE(item->param7(), 100.0);
             ++updatedWaypoints;

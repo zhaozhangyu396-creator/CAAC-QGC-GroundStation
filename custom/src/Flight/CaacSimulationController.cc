@@ -118,6 +118,16 @@ bool CaacSimulationController::ownsVehicle(const Vehicle* vehicle) const
     return vehicle && _link && vehicle->id() == _link->vehicleId();
 }
 
+int CaacSimulationController::waypointNumber(int sequence, const QGeoCoordinate& coordinate) const
+{
+    const auto found = _waypointNumbers.constFind(sequence);
+    if (!ownsVehicle(MultiVehicleManager::instance()->activeVehicle()) || found == _waypointNumbers.cend() ||
+        !coordinate.isValid() || coordinate.distanceTo(found->coordinate) > 0.1) {
+        return sequence;
+    }
+    return found->number;
+}
+
 void CaacSimulationController::_setStatus(const QString& status)
 {
     if (_status != status) {
@@ -263,6 +273,10 @@ bool CaacSimulationController::upload(PlanMasterController* plan)
             if (error) {
                 _uploadSent = false;
                 _setStatus(tr("Simulation mission upload failed."));
+            } else {
+                _waypointNumbers = _pendingWaypointNumbers;
+                ++_waypointNumberRevision;
+                emit waypointNumbersChanged();
             }
         },
         Qt::SingleShotConnection);
@@ -315,6 +329,10 @@ void CaacSimulationController::stop()
     _missionReady = false;
     _link.clear();
     _vehicle.clear();
+    _waypointNumbers.clear();
+    _pendingWaypointNumbers.clear();
+    ++_waypointNumberRevision;
+    emit waypointNumbersChanged();
     if (_uploadPlan) {
         _uploadPlan->deleteLater();
     }
@@ -495,7 +513,8 @@ void CaacSimulationController::_publish()
 bool CaacSimulationController::_prepareFlightPlan()
 {
     _uploadPlan = new PlanMasterController(this);
-    _uploadPlan->setFlyView(true);
+    _uploadPlan->setProperty("caacSimulationPlanning", true);
+    _uploadPlan->setFlyView(false);
     _uploadPlan->start();
     auto* mission = _uploadPlan->missionController();
     QString error;
@@ -505,6 +524,7 @@ bool CaacSimulationController::_prepareFlightPlan()
     }
     auto* items = mission->visualItems();
     QList<SimpleMissionItem*> waypoints;
+    QHash<const SimpleMissionItem*, int> waypointOrigins;
     bool takeoff = false;
     bool existingFlow = false;
     SimpleMissionItem* selectedStart = nullptr;
@@ -519,6 +539,7 @@ bool CaacSimulationController::_prepareFlightPlan()
         takeoff = takeoff || item->isTakeoffItem();
         if (item->command() == MAV_CMD_NAV_WAYPOINT) {
             waypoints.append(item);
+            waypointOrigins.insert(item, item->sequenceNumber());
             if (item->sequenceNumber() == _settings.value("startSequence").toInt()) {
                 selectedStart = item;
             }
@@ -527,13 +548,35 @@ bool CaacSimulationController::_prepareFlightPlan()
             }
         }
     }
-    if (waypoints.isEmpty() || (_settings.value("startSequence").toInt() > 0 && !selectedStart) ||
-        (_settings.value("endBehavior").toInt() == 1 && _settings.value("returnSequence").toInt() > 0 &&
-         !selectedReturn)) {
+    if (waypoints.isEmpty() ||
+        (!existingFlow && ((_settings.value("startSequence").toInt() > 0 && !selectedStart) ||
+                           (_settings.value("endBehavior").toInt() == 1 &&
+                            _settings.value("returnSequence").toInt() > 0 && !selectedReturn)))) {
         _fail(tr("Select existing waypoints for the start and return points."));
         return false;
     }
     if (existingFlow) {
+        for (auto it = waypointOrigins.begin(); it != waypointOrigins.end(); ++it) {
+            it.value() = waypointNumber(it.key()->sequenceNumber(), it.key()->coordinate());
+        }
+        for (int i = 1; i < items->count(); ++i) {
+            auto* item = items->value<SimpleMissionItem*>(i);
+            if (item && item->command() == MAV_CMD_NAV_LOITER_UNLIM) {
+                const int number = waypointNumber(item->sequenceNumber(), item->coordinate());
+                if (number != item->sequenceNumber()) {
+                    waypointOrigins.insert(item, number);
+                }
+            }
+        }
+    }
+    const auto captureNumbers = [this, &waypointOrigins]() {
+        _pendingWaypointNumbers.clear();
+        for (auto it = waypointOrigins.cbegin(); it != waypointOrigins.cend(); ++it) {
+            _pendingWaypointNumbers.insert(it.key()->sequenceNumber(), {it.value(), it.key()->coordinate()});
+        }
+    };
+    if (existingFlow) {
+        captureNumbers();
         return true;
     }
     if (!selectedStart) {
@@ -576,7 +619,20 @@ bool CaacSimulationController::_prepareFlightPlan()
             }
         }
     }
-    const auto append = [mission, items](int command, const SimpleMissionItem* source) {
+    const bool closed = _settings.value("closed").toBool();
+    if (closed) {
+        // Rotate the copied route so the preview and executed circle both start at the selected waypoint.
+        const int startIndex = waypoints.indexOf(selectedStart);
+        auto* tail = waypoints.last();
+        for (int i = 0; i < startIndex; ++i) {
+            if (!mission->moveVisualItem(items->indexOf(waypoints.at(i)), items->indexOf(tail))) {
+                _fail(tr("Unable to prepare the simulation mission."));
+                return false;
+            }
+            tail = waypoints.at(i);
+        }
+    }
+    const auto append = [mission, items, &waypointOrigins](int command, const SimpleMissionItem* source) {
         const auto coordinate = source ? source->coordinate() : QGeoCoordinate();
         auto* item =
             qobject_cast<SimpleMissionItem*>(mission->insertSimpleMissionItem(coordinate, items->count(), false));
@@ -596,9 +652,12 @@ bool CaacSimulationController::_prepareFlightPlan()
             item->setAltitudeFrame(source->altitudeFrame());
             item->altitude()->setRawValue(source->editableAlt());
         }
+        if (source && waypointOrigins.contains(source)) {
+            waypointOrigins.insert(item, waypointOrigins.value(source));
+        }
         return item;
     };
-    if (_settings.value("startSequence").toInt() > 0) {
+    if (!closed && selectedStart != waypoints.first()) {
         const int firstWaypointIndex = items->indexOf(waypoints.first());
         auto* jump = qobject_cast<SimpleMissionItem*>(
             mission->insertSimpleMissionItem(QGeoCoordinate(), firstWaypointIndex, false));
@@ -611,8 +670,8 @@ bool CaacSimulationController::_prepareFlightPlan()
         jump->missionItem().setParam2(1);
     }
     auto* finishPoint = waypoints.last();
-    if (_settings.value("closed").toBool()) {
-        finishPoint = append(MAV_CMD_NAV_WAYPOINT, waypoints.first());
+    if (closed) {
+        finishPoint = append(MAV_CMD_NAV_WAYPOINT, selectedStart);
         if (!finishPoint) {
             _fail(tr("Unable to close the simulation route."));
             return false;
@@ -625,7 +684,8 @@ bool CaacSimulationController::_prepareFlightPlan()
             _fail(tr("Unable to prepare the simulation loop."));
             return false;
         }
-        jump->missionItem().setParam1(selectedStart->sequenceNumber());
+        // The closing waypoint has already reached the start; skip its duplicate arrival and hold.
+        jump->missionItem().setParam1(selectedStart->sequenceNumber() + (closed ? 1 : 0));
         jump->missionItem().setParam2(loopMode == 2 ? -1 : _settings.value("loopCount").toInt() - 1);
     }
     if (!nativeEnd) {
@@ -642,5 +702,6 @@ bool CaacSimulationController::_prepareFlightPlan()
             }
         }
     }
+    captureNumbers();
     return true;
 }

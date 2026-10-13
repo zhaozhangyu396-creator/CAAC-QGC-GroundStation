@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QtCore/QElapsedTimer>
+#include <QtCore/QHash>
 #include <QtCore/QJsonObject>
 #include <QtCore/QObject>
 #include <QtCore/QPointer>
@@ -26,6 +27,7 @@ class CaacSimulationController : public QObject
     Q_PROPERTY(double takeoffHeight READ takeoffHeight NOTIFY statusChanged)
     Q_PROPERTY(QString status READ status NOTIFY statusChanged)
     Q_PROPERTY(Vehicle* vehicle READ vehicle NOTIFY statusChanged)
+    Q_PROPERTY(int waypointNumberRevision READ waypointNumberRevision NOTIFY waypointNumbersChanged)
 
 public:
     explicit CaacSimulationController(QObject* parent = nullptr);
@@ -45,6 +47,10 @@ public:
 
     Vehicle* vehicle() const;
     bool ownsVehicle(const Vehicle* vehicle) const;
+
+    int waypointNumberRevision() const { return _waypointNumberRevision; }
+
+    Q_INVOKABLE int waypointNumber(int sequence, const QGeoCoordinate& coordinate) const;
     Q_INVOKABLE bool start(PlanMasterController* plan);
     Q_INVOKABLE bool upload(PlanMasterController* plan);
     Q_INVOKABLE bool restart();
@@ -56,6 +62,7 @@ signals:
     void statusChanged();
     void missionUploaded();
     void emergencyModeChanged();
+    void waypointNumbersChanged();
 
 private:
     bool _prepareFlightPlan();
@@ -80,5 +87,15 @@ private:
     bool _uploadSent = false;
     bool _missionReady = false;
     bool _settingsExplicit = false;
+
+    struct WaypointNumber
+    {
+        int number;
+        QGeoCoordinate coordinate;
+    };
+
+    QHash<int, WaypointNumber> _waypointNumbers;
+    QHash<int, WaypointNumber> _pendingWaypointNumbers;
+    int _waypointNumberRevision = 0;
     double _holdAltitude = qQNaN();
 };

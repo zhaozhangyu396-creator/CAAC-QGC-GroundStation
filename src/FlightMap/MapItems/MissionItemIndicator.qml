@@ -17,6 +17,13 @@ MapQuickItem {
 
     readonly property bool _isCurrentItem: missionItem ? missionItem.isCurrentItem || missionItem.hasCurrentChildItem : false
     readonly property bool _usesAbbreviation: missionItem ? missionItem.abbreviation !== "" : false
+    readonly property int _displaySequenceNumber: {
+        if (!missionItem) { return -1 }
+        if (!missionItem.flyView || !QGroundControl.corePlugin.directMissionItemEditing) { return missionItem.sequenceNumber }
+        const simulation = QGroundControl.corePlugin.simulation
+        void simulation.waypointNumberRevision
+        return simulation.waypointNumber(missionItem.sequenceNumber, missionItem.coordinate)
+    }
     readonly property var _group: indicatorGroup ? indicatorGroup.groupForItem(missionItem) : null
     readonly property bool _isGrouped: _group ? _group.items.length > 1 : false
     readonly property bool _isGroupRepresentative: !_group || _group.representative === missionItem
@@ -44,9 +51,10 @@ MapQuickItem {
     sourceItem:
         MissionItemIndexLabel {
             id:                 _label
+            objectName:         "missionItemMapLabel_" + _item.missionItem.sequenceNumber
             checked:            _item._isCurrentItem
             label:              _item.missionItem.abbreviation
-            index:              _item._usesAbbreviation ? -1 : _item.missionItem.sequenceNumber
+            index:              _item._usesAbbreviation ? -1 : _item._displaySequenceNumber
             indicatorSubText:   _item._isGrouped ? "…" : ""
             small:              !_item._isGrouped && !_item._isCurrentItem
             medium:             _item._isGrouped && !_item._isCurrentItem

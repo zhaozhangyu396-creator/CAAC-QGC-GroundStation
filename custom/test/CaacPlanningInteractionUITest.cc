@@ -6,6 +6,7 @@
 #include <QtGui/QImage>
 #include <QtQuick/QQuickItem>
 #include <QtQuick/QQuickWindow>
+#include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
 #include "AppSettings.h"
@@ -47,7 +48,7 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     auto* mission = master->missionController();
     const QGeoCoordinate home(30, 120, 20);
     mission->setHomePosition(home);
-    const auto a = QGCGeo::geodesicDestination(home, 90, 100);
+    const auto a = QGCGeo::geodesicDestination(home, 90, 7.1);
     QVERIFY(editor->addWaypoint(a));
     QVERIFY(editor->addWaypoint(a));
     QTRY_COMPARE_WITH_TIMEOUT(mission->simpleFlightPathSegments()->count(), 2, TestTimeout::mediumMs());
@@ -78,6 +79,7 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     QVERIFY(overlap);
     const auto labels = overlap->property("text").toString();
     QVERIFY(labels.contains(QStringLiteral("1")) && labels.contains(QStringLiteral("2")));
+    QVERIFY(!labels.contains(QCoreApplication::translate("CaacWaypointOverlap", "Takeoff point")));
     QTest::mouseClick(_window, Qt::LeftButton, Qt::NoModifier, markerPosition().toPoint());
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickBearing")));
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickDistance")));
@@ -125,6 +127,13 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     QVERIFY(std::abs(editor->waypointLeg(waypoint).value("distance").toDouble() - 360.65) < 0.001);
     QVERIFY(std::abs(editor->waypointLeg(waypoint).value("bearing").toDouble() - 90.44) < 0.001);
     QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickBearing"), 0));
+    map->setProperty("center", QVariant::fromValue(a));
+    QSignalSpy hoverFrame(_window, &QQuickWindow::frameSwapped);
+    _window->update();
+    QVERIFY(hoverFrame.wait(TestTimeout::mediumMs()));
+    QTest::mouseMove(_window, middle.toPoint());
+    QTRY_VERIFY_WITH_TIMEOUT(!findVisibleItem(_rootItem, QStringLiteral("caacWaypointOverlapText"), 0),
+                             TestTimeout::mediumMs());
     map->setProperty("center", QVariant::fromValue(waypoint->coordinate()));
     QTRY_VERIFY_WITH_TIMEOUT(QLineF(markerPosition(), middle).length() < 1, TestTimeout::mediumMs());
     QTest::mouseClick(_window, Qt::RightButton, Qt::NoModifier, markerPosition().toPoint());

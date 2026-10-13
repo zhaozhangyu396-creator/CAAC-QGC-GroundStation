@@ -333,6 +333,26 @@ QString CaacCorePlugin::updateFlightWaypointAltitudes(PlanMasterController* cont
         vehicle->pauseVehicle();
         return {};
     }
+    if (_simulation->ownsVehicle(vehicle)) {
+        QList<int> numbers;
+        for (const auto* item : items) {
+            numbers.append(_simulation->waypointNumber(item->sequenceNumber(), item->coordinate()));
+        }
+        // A compiled return-to-waypoint hover follows that waypoint's edited altitude.
+        for (int i = 1; i < mission->visualItems()->count(); ++i) {
+            auto* item = mission->visualItems()->value<SimpleMissionItem*>(i);
+            if (item && item->command() == MAV_CMD_NAV_LOITER_UNLIM) {
+                const int number = _simulation->waypointNumber(item->sequenceNumber(), item->coordinate());
+                if (number != item->sequenceNumber() && numbers.contains(number)) {
+                    if (altitude < item->altitude()->rawMin().toDouble() ||
+                        altitude > item->altitude()->rawMax().toDouble()) {
+                        return tr("Enter a valid waypoint altitude.");
+                    }
+                    items.append(item);
+                }
+            }
+        }
+    }
     for (auto* item : items) {
         item->altitude()->setRawValue(altitude);
     }
