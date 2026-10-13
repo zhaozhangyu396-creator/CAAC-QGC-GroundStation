@@ -165,9 +165,23 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
                map->mapToScene(QPointF(map->width() / 2, map->height() / 2)))
                 .length() < 1,
         TestTimeout::mediumMs());
-    const auto homePress =
-        homeDragger->mapToScene(QPointF(homeDragger->width() / 2, homeDragger->height() / 2)).toPoint();
     QVERIFY(!_window->grabWindow().isNull());
+    const auto homeScenePosition = [homeDragger]() {
+        for (auto* ancestor = homeDragger; ancestor; ancestor = ancestor->parentItem()) {
+            ancestor->ensurePolished();
+        }
+        return homeDragger->mapToScene(QPointF(homeDragger->width() / 2, homeDragger->height() / 2));
+    };
+    QPointF lastHomePosition(qQNaN(), qQNaN());
+    QVERIFY(waitForCondition(
+        [&]() {
+            const auto position = homeScenePosition();
+            const bool stable = position == lastHomePosition;
+            lastHomePosition = position;
+            return stable;
+        },
+        TestTimeout::shortMs(), QStringLiteral("Home drag position settled")));
+    const auto homePress = homeScenePosition().toPoint();
     QTest::mousePress(_window, Qt::LeftButton, Qt::NoModifier, homePress);
     QTRY_VERIFY_WITH_TIMEOUT(homeDragger->childItems().first()->property("pressed").toBool(), TestTimeout::mediumMs());
     for (int step = 1; step <= 5; ++step) {

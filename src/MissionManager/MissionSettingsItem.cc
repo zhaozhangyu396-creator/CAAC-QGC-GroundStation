@@ -178,12 +178,17 @@ void MissionSettingsItem::_setDirty(void)
 
 void MissionSettingsItem::setCoordinate(const QGeoCoordinate& coordinate)
 {
-    if (_plannedHomePositionCoordinate != coordinate) {
-        _plannedHomePositionCoordinate = coordinate;
-        if (std::isfinite(coordinate.altitude())) {
-            _plannedHomePositionAltitudeFact.setRawValue(coordinate.altitude());
+    QGeoCoordinate resolvedCoordinate = coordinate;
+    if (resolvedCoordinate.isValid() && !std::isfinite(resolvedCoordinate.altitude()) &&
+        std::isfinite(_plannedHomePositionCoordinate.altitude())) {
+        resolvedCoordinate.setAltitude(_plannedHomePositionCoordinate.altitude());
+    }
+    if (_plannedHomePositionCoordinate != resolvedCoordinate) {
+        _plannedHomePositionCoordinate = resolvedCoordinate;
+        if (std::isfinite(resolvedCoordinate.altitude())) {
+            _plannedHomePositionAltitudeFact.setRawValue(resolvedCoordinate.altitude());
         }
-        emit coordinateChanged(coordinate);
+        emit coordinateChanged(resolvedCoordinate);
     }
 }
 
