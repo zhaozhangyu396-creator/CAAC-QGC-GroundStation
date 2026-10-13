@@ -53,6 +53,9 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     QVERIFY(startupPlugin);
     QVERIFY(startupPlugin->firstRunPromptsToShow().isEmpty());
     auto* appSettings = SettingsManager::instance()->appSettings();
+    QVERIFY(appSettings->audioMuted()->rawDefaultValue().toBool());
+    QVERIFY(appSettings->audioMuted()->rawValue().toBool());
+    QVERIFY(appSettings->audioMuted()->property("userVisible").toBool());
     QCOMPARE(appSettings->preferredFirmwareClass()->rawDefaultValue().toUInt(),
              static_cast<uint>(QGCMAVLink::FirmwareClassPX4));
     QCOMPARE(appSettings->preferredFirmwareClass()->rawValue().toUInt(),

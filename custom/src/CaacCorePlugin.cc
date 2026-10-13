@@ -77,6 +77,8 @@ void CaacCorePlugin::adjustSettingMetaData(const QString& settingsGroup, FactMet
             metaData.setRawDefaultValue(QGCMAVLink::FirmwareClassPX4);
         } else if (metaData.name() == AppSettings::preferredVehicleClassName) {
             metaData.setRawDefaultValue(QGCMAVLink::VehicleClassMultiRotor);
+        } else if (metaData.name() == AppSettings::audioMutedName) {
+            metaData.setRawDefaultValue(true);
         }
     } else if (settingsGroup == UnitsSettings::settingsGroup) {
         if (metaData.name() == UnitsSettings::horizontalDistanceUnitsName) {
