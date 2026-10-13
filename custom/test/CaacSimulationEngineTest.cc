@@ -33,6 +33,7 @@ class CaacSimulationEngineTest : public OfflineMissionTest
     Q_OBJECT
 private slots:
     void _climbGeometry();
+    void _attitudeRespondsToMotion();
     void _turnModes();
     void _loopsAndReturn();
     void _windComponents();
@@ -99,6 +100,30 @@ void CaacSimulationEngineTest::_guidedTargetPreservesMission()
     engine.pause();
     QCOMPARE(engine.state().northSpeed, 0.0);
     QCOMPARE(engine.state().eastSpeed, 0.0);
+}
+
+void CaacSimulationEngineTest::_attitudeRespondsToMotion()
+{
+    const QGeoCoordinate home(30, 120, 20);
+    for (double bearing : {90.0, 270.0}) {
+        for (double altitude : {2.0, 10.0}) {
+            CaacSimulationEngine engine;
+            QString error;
+            const auto target = QGCGeo::geodesicDestination(home, bearing, 100);
+            QVERIFY(engine.load({{0, waypoint(0, target, static_cast<float>(altitude))}}, home,
+                                {.horizontalSpeed = 10, .verticalSpeed = 10, .turnMode = 1}, error));
+            engine.setAltitude(25);
+            engine.advance(0.1);
+            QVERIFY(std::isfinite(engine.state().roll) && std::isfinite(engine.state().pitch));
+            QVERIFY(bearing == 90 ? engine.state().roll > 0 : engine.state().roll < 0);
+            QVERIFY(altitude == 10 ? engine.state().pitch > 0 : engine.state().pitch < 0);
+            QVERIFY(std::abs(engine.state().roll) <= 35);
+            QVERIFY(std::abs(engine.state().pitch) <= 30);
+            engine.pause();
+            QCOMPARE(engine.state().roll, 0.0);
+            QCOMPARE(engine.state().pitch, 0.0);
+        }
+    }
 }
 
 void CaacSimulationEngineTest::_climbGeometry()

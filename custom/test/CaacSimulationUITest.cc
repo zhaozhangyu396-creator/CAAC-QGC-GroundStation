@@ -426,6 +426,10 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     QVERIFY(updatedWaypoints >= 2);
     QTRY_VERIFY_WITH_TIMEOUT(vehicle->altitudeRelative()->rawValue().toDouble() > heightBeforeAll + 0.1,
                              TestTimeout::longMs());
+    QTRY_VERIFY_WITH_TIMEOUT(std::abs(vehicle->pitch()->rawValue().toDouble()) > 0.1, TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(attitude->property("pitchAngle").toDouble(), vehicle->pitch()->rawValue().toDouble(),
+                              TestTimeout::mediumMs());
+
     QVERIFY(vehicle->batteries()->count() > 0);
     for (int i = 0; i < vehicle->batteries()->count(); ++i) {
         auto* battery = vehicle->batteries()->value<BatteryFactGroup*>(i);
@@ -439,7 +443,7 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     QVERIFY(planMap);
     auto* localWaypoint = mission->visualItems()->value<SimpleMissionItem*>(1);
     QVERIFY(localWaypoint);
-    const auto gotoPoint = QGCGeo::geodesicDestination(vehicle->coordinate(), 90, 2);
+    const auto gotoPoint = QGCGeo::geodesicDestination(vehicle->coordinate(), 90, 10);
     localWaypoint->setCoordinate(gotoPoint);
     planMap->setProperty("zoomLevel", 18);
     planMap->setProperty("center", QVariant::fromValue(gotoPoint));
@@ -462,6 +466,15 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     auto* confirmation = findVisibleItem(_rootItem, QStringLiteral("guidedActionConfirmButton"));
     QVERIFY(confirmation);
     QVERIFY(QMetaObject::invokeMethod(confirmation, "activated"));
+    QTRY_VERIFY_WITH_TIMEOUT(std::abs(vehicle->roll()->rawValue().toDouble()) > 0.1, TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(attitude->property("rollIndicatorAngle").toDouble(),
+                              vehicle->roll()->rawValue().toDouble(), TestTimeout::mediumMs());
+    if (qEnvironmentVariableIsSet("CAAC_SIMULATION_UI_SCREENSHOT")) {
+        QSignalSpy frame(_window, &QQuickWindow::frameSwapped);
+        _window->update();
+        QVERIFY(frame.wait(TestTimeout::mediumMs()));
+        QVERIFY(_window->grabWindow().save(QStringLiteral("/workspace/caac-turning-attitude.png")));
+    }
     QTRY_VERIFY_WITH_TIMEOUT(QGCGeo::geodesicDistance(vehicle->coordinate(), gotoPoint) < 0.1, TestTimeout::mediumMs());
     QVERIFY(mock->receivedMavCommandCount(MAV_CMD_DO_REPOSITION) > 0);
     QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->pauseFlightMode(), TestTimeout::mediumMs());

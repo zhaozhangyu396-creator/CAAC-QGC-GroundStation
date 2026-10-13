@@ -25,6 +25,8 @@ public:
     {
         QGeoCoordinate position;
         double heading = 0;
+        double roll = 0;
+        double pitch = 0;
         double northSpeed = 0;
         double eastSpeed = 0;
         double climbSpeed = 0;

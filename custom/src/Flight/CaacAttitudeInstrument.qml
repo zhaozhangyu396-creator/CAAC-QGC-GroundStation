@@ -15,6 +15,7 @@ Item {
     property var vehicle: null
     readonly property real rollAngle: vehicle && isFinite(vehicle.roll.rawValue) ? vehicle.roll.rawValue : 0
     readonly property real pitchAngle: vehicle && isFinite(vehicle.pitch.rawValue) ? vehicle.pitch.rawValue : 0
+    readonly property real rollIndicatorAngle: rollAngle
     readonly property bool attitudeAvailable: vehicle && isFinite(vehicle.roll.rawValue) && isFinite(vehicle.pitch.rawValue)
     readonly property real headingAngle: vehicle ? vehicle.heading.rawValue : NaN
 
@@ -76,7 +77,6 @@ Item {
             ctx.font = Math.round(radius * 0.09) + 'px "' + ScreenTools.normalFontFamily + '"'
             ctx.textAlign = "center"
             ctx.textBaseline = "middle"
-            ctx.rotate(-root.rollAngle * Math.PI / 180)
             for (const angle of [-60, -45, -30, -20, -10, 0, 10, 20, 30, 45, 60]) {
                 ctx.save()
                 ctx.rotate(angle * Math.PI / 180)
@@ -96,6 +96,8 @@ Item {
             ctx.beginPath()
             ctx.arc(0, 0, edge - ctx.lineWidth / 2, 0, Math.PI * 2)
             ctx.stroke()
+            ctx.save()
+            ctx.rotate(root.rollIndicatorAngle * Math.PI / 180)
             ctx.fillStyle = palette.colorRed
             ctx.beginPath()
             ctx.moveTo(0, -radius * 0.94)
@@ -106,6 +108,7 @@ Item {
             ctx.fill()
             ctx.lineWidth = radius * 0.009
             ctx.stroke()
+            ctx.restore()
             ctx.strokeStyle = palette.colorRed
             ctx.lineWidth = radius * 0.026
             ctx.lineCap = "round"

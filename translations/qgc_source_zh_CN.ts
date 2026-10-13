@@ -5772,6 +5772,18 @@ Click Ok to start the auto-tuning process.
         <source>Simulation flight</source>
         <translation>模拟飞行</translation>
     </message>
+    <message>
+      <source>Select all</source>
+      <translation>全选</translation>
+    </message>
+    <message>
+      <source>Deselect all</source>
+      <translation>取消全选</translation>
+    </message>
+    <message>
+      <source>Delete selected (%1)</source>
+      <translation>删除选中（%1）</translation>
+    </message>
 </context>
   <context>
     <name>CaacRouteEditorController</name>
@@ -25200,6 +25212,14 @@ If a vehicle still has this key configured, you will no longer be able to commun
         <source>Clear drawing aids</source>
         <translation>清除辅助作图</translation>
     </message>
+    <message>
+      <source>Takeoff height (relative, m)</source>
+      <translation>起飞高度（相对起飞点，米）</translation>
+    </message>
+    <message>
+      <source>Horizontal speed (m/s)</source>
+      <translation>水平速度（米/秒）</translation>
+    </message>
 </context>
 <context>
     <name>CaacCoordinateField</name>
@@ -25222,6 +25242,14 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
         <source>Switch coordinate format</source>
         <translation>切换坐标格式</translation>
+    </message>
+    <message>
+      <source>Decimal degrees</source>
+      <translation>十进制度</translation>
+    </message>
+    <message>
+      <source>DMS</source>
+      <translation>度分秒</translation>
     </message>
 </context>
 <context>

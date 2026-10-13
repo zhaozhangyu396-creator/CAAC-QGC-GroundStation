@@ -1,4 +1,5 @@
 #include <cmath>
+#include <utility>
 
 #include <QtCore/QLineF>
 #include <QtCore/QRectF>
@@ -186,6 +187,23 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     QVERIFY(rejectDialog());
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacRemoveWaypoint_%1").arg(selected)));
 
+    const auto beforeBatchDelete = master->saveToJson();
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacSelectWaypoint_0"), 0));
+    QVERIFY(clickButton(QStringLiteral("caacSelectAllWaypoints")));
+    QCOMPARE(panel->property("selectedWaypointCount").toInt(), 2);
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacSelectWaypoint_1"), QStringLiteral("caacWaypointList")));
+    QCOMPARE(panel->property("selectedWaypointCount").toInt(), 1);
+    QVERIFY(clickButton(QStringLiteral("caacDeleteSelectedWaypoints")));
+    QCOMPARE(mission->visualItems()->count(), 2);
+    QCOMPARE(mission->plannedHomePosition(), home);
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QCOMPARE(master->saveToJson(), beforeBatchDelete);
+    QCOMPARE(panel->property("selectedWaypointCount").toInt(), 0);
+    QVERIFY(clickButton(QStringLiteral("caacSelectAllWaypoints")));
+    QVERIFY(clickButton(QStringLiteral("caacDeleteSelectedWaypoints")));
+    QCOMPARE(mission->visualItems()->count(), 1);
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QCOMPARE(master->saveToJson(), beforeBatchDelete);
     QVERIFY(clickButton(QStringLiteral("caacRelativeEditorButton")));
     auto* relativeTarget = findVisibleItem(_rootItem, QStringLiteral("caacRelativeTarget"));
     auto* relativeReference = findVisibleItem(_rootItem, QStringLiteral("caacRelativeReference"));
@@ -246,18 +264,72 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), original);
     QVERIFY(clickButton(QStringLiteral("caacGlobalSettingsButton")));
-    for (const auto* name :
-         {"caacHomeSection", "caacBasicSection", "caacSimFlightSection", "caacSimTurnSection", "caacSimClimbSection",
-          "caacSimLoopsSection", "caacSimWindSection", "caacMapEditingSection"}) {
+    for (const auto* name : {"caacHomeSection", "caacBasicSection", "caacSimTurnSection", "caacSimClimbSection",
+                             "caacSimLoopsSection", "caacSimWindSection", "caacMapEditingSection"}) {
         QVERIFY(findItem(_rootItem, QLatin1String(name)));
     }
+    const auto beforeHomeCoordinates = master->saveToJson();
+    for (const auto& entry :
+         {std::pair<QString, QString>{QStringLiteral("caacHomeLongitude"), QStringLiteral("8.54525860115325")},
+          {QStringLiteral("caacHomeLatitude"), QStringLiteral("47.3982382440215")}}) {
+        auto* decimal = findVisibleItemScrolled(entry.first, QStringLiteral("caacGlobalSettingsScroller"));
+        QVERIFY(decimal);
+        QVERIFY(decimal->setProperty("text", entry.second));
+        QVERIFY(clickButtonScrolled(entry.first + QStringLiteral("FormatToggle"),
+                                    QStringLiteral("caacGlobalSettingsScroller")));
+        auto* direction = findVisibleItem(_rootItem, entry.first + QStringLiteral("Hemisphere"));
+        QVERIFY(direction);
+        QVERIFY(direction->setProperty("currentIndex", 1));
+        QVERIFY(clickButtonScrolled(entry.first + QStringLiteral("FormatToggle"),
+                                    QStringLiteral("caacGlobalSettingsScroller")));
+        decimal = findVisibleItem(_rootItem, entry.first);
+        QVERIFY(decimal);
+        QVERIFY(std::abs(decimal->property("text").toString().toDouble() + entry.second.toDouble()) < 1e-10);
+        QVERIFY(clickButtonScrolled(entry.first + QStringLiteral("FormatToggle"),
+                                    QStringLiteral("caacGlobalSettingsScroller")));
+    }
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacApplyHome"), QStringLiteral("caacGlobalSettingsScroller")));
+    QVERIFY(std::abs(mission->plannedHomePosition().longitude() + 8.54525860115325) < 1e-10);
+    QVERIFY(std::abs(mission->plannedHomePosition().latitude() + 47.3982382440215) < 1e-10);
+    QCOMPARE(mission->plannedHomePosition().altitude(), 20.0);
+    const auto validDmsHome = master->saveToJson();
+    auto* minutes = findVisibleItem(_rootItem, QStringLiteral("caacHomeLatitudeMinutes"));
+    QVERIFY(minutes);
+    QVERIFY(minutes->setProperty("text", QStringLiteral("60")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacApplyHome"), QStringLiteral("caacGlobalSettingsScroller")));
+    QCOMPARE(master->saveToJson(), validDmsHome);
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QCOMPARE(master->saveToJson(), beforeHomeCoordinates);
+    QVERIFY(!findItem(_rootItem, QStringLiteral("caacSimFlightSection")));
+    QVERIFY(!findItem(_rootItem, QStringLiteral("caacSimActionsSection")));
+    QVERIFY(!findItem(_rootItem, QStringLiteral("caacOpenSimulation")));
     auto* horizontal =
         findVisibleItemScrolled(QStringLiteral("caacSimHorizontalSpeed"), QStringLiteral("caacGlobalSettingsScroller"));
     QVERIFY(horizontal);
+    auto* basicSection = findItem(_rootItem, QStringLiteral("caacBasicSection"));
+    auto* basicAncestor = horizontal->parentItem();
+    while (basicAncestor && basicAncestor != basicSection) {
+        basicAncestor = basicAncestor->parentItem();
+    }
+    QCOMPARE(basicAncestor, basicSection);
+    auto* takeoffHeight =
+        findVisibleItemScrolled(QStringLiteral("caacSimTakeoffHeight"), QStringLiteral("caacGlobalSettingsScroller"));
+    QVERIFY(takeoffHeight);
+    QVERIFY(takeoffHeight->setProperty("text", QStringLiteral("15")));
     horizontal->setProperty("text", QStringLiteral("7.5"));
     QVERIFY(clickButtonScrolled(QStringLiteral("caacSaveSimulationSettings"),
                                 QStringLiteral("caacGlobalSettingsScroller")));
     QCOMPARE(editor->simulationSettings().value("horizontalSpeed").toDouble(), 7.5);
+    QCOMPARE(editor->simulationSettings().value("takeoffHeight").toDouble(), 15.0);
+    auto* windSection = findItem(_rootItem, QStringLiteral("caacSimWindSection"));
+    auto* saveSettings = findVisibleItem(_rootItem, QStringLiteral("caacSaveSimulationSettings"));
+    QVERIFY(windSection && saveSettings);
+    auto* ancestor = saveSettings->parentItem();
+    while (ancestor && ancestor != windSection) {
+        ancestor = ancestor->parentItem();
+    }
+    QCOMPARE(ancestor, windSection);
+
     QVERIFY(
         clickButtonScrolled(QStringLiteral("caacGlobalShowDrawingAids"), QStringLiteral("caacGlobalSettingsScroller")));
     QVERIFY(!panel->property("showDrawingAids").toBool());

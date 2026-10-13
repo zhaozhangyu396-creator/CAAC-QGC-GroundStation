@@ -62,9 +62,25 @@ Item {
                     Layout.fillWidth: true
                     rowSpacing: ScreenTools.defaultFontPixelHeight * 0.5
                     QGCLabel { text: qsTr("Longitude (°)") }
-                    NumberField { id: homeLongitude; objectName: "caacHomeLongitude"; text: root._home.isValid ? root._home.longitude.toString() : "" }
+                    CaacCoordinateField {
+                        id: homeLongitude
+                        fieldName: "caacHomeLongitude"
+                        maximumDegrees: 180
+                        compact: true
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        value: root._home.isValid ? root._home.longitude : NaN
+                    }
                     QGCLabel { text: qsTr("Latitude (°)") }
-                    NumberField { id: homeLatitude; objectName: "caacHomeLatitude"; text: root._home.isValid ? root._home.latitude.toString() : "" }
+                    CaacCoordinateField {
+                        id: homeLatitude
+                        fieldName: "caacHomeLatitude"
+                        maximumDegrees: 90
+                        compact: true
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        value: root._home.isValid ? root._home.latitude : NaN
+                    }
                     QGCLabel { text: qsTr("Home AMSL altitude (m)") }
                     NumberField { id: homeAltitude; objectName: "caacHomeAltitude"; text: root._home.isValid ? root._home.altitude.toString() : "" }
                 }
@@ -73,7 +89,7 @@ Item {
                     Layout.fillWidth: true
                     text: qsTr("Save home position")
                     primary: true
-                    onClicked: root.routeController.updatePlannedHome(root.number(homeLatitude.text), root.number(homeLongitude.text), root.number(homeAltitude.text))
+                    onClicked: root.routeController.updatePlannedHome(homeLatitude.coordinate, homeLongitude.coordinate, root.number(homeAltitude.text))
                 }
             }
             CaacSettingsSection {
@@ -118,11 +134,29 @@ Item {
                     font.pointSize: ScreenTools.smallFontPointSize
                     wrapMode: Text.WordWrap
                 }
+                GridLayout {
+                    columns: root.width < ScreenTools.defaultFontPixelWidth * 35 ? 1 : 2
+                    Layout.fillWidth: true
+                    QGCLabel { text: qsTr("Takeoff height (relative, m)") }
+                    NumberField {
+                        id: simTakeoffHeight
+                        objectName: "caacSimTakeoffHeight"
+                        text: root.routeController.simulationSettings.takeoffHeight.toString()
+                    }
+                    QGCLabel { text: qsTr("Horizontal speed (m/s)") }
+                    NumberField {
+                        id: simHorizontalSpeed
+                        objectName: "caacSimHorizontalSpeed"
+                        text: root.routeController.simulationSettings.horizontalSpeed.toString()
+                    }
+                }
             }
             CaacSimulationSettings {
                 Layout.fillWidth: true
                 routeController: root.routeController
                 editor: root.editor
+                takeoffHeight: root.number(simTakeoffHeight.text)
+                horizontalSpeed: root.number(simHorizontalSpeed.text)
             }
             CaacSettingsSection {
                 objectName: "caacRotationSection"

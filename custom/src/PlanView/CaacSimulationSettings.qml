@@ -10,6 +10,8 @@ ColumnLayout {
     id: root
     required property var routeController
     required property var editor
+    required property real takeoffHeight
+    required property real horizontalSpeed
     readonly property var _settings: routeController.simulationSettings
     readonly property var _items: editor.planMasterController ? editor.planMasterController.missionController.visualItems : null
     readonly property var _points: {
@@ -27,7 +29,7 @@ ColumnLayout {
     function pointIndex(sequence) { return _points.findIndex(point => point.sequence === sequence) }
     function number(value) { return value.trim().length ? Number(value) : NaN }
     function values() {
-        return {horizontalSpeed: number(horizontal.text), verticalSpeed: number(vertical.text),
+        return {horizontalSpeed: horizontalSpeed, verticalSpeed: number(vertical.text),
             yawRate: number(yawRate.text), windSpeed: number(windSpeed.text), windBearing: number(windBearing.text),
             turnMode: turn.currentIndex, climbMode: climb.currentIndex, holdSeconds: hold.visible ? number(hold.text) : _settings.holdSeconds,
             specifyYaw: yawMode.currentIndex === 1, yaw: yaw.visible ? number(yaw.text) : _settings.yaw, closed: closed.checked,
@@ -35,7 +37,7 @@ ColumnLayout {
             startSequence: start.currentIndex >= 0 ? _points[start.currentIndex].sequence : NaN,
             returnSequence: ending.currentIndex === 0 ? _settings.returnSequence
                 : returning.currentIndex >= 0 ? _points[returning.currentIndex].sequence : NaN,
-            takeoffHeight: number(takeoffHeight.text)}
+            takeoffHeight: takeoffHeight}
     }
     component NumberField: QGCTextField {
         Layout.fillWidth: true
@@ -43,18 +45,6 @@ ColumnLayout {
         validator: DoubleValidator { locale: "C" }
     }
     spacing: ScreenTools.defaultFontPixelHeight * 0.5
-    CaacSettingsSection {
-        objectName: "caacSimFlightSection"
-        title: qsTr("Takeoff and flight speed")
-        GridLayout {
-            columns: root.width < ScreenTools.defaultFontPixelWidth * 35 ? 1 : 2
-            Layout.fillWidth: true
-            QGCLabel { text: qsTr("Takeoff height (relative, m)") }
-            NumberField { id: takeoffHeight; objectName: "caacSimTakeoffHeight"; text: root._settings.takeoffHeight.toString() }
-            QGCLabel { text: qsTr("Horizontal speed (m/s)") }
-            NumberField { id: horizontal; objectName: "caacSimHorizontalSpeed"; text: root._settings.horizontalSpeed.toString() }
-        }
-    }
     CaacSettingsSection {
         objectName: "caacSimTurnSection"
         title: qsTr("Turn and heading")
@@ -157,21 +147,11 @@ ColumnLayout {
             QGCLabel { text: qsTr("Wind direction (towards, degrees)") }
             NumberField { id: windBearing; objectName: "caacSimWindBearing"; text: root._settings.windBearing.toString() }
         }
-    }
-    CaacSettingsSection {
-        objectName: "caacSimActionsSection"
-        title: qsTr("Simulation flight")
         QGCButton {
             objectName: "caacSaveSimulationSettings"
             Layout.fillWidth: true
             text: qsTr("Save simulation settings")
             onClicked: root.routeController.setSimulationSettings(root.values())
-        }
-        QGCButton {
-            objectName: "caacOpenSimulation"
-            Layout.fillWidth: true
-            text: qsTr("Simulation flight")
-            onClicked: root.editor.openSimulation()
         }
     }
 }

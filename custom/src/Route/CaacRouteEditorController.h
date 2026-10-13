@@ -73,6 +73,7 @@ public:
     Q_INVOKABLE QVariantMap waypointAdvancedProperties(QObject* item) const;
     Q_INVOKABLE bool updateWaypointProperties(QObject* item, const QVariantMap& properties);
     Q_INVOKABLE bool removeCurrentWaypoint();
+    Q_INVOKABLE bool removeWaypoints(const QVariantList& waypoints);
     Q_INVOKABLE bool moveCurrentWaypoint(int offset);
     Q_INVOKABLE bool setRotationCenter(const QGeoCoordinate& coordinate);
     Q_INVOKABLE bool rotateRoute(double clockwiseDegrees);

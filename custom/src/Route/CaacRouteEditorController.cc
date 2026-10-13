@@ -7,6 +7,7 @@
 #include <QtCore/QEvent>
 #include <QtCore/QJsonArray>
 #include <QtCore/QScopeGuard>
+#include <QtCore/QSet>
 
 #include "CaacRouteGeometry.h"
 #include "CaacRouteTemplates.h"
@@ -628,6 +629,34 @@ bool CaacRouteEditorController::removeCurrentWaypoint()
     beginEdit();
     const auto finish = qScopeGuard([this]() { endEdit(); });
     _missionController()->removeVisualItem(_missionController()->visualItemIndexForObject(item));
+    return true;
+}
+
+bool CaacRouteEditorController::removeWaypoints(const QVariantList& waypoints)
+{
+    if (!_canChangeOrder()) {
+        return false;
+    }
+    auto* mission = _missionController();
+    QSet<int> indices;
+    if (waypoints.isEmpty()) {
+        return _fail(tr("Only ordinary waypoints can be removed here."));
+    }
+    for (const auto& waypoint : waypoints) {
+        auto* item = qobject_cast<SimpleMissionItem*>(waypoint.value<QObject*>());
+        const int index = item ? mission->visualItemIndexForObject(item) : -1;
+        if (!item || index < 1 || item->command() != MAV_CMD_NAV_WAYPOINT || indices.contains(index)) {
+            return _fail(tr("Only ordinary waypoints can be removed here."));
+        }
+        indices.insert(index);
+    }
+    auto ordered = indices.values();
+    std::sort(ordered.begin(), ordered.end(), [](int indexA, int indexB) { return indexA > indexB; });
+    beginEdit();
+    const auto finish = qScopeGuard([this]() { endEdit(); });
+    for (int index : ordered) {
+        mission->removeVisualItem(index);
+    }
     return true;
 }
 

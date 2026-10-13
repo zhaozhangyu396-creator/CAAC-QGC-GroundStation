@@ -426,7 +426,7 @@ void CaacSimulationController::_publish()
     if (!_link || !_link->mavlinkChannelIsSet()) {
         return;
     }
-    const auto state = _engine.loaded() ? _engine.state() : CaacSimulationEngine::State{.position = _home};
+    const auto state = _engine.state();
     const auto system = static_cast<uint8_t>(_link->vehicleId());
     const auto component = static_cast<uint8_t>(MAV_COMP_ID_AUTOPILOT1);
     const auto channel = _link->_outgoingMavlinkChannel;
@@ -455,8 +455,9 @@ void CaacSimulationController::_publish()
                                   static_cast<int16_t>(state.heading), state.airborne ? 50 : 0,
                                   static_cast<float>(state.position.altitude()), static_cast<float>(state.climbSpeed));
     _link->respondWithMavlinkMessage(message, true);
-    mavlink_msg_attitude_pack_chan(system, component, channel, &message, time, 0, 0,
-                                   static_cast<float>(state.heading * M_PI / 180.0), 0, 0, 0);
+    mavlink_msg_attitude_pack_chan(
+        system, component, channel, &message, time, static_cast<float>(state.roll * M_PI / 180.0),
+        static_cast<float>(state.pitch * M_PI / 180.0), static_cast<float>(state.heading * M_PI / 180.0), 0, 0, 0);
     _link->respondWithMavlinkMessage(message, true);
     mavlink_msg_extended_sys_state_pack_chan(system, component, channel, &message, MAV_VTOL_STATE_UNDEFINED,
                                              state.airborne ? MAV_LANDED_STATE_IN_AIR : MAV_LANDED_STATE_ON_GROUND);

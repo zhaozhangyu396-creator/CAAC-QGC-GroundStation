@@ -28,7 +28,62 @@ private slots:
     void _orientationPreview();
     void _quickWaypointOperations();
     void _relativeEndpointEditing();
+    void _batchWaypointDeletion();
 };
+
+void CaacPlanningToolsTest::_batchWaypointDeletion()
+{
+    PlanMasterController master;
+    master.start();
+    CaacRouteEditorController editor;
+    editor.setPlanMasterController(&master);
+    auto* mission = master.missionController();
+    const QGeoCoordinate home(30, 120, 20);
+    mission->setHomePosition(home);
+    QList<QGeoCoordinate> coordinates;
+    for (double bearing : {0.0, 90.0, 180.0, 270.0}) {
+        coordinates.append(QGCGeo::geodesicDestination(home, bearing, 100));
+        QVERIFY(editor.addWaypoint(coordinates.last()));
+    }
+    auto* takeoff = qobject_cast<SimpleMissionItem*>(mission->insertTakeoffItem(home, 1, false));
+    QVERIFY(takeoff);
+    takeoff->setCoordinate(home);
+    auto* landing = qobject_cast<SimpleMissionItem*>(
+        mission->insertSimpleMissionItem(home, mission->visualItems()->count(), false));
+    QVERIFY(landing);
+    landing->setCommand(MAV_CMD_NAV_LAND);
+    editor.clearHistory();
+    const auto original = master.saveToJson();
+    const auto objectAt = [&](int index) { return QVariant::fromValue(mission->visualItems()->get(index)); };
+    QVERIFY(!editor.removeWaypoints({objectAt(2), objectAt(0)}));
+    QVERIFY(!editor.removeWaypoints({objectAt(2), objectAt(2)}));
+    QVERIFY(!editor.removeWaypoints({objectAt(2), objectAt(1)}));
+    QCOMPARE(master.saveToJson(), original);
+    QVERIFY(editor.removeWaypoints({objectAt(2), objectAt(4)}));
+    QCOMPARE(mission->visualItems()->count(), 5);
+    QCOMPARE(mission->visualItems()->value<SimpleMissionItem*>(2)->coordinate(), coordinates.at(1));
+    QCOMPARE(mission->visualItems()->value<SimpleMissionItem*>(3)->coordinate(), coordinates.at(3));
+    const auto afterPartial = master.saveToJson();
+    QVERIFY(editor.undo());
+    QCOMPARE(master.saveToJson(), original);
+    QVERIFY(editor.redo());
+    QCOMPARE(master.saveToJson(), afterPartial);
+    QVERIFY(editor.undo());
+    QVariantList all;
+    for (int i = 1; i < mission->visualItems()->count(); ++i) {
+        auto* item = mission->visualItems()->value<SimpleMissionItem*>(i);
+        if (item && item->command() == MAV_CMD_NAV_WAYPOINT) {
+            all.append(objectAt(i));
+        }
+    }
+    QVERIFY(editor.removeWaypoints(all));
+    QCOMPARE(mission->visualItems()->count(), 3);
+    QCOMPARE(mission->visualItems()->value<SimpleMissionItem*>(1)->command(), MAV_CMD_NAV_TAKEOFF);
+    QCOMPARE(mission->visualItems()->value<SimpleMissionItem*>(2)->command(), MAV_CMD_NAV_LAND);
+    QCOMPARE(mission->plannedHomePosition(), home);
+    QVERIFY(editor.undo());
+    QCOMPARE(master.saveToJson(), original);
+}
 
 void CaacPlanningToolsTest::_relativeEndpointEditing()
 {

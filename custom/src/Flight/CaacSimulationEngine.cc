@@ -123,6 +123,8 @@ bool CaacSimulationEngine::jump(int sequence)
 
 void CaacSimulationEngine::pause()
 {
+    _state.roll = 0;
+    _state.pitch = 0;
     _state.northSpeed = 0;
     _state.eastSpeed = 0;
     _state.climbSpeed = 0;
@@ -226,6 +228,7 @@ double CaacSimulationEngine::_rotate(double target, double seconds, double rate)
 bool CaacSimulationEngine::_move(const QGeoCoordinate& target, double seconds, bool landing)
 {
     const auto before = _state.position;
+    const double previousHeading = _state.heading;
     const double distance = QGCGeo::geodesicDistance(before, target);
     const double height = target.altitude() - before.altitude();
     const double bearing = distance > 0.01 ? QGCGeo::geodesicAzimuth(before, target) : _state.heading;
@@ -263,6 +266,13 @@ bool CaacSimulationEngine::_move(const QGeoCoordinate& target, double seconds, b
     _state.northSpeed = moved / seconds * std::cos(movedBearing * M_PI / 180.0);
     _state.eastSpeed = moved / seconds * std::sin(movedBearing * M_PI / 180.0);
     _state.climbSpeed = (_state.position.altitude() - before.altitude()) / seconds;
+    const double horizontalSpeed = moved / seconds;
+    const double yawRate = std::remainder(_state.heading - previousHeading, 360.0) * M_PI / (180.0 * seconds);
+    // Estimate training attitude from turn rate and flight-path slope, rather than aircraft dynamics.
+    _state.roll = std::clamp(std::atan2(horizontalSpeed * yawRate, 9.80665) * 180.0 / M_PI, -35.0, 35.0);
+    _state.pitch = horizontalSpeed > 0.05
+                       ? std::clamp(std::atan2(_state.climbSpeed, horizontalSpeed) * 180.0 / M_PI, -30.0, 30.0)
+                       : 0;
     _state.airborne = _state.position.altitude() > _home.altitude() + 0.01;
     const bool arrived =
         QGCGeo::geodesicDistance(_state.position, target) < std::max(0.05, _options.windSpeed * seconds + 0.01) &&

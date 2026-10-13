@@ -27,6 +27,30 @@ Column {
     onActivePanelChanged: showMissionTree = false
     readonly property var currentItem: editorController.currentItem
     readonly property var routeController: editorController
+    property var selectedWaypointItems: []
+    readonly property int selectedWaypointCount: selectedWaypointItems.length
+    readonly property var _selectableWaypoints: {
+        const items = []
+        const model = planMasterController ? planMasterController.missionController.visualItems : null
+        if (model) {
+            for (let i = 1; i < model.count; ++i) {
+                const item = model.get(i)
+                if (item.isSimpleItem && item.command === 16) { items.push(item) }
+            }
+        }
+        return items
+    }
+    readonly property bool allWaypointsSelected: _selectableWaypoints.length > 0
+        && _selectableWaypoints.every(item => selectedWaypointItems.indexOf(item) >= 0)
+    on_SelectableWaypointsChanged: {
+        selectedWaypointItems = selectedWaypointItems.filter(item => _selectableWaypoints.indexOf(item) >= 0)
+    }
+
+    function selectWaypointForDeletion(item, selected) {
+        const items = selectedWaypointItems.filter(point => point !== item)
+        if (selected && _selectableWaypoints.indexOf(item) >= 0) { items.push(item) }
+        selectedWaypointItems = items
+    }
     readonly property var _managerVehicle: planMasterController ? planMasterController.managerVehicle : null
     readonly property bool _canTransfer: planMasterController && !planMasterController.offline
         && _managerVehicle && _managerVehicle === QGroundControl.multiVehicleManager.activeVehicle
@@ -544,13 +568,42 @@ Column {
         routeController: editorController
     }
 
+    RowLayout {
+        id: waypointBatchActions
+        visible: root.activePanel === 3 && !root.showMissionTree
+        width: root.width
+        spacing: ScreenTools.defaultFontPixelWidth * 0.5
+        QGCButton {
+            objectName: "caacSelectAllWaypoints"
+            Layout.fillWidth: true
+            Layout.minimumWidth: 0
+            pointSize: ScreenTools.smallFontPointSize
+            text: root.allWaypointsSelected ? qsTr("Deselect all") : qsTr("Select all")
+            enabled: root._selectableWaypoints.length > 0
+            onClicked: root.selectedWaypointItems = root.allWaypointsSelected ? [] : root._selectableWaypoints.slice()
+        }
+        QGCButton {
+            objectName: "caacDeleteSelectedWaypoints"
+            Layout.fillWidth: true
+            Layout.minimumWidth: 0
+            pointSize: ScreenTools.smallFontPointSize
+            text: qsTr("Delete selected (%1)").arg(root.selectedWaypointCount)
+            enabled: root.selectedWaypointCount > 0 && root.planMasterController && !root.planMasterController.syncInProgress
+            onClicked: {
+                waypointPopup.close()
+                editorController.cancelRouteOrientation()
+                if (editorController.removeWaypoints(root.selectedWaypointItems)) { root.selectedWaypointItems = [] }
+            }
+        }
+    }
+
     QGCListView {
         id: waypointList
         objectName: "caacWaypointList"
         width: root.width
         height: Math.max(ScreenTools.defaultFontPixelHeight * 5,
-            root.height - panelNavigation.height - listHeader.height - pointActions.height - root._transferHeight - root._settingsButtonHeight - helpLabel.height
-            - root.spacing * 5)
+            root.height - panelNavigation.height - listHeader.height - waypointBatchActions.height - pointActions.height - root._transferHeight - root._settingsButtonHeight - helpLabel.height
+            - root.spacing * 6)
         visible: !root.showMissionTree && root.activePanel === 3
         clip: true
         spacing: ScreenTools.defaultFontPixelHeight * 0.4
@@ -571,13 +624,14 @@ Column {
             readonly property var _leg: editorController.coordinateItems.length > 0
                 ? editorController.waypointLeg(object) : ({})
             readonly property var _speed: index > 0 && object.isSimpleItem ? object.speedSection : null
+            readonly property bool _batchSelected: root.selectedWaypointItems.indexOf(object) >= 0
             objectName: "caacWaypointCard_" + object.sequenceNumber
             width: waypointList.width
             height: _display ? cardContent.implicitHeight + ScreenTools.defaultFontPixelHeight : 0
             visible: _display
             radius: ScreenTools.defaultBorderRadius
-            color: object.isCurrentItem ? dragPalette.buttonHighlight : dragPalette.windowShade
-            readonly property color _textColor: object.isCurrentItem ? dragPalette.buttonHighlightText : dragPalette.text
+            color: _batchSelected || object.isCurrentItem ? dragPalette.buttonHighlight : dragPalette.windowShade
+            readonly property color _textColor: _batchSelected || object.isCurrentItem ? dragPalette.buttonHighlightText : dragPalette.text
 
             MouseArea {
                 anchors.fill: parent
@@ -591,6 +645,12 @@ Column {
                 anchors.fill: parent
                 anchors.margins: ScreenTools.defaultFontPixelHeight * 0.5
                 spacing: ScreenTools.defaultFontPixelWidth
+                QGCCheckBox {
+                    objectName: "caacSelectWaypoint_" + card.object.sequenceNumber
+                    visible: card.index > 0 && card.object.command === 16
+                    checked: card._batchSelected
+                    onClicked: root.selectWaypointForDeletion(card.object, checked)
+                }
                 QGCLabel {
                     objectName: "caacWaypointNumber_" + card.object.sequenceNumber
                     text: card.object.sequenceNumber

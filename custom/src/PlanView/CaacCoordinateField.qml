@@ -4,12 +4,14 @@ import QtQuick.Layouts
 import QGroundControl
 import QGroundControl.Controls
 
-RowLayout {
+GridLayout {
     id: root
     required property int maximumDegrees
     required property string fieldName
     property real value: NaN
     property bool displayDms: false
+    property bool compact: false
+    readonly property bool _compactDms: displayDms && compact && width < ScreenTools.defaultFontPixelWidth * 52
     property real _canonicalValue: NaN
     property bool _dirty: false
     property bool _ready: false
@@ -17,7 +19,9 @@ RowLayout {
     readonly property real coordinate: !_dirty ? _canonicalValue : displayDms
         ? QGroundControl.corePlugin.coordinateFromDms(number(degrees.text), number(minutes.text), number(seconds.text), hemisphere.currentIndex === 1, maximumDegrees)
         : number(decimal.text)
-    spacing: ScreenTools.defaultFontPixelWidth * 0.5
+    columns: displayDms ? (_compactDms ? 2 : 5) : 2
+    columnSpacing: ScreenTools.defaultFontPixelWidth * 0.5
+    rowSpacing: ScreenTools.defaultFontPixelHeight * 0.5
 
     function number(text) { return text.trim().length ? Number(text) : NaN }
     function markEdited() { if (_ready && !_rendering) { _dirty = true } }
@@ -61,7 +65,7 @@ RowLayout {
         id: degrees
         objectName: root.fieldName + "Degrees"
         Layout.fillWidth: true
-        Layout.minimumWidth: ScreenTools.defaultFontPixelWidth * 7
+        Layout.minimumWidth: root._compactDms ? 0 : ScreenTools.defaultFontPixelWidth * 7
         visible: root.displayDms
         showUnits: true
         unitsLabel: "°"
@@ -72,7 +76,7 @@ RowLayout {
         id: minutes
         objectName: root.fieldName + "Minutes"
         Layout.fillWidth: true
-        Layout.minimumWidth: ScreenTools.defaultFontPixelWidth * 6
+        Layout.minimumWidth: root._compactDms ? 0 : ScreenTools.defaultFontPixelWidth * 6
         visible: root.displayDms
         showUnits: true
         unitsLabel: "′"
@@ -83,7 +87,8 @@ RowLayout {
         id: seconds
         objectName: root.fieldName + "Seconds"
         Layout.fillWidth: true
-        Layout.minimumWidth: ScreenTools.defaultFontPixelWidth * 16
+        Layout.minimumWidth: root._compactDms ? 0 : ScreenTools.defaultFontPixelWidth * 16
+        Layout.columnSpan: root._compactDms ? 2 : 1
         visible: root.displayDms
         showUnits: true
         unitsLabel: "″"
@@ -93,14 +98,15 @@ RowLayout {
     QGCComboBox {
         id: hemisphere
         objectName: root.fieldName + "Hemisphere"
-        Layout.minimumWidth: ScreenTools.defaultFontPixelWidth * 10
+        Layout.minimumWidth: root._compactDms ? 0 : ScreenTools.defaultFontPixelWidth * 10
+        Layout.fillWidth: root._compactDms
         visible: root.displayDms
         model: root.maximumDegrees === 90 ? [qsTr("North"), qsTr("South")] : [qsTr("East"), qsTr("West")]
         onCurrentIndexChanged: root.markEdited()
     }
     QGCButton {
         objectName: root.fieldName + "FormatToggle"
-        text: "⇄"
+        text: root.displayDms ? qsTr("Decimal degrees") : qsTr("DMS")
         Accessible.name: qsTr("Switch coordinate format")
         enabled: (isFinite(root.coordinate) && Math.abs(root.coordinate) <= root.maximumDegrees)
             || (!root._dirty && isNaN(root._canonicalValue))
