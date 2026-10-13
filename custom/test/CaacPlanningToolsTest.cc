@@ -75,16 +75,45 @@ void CaacPlanningToolsTest::_relativeEndpointEditing()
     QCOMPARE(master.saveToJson(), unchanged);
     QVERIFY(editor.undo());
     QCOMPARE(master.saveToJson(), original);
+    for (bool isLanding : {false, true}) {
+        for (double angle : {90.0, -90.0, 180.0}) {
+            QVERIFY(editor.setRelativeEndpoint(1, angle, 50, isLanding, true));
+            const auto endpoint = isLanding ? mission->visualItems()->value<SimpleMissionItem*>(2)->coordinate()
+                                            : mission->plannedHomePosition();
+            const double expectedBearing = angle == 90 ? 0 : angle == -90 ? 180 : 90;
+            QVERIFY(std::abs(QGCGeo::geodesicDistance(waypoint, endpoint) - 50) < 0.01);
+            QVERIFY(std::abs(std::remainder(QGCGeo::geodesicAzimuth(waypoint, endpoint) - expectedBearing, 360)) <
+                    0.01);
+            QCOMPARE(mission->plannedHomePosition().altitude(), 20.0);
+            QVERIFY(editor.undo());
+            QCOMPARE(master.saveToJson(), original);
+        }
+        QVERIFY(editor.setRelativeEndpoint(1, 90, 0, isLanding, true));
+        const auto endpoint = isLanding ? mission->visualItems()->value<SimpleMissionItem*>(2)->coordinate()
+                                        : mission->plannedHomePosition();
+        QVERIFY(QGCGeo::geodesicDistance(waypoint, endpoint) < 0.001);
+        QVERIFY(editor.undo());
+        QCOMPARE(master.saveToJson(), original);
+        QVERIFY(!editor.setRelativeEndpoint(0, 90, 25, isLanding, true));
+        QVERIFY(!editor.setRelativeEndpoint(1, qQNaN(), 25, isLanding, true));
+        QVERIFY(!editor.setRelativeEndpoint(1, 90, -1, isLanding, true));
+        QCOMPARE(master.saveToJson(), original);
+    }
     auto* takeoff = qobject_cast<SimpleMissionItem*>(mission->insertTakeoffItem(home, 1, false));
     QVERIFY(takeoff);
+    takeoff->setCoordinate(home);
     takeoff->altitude()->setRawValue(5.0);
     const auto beforeTakeoffEdit = master.saveToJson();
     editor.clearHistory();
-    QVERIFY(editor.setRelativeEndpoint(2, 180, 25, false));
+    QVERIFY2(editor.setRelativeEndpoint(2, 90, 25, false, true), qPrintable(editor.lastError()));
+    QVERIFY(QGCGeo::geodesicDistance(takeoff->coordinate(), mission->plannedHomePosition()) < 0.001);
     QCOMPARE(mission->plannedHomePosition().altitude(), 20.0);
     QCOMPARE(takeoff->altitude()->rawValue().toDouble(), 5.0);
+    const auto afterTakeoffEdit = master.saveToJson();
     QVERIFY(editor.undo());
     QCOMPARE(master.saveToJson(), beforeTakeoffEdit);
+    QVERIFY(editor.redo());
+    QCOMPARE(master.saveToJson(), afterTakeoffEdit);
 }
 
 class CaacRouteTemplateGeometryTest : public UnitTest

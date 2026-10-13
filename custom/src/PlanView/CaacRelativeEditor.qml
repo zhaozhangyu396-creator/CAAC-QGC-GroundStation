@@ -21,7 +21,8 @@ Item {
         if (target.currentIndex > 0) {
             return routeController.setRelativeEndpoint(selectedIndex(reference),
                 angle.text.trim().length ? Number(angle.text) : NaN,
-                distance.text.trim().length ? Number(distance.text) : NaN, target.currentIndex === 2)
+                distance.text.trim().length ? Number(distance.text) : NaN, target.currentIndex === 2,
+                angleType.currentIndex === 1)
         }
         return routeController.insertRelativeWaypoint(selectedIndex(reference), selectedIndex(insertAfter),
             angle.text.trim().length ? Number(angle.text) : NaN,
@@ -63,7 +64,6 @@ Item {
                     Layout.fillWidth: true
                     Layout.minimumWidth: 0
                     model: [qsTr("Waypoint"), qsTr("Takeoff point"), qsTr("Landing point")]
-                    onActivated: { if (currentIndex > 0) { angleType.currentIndex = 0 } }
                 }
                 QGCLabel { text: qsTr("Reference point") }
                 QGCComboBox {
@@ -78,7 +78,6 @@ Item {
                 QGCComboBox {
                     id: angleType
                     objectName: "caacRelativeAngleType"
-                    enabled: target.currentIndex === 0
                     Layout.fillWidth: true
                     Layout.minimumWidth: 0
                     model: [qsTr("Bearing"), qsTr("Interior angle")]
@@ -152,7 +151,7 @@ Item {
             QGCLabel {
                 Layout.fillWidth: true
                 wrapMode: Text.WordWrap
-                text: target.currentIndex === 0 ? qsTr("Press Space to add a waypoint") : qsTr("Set the selected endpoint from the reference point, bearing and distance.")
+                text: target.currentIndex === 0 ? qsTr("Press Space to add a waypoint") : qsTr("Set the selected endpoint from the reference point, angle and distance.")
                 font.pointSize: ScreenTools.smallFontPointSize
             }
         }
@@ -173,7 +172,7 @@ Item {
     Shortcut {
         sequence: "Space"
         enabled: root.visible && root.enabled && addButton.enabled && !angle.activeFocus && !distance.activeFocus
-            && !reference.popup.visible && !angleType.popup.visible && !insertAfter.popup.visible
+            && !target.popup.visible && !reference.popup.visible && !angleType.popup.visible && !insertAfter.popup.visible
         onActivated: root.addWaypoint()
     }
 }

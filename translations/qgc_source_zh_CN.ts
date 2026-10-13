@@ -24748,8 +24748,8 @@ If a vehicle still has this key configured, you will no longer be able to commun
         <translation>设置位置</translation>
     </message>
     <message>
-        <source>Set the selected endpoint from the reference point, bearing and distance.</source>
-        <translation>根据参考点、方位角和距离设置所选起飞点或降落点。</translation>
+        <source>Set the selected endpoint from the reference point, angle and distance.</source>
+        <translation>根据参考点、角度和距离设置所选起飞点或降落点。</translation>
     </message>
     <message>
         <source>Set takeoff point</source>
@@ -25439,6 +25439,18 @@ altitude</source>
     <message>
       <source>Jump to waypoint</source>
       <translation>跳转航点</translation>
+    </message>
+    <message>
+      <source>Current flight altitude (m)</source>
+      <translation>当前飞行高度（米）</translation>
+    </message>
+    <message>
+      <source>Altitude must be between %1 and %2 metres.</source>
+      <translation>高度必须在 %1 至 %2 米之间。</translation>
+    </message>
+    <message>
+      <source>All waypoints</source>
+      <translation>全部航点</translation>
     </message>
 </context>
   <context>

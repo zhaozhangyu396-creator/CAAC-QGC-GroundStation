@@ -6,21 +6,28 @@
 #include <QtCore/QApplicationStatic>
 #include <QtCore/QJsonObject>
 #include <QtCore/QSettings>
+#include <QtCore/QTimer>
 #include <QtGui/QGuiApplication>
 #include <QtPositioning/QGeoCoordinate>
 #include <QtQml/QQmlAbstractUrlInterceptor>
 #include <QtQml/QQmlApplicationEngine>
 
+#include "AppMessages.h"
+#include "AppSettings.h"
 #include "CaacFlightDistance.h"
 #include "CaacSimulationController.h"
+#include "FactMetaData.h"
 #include "LinkConfiguration.h"
 #include "LinkInterface.h"
 #include "MissionController.h"
+#include "MissionManager.h"
 #include "MultiVehicleManager.h"
 #include "PlanMasterController.h"
 #include "QGCGeo.h"
+#include "QGCMAVLink.h"
 #include "QmlObjectListModel.h"
 #include "SimpleMissionItem.h"
+#include "UnitsSettings.h"
 #include "Vehicle.h"
 #include "VehicleLinkManager.h"
 
@@ -60,6 +67,30 @@ CaacCorePlugin::CaacCorePlugin(QObject* parent)
     const QSettings settings;
     _doubleClickAddWaypoint = settings.value(QStringLiteral("CAAC/Map/DoubleClickAddWaypoint"), true).toBool();
     _dragWaypoints = settings.value(QStringLiteral("CAAC/Map/DragWaypoints"), true).toBool();
+}
+
+void CaacCorePlugin::adjustSettingMetaData(const QString& settingsGroup, FactMetaData& metaData, bool& userVisible)
+{
+    QGCCorePlugin::adjustSettingMetaData(settingsGroup, metaData, userVisible);
+    if (settingsGroup == AppSettings::settingsGroup) {
+        if (metaData.name() == AppSettings::preferredFirmwareClassName) {
+            metaData.setRawDefaultValue(QGCMAVLink::FirmwareClassPX4);
+        } else if (metaData.name() == AppSettings::preferredVehicleClassName) {
+            metaData.setRawDefaultValue(QGCMAVLink::VehicleClassMultiRotor);
+        }
+    } else if (settingsGroup == UnitsSettings::settingsGroup) {
+        if (metaData.name() == UnitsSettings::horizontalDistanceUnitsName) {
+            metaData.setRawDefaultValue(UnitsSettings::HorizontalDistanceUnitsMeters);
+        } else if (metaData.name() == UnitsSettings::verticalDistanceUnitsName) {
+            metaData.setRawDefaultValue(UnitsSettings::VerticalDistanceUnitsMeters);
+        } else if (metaData.name() == UnitsSettings::areaUnitsName) {
+            metaData.setRawDefaultValue(UnitsSettings::AreaUnitsSquareMeters);
+        } else if (metaData.name() == UnitsSettings::speedUnitsName) {
+            metaData.setRawDefaultValue(UnitsSettings::SpeedUnitsMetersPerSecond);
+        } else if (metaData.name() == UnitsSettings::temperatureUnitsName) {
+            metaData.setRawDefaultValue(UnitsSettings::TemperatureUnitsCelsius);
+        }
+    }
 }
 
 void CaacCorePlugin::setDoubleClickAddWaypoint(bool enabled)
@@ -201,29 +232,108 @@ QString CaacCorePlugin::refreshFlightMission(PlanMasterController* controller)
 QString CaacCorePlugin::updateFlightWaypointAltitude(PlanMasterController* controller, QObject* waypoint,
                                                      double altitude)
 {
+    return updateFlightWaypointAltitudes(controller, {QVariant::fromValue(waypoint)}, altitude);
+}
+
+QString CaacCorePlugin::updateFlightWaypointAltitudes(PlanMasterController* controller, const QVariantList& waypoints,
+                                                      double altitude)
+{
+    if (_flightAltitudeUpdateTimer) {
+        return tr("Wait for the aircraft and mission transfer to be ready.");
+    }
     auto* vehicle = MultiVehicleManager::instance()->activeVehicle();
     if (!vehicle) {
         return tr("Wait for the aircraft and mission transfer to be ready.");
     }
     auto* mission = controller ? controller->missionController() : nullptr;
-    auto* item = qobject_cast<SimpleMissionItem*>(waypoint);
     if (!controller || !mission || controller->managerVehicle() != vehicle || controller->offline() ||
         controller->syncInProgress() || !vehicle->isInitialConnectComplete()) {
         return tr("Wait for the aircraft and mission transfer to be ready.");
     }
-    if (!item || item->command() != MAV_CMD_NAV_WAYPOINT || mission->visualItems()->indexOf(item) <= 0) {
+    if (waypoints.isEmpty()) {
         return tr("Select a downloaded waypoint.");
     }
-    if (mission->sendToVehiclePreCheck() != MissionController::SendToVehiclePreCheckStateOk ||
+    QList<SimpleMissionItem*> items;
+    for (const auto& waypoint : waypoints) {
+        auto* item = qobject_cast<SimpleMissionItem*>(waypoint.value<QObject*>());
+        if (!item || item->command() != MAV_CMD_NAV_WAYPOINT || mission->visualItems()->indexOf(item) <= 0 ||
+            items.contains(item)) {
+            return tr("Select a downloaded waypoint.");
+        }
+        auto* fact = item->altitude();
+        if (!std::isfinite(altitude) || std::abs(altitude) > std::numeric_limits<float>::max() ||
+            altitude < fact->rawMin().toDouble() || altitude > fact->rawMax().toDouble()) {
+            return tr("Enter a valid waypoint altitude.");
+        }
+        items.append(item);
+    }
+    const auto preCheck = mission->sendToVehiclePreCheck();
+    const bool pauseSimulation =
+        preCheck == MissionController::SendToVehiclePreCheckStateActiveMission && _simulation->ownsVehicle(vehicle);
+    if ((!pauseSimulation && preCheck != MissionController::SendToVehiclePreCheckStateOk) ||
         mission->readyForSaveState() != VisualMissionItem::ReadyForSave) {
         return tr("Pause the mission and complete all mission data before uploading.");
     }
-    auto* fact = item->altitude();
-    if (!std::isfinite(altitude) || std::abs(altitude) > std::numeric_limits<float>::max() ||
-        altitude < fact->rawMin().toDouble() || altitude > fact->rawMax().toDouble()) {
-        return tr("Enter a valid waypoint altitude.");
+    if (pauseSimulation) {
+        auto* timer = new QTimer(this);
+        timer->setSingleShot(true);
+        timer->setProperty("uploading", false);
+        _flightAltitudeUpdateTimer = timer;
+        const QPointer<Vehicle> aircraft(vehicle);
+        const QPointer<PlanMasterController> plan(controller);
+        connect(MultiVehicleManager::instance(), &MultiVehicleManager::activeVehicleChanged, timer,
+                [timer, aircraft](Vehicle* activeVehicle) {
+                    if (!aircraft || activeVehicle != aircraft) {
+                        timer->deleteLater();
+                    }
+                });
+        QList<QPointer<SimpleMissionItem>> selected;
+        for (auto* item : items) {
+            selected.append(item);
+        }
+        connect(timer, &QTimer::timeout, timer, [this, timer]() {
+            QGC::showAppMessage(tr("Wait for the aircraft and mission transfer to be ready."));
+            timer->deleteLater();
+        });
+        connect(vehicle, &Vehicle::flightModeChanged, timer, [this, timer, aircraft, plan, selected, altitude]() {
+            if (timer->property("uploading").toBool() || !aircraft || !plan ||
+                aircraft != MultiVehicleManager::instance()->activeVehicle() ||
+                aircraft->flightMode() != aircraft->pauseFlightMode()) {
+                return;
+            }
+            timer->setProperty("uploading", true);
+            QVariantList selectedWaypoints;
+            for (const auto& item : selected) {
+                selectedWaypoints.append(QVariant::fromValue(static_cast<QObject*>(item.data())));
+            }
+            connect(
+                aircraft->missionManager(), &MissionManager::sendComplete, timer,
+                [timer, aircraft](bool error) {
+                    if (error) {
+                        QGC::showAppMessage(QCoreApplication::translate("CaacSimulationController",
+                                                                        "Simulation mission upload failed."));
+                    } else if (aircraft && aircraft == MultiVehicleManager::instance()->activeVehicle() &&
+                               aircraft->flightMode() == aircraft->pauseFlightMode()) {
+                        aircraft->startMission();
+                    }
+                    timer->deleteLater();
+                },
+                Qt::SingleShotConnection);
+            _flightAltitudeUpdateTimer.clear();
+            const auto error = updateFlightWaypointAltitudes(plan, selectedWaypoints, altitude);
+            _flightAltitudeUpdateTimer = timer;
+            if (!error.isEmpty()) {
+                QGC::showAppMessage(error);
+                timer->deleteLater();
+            }
+        });
+        timer->start(60000);
+        vehicle->pauseVehicle();
+        return {};
     }
-    fact->setRawValue(altitude);
+    for (auto* item : items) {
+        item->altitude()->setRawValue(altitude);
+    }
     mission->sendToVehicle();
     return {};
 }

@@ -42,6 +42,7 @@ Rectangle {
     property alias  model:              repeater.model
     property bool   horizontal: false
     property bool   roundButtons: false
+    property bool   doubleClickActions: false
     property int    horizontalColumns: 0
     readonly property real roundButtonDiameter: Math.max(0, Math.min(ScreenTools.defaultFontPixelHeight * 3,
         _buttonWidth - ScreenTools.defaultFontPixelWidth * 1.4))
@@ -95,6 +96,7 @@ Rectangle {
                     width:              _root._buttonWidth - flickable.anchors.margins * 2
                     height:             _root.roundButtons ? ScreenTools.defaultFontPixelHeight * 4.7 : width
                     roundStyle:         _root.roundButtons
+                    doubleClickRequired: _root.doubleClickActions
                     radius:             ScreenTools.defaultFontPixelWidth / 2
                     fontPointSize:      _root.roundButtons ? Math.min(_root.fontSize, ScreenTools.smallFontPointSize) : _root.fontSize
                     toolStripAction:    modelData

@@ -81,7 +81,8 @@ public:
     Q_INVOKABLE bool alignRouteAround(const QGeoCoordinate& center, int fromIndex, int toIndex, double targetBearing);
     Q_INVOKABLE bool insertRelativeWaypoint(int referenceIndex, int afterIndex, double angle, double distance,
                                             bool interiorAngle);
-    Q_INVOKABLE bool setRelativeEndpoint(int referenceIndex, double bearing, double distance, bool landing);
+    Q_INVOKABLE bool setRelativeEndpoint(int referenceIndex, double angle, double distance, bool landing,
+                                         bool interiorAngle = false);
     Q_INVOKABLE void beginEdit();
     Q_INVOKABLE void endEdit();
     Q_INVOKABLE bool undo();

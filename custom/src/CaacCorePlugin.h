@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QtCore/QHash>
+#include <QtCore/QPointer>
 #include <QtCore/QVariantMap>
 #include <QtPositioning/QGeoCoordinate>
 
@@ -9,6 +10,7 @@
 class CaacFlightDistance;
 class CaacSimulationController;
 class QQmlAbstractUrlInterceptor;
+class QTimer;
 class Vehicle;
 
 class CaacCorePlugin : public QGCCorePlugin
@@ -28,6 +30,11 @@ public:
     explicit CaacCorePlugin(QObject* parent = nullptr);
     static QGCCorePlugin* instance();
     void init() override;
+    void adjustSettingMetaData(const QString& settingsGroup, FactMetaData& metaData, bool& userVisible) override;
+
+    bool showInitialSetupVehiclePreferences() const override { return false; }
+
+    bool showInitialSetupMeasurementUnits() const override { return false; }
     CaacFlightDistance* flightDistance() const;
 
     CaacSimulationController* simulation() const { return _simulation; }
@@ -36,6 +43,8 @@ public:
     Q_INVOKABLE void resetFlightDistanceForSimulationRestart(Vehicle* vehicle);
     Q_INVOKABLE QString updateFlightWaypointAltitude(PlanMasterController* controller, QObject* waypoint,
                                                      double altitude);
+    Q_INVOKABLE QString updateFlightWaypointAltitudes(PlanMasterController* controller, const QVariantList& waypoints,
+                                                      double altitude);
 
     bool doubleClickAddWaypoint() const { return _doubleClickAddWaypoint; }
 
@@ -75,4 +84,5 @@ private:
     bool _doubleClickAddWaypoint = true;
     bool _dragWaypoints = true;
     CaacSimulationController* _simulation = nullptr;
+    QPointer<QTimer> _flightAltitudeUpdateTimer;
 };

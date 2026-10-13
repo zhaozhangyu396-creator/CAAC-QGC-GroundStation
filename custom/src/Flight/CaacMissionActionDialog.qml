@@ -10,6 +10,7 @@ import QGroundControl.Controls
 QGCPopupDialog {
     id: root
     property bool editAltitude: false
+    property bool editCurrentAltitude: false
     readonly property var _vehicle: QGroundControl.multiVehicleManager.activeVehicle
     property var _openedVehicle: null
     readonly property var _master: globals.planMasterControllerFlyView
@@ -24,6 +25,7 @@ QGCPopupDialog {
         _openedVehicle = _vehicle
         // Freeze the choices so a downloaded replacement mission cannot retarget an open dialog.
         const choices = []
+        if (editAltitude) { choices.push({all: true, label: qsTr("All waypoints")}) }
         if (_items) {
             for (let i = 1; i < _items.count; ++i) {
                 const item = _items.get(i)
@@ -42,15 +44,42 @@ QGCPopupDialog {
             return false
         }
         const choice = _choices[waypoint.currentIndex]
-        for (let i = 1; i < _items.count; ++i) {
-            if (_items.get(i) === choice.item && choice.item.sequenceNumber === choice.sequence) {
-                return true
+        const selected = choice.all ? _choices.filter(entry => !entry.all) : [choice]
+        if (!selected.length) { return false }
+        for (const entry of selected) {
+            let found = false
+            for (let i = 1; i < _items.count; ++i) {
+                if (_items.get(i) === entry.item && entry.item.sequenceNumber === entry.sequence) {
+                    found = true
+                    break
+                }
             }
+            if (!found) { return false }
         }
-        return false
+        return true
     }
 
     onAccepted: {
+        preventClose = false
+        if (editCurrentAltitude) {
+            const height = altitude.text.trim().length ? Number(altitude.text) : NaN
+            const settings = QGroundControl.settingsManager.flyViewSettings
+            if (!_vehicle || _vehicle !== _openedVehicle || !globals.guidedControllerFlyView.showChangeAlt) {
+                _error = qsTr("Aircraft or mission changed. Close this window and select again.")
+                preventClose = true
+                return
+            }
+            if (!isFinite(height) || height < settings.guidedMinimumAltitude.rawValue
+                    || height > settings.guidedMaximumAltitude.rawValue) {
+                _error = qsTr("Altitude must be between %1 and %2 metres.")
+                    .arg(settings.guidedMinimumAltitude.rawValue).arg(settings.guidedMaximumAltitude.rawValue)
+                preventClose = true
+                return
+            }
+            globals.guidedControllerFlyView.closeAll()
+            _vehicle.guidedModeChangeAltitude(height - _vehicle.altitudeRelative.rawValue, false)
+            return
+        }
         if (!selectedItemIsCurrent()) {
             _error = qsTr("Aircraft or mission changed. Close this window and select again.")
             preventClose = true
@@ -58,7 +87,8 @@ QGCPopupDialog {
         }
         const choice = _choices[waypoint.currentIndex]
         if (editAltitude) {
-            _error = QGroundControl.corePlugin.updateFlightWaypointAltitude(_master, choice.item,
+            const selected = choice.all ? _choices.filter(entry => !entry.all) : [choice]
+            _error = QGroundControl.corePlugin.updateFlightWaypointAltitudes(_master, selected.map(entry => entry.item),
                 altitude.text.trim().length ? Number(altitude.text) : NaN)
             preventClose = _error.length > 0
         } else {
@@ -69,24 +99,25 @@ QGCPopupDialog {
                 return
             }
             guided.closeAll()
-            guided.confirmAction(guided.actionSetWaypoint, choice.sequence)
+            guided.executeAction(guided.actionSetWaypoint, choice.sequence)
         }
     }
 
     ColumnLayout {
         width: Math.min(root.maxContentAvailableWidth, ScreenTools.defaultFontPixelWidth * 55)
         spacing: ScreenTools.defaultFontPixelHeight * 0.5
-        QGCLabel { text: qsTr("Target waypoint") }
+        QGCLabel { text: qsTr("Target waypoint"); visible: !root.editCurrentAltitude }
         QGCComboBox {
             id: waypoint
             objectName: "caacFlightWaypointChoice"
             Layout.fillWidth: true
+            visible: !root.editCurrentAltitude
             model: root._choices
             textRole: "label"
         }
         QGCLabel {
             visible: root.editAltitude
-            text: qsTr("Waypoint altitude (m)")
+            text: root.editCurrentAltitude ? qsTr("Current flight altitude (m)") : qsTr("Waypoint altitude (m)")
         }
         QGCTextField {
             id: altitude
@@ -94,34 +125,32 @@ QGCPopupDialog {
             Layout.fillWidth: true
             visible: root.editAltitude
             validator: DoubleValidator { locale: "C" }
-            text: waypoint.currentIndex >= 0 && waypoint.currentIndex < root._choices.length
-                ? root._choices[waypoint.currentIndex].altitude.toString() : ""
+            text: root.editCurrentAltitude && root._vehicle ? root._vehicle.altitudeRelative.rawValue.toString()
+                : waypoint.currentIndex >= 0 && waypoint.currentIndex < root._choices.length
+                ? (root._choices[waypoint.currentIndex].all ? "" : root._choices[waypoint.currentIndex].altitude.toString()) : ""
         }
         QGCLabel {
             Layout.fillWidth: true
-            visible: root.editAltitude
+            visible: root.editAltitude && !root.editCurrentAltitude
             wrapMode: Text.WordWrap
             text: qsTr("Keeps the waypoint's altitude frame. Pause the mission before saving; saving uploads the complete mission to the aircraft.")
         }
         QGCButton {
             objectName: "caacChangeFlightAltitude"
             Layout.fillWidth: true
-            visible: root.editAltitude
+            visible: root.editAltitude && !root.editCurrentAltitude
             text: qsTr("Change current flight altitude")
             enabled: root._vehicle && root._vehicle === root._openedVehicle
                 && globals.guidedControllerFlyView.showChangeAlt
             onClicked: {
                 if (enabled) {
-                    root.close()
-                    const guided = globals.guidedControllerFlyView
-                    guided.closeAll()
-                    guided.confirmAction(guided.actionChangeAlt)
+                    root.editCurrentAltitude = true
                 }
             }
         }
         QGCLabel {
             Layout.fillWidth: true
-            visible: root._choices.length === 0 || root._error.length > 0
+            visible: (!root.editCurrentAltitude && root._choices.length === 0) || root._error.length > 0
             wrapMode: Text.WordWrap
             text: root._error || qsTr("No downloaded waypoints are available.")
         }

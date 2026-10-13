@@ -191,14 +191,31 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     auto* relativeReference = findVisibleItem(_rootItem, QStringLiteral("caacRelativeReference"));
     auto* relativeDistance = findVisibleItem(_rootItem, QStringLiteral("caacRelativeDistance"));
     QVERIFY(relativeTarget && relativeReference && relativeDistance);
+    auto* relativeAngleType = findVisibleItem(_rootItem, QStringLiteral("caacRelativeAngleType"));
+    auto* relativeAngle = findVisibleItem(_rootItem, QStringLiteral("caacRelativeAngle"));
+    QVERIFY(relativeAngleType && relativeAngle);
     const auto beforeEndpoint = master->saveToJson();
-    relativeTarget->setProperty("currentIndex", 1);
-    relativeReference->setProperty("currentIndex", 1);
-    relativeDistance->setProperty("text", QStringLiteral("25"));
-    QVERIFY(clickButton(QStringLiteral("caacRelativeAdd")));
-    QVERIFY(master->saveToJson() != beforeEndpoint);
-    QVERIFY(clickButton(QStringLiteral("caacUndo")));
-    QCOMPARE(master->saveToJson(), beforeEndpoint);
+    for (int targetIndex : {1, 2}) {
+        QVERIFY(relativeAngleType->setProperty("currentIndex", 1));
+        QVERIFY(relativeTarget->setProperty("currentIndex", targetIndex));
+        QVERIFY(QMetaObject::invokeMethod(relativeTarget, "activated", Q_ARG(int, targetIndex)));
+        QVERIFY(relativeAngleType->isEnabled());
+        QCOMPARE(relativeAngleType->property("currentIndex").toInt(), 1);
+        QVERIFY(relativeReference->setProperty("currentIndex", 1));
+        QVERIFY(relativeAngle->setProperty("text", QStringLiteral("90")));
+        QVERIFY(relativeDistance->setProperty("text", QStringLiteral("25")));
+        QVERIFY(clickButton(QStringLiteral("caacRelativeAdd")));
+        QVERIFY(master->saveToJson() != beforeEndpoint);
+        const auto endpoint =
+            targetIndex == 1
+                ? mission->plannedHomePosition()
+                : mission->visualItems()->value<SimpleMissionItem*>(mission->visualItems()->count() - 1)->coordinate();
+        const auto reference = mission->visualItems()->value<SimpleMissionItem*>(1)->coordinate();
+        QVERIFY(std::abs(QGCGeo::geodesicDistance(reference, endpoint) - 25) < 0.01);
+        QVERIFY(std::abs(std::remainder(QGCGeo::geodesicAzimuth(reference, endpoint), 360)) < 0.02);
+        QVERIFY(clickButton(QStringLiteral("caacUndo")));
+        QCOMPARE(master->saveToJson(), beforeEndpoint);
+    }
     QVERIFY(clickButton(QStringLiteral("caacTemplateEditorButton")));
     auto* bearing =
         findVisibleItemScrolled(QStringLiteral("caacTemplateBearing"), QStringLiteral("caacTemplateScroller"));

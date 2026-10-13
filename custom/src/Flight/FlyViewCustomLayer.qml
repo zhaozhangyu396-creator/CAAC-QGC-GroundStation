@@ -33,6 +33,13 @@ Item {
     }
 
     QGCPalette { id: caacPalette; colorGroupEnabled: true }
+    function selectPanel(button) {
+        if (button.checked) {
+            for (const panelButton of [missionButton, dataButton, mapButton]) {
+                if (panelButton !== button) { panelButton.checked = false }
+            }
+        }
+    }
 
     component RoundTool: QGCButton {
         id: button
@@ -104,22 +111,6 @@ Item {
         }
     }
 
-    QGCLabel {
-        objectName: "caacSimulationBanner"
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.horizontalCenterOffset: -parent.width / 4
-        anchors.top: parent.top
-        anchors.topMargin: root.occluders ? root.occluders.toolStrip.y + root.occluders.toolStrip.height + root._margin : root._margin
-        width: parent.width / 3
-        wrapMode: Text.WordWrap
-        horizontalAlignment: Text.AlignHCenter
-        visible: root._corePlugin.simulation.active
-        text: qsTr("SIMULATION FLIGHT")
-        font.pointSize: ScreenTools.menuFontPointSize
-        font.bold: true
-        color: caacPalette.colorYellowGreen
-    }
-
     CaacWaypointOverlap {
         visible: !root._simulationEmergency
         anchors.fill: parent
@@ -188,6 +179,7 @@ Item {
                 text: qsTr("Mission details")
                 toolIcon: "mission"
                 checkable: true
+                onCheckedChanged: root.selectPanel(this)
             }
             Item { Layout.fillWidth: true }
             RoundTool {
@@ -195,6 +187,7 @@ Item {
                 objectName: "caacFlightDataButton"
                 text: qsTr("Flight data")
                 checkable: true
+                onCheckedChanged: root.selectPanel(this)
             }
             Item { Layout.fillWidth: true }
             RoundTool {
@@ -203,6 +196,7 @@ Item {
                 text: qsTr("Map settings")
                 toolIcon: "map"
                 checkable: true
+                onCheckedChanged: root.selectPanel(this)
             }
             Item { Layout.fillWidth: true }
             RoundTool {

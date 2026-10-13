@@ -20,6 +20,7 @@ Item {
     property var guidedValueSlider
     property var fwdFlightGotoMapCircle
     property var orbitMapCircle
+    property bool automaticMissionPopupsAllowed: true
 
     readonly property string emergencyStopTitle:            qsTr("EMERGENCY STOP")
     readonly property string armTitle:                      qsTr("Arm")
@@ -280,7 +281,7 @@ Item {
             console.log("showStartMission", showStartMission)
         }
         _outputState()
-        if (showStartMission &&
+        if (showStartMission && automaticMissionPopupsAllowed &&
             _flyViewSettings.enableAutomaticMissionPopups.rawValue
                 && !(QGroundControl.corePlugin.simulation && QGroundControl.corePlugin.simulation.active
                     && QGroundControl.corePlugin.simulation.vehicle === _activeVehicle)) {
@@ -292,7 +293,7 @@ Item {
             console.log("showContinueMission", showContinueMission)
         }
         _outputState()
-        if (showContinueMission &&
+        if (showContinueMission && automaticMissionPopupsAllowed &&
             _flyViewSettings.enableAutomaticMissionPopups.rawValue
                 && !(QGroundControl.corePlugin.simulation && QGroundControl.corePlugin.simulation.active
                     && QGroundControl.corePlugin.simulation.vehicle === _activeVehicle)) {

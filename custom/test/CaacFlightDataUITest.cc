@@ -34,11 +34,15 @@ void CaacFlightDataUITest::_liveFlightData()
                        QCoreApplication::translate("CaacMissionDetails", "Unavailable"),
                        QStringLiteral("no target without aircraft")));
     QVERIFY(clickButton(QStringLiteral("caacFlightDataButton")));
-    QVERIFY(
-        verifyVisibility(QStringLiteral("caacMissionDetailsPanel"), true, QStringLiteral("panels stay independent")));
+    QVERIFY(verifyVisibility(QStringLiteral("caacMissionDetailsPanel"), false, QStringLiteral("mission panel closed")));
+    QVERIFY(verifyVisibility(QStringLiteral("caacFlyDataPanel"), true, QStringLiteral("data panel opened")));
     QVERIFY(clickButton(QStringLiteral("caacMissionDetailsButton")));
+    QVERIFY(verifyVisibility(QStringLiteral("caacFlyDataPanel"), false, QStringLiteral("data panel closed")));
+    QVERIFY(clickButton(QStringLiteral("caacMissionDetailsButton")));
+    QVERIFY(verifyVisibility(QStringLiteral("caacMissionDetailsPanel"), false, QStringLiteral("toggle current panel")));
     QVERIFY(clickButton(QStringLiteral("caacMapSettingsButton")));
-    QVERIFY(clickButton(QStringLiteral("caacFlightDataButton")));
+    QVERIFY(verifyVisibility(QStringLiteral("caacMissionDetailsPanel"), false, QStringLiteral("only map panel")));
+    QVERIFY(verifyVisibility(QStringLiteral("caacFlyDataPanel"), false, QStringLiteral("only map panel")));
     auto* mapSettings = findVisibleItem(_rootItem, QStringLiteral("caacMapSettingsPanel"));
     QVERIFY(mapSettings);
     auto* addCombo = findVisibleItem(_rootItem, QStringLiteral("caacMapDoubleClickAdd"));

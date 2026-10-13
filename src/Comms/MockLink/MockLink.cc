@@ -926,7 +926,15 @@ void MockLink::_sendSysStatus()
 
 void MockLink::_sendBatteryStatus()
 {
-    if (_battery1PctRemaining > 1) {
+    if (_caacSimulation) {
+        _battery1PctRemaining = 100;
+        _battery2PctRemaining = 100;
+        _battery1TimeRemaining = _batteryMaxTimeRemaining;
+        _battery2TimeRemaining = _batteryMaxTimeRemaining;
+        _battery1ChargeState = MAV_BATTERY_CHARGE_STATE_OK;
+        _battery2ChargeState = MAV_BATTERY_CHARGE_STATE_OK;
+    }
+    if (!_caacSimulation && _battery1PctRemaining > 1) {
         _battery1PctRemaining = static_cast<int8_t>(100 - (_runningTime.elapsed() / 1000));
         _battery1TimeRemaining = static_cast<double>(_batteryMaxTimeRemaining) * (static_cast<double>(_battery1PctRemaining) / 100.0);
         if (_battery1PctRemaining > 50) {
@@ -940,7 +948,7 @@ void MockLink::_sendBatteryStatus()
         }
     }
 
-    if (_battery2PctRemaining > 1) {
+    if (!_caacSimulation && _battery2PctRemaining > 1) {
         _battery2PctRemaining = static_cast<int8_t>(100 - ((_runningTime.elapsed() / 1000) / 2));
         _battery2TimeRemaining = static_cast<double>(_batteryMaxTimeRemaining) * (static_cast<double>(_battery2PctRemaining) / 100.0);
         if (_battery2PctRemaining > 50) {

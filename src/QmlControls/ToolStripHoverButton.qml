@@ -25,6 +25,7 @@ Button {
     property alias  contentWidth:       innerText.contentWidth
 
     property bool roundStyle: false
+    property bool doubleClickRequired: false
     readonly property real roundDiameter: Math.min(ScreenTools.defaultFontPixelHeight * 3, width - contentMargins * 2)
     property bool forceImageScale11: false
     property real imageScale:        forceImageScale11 && (text == "") ? 0.8 : 0.6
@@ -37,7 +38,7 @@ Button {
 
     onCheckedChanged: { if (toolStripAction) toolStripAction.checked = checked }
 
-    onClicked: {
+    function triggerAction() {
         if (mainWindow.allowViewSwitch()) {
             dropPanel.hide()
             if (!toolStripAction.dropPanelComponent) {
@@ -52,6 +53,9 @@ Button {
             checked = !checked
         }
     }
+
+    onClicked: { if (!doubleClickRequired) { triggerAction() } }
+    onDoubleClicked: { if (doubleClickRequired) { triggerAction() } }
 
     QGCPalette { id: qgcPal; colorGroupEnabled: control.roundStyle || control.enabled }
 

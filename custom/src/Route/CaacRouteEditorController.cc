@@ -5,6 +5,7 @@
 #include <limits>
 
 #include <QtCore/QEvent>
+#include <QtCore/QJsonArray>
 #include <QtCore/QScopeGuard>
 
 #include "CaacRouteGeometry.h"
@@ -809,7 +810,8 @@ bool CaacRouteEditorController::insertRelativeWaypoint(int referenceIndex, int a
     return true;
 }
 
-bool CaacRouteEditorController::setRelativeEndpoint(int referenceIndex, double bearing, double distance, bool landing)
+bool CaacRouteEditorController::setRelativeEndpoint(int referenceIndex, double angle, double distance, bool landing,
+                                                    bool interiorAngle)
 {
     if (!_canChangeOrder()) {
         return false;
@@ -824,9 +826,22 @@ bool CaacRouteEditorController::setRelativeEndpoint(int referenceIndex, double b
                                               reference->isStandaloneCoordinate()))) {
         return _fail(tr("Select a simple coordinate reference point."));
     }
-    const auto coordinate = distance == 0 && std::isfinite(bearing) && reference->coordinate().isValid()
-                                ? std::optional<QGeoCoordinate>(reference->coordinate())
-                                : CaacRouteGeometry::relativePoint(reference->coordinate(), bearing, distance);
+    std::optional<QGeoCoordinate> coordinate;
+    if (interiorAngle) {
+        auto* previous = _previousCoordinateItem(referenceIndex);
+        if (!previous) {
+            return _fail(tr("Interior angle requires an incoming leg; planned home alone has none."));
+        }
+        coordinate = CaacRouteGeometry::interiorAnglePoint(previous->coordinate(), reference->coordinate(), angle,
+                                                           distance == 0 ? 1 : distance);
+        if (coordinate && distance == 0) {
+            coordinate = reference->coordinate();
+        }
+    } else {
+        coordinate = distance == 0 && std::isfinite(angle) && reference->coordinate().isValid()
+                         ? std::optional<QGeoCoordinate>(reference->coordinate())
+                         : CaacRouteGeometry::relativePoint(reference->coordinate(), angle, distance);
+    }
     if (!coordinate) {
         return _fail(tr("Check the reference point, angle and positive distance in metres."));
     }
@@ -1108,6 +1123,12 @@ bool CaacRouteEditorController::_restore(int index)
     QString error;
     if (!_missionController()->load(state.mission, error)) {
         return _fail(tr("Unable to restore the route: %1").arg(error));
+    }
+    const auto savedHome = state.mission.value(QStringLiteral("plannedHomePosition")).toArray();
+    auto* home = _missionController()->visualItems()->value<MissionSettingsItem*>(0);
+    // Loading a takeoff coordinate can replace the home altitude with an unset coordinate altitude.
+    if (home && savedHome.size() == 3 && savedHome.at(2).isDouble()) {
+        home->plannedHomePositionAltitude()->setRawValue(savedHome.at(2).toDouble());
     }
     _setCenter(state.center);
     _masterController->setProperty("caacSimulationSettings", state.simulation);

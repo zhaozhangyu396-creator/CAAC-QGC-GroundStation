@@ -19,9 +19,18 @@ ToolStripActionList {
     property Component _missionDialog: Component { CaacMissionActionDialog { } }
     property var _pendingVehicle: null
     property bool _pendingAltitude: false
+    on_GuidedChanged: disableAutomaticConfirmations()
+    Component.onCompleted: disableAutomaticConfirmations()
     on_VehicleChanged: {
         _pendingVehicle = null
         if (root._guided && root._guided.confirmDialog && root._guided.guidedValueSlider) { root._guided.closeAll() }
+    }
+
+    function disableAutomaticConfirmations() {
+        if (_guided) {
+            _guided.automaticMissionPopupsAllowed = false
+            if (_guided.confirmDialog && _guided.guidedValueSlider) { _guided.closeAll() }
+        }
     }
 
     function openMissionDialog(editAltitude) {
@@ -61,15 +70,21 @@ ToolStripActionList {
             onTriggered: {
                 if (enabled) {
                     root._guided.closeAll()
-                    root._guided.confirmAction(root._guided.showContinueMission
-                        ? root._guided.actionContinueMission : root._guided.actionStartMission)
+                    root._vehicle.startMission()
                 }
             }
         },
-        GuidedActionPause {
+        ToolStripAction {
             objectName: "caacPauseMission"
             text: qsTr("Pause route")
-            visible: true
+            iconSource: "/res/pause-mission.svg"
+            enabled: root._vehicle && root._guided.showPause
+            onTriggered: {
+                if (enabled) {
+                    root._guided.closeAll()
+                    root._vehicle.pauseVehicle()
+                }
+            }
         },
         ToolStripAction {
             objectName: "caacTakeoff"
@@ -80,7 +95,9 @@ ToolStripActionList {
                 if (enabled) {
                     root._guided.closeAll()
                     if (root._simulatedVehicle) { root._vehicle.guidedModeTakeoff(root._simulation.takeoffHeight) }
-                    else { root._guided.confirmAction(root._guided.actionTakeoff) }
+                    else if (root._vehicle.supports.guidedTakeoffWithAltitude) {
+                        root._vehicle.guidedModeTakeoff(root._vehicle.minimumTakeoffAltitudeMeters())
+                    } else { root._vehicle.startTakeoff() }
                 }
             }
         },
@@ -92,8 +109,7 @@ ToolStripActionList {
             onTriggered: {
                 if (enabled) {
                     root._guided.closeAll()
-                    if (root._simulatedVehicle) { root._vehicle.guidedModeRTL(false) }
-                    else { root._guided.confirmAction(root._guided.actionRTL) }
+                    root._vehicle.guidedModeRTL(false)
                 }
             }
         },
