@@ -22,6 +22,7 @@ Rectangle {
     property bool dragEnabled: true
     readonly property bool missionItemDragger: true
     property var gestureTarget: itemDragger
+    property int gesturePriority: -1
     property bool _externalDragActive: false
 
     signal clicked
@@ -75,8 +76,7 @@ Rectangle {
             itemDragger.gestureTarget = itemDragger
             if (!itemDragger.editOnRightClick || !itemDragger.itemIndicator) { return }
             const point = itemDrag.mapToItem(itemDragger.mapControl, Qt.point(mouse.x, mouse.y))
-            const ownCenter = Qt.point(itemDragger.x + itemDragger._touchMarginHorizontal + itemDragger.itemIndicator.anchorPoint.x,
-                                       itemDragger.y + itemDragger._touchMarginVertical + itemDragger.itemIndicator.anchorPoint.y)
+            const ownCenter = itemDragger.mapControl.fromCoordinate(itemDragger.itemCoordinate, false)
             let nearestDistance = Math.pow(point.x - ownCenter.x, 2) + Math.pow(point.y - ownCenter.y, 2)
             // Expanded hit areas must not intercept a nearer visible marker.
             for (const other of itemDragger.mapControl.children) {
@@ -84,10 +84,10 @@ Rectangle {
                     || point.x < other.x || point.y < other.y || point.x > other.x + other.width || point.y > other.y + other.height) {
                     continue
                 }
-                const center = Qt.point(other.x + other._touchMarginHorizontal + other.itemIndicator.anchorPoint.x,
-                                        other.y + other._touchMarginVertical + other.itemIndicator.anchorPoint.y)
+                const center = itemDragger.mapControl.fromCoordinate(other.itemCoordinate, false)
                 const distance = Math.pow(point.x - center.x, 2) + Math.pow(point.y - center.y, 2)
-                if (distance + 0.01 < nearestDistance) {
+                if (distance + 0.01 < nearestDistance || (Math.abs(distance - nearestDistance) <= 0.01
+                    && other.gesturePriority > itemDragger.gestureTarget.gesturePriority)) {
                     nearestDistance = distance
                     itemDragger.gestureTarget = other
                 }

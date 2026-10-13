@@ -128,6 +128,7 @@ Item {
 
         MissionItemIndicatorDrag {
             objectName: "missionItemDrag_" + control._missionItem.sequenceNumber
+            gesturePriority: control._missionItem.sequenceNumber
             mapControl: control.map
             itemIndicator: itemVisualLoader.item
             itemCoordinate: _missionItem.coordinate

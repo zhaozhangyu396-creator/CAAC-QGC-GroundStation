@@ -16,7 +16,7 @@ QGCPopupDialog {
 
     property var routeController: null
     property var editor: null
-    property int operation: 0
+    property int operation: 1
     readonly property var _points: routeController ? routeController.coordinateItems : []
     property string _inputError: ""
 
@@ -54,9 +54,9 @@ QGCPopupDialog {
             objectName: "caacGeometryOperation"
             Layout.fillWidth: true
             visible: root.operation !== 2
-            model: [qsTr("Rotate by angle"), qsTr("Align two points")]
-            currentIndex: root.operation === 2 ? -1 : root.operation
-            onActivated: root.operation = currentIndex
+            model: [qsTr("Align two points"), qsTr("Rotate by angle")]
+            currentIndex: root.operation === 2 ? -1 : root.operation === 1 ? 0 : 1
+            onActivated: root.operation = currentIndex === 0 ? 1 : 0
         }
 
         GridLayout {

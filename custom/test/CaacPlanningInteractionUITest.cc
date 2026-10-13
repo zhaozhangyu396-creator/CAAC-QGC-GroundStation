@@ -27,7 +27,90 @@ class CaacPlanningInteractionUITest : public QmlUITestBase
 private slots:
     void _pointMenusAndOrientation();
     void _liveRoutePreview();
+    void _homeRelativeEditing();
 };
+
+void CaacPlanningInteractionUITest::_homeRelativeEditing()
+{
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewPlan")));
+    auto* plan = findVisibleItem(_rootItem, QStringLiteral("mainView_plan"));
+    auto* map = findVisibleItem(_rootItem, QStringLiteral("planView_map"));
+    auto* panel = findVisibleItem(_rootItem, QStringLiteral("caacRouteEditor"));
+    QVERIFY(plan && map && panel);
+    auto* master = plan->property("_planMasterController").value<PlanMasterController*>();
+    auto* editor = panel->property("routeController").value<CaacRouteEditorController*>();
+    QVERIFY(master && editor);
+    auto* mission = master->missionController();
+    const QGeoCoordinate home(30, 120, 20);
+    mission->setHomePosition(home);
+    const auto reference = QGCGeo::geodesicDestination(home, 90, 100);
+    QVERIFY(editor->addWaypoint(reference));
+    QVERIFY(editor->addWaypoint(QGCGeo::geodesicDestination(home, 180, 130)));
+    const auto original = master->saveToJson();
+    map->setProperty("zoomLevel", 18);
+    const auto midpoint = QGCGeo::geodesicDestination(home, 90, 50);
+    map->setProperty("center", QVariant::fromValue(midpoint));
+    auto* split = findVisibleItem(_rootItem, QStringLiteral("caacHomeSplitButton"), TestTimeout::mediumMs());
+    QVERIFY(split);
+    QTRY_VERIFY_WITH_TIMEOUT(QLineF(split->mapToScene(QPointF(split->width() / 2, split->height() / 2)),
+                                    map->mapToScene(QPointF(map->width() / 2, map->height() / 2)))
+                                     .length() < 1,
+                             TestTimeout::mediumMs());
+    QVERIFY(clickButton(QStringLiteral("caacHomeSplitButton")));
+    QTRY_COMPARE_WITH_TIMEOUT(mission->visualItems()->count(), 4, TestTimeout::mediumMs());
+    auto* inserted = mission->visualItems()->value<SimpleMissionItem*>(1);
+    QVERIFY(inserted && inserted->command() == MAV_CMD_NAV_WAYPOINT);
+    QVERIFY(QGCGeo::geodesicDistance(inserted->coordinate(), midpoint) < 0.01);
+    QVERIFY(QGCGeo::geodesicDistance(mission->visualItems()->value<SimpleMissionItem*>(2)->coordinate(), reference) <
+            0.01);
+    QCOMPARE(mission->plannedHomePosition().altitude(), 20.0);
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QCOMPARE(master->saveToJson(), original);
+    map->setProperty("center", QVariant::fromValue(home));
+    auto* dragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_0"), TestTimeout::mediumMs());
+    QVERIFY(dragger);
+    const auto position = [&]() { return dragger->mapToScene(QPointF(dragger->width() / 2, dragger->height() / 2)); };
+    QTRY_VERIFY_WITH_TIMEOUT(
+        QLineF(position(), map->mapToScene(QPointF(map->width() / 2, map->height() / 2))).length() < 1,
+        TestTimeout::mediumMs());
+    QVERIFY(!_window->grabWindow().isNull());
+    QTest::mouseClick(_window, Qt::LeftButton, Qt::NoModifier, position().toPoint());
+    auto* combo = findVisibleItem(_rootItem, QStringLiteral("caacHomeRelativeReference"));
+    auto* bearing = findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickBearing"));
+    auto* distance = findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickDistance"));
+    QVERIFY(combo && bearing && distance);
+    QCOMPARE(combo->property("count").toInt(), 2);
+    QCOMPARE(combo->property("currentIndex").toInt(), 0);
+    QVERIFY(std::abs(distance->property("text").toString().toDouble() - 100) < 0.01);
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickDelete"), 0));
+    combo->setProperty("currentIndex", 1);
+    QVERIFY(QMetaObject::invokeMethod(combo, "activated", Q_ARG(int, 1)));
+    QVERIFY(std::abs(distance->property("text").toString().toDouble() - 130) < 0.01);
+    QCOMPARE(master->saveToJson(), original);
+    combo->setProperty("currentIndex", 0);
+    QVERIFY(QMetaObject::invokeMethod(combo, "activated", Q_ARG(int, 0)));
+    QVERIFY(clickButton(QStringLiteral("caacWaypointFineTuning")));
+    _window->requestActivate();
+    QTRY_VERIFY_WITH_TIMEOUT(_window->isActive(), TestTimeout::mediumMs());
+    QTest::keyClick(_window, Qt::Key_Right);
+    QTRY_VERIFY_WITH_TIMEOUT(
+        std::abs(QGCGeo::geodesicDistance(reference, mission->plannedHomePosition()) - 100.01) < 0.001,
+        TestTimeout::mediumMs());
+    QCOMPARE(mission->plannedHomePosition().altitude(), 20.0);
+    bearing->setProperty("text", QStringLiteral("238"));
+    distance->setProperty("text", QStringLiteral("28.1"));
+    QVERIFY(clickButton(QStringLiteral("caacWaypointQuickConfirm")));
+    QVERIFY(QGCGeo::geodesicDistance(mission->plannedHomePosition(),
+                                     QGCGeo::geodesicDestination(reference, 238, 28.1)) < 0.01);
+    QCOMPARE(mission->plannedHomePosition().altitude(), 20.0);
+    QCOMPARE(mission->visualItems()->value<SimpleMissionItem*>(1)->coordinate().latitude(), reference.latitude());
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QCOMPARE(master->saveToJson(), original);
+}
 
 void CaacPlanningInteractionUITest::_liveRoutePreview()
 {
@@ -224,7 +307,11 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     const auto labels = overlap->property("text").toString();
     QVERIFY(labels.contains(QStringLiteral("1")) && labels.contains(QStringLiteral("2")));
     QVERIFY(!labels.contains(QCoreApplication::translate("CaacWaypointOverlap", "Takeoff point")));
-    QTest::mouseClick(_window, Qt::LeftButton, Qt::NoModifier, markerPosition().toPoint());
+    QTest::mousePress(_window, Qt::LeftButton, Qt::NoModifier, markerPosition().toPoint());
+    auto* waypointGrabber = _window->mouseGrabberItem();
+    QVERIFY(waypointGrabber);
+    QCOMPARE(waypointGrabber->parentItem()->property("gestureTarget").value<QObject*>(), dragger);
+    QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, markerPosition().toPoint());
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickBearing")));
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickDistance")));
     auto* popup = findVisibleItem(_rootItem, QStringLiteral("caacWaypointPopupContent"));

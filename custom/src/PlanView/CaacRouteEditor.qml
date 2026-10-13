@@ -469,7 +469,7 @@ Column {
                 heightFactor: 0.25
                 leftPadding: ScreenTools.defaultFontPixelWidth
                 rightPadding: leftPadding
-                onClicked: root.openGeometry(0)
+                onClicked: root.openGeometry(1)
             }
             QGCButton {
                 objectName: "caacRelativePoint"

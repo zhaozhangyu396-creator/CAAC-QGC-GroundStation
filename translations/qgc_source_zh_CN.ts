@@ -24850,6 +24850,18 @@ If a vehicle still has this key configured, you will no longer be able to commun
 <context>
     <name>FlyViewCustomLayer</name>
     <message>
+        <source>Altitude</source>
+        <translation>高度</translation>
+    </message>
+    <message>
+        <source>Speed</source>
+        <translation>速度</translation>
+    </message>
+    <message>
+        <source>Heading</source>
+        <translation>航向角</translation>
+    </message>
+    <message>
       <source>Mission details</source>
       <translation>任务详情</translation>
     </message>
@@ -26046,6 +26058,10 @@ altitude</source>
 </context>
 <context>
     <name>CaacWaypointPopup</name>
+    <message>
+        <source>Relative waypoint</source>
+        <translation>相对航点</translation>
+    </message>
     <message>
         <source>Bearing</source>
         <translation>方位角</translation>

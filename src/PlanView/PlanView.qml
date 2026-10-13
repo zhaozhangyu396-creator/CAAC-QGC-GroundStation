@@ -361,6 +361,53 @@ Item {
                 }
             }
 
+            MapQuickItem {
+                id: homeSplitItem
+                readonly property var points: rightPanel.routeController
+                    ? rightPanel.routeController.coordinateItems : []
+                readonly property var firstPoint: {
+                    for (const point of points) {
+                        if (point.index === 0) { continue }
+                        const item = _missionController.visualItems.get(point.index)
+                        if (item && item.command === 16) { return point }
+                        if (!item || !item.isTakeoffItem || point.coordinate.distanceTo(_missionController.plannedHomePosition) >= 0.01) {
+                            return null
+                        }
+                    }
+                    return null
+                }
+                readonly property var metrics: firstPoint
+                    ? QGroundControl.corePlugin.routeLegMetrics(_missionController.plannedHomePosition, firstPoint.coordinate) : ({})
+                readonly property real screenLegLength: {
+                    void editorMap.center
+                    void editorMap.zoomLevel
+                    if (!firstPoint) { return 0 }
+                    const from = editorMap.fromCoordinate(_missionController.plannedHomePosition, false)
+                    const to = editorMap.fromCoordinate(firstPoint.coordinate, false)
+                    return Math.hypot(to.x - from.x, to.y - from.y)
+                }
+                readonly property bool previewIncludesLeg: !rightPanel.simulationPreviewActive
+                    || (!!firstPoint && rightPanel.simulationPreviewSegments.some(segment =>
+                        segment.coordinate1.distanceTo(_missionController.plannedHomePosition) < 0.01
+                        && segment.coordinate2.distanceTo(firstPoint.coordinate) < 0.01))
+                coordinate: metrics.midpoint || QtPositioning.coordinate()
+                anchorPoint.x: sourceItem.width / 2
+                anchorPoint.y: sourceItem.height / 2
+                z: QGroundControl.zOrderWaypointLines + 1
+                visible: _editingLayer === _layerMission && !!firstPoint && previewIncludesLeg
+                    && screenLegLength > _missionItemIndicatorGroup.groupingDistance * 2
+                sourceItem: SplitIndicator {
+                    objectName: "caacHomeSplitButton"
+                    enabled: !_planMasterController.syncInProgress
+                    onClicked: {
+                        if (homeSplitItem.firstPoint && homeSplitItem.metrics.distance > 0) {
+                            rightPanel.routeController.insertRelativeWaypoint(0, homeSplitItem.firstPoint.index - 1,
+                                homeSplitItem.metrics.bearing, homeSplitItem.metrics.distance / 2, false)
+                        }
+                    }
+                }
+            }
+
             // UI for splitting the current segment
             MapQuickItem {
                 id: splitSegmentItem

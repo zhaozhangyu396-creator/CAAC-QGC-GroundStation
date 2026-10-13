@@ -129,17 +129,44 @@ Item {
         segments: root._missionController ? root._missionController.simpleFlightPathSegments : null
     }
 
-    CaacAttitudeInstrument {
-        objectName: "caacEmergencyAttitude"
+    ColumnLayout {
+        id: emergencyInstruments
         readonly property real sideInset: root.occluders
             ? root.occluders.toolStrip.x + root.occluders.toolStrip.width + root._margin : root._margin
         readonly property real availableWidth: Math.max(0, root.width - sideInset - root._margin)
         x: sideInset + (availableWidth - width) / 2
         y: (root.height - height) / 2
         width: Math.min(availableWidth, root.height * 0.7)
-        height: width
-        vehicle: root._vehicle
+        spacing: ScreenTools.defaultFontPixelHeight
         visible: root._simulationEmergency
+
+        CaacAttitudeInstrument {
+            objectName: "caacEmergencyAttitude"
+            Layout.fillWidth: true
+            Layout.preferredHeight: width
+            vehicle: root._vehicle
+        }
+        RowLayout {
+            Layout.alignment: Qt.AlignHCenter
+            Layout.fillWidth: true
+            spacing: ScreenTools.defaultFontPixelWidth * 2
+            Repeater {
+                model: [
+                    { key: "Altitude", label: qsTr("Altitude"), fact: root._vehicle ? root._vehicle.altitudeRelative : null },
+                    { key: "Speed", label: qsTr("Speed"), fact: root._vehicle ? root._vehicle.groundSpeed : null },
+                    { key: "Heading", label: qsTr("Heading"), fact: root._vehicle ? root._vehicle.heading : null }
+                ]
+                QGCLabel {
+                    required property var modelData
+                    objectName: "caacEmergency" + modelData.key + "Value"
+                    Layout.fillWidth: true
+                    horizontalAlignment: Text.AlignHCenter
+                    font.pointSize: ScreenTools.largeFontPointSize
+                    text: modelData.label + ": " + (modelData.fact && isFinite(Number(modelData.fact.rawValue))
+                        ? modelData.fact.valueString + " " + modelData.fact.units : "—")
+                }
+            }
+        }
     }
 
     QGCButton {

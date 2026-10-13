@@ -426,7 +426,11 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QVERIFY(waypointMoved);
     QVERIFY(dragValues);
     QVERIFY(feedbackChanged);
-    QTRY_VERIFY_WITH_TIMEOUT(legLabel->property("legText").toString() != initialLegText, TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(
+        findVisibleItem(_rootItem, QStringLiteral("caacRouteLegLabel_1"), 0) &&
+            findVisibleItem(_rootItem, QStringLiteral("caacRouteLegLabel_1"), 0)->property("legText").toString() !=
+                initialLegText,
+        TestTimeout::mediumMs());
     QTRY_VERIFY_WITH_TIMEOUT(!dragValues->isVisible(), TestTimeout::mediumMs());
     QCOMPARE(first->altitude()->rawValue().toDouble(), 123.45);
     QCOMPARE(mission->visualItems()->count(), 3);
@@ -513,6 +517,15 @@ void CaacRouteEditorUITest::_testMouseEditing()
     auto* rotationOperation = findVisibleItem(_rootItem, QStringLiteral("caacGeometryOperation"));
     QVERIFY(rotationOperation);
     QCOMPARE(rotationOperation->property("count").toInt(), 2);
+    QCOMPARE(rotationOperation->property("currentIndex").toInt(), 0);
+    QCOMPARE(rotationOperation->property("currentText").toString(),
+             QCoreApplication::translate("CaacGeometryDialog", "Align two points"));
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacAlignmentPointA")));
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacAlignmentBearing")));
+    QVERIFY(rotationOperation->setProperty("currentIndex", 1));
+    QVERIFY(QMetaObject::invokeMethod(rotationOperation, "activated", Q_ARG(int, 1)));
+    QCOMPARE(rotationOperation->property("currentText").toString(),
+             QCoreApplication::translate("CaacGeometryDialog", "Rotate by angle"));
     auto* rotationLatitude = findVisibleItem(_rootItem, QStringLiteral("caacRotationLatitude"));
     auto* rotationLongitude = findVisibleItem(_rootItem, QStringLiteral("caacRotationLongitude"));
     auto* rotationAngle = findVisibleItem(_rootItem, QStringLiteral("caacRotationAngle"));

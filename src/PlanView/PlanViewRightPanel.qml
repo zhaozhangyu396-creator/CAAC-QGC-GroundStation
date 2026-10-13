@@ -17,6 +17,10 @@ Item {
     readonly property bool showNativeEditor: !customEditor.enabled || !customEditor.editorItem || customEditor.editorItem.showMissionTree !== false
     readonly property bool simulationPreviewActive: customEditor.enabled && customEditor.editorItem
         && customEditor.editorItem.simulationPreviewActive === true
+    readonly property var routeController: customEditor.enabled && customEditor.editorItem
+        ? customEditor.editorItem.routeController || null : null
+    readonly property var simulationPreviewSegments: simulationPreviewActive
+        ? customEditor.editorItem.simulationPreviewSegments : []
     property var  _missionController: planMasterController.missionController
     property real _toolsMargin:       ScreenTools.defaultFontPixelWidth * 0.75
 

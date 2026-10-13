@@ -13,9 +13,24 @@ Popup {
     required property var editor
     property var waypoint: null
     property bool fineTuning: false
+    property var _homeReference: null
+    readonly property bool _isHome: waypoint && waypoint.homePosition
+    readonly property var _homePoints: controller.coordinateItems.filter(point => {
+        const item = controller.planMasterController.missionController.visualItems.get(point.index)
+        return item && item.isSimpleItem && item.command === 16 && point.coordinate.isValid
+    })
+    readonly property int _referenceIndex: _homePoints.findIndex(point =>
+        controller.planMasterController.missionController.visualItems.get(point.index) === _homeReference)
     readonly property var controller: editor.routeController
-    readonly property var _leg: waypoint && controller.coordinateItems.length > 0 ? controller.waypointLeg(waypoint) : ({})
-    readonly property bool _editable: _leg.distance !== undefined && waypoint && waypoint.command === 16
+    readonly property var _leg: {
+        void controller.coordinateItems
+        if (!waypoint) { return ({}) }
+        if (!_isHome) { return controller.waypointLeg(waypoint) }
+        if (_referenceIndex < 0 || !_homeReference) { return ({}) }
+        const metrics = QGroundControl.corePlugin.routeLegMetrics(_homeReference.coordinate, waypoint.coordinate)
+        return metrics.distance === undefined ? ({ distance: 0, bearing: 0 }) : metrics
+    }
+    readonly property bool _editable: _leg.distance !== undefined && waypoint && (_isHome || waypoint.command === 16)
     readonly property point _position: {
         if (!waypoint || !editor.editorMap) { return Qt.point(0, 0) }
         void editor.editorMap.center
@@ -97,8 +112,10 @@ Popup {
     function show(item) {
         if (visible) { close() }
         controller.cancelRouteOrientation()
-        if (!controller.selectWaypoint(item)) { return }
+        if (!item || (!item.homePosition && !controller.selectWaypoint(item))) { return }
         waypoint = item
+        _homeReference = _isHome && _homePoints.length
+            ? controller.planMasterController.missionController.visualItems.get(_homePoints[0].index) : null
         syncFields()
         open()
     }
@@ -110,6 +127,13 @@ Popup {
         if (!visible || !waypoint) { return false }
         const angle = bearing.text.trim().length ? Number(bearing.text) : NaN
         const metres = distance.text.trim().length ? Number(distance.text) : NaN
+        return updatePosition(angle, metres)
+    }
+    function updatePosition(angle, metres) {
+        if (_isHome) {
+            return _referenceIndex >= 0 && controller.setRelativeEndpoint(
+                _homePoints[_referenceIndex].index, angle, metres, false, false)
+        }
         return controller.updateWaypointLeg(waypoint, angle, metres)
     }
     function nudge(key) {
@@ -121,7 +145,7 @@ Popup {
         else if (key === Qt.Key_Right) { metres += 0.01 }
         else if (key === Qt.Key_Left) { metres = Math.max(0, metres - 0.01) }
         else { return false }
-        if (controller.updateWaypointLeg(waypoint, angle, metres)) {
+        if (updatePosition(angle, metres)) {
             syncFields()
             if (metres < 0.001) { bearing.text = ((angle % 360 + 360) % 360).toFixed(2) }
         }
@@ -131,7 +155,7 @@ Popup {
         if (fineTuning) { controller.beginEdit(); keyTarget.forceActiveFocus() }
         else { controller.endEdit() }
     }
-    onClosed: { fineTuning = false; waypoint = null }
+    onClosed: { fineTuning = false; waypoint = null; _homeReference = null }
 
     Connections {
         target: root.editor.planMasterController ? root.editor.planMasterController.missionController : null
@@ -157,6 +181,24 @@ Popup {
                 Layout.fillWidth: true
                 columns: 2
                 columnSpacing: ScreenTools.defaultFontPixelWidth
+                QGCLabel {
+                    visible: root._isHome
+                    text: qsTr("Relative waypoint")
+                    font.pointSize: ScreenTools.menuFontPointSize
+                }
+                QGCComboBox {
+                    objectName: "caacHomeRelativeReference"
+                    visible: root._isHome
+                    Layout.fillWidth: true
+                    model: root._homePoints
+                    textRole: "label"
+                    currentIndex: root._referenceIndex
+                    onActivated: {
+                        root._homeReference = root.controller.planMasterController.missionController.visualItems.get(
+                            root._homePoints[currentIndex].index)
+                        root.syncFields()
+                    }
+                }
                 QGCLabel { text: qsTr("Bearing"); font.pointSize: ScreenTools.menuFontPointSize }
                 QuickNumberField {
                     id: bearing
@@ -211,6 +253,7 @@ Popup {
             }
             QGCButton {
                 objectName: "caacWaypointQuickDelete"
+                visible: !root._isHome
                 pointSize: ScreenTools.menuFontPointSize
                 textColor: palette.colorRed
                 Layout.fillWidth: true

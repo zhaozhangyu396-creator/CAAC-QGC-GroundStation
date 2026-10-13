@@ -54,6 +54,8 @@ Item {
     ToolTip {
         id: tip
         objectName: "caacWaypointOverlapTip"
+        enabled: false
+        closePolicy: Popup.NoAutoClose
         visible: root.visible && hover.hovered && root._labels.length > 1
         text: qsTr("Overlapping waypoints: %1").arg(root._labels.join(", "))
         x: Math.min(hover.point.position.x + ScreenTools.defaultFontPixelWidth, root.width - width)

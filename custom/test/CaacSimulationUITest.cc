@@ -641,6 +641,17 @@ void CaacSimulationUITest::_uploadAndFlightControls()
                                QSizeF(emergencyAttitude->width(), emergencyAttitude->height()));
     const QRectF toolbarRect(toolbar->mapToScene(QPointF(0, 0)), QSizeF(toolbar->width(), toolbar->height()));
     QVERIFY(!emergencyRect.intersects(toolbarRect));
+    for (const auto& entry : {std::pair{QStringLiteral("Altitude"), vehicle->altitudeRelative()},
+                              std::pair{QStringLiteral("Speed"), vehicle->groundSpeed()},
+                              std::pair{QStringLiteral("Heading"), vehicle->heading()}}) {
+        auto* value =
+            findVisibleItem(_rootItem, QStringLiteral("caacEmergency") + entry.first + QStringLiteral("Value"));
+        QVERIFY(value);
+        QTRY_VERIFY_WITH_TIMEOUT(value->property("text").toString().endsWith(entry.second->cookedValueString() + " " +
+                                                                             entry.second->cookedUnits()),
+                                 TestTimeout::mediumMs());
+        QVERIFY(value->mapToScene(QPointF(0, 0)).y() >= emergencyRect.bottom());
+    }
     QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("flyViewMap"), 0));
     QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacDashboardHeadingValue"), 0));
     QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacFlightDataButton"), 0));

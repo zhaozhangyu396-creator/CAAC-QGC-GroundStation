@@ -165,7 +165,7 @@ Item {
                     objectName: "caacGlobalRotate"
                     Layout.fillWidth: true
                     text: qsTr("Rotate / align two points")
-                    onClicked: root.editor.openGeometry(0)
+                    onClicked: root.editor.openGeometry(1)
                 }
             }
             CaacSettingsSection {
