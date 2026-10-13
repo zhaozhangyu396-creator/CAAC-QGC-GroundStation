@@ -83,9 +83,10 @@ add_qgc_test(
     Vehicle
     NoSanitizer
     TIMEOUT
-    120
+    180
     ENV_MODIFICATION
     "QGC_TEST_LOCALE=set:zh_CN"
+    "QGC_TEST_REALTIME_PLAN_TIMEOUTS=set:1"
 )
 if(WIN32)
     set_property(

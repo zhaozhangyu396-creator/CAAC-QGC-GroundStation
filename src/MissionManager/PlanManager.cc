@@ -244,8 +244,15 @@ void PlanManager::_ackTimeout(void)
 void PlanManager::_startAckTimeout(AckType_t ack)
 {
     // Use much shorter timeouts in unit tests since MockLink responds instantly
+#ifdef QGC_UNITTEST_BUILD
+    // GUI tests perform real rendering while transferring missions, so use the normal protocol timing.
+    const bool fastTests = QGC::runningUnitTests() && !qEnvironmentVariableIsSet("QGC_TEST_REALTIME_PLAN_TIMEOUTS");
+    const int retryTimeout = fastTests ? 10 : _retryTimeoutMilliseconds;
+    const int ackTimeout = fastTests ? kTestAckTimeoutMs : _ackTimeoutMilliseconds;
+#else
     const int retryTimeout = QGC::runningUnitTests() ? 10 : _retryTimeoutMilliseconds;
     const int ackTimeout = QGC::runningUnitTests() ? kTestAckTimeoutMs : _ackTimeoutMilliseconds;
+#endif
 
     switch (ack) {
     case AckMissionItem:

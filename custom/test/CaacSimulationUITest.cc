@@ -138,7 +138,7 @@ void CaacSimulationUITest::_closedRouteAndSimulationToggle()
         QVERIFY(editor.setSimulationSettings(variant));
         QSignalSpy variantUpload(simulation, &CaacSimulationController::missionUploaded);
         QVERIFY(simulation->upload(master));
-        QVERIFY(variantUpload.wait(TestTimeout::longMs()));
+        QTRY_VERIFY_WITH_TIMEOUT(!variantUpload.isEmpty(), TestTimeout::longMs());
         QMap<uint16_t, mavlink_mission_item_int_t> compiled;
         for (const auto* item : simulation->vehicle()->missionManager()->missionItems()) {
             mavlink_mission_item_int_t wire{};
@@ -204,13 +204,13 @@ void CaacSimulationUITest::_closedRouteAndSimulationToggle()
     QVERIFY(editor.setSimulationSettings(readSettings));
     QSignalSpy beforeReadUpload(simulation, &CaacSimulationController::missionUploaded);
     QVERIFY(simulation->upload(master));
-    QVERIFY(beforeReadUpload.wait(TestTimeout::longMs()));
+    QTRY_VERIFY_WITH_TIMEOUT(!beforeReadUpload.isEmpty(), TestTimeout::longMs());
     QSignalSpy readCompleted(mission, &MissionController::newItemsFromVehicle);
     mission->loadFromVehicle();
-    QVERIFY(readCompleted.wait(TestTimeout::longMs()));
+    QTRY_VERIFY_WITH_TIMEOUT(!readCompleted.isEmpty(), TestTimeout::longMs());
     QSignalSpy readUpload(simulation, &CaacSimulationController::missionUploaded);
     QVERIFY2(simulation->upload(master), qPrintable(simulation->status()));
-    QVERIFY(readUpload.wait(TestTimeout::longMs()));
+    QTRY_VERIFY_WITH_TIMEOUT(!readUpload.isEmpty(), TestTimeout::longMs());
     int readWaypoints = 0;
     for (const auto* item : simulation->vehicle()->missionManager()->missionItems()) {
         if (item->command() == MAV_CMD_NAV_WAYPOINT) {
@@ -228,7 +228,7 @@ void CaacSimulationUITest::_closedRouteAndSimulationToggle()
     QSignalSpy uploaded(simulation, &CaacSimulationController::missionUploaded);
     QVERIFY(simulation->upload(master));
     step("upload requested");
-    QVERIFY(uploaded.wait(TestTimeout::longMs()));
+    QTRY_VERIFY_WITH_TIMEOUT(!uploaded.isEmpty(), TestTimeout::longMs());
     auto* vehicle = simulation->vehicle();
     QList<const MissionItem*> uploadedWaypoints;
     int takeoffs = 0;
@@ -385,7 +385,7 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     QSignalSpy initialUpload(simulation, &CaacSimulationController::missionUploaded);
     QVERIFY(initialUpload.isValid());
     QVERIFY(clickButton(QStringLiteral("caacUploadWaypoints")));
-    QVERIFY(initialUpload.wait(TestTimeout::longMs()));
+    QTRY_VERIFY_WITH_TIMEOUT(!initialUpload.isEmpty(), TestTimeout::longMs());
     QVERIFY(simulation->missionReady());
     QVERIFY(!findItem(_rootItem, QStringLiteral("caacSimulationBanner")));
     QVERIFY(!simulation->vehicle()->armed());
@@ -634,7 +634,7 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     QSignalSpy upload(manager, &MissionManager::sendComplete);
     QVERIFY(upload.isValid());
     QVERIFY(acceptDialog());
-    QVERIFY(upload.wait(TestTimeout::mediumMs()));
+    QTRY_VERIFY_WITH_TIMEOUT(!upload.isEmpty(), TestTimeout::mediumMs());
     QCOMPARE(upload.last().first().toBool(), false);
     QTRY_VERIFY_WITH_TIMEOUT(!manager->inProgress(), TestTimeout::mediumMs());
     bool uploadedAltitude = false;
@@ -780,7 +780,7 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     QSignalSpy listUpload(manager, &MissionManager::sendComplete);
     QVERIFY(listUpload.isValid());
     QVERIFY(clickButton(QStringLiteral("caacUploadWaypoints")));
-    QVERIFY(listUpload.wait(TestTimeout::mediumMs()));
+    QTRY_VERIFY_WITH_TIMEOUT(!listUpload.isEmpty(), TestTimeout::mediumMs());
     QCOMPARE(listUpload.last().first().toBool(), false);
     QTRY_VERIFY_WITH_TIMEOUT(!master->syncInProgress(), TestTimeout::mediumMs());
     QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewFly")));
