@@ -46,7 +46,7 @@ Item {
         property string toolIcon: "data"
         Layout.minimumWidth: Layout.preferredWidth
         Layout.maximumWidth: Layout.preferredWidth
-        Layout.preferredWidth: root.flightToolStrip ? root.flightToolStrip.roundButtonDiameter : ScreenTools.defaultFontPixelHeight * 3
+        Layout.preferredWidth: ScreenTools.defaultFontPixelHeight * 3
         Layout.preferredHeight: Layout.preferredWidth
         Accessible.name: text
         ToolTip.visible: hovered
@@ -163,7 +163,7 @@ Item {
         y: Math.max(0, Math.min(baseY + root._panelOffset.y,
             (root.occluders ? Math.min(root.occluders.bottomRight.y, root.occluders.virtualJoystickRight.y) : root.height)
                 - toolbar.height - root._margin * 2))
-        width: root.flightToolStrip ? root.flightToolStrip.width : Math.min(ScreenTools.defaultFontPixelWidth * 46, parent.width / 2)
+        width: Math.min(ScreenTools.defaultFontPixelWidth * 46, parent.width / 2)
         readonly property real availableHeight: (root.occluders ? Math.min(root.occluders.bottomRight.y, root.occluders.virtualJoystickRight.y) : root.height) - y - root._margin
         visible: !root._simulationEmergency && availableHeight > toolbar.height
         spacing: root._margin

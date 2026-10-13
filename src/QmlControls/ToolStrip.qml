@@ -44,8 +44,11 @@ Rectangle {
     property bool   roundButtons: false
     property bool   doubleClickActions: false
     property int    horizontalColumns: 0
+    property real   roundButtonMaximumDiameter: Infinity
+    property real   roundButtonHeight: ScreenTools.defaultFontPixelHeight * 4.7
+    property bool   compactLabels: false
     readonly property real roundButtonDiameter: Math.max(0, Math.min(ScreenTools.defaultFontPixelHeight * 3,
-        _buttonWidth - ScreenTools.defaultFontPixelWidth * 1.4))
+        _buttonWidth - ScreenTools.defaultFontPixelWidth * (compactLabels ? 0.6 : 1.4), roundButtonMaximumDiameter))
     property real   maxWidth: Infinity
     property real   maxHeight           ///< Maximum height for control, determines whether text is hidden to make control shorter
     property var    fontSize:           ScreenTools.menuFontPointSize
@@ -74,7 +77,8 @@ Rectangle {
         anchors.margins:    ScreenTools.defaultFontPixelWidth * 0.4
         anchors.fill:       parent
         contentHeight:      toolStripColumn.height
-        contentWidth:       _root.horizontal ? toolStripColumn.implicitWidth : width
+        contentWidth:       _root.roundButtons && _root.horizontal ? Math.min(toolStripColumn.implicitWidth, width)
+            : _root.horizontal ? toolStripColumn.implicitWidth : width
         interactive: !(_root.roundButtons && _root.horizontal)
         flickableDirection: _root.horizontal ? Flickable.HorizontalFlick : Flickable.VerticalFlick
         ScrollBar.horizontal: ScrollBar { policy: _root.horizontal && !_root.roundButtons ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff }
@@ -93,9 +97,11 @@ Rectangle {
 
                 ToolStripHoverButton {
                     id:                 buttonTemplate
-                    width:              _root._buttonWidth - flickable.anchors.margins * 2
-                    height:             _root.roundButtons ? ScreenTools.defaultFontPixelHeight * 4.7 : width
+                    width:              _root._buttonWidth - (_root.compactLabels ? 0 : flickable.anchors.margins * 2)
+                    height:             _root.roundButtons ? _root.roundButtonHeight : width
                     roundStyle:         _root.roundButtons
+                    maximumRoundDiameter: _root.roundButtonMaximumDiameter
+                    compactLabel:       _root.compactLabels
                     doubleClickRequired: _root.doubleClickActions
                     radius:             ScreenTools.defaultFontPixelWidth / 2
                     fontPointSize:      _root.roundButtons ? Math.min(_root.fontSize, ScreenTools.smallFontPointSize) : _root.fontSize

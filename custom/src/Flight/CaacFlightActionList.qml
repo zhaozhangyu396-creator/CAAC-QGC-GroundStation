@@ -63,30 +63,6 @@ ToolStripActionList {
 
     model: [
         ToolStripAction {
-            objectName: "caacStartMission"
-            text: qsTr("Start route")
-            iconSource: "/InstrumentValueIcons/play.svg"
-            enabled: root._hasMission && (root._guided.showStartMission || root._guided.showContinueMission)
-            onTriggered: {
-                if (enabled) {
-                    root._guided.closeAll()
-                    root._vehicle.startMission()
-                }
-            }
-        },
-        ToolStripAction {
-            objectName: "caacPauseMission"
-            text: qsTr("Pause route")
-            iconSource: "/res/pause-mission.svg"
-            enabled: root._vehicle && root._guided.showPause
-            onTriggered: {
-                if (enabled) {
-                    root._guided.closeAll()
-                    root._vehicle.pauseVehicle()
-                }
-            }
-        },
-        ToolStripAction {
             objectName: "caacTakeoff"
             text: qsTr("One-click takeoff")
             iconSource: "/res/takeoff.svg"
@@ -110,6 +86,30 @@ ToolStripActionList {
                 if (enabled) {
                     root._guided.closeAll()
                     root._vehicle.guidedModeRTL(false)
+                }
+            }
+        },
+        ToolStripAction {
+            objectName: "caacStartMission"
+            text: qsTr("Start route")
+            iconSource: "/InstrumentValueIcons/play.svg"
+            enabled: root._hasMission && (root._guided.showStartMission || root._guided.showContinueMission)
+            onTriggered: {
+                if (enabled) {
+                    root._guided.closeAll()
+                    root._vehicle.startMission()
+                }
+            }
+        },
+        ToolStripAction {
+            objectName: "caacPauseMission"
+            text: qsTr("Pause route")
+            iconSource: "/res/pause-mission.svg"
+            enabled: root._vehicle && root._guided.showPause
+            onTriggered: {
+                if (enabled) {
+                    root._guided.closeAll()
+                    root._vehicle.pauseVehicle()
                 }
             }
         },

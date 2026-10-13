@@ -22,7 +22,7 @@ Item {
     property rect   pipViewRect:            Qt.rect(0, height, 0, 0)
     property var    occluders:              _occluders
     property var    mapControl
-    property alias  toolStripControl: toolStrip
+    property var    toolStripControl
     property var    viewer3DCameraController
 
     readonly property bool _simulationEmergency: QGroundControl.corePlugin.simulation
@@ -148,23 +148,18 @@ Item {
         }
     }
 
-    FlyViewToolStrip {
-        id:                     toolStrip
-        objectName:             "flyViewToolStrip"
-        horizontal:             true
-        maxWidth:               Math.max(0, (parent.width - _toolsMargin * 2) / 2)
-        anchors.left:           parent.left
-        anchors.top:            parent.top
-        z:                      QGroundControl.zOrderWidgets
-        maxHeight:              pipViewRect.y - y - _toolsMargin
-        visible:                !QGroundControl.videoManager.fullScreen
+    Item {
+        id: toolStrip
+        width: 0
+        height: 0
+        readonly property real roundButtonDiameter: ScreenTools.defaultFontPixelHeight * 3
+    }
 
-        onDisplayPreFlightChecklist: {
-            if (!preFlightChecklistLoader.active) {
-                preFlightChecklistLoader.active = true
-            }
-            preFlightChecklistLoader.item.open()
+    function displayPreFlightChecklist() {
+        if (!preFlightChecklistLoader.active) {
+            preFlightChecklistLoader.active = true
         }
+        preFlightChecklistLoader.item.open()
     }
 
     VehicleWarnings {

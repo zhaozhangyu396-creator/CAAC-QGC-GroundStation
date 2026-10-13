@@ -2,13 +2,16 @@
 #include <QtCore/QScopeGuard>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QImage>
+#include <QtQml/QJSValue>
 #include <QtQuick/QQuickItem>
 #include <QtQuick/QQuickWindow>
 #include <QtTest/QSignalSpy>
 
 #include "CaacCorePlugin.h"
 #include "CaacFlightDistance.h"
+#include "Fact.h"
 #include "MockLink.h"
+#include "ParameterManager.h"
 #include "QGCGeo.h"
 #include "QmlUITestBase.h"
 #include "Vehicle.h"
@@ -93,6 +96,42 @@ void CaacFlightDataUITest::_liveFlightData()
         return;
     }
     const auto disconnect = qScopeGuard([&]() { disconnectMockLink(mock); });
+    {
+        const QStringList expectedModes{QStringLiteral("手动模式"), QStringLiteral("姿态模式"),
+                                        QStringLiteral("手动特技"), QStringLiteral("定高模式"),
+                                        QStringLiteral("定点模式"), QStringLiteral("保持模式"),
+                                        QStringLiteral("任务模式"), QStringLiteral("返航模式")};
+        QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightModes(), expectedModes, TestTimeout::longMs());
+        QVERIFY(clickButton(QStringLiteral("toolbar_flightModeIndicator")));
+        QVERIFY(clickButton(QStringLiteral("indicatorDrawerExpandButton")));
+        auto* geofence = findVisibleItem(_rootItem, QStringLiteral("caacGeofenceAction"));
+        QVERIFY(geofence);
+        QVariant actionLabels = geofence->property("model");
+        if (actionLabels.canConvert<QJSValue>()) {
+            actionLabels = actionLabels.value<QJSValue>().toVariant();
+        }
+        QCOMPARE(
+            actionLabels.toStringList(),
+            QStringList({QStringLiteral("无行为"), QStringLiteral("警告"), QStringLiteral("保持悬停"),
+                         QStringLiteral("返航"), QStringLiteral("飞行中止（停止动力输出）"), QStringLiteral("降落")}));
+        auto* geofenceFact = geofence->property("fact").value<Fact*>();
+        QVERIFY(geofenceFact);
+        const auto savedGeofenceAction = geofenceFact->rawValue();
+        const auto restoreGeofenceAction =
+            qScopeGuard([geofenceFact, savedGeofenceAction] { geofenceFact->setRawValue(savedGeofenceAction); });
+        for (int i = 0; i < 6; ++i) {
+            QCOMPARE(geofenceFact->enumValues().at(i).toInt(), i);
+            QVERIFY(QMetaObject::invokeMethod(geofence, "activated", Q_ARG(int, i)));
+            QTRY_COMPARE_WITH_TIMEOUT(geofenceFact->rawValue().toInt(), i, TestTimeout::mediumMs());
+            QTRY_VERIFY_WITH_TIMEOUT(!vehicle->parameterManager()->pendingWrites(), TestTimeout::mediumMs());
+        }
+        geofenceFact->setRawValue(savedGeofenceAction);
+        QTRY_VERIFY_WITH_TIMEOUT(!vehicle->parameterManager()->pendingWrites(), TestTimeout::mediumMs());
+        auto* drawerLoader = findItem(_rootItem, QStringLiteral("indicatorDrawerLoader"));
+        QVERIFY(drawerLoader);
+        QTest::keyClick(_window, Qt::Key_Escape);
+        QTRY_VERIFY_WITH_TIMEOUT(!drawerLoader->property("item").value<QObject*>(), TestTimeout::mediumMs());
+    }
     auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
     QVERIFY(plugin);
     auto* distance = plugin->flightDistance();
@@ -117,6 +156,7 @@ void CaacFlightDataUITest::_liveFlightData()
         QVERIFY(frame.wait(TestTimeout::mediumMs()));
         QVERIFY(_window->grabWindow().save(screenshot));
     }
+    QVERIFY(scrollIntoView(pagination, QStringLiteral("caacFlyPanelsScroller")));
     QVERIFY(clickItemFraction(QStringLiteral("caacFlightDataPagination"), 0.5, 0.5));
     QVERIFY(verifyProperty(QStringLiteral("caacFlyDataPanel"), "currentPage", 1, QStringLiteral("second page dot")));
     auto* log = findVisibleItem(_rootItem, QStringLiteral("caacFlightLog"));

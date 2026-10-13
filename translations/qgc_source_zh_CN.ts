@@ -8531,7 +8531,7 @@ VTOL</source>
     <message>
       <location filename="../src/FlyView/FlyViewMapClickDropPanel.qml" line="97"/>
       <source>Set home here</source>
-      <translation>安家于此</translation>
+      <translation>返回于此</translation>
     </message>
     <message>
       <location filename="../src/FlyView/FlyViewMapClickDropPanel.qml" line="107"/>
@@ -13706,7 +13706,7 @@ VTOL</source>
     <message>
       <location filename="../src/Toolbar/MainStatusIndicator.qml" line="371"/>
       <source>No new vehicle messages</source>
-      <translation>没有新车信息</translation>
+      <translation>没有最新消息</translation>
     </message>
     <message>
       <location filename="../src/Toolbar/MainStatusIndicator.qml" line="401"/>
@@ -16235,17 +16235,17 @@ Is this really what you want?</source>
     <message>
       <location filename="../src/FirmwarePlugin/PX4/PX4FirmwarePlugin.cc" line="28"/>
       <source>Manual</source>
-      <translation>手动Manual</translation>
+      <translation>手动模式</translation>
     </message>
     <message>
       <location filename="../src/FirmwarePlugin/PX4/PX4FirmwarePlugin.cc" line="29"/>
       <source>Acro</source>
-      <translation>特技Acro</translation>
+      <translation>手动特技</translation>
     </message>
     <message>
       <location filename="../src/FirmwarePlugin/PX4/PX4FirmwarePlugin.cc" line="30"/>
       <source>Stabilized</source>
-      <translation>自稳Stabilized</translation>
+      <translation>姿态模式</translation>
     </message>
     <message>
       <location filename="../src/FirmwarePlugin/PX4/PX4FirmwarePlugin.cc" line="31"/>
@@ -16255,12 +16255,12 @@ Is this really what you want?</source>
     <message>
       <location filename="../src/FirmwarePlugin/PX4/PX4FirmwarePlugin.cc" line="32"/>
       <source>Altitude</source>
-      <translation>高度</translation>
+      <translation>定高模式</translation>
     </message>
     <message>
       <location filename="../src/FirmwarePlugin/PX4/PX4FirmwarePlugin.cc" line="33"/>
       <source>Position</source>
-      <translation>定点Position</translation>
+      <translation>定点模式</translation>
     </message>
     <message>
       <location filename="../src/FirmwarePlugin/PX4/PX4FirmwarePlugin.cc" line="34"/>
@@ -16280,17 +16280,17 @@ Is this really what you want?</source>
     <message>
       <location filename="../src/FirmwarePlugin/PX4/PX4FirmwarePlugin.cc" line="37"/>
       <source>Hold</source>
-      <translation>等待</translation>
+      <translation>保持模式</translation>
     </message>
     <message>
       <location filename="../src/FirmwarePlugin/PX4/PX4FirmwarePlugin.cc" line="38"/>
       <source>Mission</source>
-      <translation>任务</translation>
+      <translation>任务模式</translation>
     </message>
     <message>
       <location filename="../src/FirmwarePlugin/PX4/PX4FirmwarePlugin.cc" line="39"/>
       <source>Return</source>
-      <translation>返航Return</translation>
+      <translation>返航模式</translation>
     </message>
     <message>
       <location filename="../src/FirmwarePlugin/PX4/PX4FirmwarePlugin.cc" line="40"/>
@@ -16543,6 +16543,30 @@ Is this really what you want?</source>
       <location filename="../src/FirmwarePlugin/PX4/PX4FlightModeIndicator.qml" line="79"/>
       <source>Max Altitude</source>
       <translation>最大海拔</translation>
+    </message>
+    <message>
+      <source>None</source>
+      <translation>无行为</translation>
+    </message>
+    <message>
+      <source>Warning</source>
+      <translation>警告</translation>
+    </message>
+    <message>
+      <source>Hold mode</source>
+      <translation>保持悬停</translation>
+    </message>
+    <message>
+      <source>Return mode</source>
+      <translation>返航</translation>
+    </message>
+    <message>
+      <source>Terminate</source>
+      <translation>飞行中止（停止动力输出）</translation>
+    </message>
+    <message>
+      <source>Land mode</source>
+      <translation>降落</translation>
     </message>
   </context>
   <context>

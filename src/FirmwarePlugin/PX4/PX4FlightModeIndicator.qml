@@ -39,10 +39,31 @@ ColumnLayout {
         Layout.fillWidth:   true
         heading:            qsTr("GeoFence")
 
-        LabelledFactComboBox {
+        RowLayout {
             Layout.fillWidth:       true
-            label:                  qsTr("Breach Action")
-            fact:                   controller.getParameterFact(-1, "GF_ACTION")
+            spacing:                ScreenTools.defaultFontPixelWidth * 2
+
+            QGCLabel {
+                Layout.fillWidth:   true
+                text:               qsTr("Breach Action")
+            }
+
+            FactComboBox {
+                objectName:         "caacGeofenceAction"
+                sizeToContents:     true
+                fact:               controller.getParameterFact(-1, "GF_ACTION")
+                model: fact ? fact.enumStrings.map((label, index) => {
+                    switch (Number(fact.enumValues[index])) {
+                    case 0: return qsTr("None")
+                    case 1: return qsTr("Warning")
+                    case 2: return qsTr("Hold mode")
+                    case 3: return qsTr("Return mode")
+                    case 4: return qsTr("Terminate")
+                    case 5: return qsTr("Land mode")
+                    default: return label
+                    }
+                }) : []
+            }
         }
 
         ColumnLayout {

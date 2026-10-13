@@ -151,6 +151,7 @@ Item {
             z:                      _fullItemZorder + 2
             pipViewRect:            _pipView.visible ? Qt.rect(_pipView.x + _pipView.occupiedRect.x - x, _pipView.y + _pipView.occupiedRect.y - y, _pipView.occupiedRect.width, _pipView.occupiedRect.height) : Qt.rect(0, height, 0, 0)
             mapControl:             _mapControl
+            toolStripControl:       toolbar.flightToolStrip
             viewer3DCameraController: viewer3DLoader.item ? viewer3DLoader.item.cameraController : null
             visible:                !QGroundControl.videoManager.fullScreen
         }
@@ -218,5 +219,6 @@ Item {
         id:                 toolbar
         guidedValueSlider:  _guidedValueSlider
         visible:            !QGroundControl.videoManager.fullScreen
+        onDisplayPreFlightChecklist: widgetLayer.displayPreFlightChecklist()
     }
 }

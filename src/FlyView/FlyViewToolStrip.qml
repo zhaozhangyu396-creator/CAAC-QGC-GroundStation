@@ -8,7 +8,7 @@ ToolStrip {
     id: _root
     roundButtons: true
     doubleClickActions: true
-    horizontalColumns: 4
+    horizontalColumns: 7
 
     signal displayPreFlightChecklist
 

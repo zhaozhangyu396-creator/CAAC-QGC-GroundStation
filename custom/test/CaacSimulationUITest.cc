@@ -397,32 +397,60 @@ void CaacSimulationUITest::_uploadAndFlightControls()
                              TestTimeout::mediumMs());
     auto* toolbar = findVisibleItem(_rootItem, QStringLiteral("flyViewToolStrip"));
     QVERIFY(toolbar);
-    const auto originalWidth = toolbar->property("maxWidth");
-    QTRY_COMPARE_WITH_TIMEOUT(toolbar->property("_roundColumns").toInt(), 4, TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(toolbar->property("_roundColumns").toInt(), 7, TestTimeout::mediumMs());
     auto* rightTool = findVisibleItem(_rootItem, QStringLiteral("caacFlightDataButton"));
     QVERIFY(rightTool);
-    QTRY_VERIFY_WITH_TIMEOUT(std::abs(rightTool->width() - toolbar->property("roundButtonDiameter").toDouble()) < 1,
-                             TestTimeout::mediumMs());
-    auto* firstAction = findVisibleItem(_rootItem, QStringLiteral("caacStartMission"));
-    auto* secondRowAction = findVisibleItem(_rootItem, QStringLiteral("caacJumpWaypoint"));
-    QVERIFY(firstAction && secondRowAction);
-    auto* lastRightTool = findVisibleItem(_rootItem, QStringLiteral("caacCenterVehicleButton"));
-    QVERIFY(lastRightTool);
-    QTRY_VERIFY_WITH_TIMEOUT(
-        std::abs(firstAction->mapToScene(QPointF(firstAction->width() / 2, 0)).x() +
-                 lastRightTool->mapToScene(QPointF(lastRightTool->width() / 2, 0)).x() - _window->width()) < 2,
-        TestTimeout::mediumMs());
-    QTRY_VERIFY_WITH_TIMEOUT(
-        std::abs(rightTool->mapToScene(QPointF(0, 0)).y() - firstAction->mapToScene(QPointF(0, 0)).y() -
-                 firstAction->property("contentMargins").toDouble()) < 1,
-        TestTimeout::mediumMs());
-    QVERIFY(secondRowAction->mapToScene(QPointF(0, 0)).y() >
-            firstAction->mapToScene(QPointF(0, 0)).y() + firstAction->height() * 0.8);
-    QVERIFY(toolbar->setProperty("maxWidth", 400.0));
-    QTRY_COMPARE_WITH_TIMEOUT(toolbar->property("_roundColumns").toInt(), 4, TestTimeout::mediumMs());
-    QTRY_VERIFY_WITH_TIMEOUT(flightActions->property("contentWidth").toDouble() <= flightActions->width() + 1,
-                             TestTimeout::mediumMs());
-    QVERIFY(toolbar->setProperty("maxWidth", originalWidth));
+    auto* host = findVisibleItem(_rootItem, QStringLiteral("caacTopFlightActions"));
+    QVERIFY(host);
+    const QStringList actionOrder{QStringLiteral("caacTakeoff"),
+                                  QStringLiteral("caacReturnHome"),
+                                  QStringLiteral("caacStartMission"),
+                                  QStringLiteral("caacPauseMission"),
+                                  QStringLiteral("caacJumpWaypoint"),
+                                  QStringLiteral("caacModifyWaypointAltitude"),
+                                  QStringLiteral("caacSimulationEmergency")};
+    auto* firstAction = findVisibleItem(_rootItem, actionOrder.first());
+    QVERIFY(firstAction);
+    const auto firstPosition = firstAction->mapToScene(QPointF(0, 0));
+    double previousX = -1;
+    for (const auto& name : actionOrder) {
+        auto* action = findVisibleItem(_rootItem, name);
+        QVERIFY(action);
+        const auto position = action->mapToScene(QPointF(0, 0));
+        QVERIFY(position.x() > previousX);
+        QVERIFY(std::abs(position.y() - firstPosition.y()) < 1);
+        QVERIFY(std::abs(action->property("roundDiameter").toDouble() -
+                         firstAction->property("roundDiameter").toDouble()) < 1);
+        QVERIFY(position.y() + action->height() <= host->mapToScene(QPointF(0, host->height())).y() + 1);
+        previousX = position.x();
+    }
+    QVERIFY(firstPosition.y() < rightTool->mapToScene(QPointF(0, 0)).y());
+    auto* modeIndicator = findVisibleItem(_rootItem, QStringLiteral("toolbar_flightModeIndicator"));
+    auto* indicators = findVisibleItem(_rootItem, QStringLiteral("flyViewToolBarIndicators"));
+    QVERIFY(modeIndicator && indicators);
+    QVERIFY(firstPosition.x() >= modeIndicator->mapToScene(QPointF(modeIndicator->width(), 0)).x());
+    auto* header = host->parentItem();
+    QVERIFY(header);
+    QCOMPARE(header->height(), header->property("_statusHeight").toDouble());
+    QVERIFY(host->mapToScene(QPointF(0, host->height())).y() <=
+            header->mapToScene(QPointF(0, header->height())).y() + 1);
+    QVERIFY(host->mapToScene(QPointF(host->width(), 0)).x() <= indicators->mapToScene(QPointF(0, 0)).x() + 1);
+    const auto originalWindowSize = _window->size();
+    for (const int requestedWidth : {800, 1600}) {
+        _window->resize(std::max(_window->minimumWidth(), requestedWidth), originalWindowSize.height());
+        QTRY_VERIFY_WITH_TIMEOUT(flightActions->property("contentWidth").toDouble() <= flightActions->width(),
+                                 TestTimeout::mediumMs());
+        QCOMPARE(header->height(), header->property("_statusHeight").toDouble());
+        QVERIFY(host->mapToScene(QPointF(host->width(), 0)).x() <= indicators->mapToScene(QPointF(0, 0)).x() + 1);
+        if (qEnvironmentVariableIsSet("CAAC_SIMULATION_UI_SCREENSHOT")) {
+            QSignalSpy frame(_window, &QQuickWindow::frameSwapped);
+            _window->update();
+            QTRY_VERIFY_WITH_TIMEOUT(!frame.isEmpty(), TestTimeout::mediumMs());
+            QVERIFY(
+                _window->grabWindow().save(QStringLiteral("/workspace/caac-inline-topbar-%1.png").arg(requestedWidth)));
+        }
+    }
+    _window->resize(originalWindowSize);
     const auto doubleClickAction = [&](const QString& name) {
         auto* button = findVisibleItemScrolled(name, QStringLiteral("flyViewToolStrip_flickable"));
         if (!button || !button->isEnabled()) {

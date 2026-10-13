@@ -12,7 +12,11 @@ Item {
 
     id:     control
     width:  parent.width
-    height: ScreenTools.toolbarHeight
+    height: _statusHeight
+
+    readonly property real _statusHeight: ScreenTools.toolbarHeight
+    property alias flightToolStrip: flightActions
+    signal displayPreFlightChecklist
 
     property var    _activeVehicle:     QGroundControl.multiVehicleManager.activeVehicle
     property bool   _communicationLost: _activeVehicle ? _activeVehicle.vehicleLinkManager.communicationLost : false
@@ -27,9 +31,13 @@ Item {
     QGCPalette { id: qgcPal }
 
     QGCFlickable {
-        anchors.fill:       parent
-        contentWidth:       toolBarLayout.width
+        anchors.left:       parent.left
+        anchors.right:      parent.right
+        anchors.top:        parent.top
+        height:             control._statusHeight
+        contentWidth:       Math.min(toolBarLayout.width, width)
         flickableDirection: Flickable.HorizontalFlick
+        interactive:        false
 
         Row {
             id:         toolBarLayout
@@ -38,14 +46,14 @@ Item {
 
             Item {
                 id:     leftPanel
-                width:  leftPanelLayout.implicitWidth
+                width:  Math.min(leftPanelLayout.implicitWidth, control.width * 0.32)
                 height: parent.height
 
                 // Gradient background behind Q button and main status indicator
                 Rectangle {
                     id:         gradientBackground
                     height:     parent.height
-                    width:      mainStatusLayout.width
+                    width:      mainStatusLayout.width * leftPanelLayout.scale
                     opacity:    qgcPal.windowTransparent.a
 
                     gradient: Gradient {
@@ -68,6 +76,8 @@ Item {
                     id:         leftPanelLayout
                     height:     parent.height
                     spacing:    ScreenTools.defaultFontPixelWidth * 2
+                    scale:      Math.min(1, leftPanel.width / Math.max(1, implicitWidth))
+                    transformOrigin: Item.Left
 
                     RowLayout {
                         id:         mainStatusLayout
@@ -108,7 +118,7 @@ Item {
             Item {
                 id:     centerPanel
                 // center panel takes up all remaining space in toolbar between left and right panels
-                width:  Math.max(guidedActionConfirm.visible ? guidedActionConfirm.width : 0, control.width - (leftPanel.width + rightPanel.width))
+                width:  Math.max(0, control.width - (leftPanel.width + rightPanel.width))
                 height: parent.height
 
                 Rectangle {
@@ -128,7 +138,7 @@ Item {
 
             Item {
                 id:     rightPanel
-                width:  flyViewIndicators.width
+                width:  Math.min(flyViewIndicators.implicitWidth, control.width * 0.28)
                 height: parent.height
 
                 Rectangle {
@@ -139,8 +149,41 @@ Item {
                 FlyViewToolBarIndicators {
                     id:     flyViewIndicators
                     height: parent.height
+                    anchors.right: parent.right
+                    scale: Math.min(1, rightPanel.width / Math.max(1, implicitWidth))
+                    transformOrigin: Item.Right
                 }
             }
+        }
+    }
+
+    Item {
+        id: flightActionHost
+        objectName: "caacTopFlightActions"
+        visible: !guidedActionConfirm.visible
+        x: leftPanel.width
+        y: 0
+        width: Math.max(0, control.width - leftPanel.width - rightPanel.width)
+        height: control._statusHeight
+
+        Rectangle {
+            anchors.fill: parent
+            color: qgcPal.windowTransparent
+        }
+
+        FlyViewToolStrip {
+            id: flightActions
+            objectName: "flyViewToolStrip"
+            horizontal: true
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+            maxWidth: parent.width
+            maxHeight: parent.height
+            roundButtonHeight: Math.max(0, maxHeight - ScreenTools.defaultFontPixelWidth * 0.8)
+            roundButtonMaximumDiameter: Math.max(0, (roundButtonHeight - ScreenTools.defaultFontPixelWidth * 0.6
+                - ScreenTools.defaultFontPixelHeight * 0.85) / 1.075)
+            compactLabels: true
+            onDisplayPreFlightChecklist: control.displayPreFlightChecklist()
         }
     }
 

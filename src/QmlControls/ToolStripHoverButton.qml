@@ -25,8 +25,11 @@ Button {
     property alias  contentWidth:       innerText.contentWidth
 
     property bool roundStyle: false
+    property bool compactLabel: false
+    property real maximumRoundDiameter: Infinity
     property bool doubleClickRequired: false
-    readonly property real roundDiameter: Math.min(ScreenTools.defaultFontPixelHeight * 3, width - contentMargins * 2)
+    readonly property real roundDiameter: Math.max(0, Math.min(ScreenTools.defaultFontPixelHeight * 3,
+        width - contentMargins * 2, maximumRoundDiameter))
     property bool forceImageScale11: false
     property real imageScale:        forceImageScale11 && (text == "") ? 0.8 : 0.6
     property real contentMargins:    roundStyle ? ScreenTools.defaultFontPixelWidth * 0.3 : innerText.height * 0.1
@@ -138,8 +141,10 @@ Button {
                 styleColor:                 qgcPal.windowShadeDark
                 text:                       control.text
                 width:                      control.roundStyle ? control.width - control.contentMargins * 2 : implicitWidth
-                wrapMode:                   control.roundStyle ? Text.Wrap : Text.NoWrap
-                maximumLineCount:           control.roundStyle ? 2 : 2147483647
+                wrapMode:                   control.roundStyle && !control.compactLabel ? Text.Wrap : Text.NoWrap
+                maximumLineCount:           control.compactLabel ? 1 : control.roundStyle ? 2 : 2147483647
+                fontSizeMode:               control.compactLabel ? Text.Fit : Text.FixedSize
+                minimumPointSize:           ScreenTools.smallFontPointSize * 0.6
                 elide:                      control.roundStyle ? Text.ElideRight : Text.ElideNone
                 horizontalAlignment:        Text.AlignHCenter
                 font.pointSize:             ScreenTools.menuFontPointSize

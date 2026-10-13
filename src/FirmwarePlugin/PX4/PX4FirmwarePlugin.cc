@@ -1,5 +1,6 @@
 #include "PX4FirmwarePlugin.h"
 
+#include <QtCore/QHash>
 #include <QtCore/QString>
 
 #include "AppMessages.h"
@@ -794,7 +795,26 @@ bool PX4FirmwarePlugin::hasGripper(const Vehicle* vehicle) const
 
 void PX4FirmwarePlugin::updateAvailableFlightModes(FlightModeList &modeList)
 {
+    const QHash<QString, QString> translatedNames = {
+        {QStringLiteral("Manual"), tr("Manual")},
+        {QStringLiteral("Stabilized"), tr("Stabilized")},
+        {QStringLiteral("Acro"), tr("Acro")},
+        {QStringLiteral("Altitude"), tr("Altitude")},
+        {QStringLiteral("Position"), tr("Position")},
+        {QStringLiteral("Hold"), tr("Hold")},
+        {QStringLiteral("Mission"), tr("Mission")},
+        {QStringLiteral("Return"), tr("Return")},
+        {QStringLiteral("Precision Landing"), tr("Precision Land")},
+        {QStringLiteral("Precision Land"), tr("Precision Land")},
+    };
+
     for(auto &mode: modeList){
+        if (mode.custom_mode == PX4CustomMode::OFFBOARD || mode.custom_mode == PX4CustomMode::AUTO_PRECLAND ||
+            mode.mode_name.startsWith(QStringLiteral("MockLink Mode"))) {
+            mode.canBeSet = false;
+        }
+        // AVAILABLE_MODES names are supplied by the vehicle and bypass Qt's translation extraction.
+        mode.mode_name = translatedNames.value(mode.mode_name, mode.mode_name);
         PX4CustomMode::Mode cMode = static_cast<PX4CustomMode::Mode>(mode.custom_mode);
 
         // Update Multi Rotor
