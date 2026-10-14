@@ -504,6 +504,14 @@ void CaacSimulationController::_publish()
         system, component, channel, &message, time, static_cast<float>(state.roll * M_PI / 180.0),
         static_cast<float>(state.pitch * M_PI / 180.0), static_cast<float>(state.heading * M_PI / 180.0), 0, 0, 0);
     _link->respondWithMavlinkMessage(message, true);
+    float quaternion[4];
+    mavlink_euler_to_quaternion(static_cast<float>(state.roll * M_PI / 180.0),
+                                static_cast<float>(state.pitch * M_PI / 180.0),
+                                static_cast<float>(state.heading * M_PI / 180.0), quaternion);
+    const float representationOffset[4] = {};
+    mavlink_msg_attitude_quaternion_pack_chan(system, component, channel, &message, time, quaternion[0], quaternion[1],
+                                              quaternion[2], quaternion[3], 0, 0, 0, representationOffset);
+    _link->respondWithMavlinkMessage(message, true);
     mavlink_msg_extended_sys_state_pack_chan(system, component, channel, &message, MAV_VTOL_STATE_UNDEFINED,
                                              state.airborne ? MAV_LANDED_STATE_IN_AIR : MAV_LANDED_STATE_ON_GROUND);
     _link->respondWithMavlinkMessage(message, true);
@@ -552,7 +560,7 @@ bool CaacSimulationController::_prepareFlightPlan()
         takeoff = takeoff || item->isTakeoffItem();
         if (item->command() == MAV_CMD_NAV_WAYPOINT) {
             waypoints.append(item);
-            waypointOrigins.insert(item, item->sequenceNumber());
+            waypointOrigins.insert(item, item->waypointNumber());
             if (item->sequenceNumber() == _settings.value("startSequence").toInt()) {
                 selectedStart = item;
             }

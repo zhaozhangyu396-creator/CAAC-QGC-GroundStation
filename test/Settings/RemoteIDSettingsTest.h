@@ -23,6 +23,7 @@ private slots:
     void _basicIDValidSignalEmittedOncePerTransition();
     void _euRegionForcesSendOperatorID();
     void _faaRegionForcesLiveLocation();
+    void _chinaClassification();
     void _legacyOperatorIDMigration();
 
 private:
@@ -31,6 +32,7 @@ private:
     QVariant _savedOperatorIDType;
     QVariant _savedRegion;
     QVariant _savedSendOperatorID;
+    QVariant _savedSendBasicID;
     QVariant _savedLocationType;
     QVariant _savedBasicID;
     QVariant _savedBasicIDType;

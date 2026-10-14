@@ -156,6 +156,9 @@ private:
     QTimer _captureTimer;
     int _historyIndex = -1;
     int _editDepth = 0;
+    QVariantMap _editSimulationSettings;
+    QPointer<VisualMissionItem> _editStartPoint;
+    QPointer<VisualMissionItem> _editReturnPoint;
     bool _restoring = false;
     QList<QGeoCoordinate> _previewCoordinates;
     QList<QPointer<VisualMissionItem>> _previewItems;

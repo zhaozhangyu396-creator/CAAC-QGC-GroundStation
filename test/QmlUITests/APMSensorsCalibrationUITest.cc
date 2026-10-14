@@ -86,7 +86,8 @@ void APMSensorsCalibrationUITest::_testCompassCalibrationCancel()
     if (QTest::currentTestFailed()) return;
 
     // Start compass cal
-    QVERIFY2(clickButton(QStringLiteral("sensorsSetup_calibrateCompass")),
+    QVERIFY2(clickButtonScrolled(QStringLiteral("sensorsSetup_calibrateCompass"),
+                                 QStringLiteral("sensorsSetup_buttonScroller")),
              "Failed to click Compass button");
     QVERIFY2(findVisibleItem(_rootItem, QStringLiteral("popupDialog_acceptButton"), 5000),
              "Pre-compass-cal dialog not found");
@@ -100,8 +101,9 @@ void APMSensorsCalibrationUITest::_testCompassCalibrationCancel()
              "Compass cal progress never started");
 
     // Cancel
-    QVERIFY2(clickButton(QStringLiteral("sensorsSetup_cancelButton")),
-             "Failed to click Cancel button");
+    QVERIFY2(
+        clickButtonScrolled(QStringLiteral("sensorsSetup_cancelButton"), QStringLiteral("sensorsSetup_buttonScroller")),
+        "Failed to click Cancel button");
 
     // After cancel the cancel button should become disabled (cal no longer active)
     QQuickItem *cancelBtn = findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_cancelButton"), 2000);
@@ -152,7 +154,8 @@ void APMSensorsCalibrationUITest::_testCompassCalibrationIgnoresStaleFailedRepor
     mockLink->startAPMStaleFailedMagCalReportStreaming();
 
     // Start compass cal while the stale stream is active
-    QVERIFY2(clickButton(QStringLiteral("sensorsSetup_calibrateCompass")),
+    QVERIFY2(clickButtonScrolled(QStringLiteral("sensorsSetup_calibrateCompass"),
+                                 QStringLiteral("sensorsSetup_buttonScroller")),
              "Failed to click Compass button");
     QVERIFY2(findVisibleItem(_rootItem, QStringLiteral("popupDialog_acceptButton"), 5000),
              "Pre-compass-cal dialog not found");
@@ -223,7 +226,8 @@ void APMSensorsCalibrationUITest::_testCompassCalibrationStartRejected()
     expectAppMessage(QRegularExpression(QStringLiteral("command failed")));
     expectAppMessage(QRegularExpression(QStringLiteral("Calibration failed")));
 
-    QVERIFY2(clickButton(QStringLiteral("sensorsSetup_calibrateCompass")),
+    QVERIFY2(clickButtonScrolled(QStringLiteral("sensorsSetup_calibrateCompass"),
+                                 QStringLiteral("sensorsSetup_buttonScroller")),
              "Failed to click Compass button");
     QVERIFY2(findVisibleItem(_rootItem, QStringLiteral("popupDialog_acceptButton"), 5000),
              "Pre-compass-cal dialog not found");

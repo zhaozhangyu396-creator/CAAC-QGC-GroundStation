@@ -56,6 +56,7 @@ public:
     Q_PROPERTY(bool             isCurrentItem                       READ isCurrentItem                      WRITE setIsCurrentItem          NOTIFY isCurrentItemChanged)
     Q_PROPERTY(bool             hasCurrentChildItem                 READ hasCurrentChildItem                WRITE setHasCurrentChildItem    NOTIFY hasCurrentChildItemChanged)                  ///< true: On of this items children is current
     Q_PROPERTY(int              sequenceNumber                      READ sequenceNumber                     WRITE setSequenceNumber         NOTIFY sequenceNumberChanged)
+    Q_PROPERTY(int waypointNumber READ waypointNumber NOTIFY waypointNumberChanged)
     Q_PROPERTY(int              lastSequenceNumber                  READ lastSequenceNumber                                                 NOTIFY lastSequenceNumberChanged)
     Q_PROPERTY(bool             specifiesCoordinate                 READ specifiesCoordinate                                                NOTIFY specifiesCoordinateChanged)                  ///< true: Item is associated with a coordinate position
     Q_PROPERTY(bool             isStandaloneCoordinate              READ isStandaloneCoordinate                                             NOTIFY isStandaloneCoordinateChanged)               ///< true: Waypoint line does not go through item
@@ -151,7 +152,11 @@ public:
     virtual double          editableAlt             (void) const = 0;
     virtual double          amslEntryAlt            (void) const = 0;
     virtual double          amslExitAlt             (void) const = 0;
-    virtual int             sequenceNumber          (void) const = 0;
+    virtual int sequenceNumber(void) const = 0;
+
+    int waypointNumber() const { return _waypointNumber >= 0 ? _waypointNumber : sequenceNumber(); }
+
+    void setWaypointNumber(int number);
     virtual double          specifiedFlightSpeed    (void) = 0;
     virtual double          specifiedGimbalYaw      (void) = 0;
     virtual double          specifiedGimbalPitch    (void) = 0;
@@ -226,6 +231,7 @@ signals:
     void isCurrentItemChanged           (bool isCurrentItem);
     void hasCurrentChildItemChanged     (bool hasCurrentChildItem);
     void sequenceNumberChanged          (int sequenceNumber);
+    void waypointNumberChanged();
     void isSimpleItemChanged            (bool isSimpleItem);
     void isTakeoffItemChanged           (bool isTakeoffItem);
     void isLandCommandChanged           (void);
@@ -258,6 +264,7 @@ protected slots:
     void _amslExitAltChanged(void);     // signals new amslExitAlt value
 
 protected:
+    int _waypointNumber = -1;
     bool                         _flyView                   = false;
     bool                        _isCurrentItem              = false;
     bool                        _hasCurrentChildItem        = false;

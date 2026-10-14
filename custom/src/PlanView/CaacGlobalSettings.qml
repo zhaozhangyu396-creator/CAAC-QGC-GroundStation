@@ -12,6 +12,16 @@ Item {
     id: root
     required property var routeController
     required property var editor
+    property bool simulationInputsEdited: false
+    function saveSimulationSettings() {
+        if (!routeController.setSimulationSettings(simulationSettings.values())) { return false }
+        simulationInputsEdited = false
+        simulationSettings.draftDirty = false
+        return true
+    }
+    function prepareUpload() {
+        return (!simulationInputsEdited && !simulationSettings.draftDirty) || saveSimulationSettings()
+    }
     readonly property var _points: routeController.coordinateItems
     readonly property var _home: _points.length ? _points[0].coordinate : QtPositioning.coordinate()
     readonly property var _missionItems: editor.planMasterController ? editor.planMasterController.missionController.visualItems : null
@@ -54,12 +64,6 @@ Item {
             CaacSettingsSection {
                 objectName: "caacToolsSection"
                 title: qsTr("Planning tools")
-                QGCButton {
-                    objectName: "caacMissionSettings"
-                    Layout.fillWidth: true
-                    text: qsTr("Advanced mission settings")
-                    onClicked: root.editor.openAdvancedMissionSettings()
-                }
                 QGCButton {
                     objectName: "caacMeasureTool"
                     Layout.fillWidth: true
@@ -180,12 +184,14 @@ Item {
                     NumberField {
                         id: simTakeoffHeight
                         objectName: "caacSimTakeoffHeight"
+                        onTextEdited: root.simulationInputsEdited = true
                         text: root.routeController.simulationSettings.takeoffHeight.toString()
                     }
                     QGCLabel { text: qsTr("Horizontal speed (m/s)") }
                     NumberField {
                         id: simHorizontalSpeed
                         objectName: "caacSimHorizontalSpeed"
+                        onTextEdited: root.simulationInputsEdited = true
                         text: root.routeController.simulationSettings.horizontalSpeed.toString()
                     }
                 }
@@ -193,7 +199,7 @@ Item {
                     objectName: "caacSaveSimulationSettings"
                     Layout.fillWidth: true
                     text: qsTr("Save simulation settings")
-                    onClicked: root.routeController.setSimulationSettings(simulationSettings.values())
+                    onClicked: root.saveSimulationSettings()
                 }
             }
             CaacSimulationSettings {

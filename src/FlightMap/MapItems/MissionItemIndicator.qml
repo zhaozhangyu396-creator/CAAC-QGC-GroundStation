@@ -19,8 +19,10 @@ MapQuickItem {
     readonly property bool _usesAbbreviation: missionItem ? missionItem.abbreviation !== "" : false
     readonly property int _displaySequenceNumber: {
         if (!missionItem) { return -1 }
-        if (!missionItem.flyView || !QGroundControl.corePlugin.directMissionItemEditing) { return missionItem.sequenceNumber }
+        if (!QGroundControl.corePlugin.directMissionItemEditing) { return missionItem.sequenceNumber }
+        if (!missionItem.flyView) { return missionItem.waypointNumber }
         const simulation = QGroundControl.corePlugin.simulation
+        if (!simulation.active || simulation.vehicle !== QGroundControl.multiVehicleManager.activeVehicle) { return missionItem.waypointNumber }
         void simulation.waypointNumberRevision
         return simulation.waypointNumber(missionItem.sequenceNumber, missionItem.coordinate)
     }

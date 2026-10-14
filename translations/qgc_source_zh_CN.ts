@@ -8755,7 +8755,27 @@ VTOL</source>
         <source>Sensor status</source>
         <translation>传感器状态</translation>
     </message>
-</context>
+    <message>
+      <source>RC signal strength</source>
+      <translation>遥控器信号强度</translation>
+    </message>
+    <message>
+      <source>Telemetry signal strength</source>
+      <translation>数传信号强度</translation>
+    </message>
+    <message>
+      <source>Propeller lock status</source>
+      <translation>螺旋桨上锁状态</translation>
+    </message>
+    <message>
+      <source>Armed</source>
+      <translation>解锁</translation>
+    </message>
+    <message>
+      <source>Disarmed</source>
+      <translation>上锁</translation>
+    </message>
+  </context>
   <context>
     <name>FlyViewTopRightPanel</name>
     <message>
@@ -21774,6 +21794,10 @@ Click 'Ok' to upload the Plan anyway.</source>
       <source>Orientations</source>
       <translation>方向</translation>
     </message>
+    <message>
+      <source>飞控校准</source>
+      <translation>飞控校准</translation>
+    </message>
   </context>
   <context>
     <name>SensorsComponentController</name>
@@ -24342,6 +24366,18 @@ If a vehicle still has this key configured, you will no longer be able to commun
       <source>Parameter download was skipped because the vehicle is armed. Configuration pages will be available after parameters are downloaded.</source>
       <translation>由于无人机已布防，参数下载被跳过。下载参数后即可使用配置页面。</translation>
     </message>
+    <message>
+      <source>无人机设置</source>
+      <translation>无人机设置</translation>
+    </message>
+    <message>
+      <source>请连接 PX4 飞控并完成参数读取后再设置此项。</source>
+      <translation>请连接 PX4 飞控并完成参数读取后再设置此项。</translation>
+    </message>
+    <message>
+      <source>返回无人机设置</source>
+      <translation>返回无人机设置</translation>
+    </message>
   </context>
   <context>
     <name>VehicleGPSFactGroup</name>
@@ -25153,6 +25189,10 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
       <source>Waypoint switches apply in Plan view. Flight view shows the downloaded mission.</source>
       <translation>加点和拖拽开关用于航线规划页。飞行页显示已下载的任务。</translation>
+    </message>
+    <message>
+      <source>Provider</source>
+      <translation>提供者</translation>
     </message>
   </context>
   <context>
@@ -26565,6 +26605,70 @@ altitude</source>
 <context>
     <name>CaacCalculator</name>
     <message>
+        <source>NNE · 22.5°</source>
+        <translation>NNE 北东北 · 22.5°</translation>
+    </message>
+    <message>
+        <source>NE · 45°</source>
+        <translation>NE 东北 · 45°</translation>
+    </message>
+    <message>
+        <source>ENE · 67.5°</source>
+        <translation>ENE 东东北 · 67.5°</translation>
+    </message>
+    <message>
+        <source>E · 90°</source>
+        <translation>E 东 · 90°</translation>
+    </message>
+    <message>
+        <source>ESE · 112.5°</source>
+        <translation>ESE 东东南 · 112.5°</translation>
+    </message>
+    <message>
+        <source>SE · 135°</source>
+        <translation>SE 东南 · 135°</translation>
+    </message>
+    <message>
+        <source>SSE · 157.5°</source>
+        <translation>SSE 南东南 · 157.5°</translation>
+    </message>
+    <message>
+        <source>S · 180°</source>
+        <translation>S 南 · 180°</translation>
+    </message>
+    <message>
+        <source>SSW · 202.5°</source>
+        <translation>SSW 南西南 · 202.5°</translation>
+    </message>
+    <message>
+        <source>SW · 225°</source>
+        <translation>SW 西南 · 225°</translation>
+    </message>
+    <message>
+        <source>WSW · 247.5°</source>
+        <translation>WSW 西西南 · 247.5°</translation>
+    </message>
+    <message>
+        <source>W · 270°</source>
+        <translation>W 西 · 270°</translation>
+    </message>
+    <message>
+        <source>WNW · 292.5°</source>
+        <translation>WNW 西西北 · 292.5°</translation>
+    </message>
+    <message>
+        <source>NW · 315°</source>
+        <translation>NW 西北 · 315°</translation>
+    </message>
+    <message>
+        <source>NNW · 337.5°</source>
+        <translation>NNW 北西北 · 337.5°</translation>
+    </message>
+    <message>
+        <source>N · 360°</source>
+        <translation>N 北 · 360°</translation>
+    </message>
+    <message>
         <source>Angle calculator</source>
         <translation>角度计算器</translation>
     </message>
@@ -26871,4 +26975,615 @@ altitude</source>
         <translation>更新</translation>
     </message>
 </context>
+  <context>
+    <name>CaacAccessDialog</name>
+    <message>
+      <source>Set access password</source>
+      <translation>设置访问密码</translation>
+    </message>
+    <message>
+      <source>Enter access password</source>
+      <translation>输入访问密码</translation>
+    </message>
+    <message>
+      <source>The passwords do not match.</source>
+      <translation>两次输入的密码不一致。</translation>
+    </message>
+    <message>
+      <source>Incorrect password or unable to save the password.</source>
+      <translation>密码错误或无法保存密码。</translation>
+    </message>
+    <message>
+      <source>Vehicle setup and analysis require this password each time they are opened.</source>
+      <translation>每次打开无人机设置或分析都需要输入访问密码。</translation>
+    </message>
+    <message>
+      <source>Current password</source>
+      <translation>当前密码</translation>
+    </message>
+    <message>
+      <source>New password</source>
+      <translation>新密码</translation>
+    </message>
+    <message>
+      <source>Access password</source>
+      <translation>访问密码</translation>
+    </message>
+    <message>
+      <source>Confirm password</source>
+      <translation>确认密码</translation>
+    </message>
+  </context>
+  <context>
+    <name>CaacPreferences</name>
+    <message>
+      <source>Edge midpoint snapping</source>
+      <translation>边中点吸附</translation>
+    </message>
+    <message>
+      <source>Change access password</source>
+      <translation>修改访问密码</translation>
+    </message>
+    <message>
+      <source>Route intersection snapping</source>
+      <translation>航线交点吸附</translation>
+    </message>
+  </context>
+  <context>
+    <name>CaacRIDSettings</name>
+    <message>
+      <source>Aircraft ID</source>
+      <translation>航空器ID</translation>
+    </message>
+    <message>
+      <source>UA type: %1 · UA ID type: %2</source>
+      <translation>UA类型：%1 · UA ID类型：%2</translation>
+    </message>
+    <message>
+      <source>Unique product identifier</source>
+      <translation>唯一产品识别码</translation>
+    </message>
+    <message>
+      <source>Airframe code (unique product identifier)</source>
+      <translation>机身编码（唯一产品识别码）</translation>
+    </message>
+    <message>
+      <source>Not reported by the aircraft</source>
+      <translation>无人机尚未上报</translation>
+    </message>
+    <message>
+      <source>Connect a flight controller first</source>
+      <translation>请先连接飞控</translation>
+    </message>
+    <message>
+      <source>Copy airframe code</source>
+      <translation>复制机身编码</translation>
+    </message>
+    <message>
+      <source>UAS code</source>
+      <translation>UAS编码</translation>
+    </message>
+    <message>
+      <source>Enter code</source>
+      <translation>去填写</translation>
+    </message>
+    <message>
+      <source>UAS code type</source>
+      <translation>UAS编码类型</translation>
+    </message>
+    <message>
+      <source>UAS code (required)</source>
+      <translation>UAS编码（强制）</translation>
+    </message>
+    <message>
+      <source>Broadcast UAS code</source>
+      <translation>广播UAS编码</translation>
+    </message>
+    <message>
+      <source>Ground station position</source>
+      <translation>地面站位置</translation>
+    </message>
+    <message>
+      <source>Position type</source>
+      <translation>位置类型</translation>
+    </message>
+    <message>
+      <source>Latitude</source>
+      <translation>纬度</translation>
+    </message>
+    <message>
+      <source>Longitude</source>
+      <translation>经度</translation>
+    </message>
+    <message>
+      <source>Altitude</source>
+      <translation>高度</translation>
+    </message>
+    <message>
+      <source>Unmanned aircraft classification</source>
+      <translation>无人机类型</translation>
+    </message>
+    <message>
+      <source>Region of operation</source>
+      <translation>操作区域</translation>
+    </message>
+    <message>
+      <source>Classification type</source>
+      <translation>分类类型</translation>
+    </message>
+    <message>
+      <source>Operation category</source>
+      <translation>运行类别</translation>
+    </message>
+    <message>
+      <source>UA class</source>
+      <translation>UA等级</translation>
+    </message>
+    <message>
+      <source>Flight declaration (optional)</source>
+      <translation>飞行声明（选填）</translation>
+    </message>
+    <message>
+      <source>Declaration type</source>
+      <translation>声明类型</translation>
+    </message>
+    <message>
+      <source>Declaration text</source>
+      <translation>声明内容</translation>
+    </message>
+    <message>
+      <source>Broadcast flight declaration</source>
+      <translation>广播飞行声明</translation>
+    </message>
+    <message>
+      <source>Operator ID</source>
+      <translation>操作员 ID</translation>
+    </message>
+    <message>
+      <source>Broadcast operator ID</source>
+      <translation>广播运营人ID</translation>
+    </message>
+  </context>
+  <context>
+    <name>CaacSafetySettings</name>
+    <message>
+      <source>Unavailable</source>
+      <translation>不可用</translation>
+    </message>
+    <message>
+      <source>Read parameters</source>
+      <translation>读取参数</translation>
+    </message>
+    <message>
+      <source>Confirm</source>
+      <translation>确认</translation>
+    </message>
+    <message>
+      <source>Read the connected aircraft parameters, edit their values, then confirm to write them. Unsupported parameters are unavailable.</source>
+      <translation>读取已连接无人机的参数，编辑后点击确认写入。不支持的参数不可用。</translation>
+    </message>
+    <message>
+      <source>Flight safety settings</source>
+      <translation>飞行安全设置</translation>
+    </message>
+    <message>
+      <source>Return altitude</source>
+      <translation>返航高度</translation>
+    </message>
+    <message>
+      <source>Horizontal speed (route)</source>
+      <translation>航线水平速度</translation>
+    </message>
+    <message>
+      <source>Ascent speed (route)</source>
+      <translation>航线上升速度</translation>
+    </message>
+    <message>
+      <source>Descent speed (route)</source>
+      <translation>航线下降速度</translation>
+    </message>
+    <message>
+      <source>Horizontal speed (manual)</source>
+      <translation>手动水平速度</translation>
+    </message>
+    <message>
+      <source>Ascent speed (manual)</source>
+      <translation>手动上升速度</translation>
+    </message>
+    <message>
+      <source>Descent speed (manual)</source>
+      <translation>手动下降速度</translation>
+    </message>
+    <message>
+      <source>Altitude limit</source>
+      <translation>高度限制</translation>
+    </message>
+    <message>
+      <source>Radar detection distance</source>
+      <translation>雷达检测距离</translation>
+    </message>
+    <message>
+      <source>Obstacle braking distance</source>
+      <translation>避障制动距离</translation>
+    </message>
+    <message>
+      <source>Obstacle avoidance behavior</source>
+      <translation>避障行为</translation>
+    </message>
+    <message>
+      <source>Slow descent</source>
+      <translation>缓降</translation>
+    </message>
+    <message>
+      <source>Slow descent function</source>
+      <translation>缓降功能</translation>
+    </message>
+    <message>
+      <source>RC connection loss protection</source>
+      <translation>遥控器失联保护</translation>
+    </message>
+    <message>
+      <source>RC loss action</source>
+      <translation>遥控器失联行为</translation>
+    </message>
+    <message>
+      <source>Trigger time</source>
+      <translation>触发时间</translation>
+    </message>
+    <message>
+      <source>Data link loss protection</source>
+      <translation>数据链路失联保护</translation>
+    </message>
+    <message>
+      <source>Data link loss action</source>
+      <translation>数据链路失联行为</translation>
+    </message>
+    <message>
+      <source>Battery settings</source>
+      <translation>电池设置</translation>
+    </message>
+    <message>
+      <source>Low battery threshold</source>
+      <translation>低电量阈值</translation>
+    </message>
+    <message>
+      <source>Critical battery threshold</source>
+      <translation>严重低电量阈值</translation>
+    </message>
+    <message>
+      <source>Low battery action</source>
+      <translation>低电量行为</translation>
+    </message>
+    <message>
+      <source>Critical battery action</source>
+      <translation>严重低电量行为</translation>
+    </message>
+    <message>
+      <source>Geofence</source>
+      <translation>电子围栏</translation>
+    </message>
+    <message>
+      <source>Fence action</source>
+      <translation>围栏触发行为</translation>
+    </message>
+    <message>
+      <source>Horizontal limit</source>
+      <translation>水平距离限制</translation>
+    </message>
+  </context>
+  <context>
+    <name>CaacSettingsMenu</name>
+    <message>
+      <source>Safety</source>
+      <translation>安全</translation>
+    </message>
+  </context>
+  <context>
+    <name>CaacUOMSettings</name>
+    <message>
+      <source>No data</source>
+      <translation>暂无数据</translation>
+    </message>
+    <message>
+      <source>UOM registration</source>
+      <translation>UOM注册</translation>
+    </message>
+    <message>
+      <source>Aircraft SN</source>
+      <translation>无人机SN码</translation>
+    </message>
+    <message>
+      <source>UOM dynamic data</source>
+      <translation>UOM动态数据</translation>
+    </message>
+    <message>
+      <source>Registration and activation</source>
+      <translation>注册与激活</translation>
+    </message>
+    <message>
+      <source>Airframe code (unique product identifier)</source>
+      <translation>机身编码（唯一产品识别码）</translation>
+    </message>
+    <message>
+      <source>UAS code</source>
+      <translation>UAS编码</translation>
+    </message>
+    <message>
+      <source>Complete registration and add the aircraft on the official UOM platform, then enter the UAS code from your aircraft record.</source>
+      <translation>在官方UOM平台完成登记并添加无人机后，填写无人机登记记录中的UAS编码。</translation>
+    </message>
+    <message>
+      <source>Open official UOM platform</source>
+      <translation>打开官方UOM平台</translation>
+    </message>
+    <message>
+      <source>Refresh status</source>
+      <translation>刷新状态</translation>
+    </message>
+    <message>
+      <source>Factory serial numbers</source>
+      <translation>出厂序列号</translation>
+    </message>
+    <message>
+      <source>Product model</source>
+      <translation>产品型号</translation>
+    </message>
+    <message>
+      <source>Factory code</source>
+      <translation>出厂编码</translation>
+    </message>
+    <message>
+      <source>Flight controller SN</source>
+      <translation>飞控SN码</translation>
+    </message>
+    <message>
+      <source>Copy all</source>
+      <translation>复制全部</translation>
+    </message>
+    <message>
+      <source>Read all</source>
+      <translation>读取全部</translation>
+    </message>
+    <message>
+      <source>Basic settings</source>
+      <translation>基础设置</translation>
+    </message>
+    <message>
+      <source>Aircraft type</source>
+      <translation>无人机类型</translation>
+    </message>
+    <message>
+      <source>Airframe code</source>
+      <translation>机身编码</translation>
+    </message>
+    <message>
+      <source>Dynamic data</source>
+      <translation>动态数据</translation>
+    </message>
+    <message>
+      <source>Heading</source>
+      <translation>航向</translation>
+    </message>
+    <message>
+      <source>Flight status</source>
+      <translation>飞行状态</translation>
+    </message>
+    <message>
+      <source>No telemetry</source>
+      <translation>无遥测数据</translation>
+    </message>
+    <message>
+      <source>Altitude AMSL</source>
+      <translation>海拔高度</translation>
+    </message>
+    <message>
+      <source>Relative altitude</source>
+      <translation>相对高度</translation>
+    </message>
+    <message>
+      <source>Horizontal speed</source>
+      <translation>水平速度</translation>
+    </message>
+    <message>
+      <source>Vertical speed</source>
+      <translation>垂直速度</translation>
+    </message>
+    <message>
+      <source>Longitude</source>
+      <translation>经度</translation>
+    </message>
+    <message>
+      <source>Latitude</source>
+      <translation>纬度</translation>
+    </message>
+    <message>
+      <source>Data statistics</source>
+      <translation>数据统计</translation>
+    </message>
+    <message>
+      <source>Communication status: reporting service is not connected</source>
+      <translation>通信状态：未连接上报服务</translation>
+    </message>
+    <message>
+      <source>Uploaded packets: 0</source>
+      <translation>已上传数据包：0</translation>
+    </message>
+    <message>
+      <source>Last upload: none</source>
+      <translation>上次上传：无</translation>
+    </message>
+  </context>
+  <context>
+    <name>SensorCalibrationPreview</name>
+    <message>
+      <source>Level</source>
+      <translation>水平</translation>
+    </message>
+    <message>
+      <source>Left side</source>
+      <translation>左侧</translation>
+    </message>
+    <message>
+      <source>Right side</source>
+      <translation>右侧</translation>
+    </message>
+    <message>
+      <source>Nose down</source>
+      <translation>机头朝下</translation>
+    </message>
+    <message>
+      <source>Nose up</source>
+      <translation>机头朝上</translation>
+    </message>
+    <message>
+      <source>Upside down</source>
+      <translation>倒置</translation>
+    </message>
+    <message>
+      <source>Incomplete</source>
+      <translation>未完成</translation>
+    </message>
+    <message>
+      <source>Rotate</source>
+      <translation>旋转</translation>
+    </message>
+    <message>
+      <source>Hold Still</source>
+      <translation>保持静止</translation>
+    </message>
+    <message>
+      <source>Completed</source>
+      <translation>已完成</translation>
+    </message>
+    <message>
+      <source>水平</source>
+      <translation>水平</translation>
+    </message>
+    <message>
+      <source>左侧</source>
+      <translation>左侧</translation>
+    </message>
+    <message>
+      <source>右侧</source>
+      <translation>右侧</translation>
+    </message>
+    <message>
+      <source>机头朝下</source>
+      <translation>机头朝下</translation>
+    </message>
+    <message>
+      <source>机头朝上</source>
+      <translation>机头朝上</translation>
+    </message>
+    <message>
+      <source>倒置</source>
+      <translation>倒置</translation>
+    </message>
+    <message>
+      <source>未完成</source>
+      <translation>未完成</translation>
+    </message>
+    <message>
+      <source>旋转</source>
+      <translation>旋转</translation>
+    </message>
+    <message>
+      <source>保持静止</source>
+      <translation>保持静止</translation>
+    </message>
+    <message>
+      <source>已完成</source>
+      <translation>已完成</translation>
+    </message>
+  </context>
+  <context>
+    <name>SensorCalibrationMotorTest</name>
+    <message>
+      <source>手动控制电机输出，用于检查电机顺序与方向。</source>
+      <translation>手动控制电机输出，用于检查电机顺序与方向。</translation>
+    </message>
+    <message>
+      <source>请先拆除所有螺旋桨。每次测试输出持续 3 秒。</source>
+      <translation>请先拆除所有螺旋桨。每次测试输出持续 3 秒。</translation>
+    </message>
+    <message>
+      <source>飞控尚未提供电机数量，请在电机或执行器设置中确认。</source>
+      <translation>飞控尚未提供电机数量，请在电机或执行器设置中确认。</translation>
+    </message>
+    <message>
+      <source>已拆除螺旋桨，启用电机测试</source>
+      <translation>已拆除螺旋桨，启用电机测试</translation>
+    </message>
+    <message>
+      <source>全部</source>
+      <translation>全部</translation>
+    </message>
+    <message>
+      <source>电机 %1</source>
+      <translation>电机 %1</translation>
+    </message>
+    <message>
+      <source>停止所有电机</source>
+      <translation>停止所有电机</translation>
+    </message>
+    <message>
+      <source>请在执行器设置中使用飞控提供的电机测试。</source>
+      <translation>请在执行器设置中使用飞控提供的电机测试。</translation>
+    </message>
+  </context>
+  <context>
+    <name>SensorCalibrationPanel</name>
+    <message>
+      <source>飞控校准</source>
+      <translation>飞控校准</translation>
+    </message>
+    <message>
+      <source>确认当前姿态</source>
+      <translation>确认当前姿态</translation>
+    </message>
+    <message>
+      <source>取消校准</source>
+      <translation>取消校准</translation>
+    </message>
+    <message>
+      <source>选择校准项目，按提示摆放无人机。</source>
+      <translation>选择校准项目，按提示摆放无人机。</translation>
+    </message>
+    <message>
+      <source>校准加速度计</source>
+      <translation>校准加速度计</translation>
+    </message>
+    <message>
+      <source>%1 / 6 · 将无人机放在平坦表面，按六种姿态依次保持静止。</source>
+      <translation>%1 / 6 · 将无人机放在平坦表面，按六种姿态依次保持静止。</translation>
+    </message>
+    <message>
+      <source>Start Calibration</source>
+      <translation>开始校准</translation>
+    </message>
+    <message>
+      <source>校准水平</source>
+      <translation>校准水平</translation>
+    </message>
+    <message>
+      <source>将无人机水平放置于平坦表面后点击校准。</source>
+      <translation>将无人机水平放置于平坦表面后点击校准。</translation>
+    </message>
+    <message>
+      <source>校准罗盘</source>
+      <translation>校准罗盘</translation>
+    </message>
+    <message>
+      <source>校准方式由飞控决定，请按姿态提示旋转无人机。</source>
+      <translation>校准方式由飞控决定，请按姿态提示旋转无人机。</translation>
+    </message>
+    <message>
+      <source>其他传感器设置</source>
+      <translation>其他传感器设置</translation>
+    </message>
+    <message>
+      <source>电机测试</source>
+      <translation>电机测试</translation>
+    </message>
+  </context>
 </TS>

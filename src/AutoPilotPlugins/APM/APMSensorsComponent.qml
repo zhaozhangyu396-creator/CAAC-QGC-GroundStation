@@ -668,6 +668,7 @@ SetupPage {
 
             QGCFlickable {
                 id:             buttonFlickable
+                objectName:     "sensorsSetup_buttonScroller"
                 anchors.left:   parent.left
                 anchors.top:    parent.top
                 anchors.bottom: parent.bottom
@@ -837,7 +838,30 @@ SetupPage {
                             font.pointSize:     ScreenTools.mediumFontPointSize
                         }
 
+                        SensorCalibrationPreview {
+                            objectName: "sensorCalibrationPreview"
+                            visible: QGroundControl.corePlugin.directMissionItemEditing
+                            anchors.top: orientationCalAreaHelpText.bottom
+                            anchors.bottom: parent.bottom
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.margins: ScreenTools.defaultFontPixelWidth / 2
+                            sideStates: [sideCalState(controller.orientationCalDownSideDone, controller.orientationCalDownSideInProgress),
+                                sideCalState(controller.orientationCalLeftSideDone, controller.orientationCalLeftSideInProgress),
+                                sideCalState(controller.orientationCalRightSideDone, controller.orientationCalRightSideInProgress),
+                                sideCalState(controller.orientationCalNoseDownSideDone, controller.orientationCalNoseDownSideInProgress),
+                                sideCalState(controller.orientationCalTailDownSideDone, controller.orientationCalTailDownSideInProgress),
+                                sideCalState(controller.orientationCalUpsideDownSideDone, controller.orientationCalUpsideDownSideInProgress)]
+                            sideVisible: [controller.orientationCalDownSideVisible, controller.orientationCalLeftSideVisible,
+                                controller.orientationCalRightSideVisible, controller.orientationCalNoseDownSideVisible,
+                                controller.orientationCalTailDownSideVisible, controller.orientationCalUpsideDownSideVisible]
+                            sideRotating: [controller.orientationCalDownSideRotate, controller.orientationCalLeftSideRotate,
+                                controller.orientationCalRightSideRotate, controller.orientationCalNoseDownSideRotate,
+                                controller.orientationCalTailDownSideRotate, controller.orientationCalUpsideDownSideRotate]
+                        }
+
                         Flow {
+                            visible: !QGroundControl.corePlugin.directMissionItemEditing
                             anchors.topMargin:  ScreenTools.defaultFontPixelWidth
                             anchors.top:        orientationCalAreaHelpText.bottom
                             anchors.bottom:     parent.bottom

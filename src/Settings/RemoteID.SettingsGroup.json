@@ -137,18 +137,18 @@
             "shortDesc": "Regulatory region for Remote ID compliance.",
             "longDesc": "The region of operation the mission will take place in",
             "type": "uint8",
-            "enumStrings": "FAA,EU",
-            "enumValues": "0,1",
+            "enumStrings": "FAA,EU,China",
+            "enumValues": "0,1,2",
             "default": 0,
             "label": "Region of operation",
-            "keywords": "region,faa,eu,remote id"
+            "keywords": "region,faa,eu,remote id ,china"
         },
         {
             "name": "locationType",
             "shortDesc": "Source for operator location data (live GNSS or fixed coordinates).",
             "longDesc": "Operator location Type",
             "type": "uint8",
-            "enumStrings": "Takeoff(Not Supported),Live GNSS, Fixed (not for FAA)",
+            "enumStrings": "Takeoff,Live GNSS,Fixed (not for FAA)",
             "enumValues": "0,1,2",
             "default": 1,
             "label": "Location Type",
@@ -224,6 +224,26 @@
             "default": 0,
             "label": "Class",
             "keywords": "eu,class,ce marking"
+        },
+        {
+            "name": "categoryChina",
+            "shortDesc": "China operation category.",
+            "type": "uint8",
+            "enumStrings": "Undeclared,Open,Specific,Certified",
+            "enumValues": "0,1,2,3",
+            "default": 1,
+            "label": "China operation category",
+            "keywords": "china,category"
+        },
+        {
+            "name": "classChina",
+            "shortDesc": "China unmanned aircraft class.",
+            "type": "uint8",
+            "enumStrings": "Undeclared,Micro,Light,Small,Medium,Large",
+            "enumValues": "0,1,2,3,4,5",
+            "default": 1,
+            "label": "China UA class",
+            "keywords": "china,class"
         }
     ]
 }

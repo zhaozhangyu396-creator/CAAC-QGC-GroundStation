@@ -102,6 +102,10 @@ void RemoteIDSettings::_regionChanged()
     } else if (newRegion == static_cast<int>(RegionOperation::FAA)) {
         // FAA requires the live operator position, not a fixed location
         locationType()->setRawValue(static_cast<int>(LocationType::LIVE));
+    } else if (newRegion == static_cast<int>(RegionOperation::China)) {
+        sendBasicID()->setRawValue(true);
+        sendOperatorID()->setRawValue(false);
+        locationType()->setRawValue(static_cast<int>(LocationType::TAKEOFF));
     }
 
     _updateOperatorIDValidForRegion();
@@ -114,7 +118,8 @@ void RemoteIDSettings::_updateOperatorIDValidForRegion()
 
     // EU IDs are valid by construction (write-gated + sanitized), FAA IDs have no published
     // spec to validate against, so presence is the only requirement for either region.
-    const bool validForRegion = !currentOperatorID.isEmpty();
+    const bool validForRegion =
+        region()->rawValue().toInt() != static_cast<int>(RegionOperation::China) && !currentOperatorID.isEmpty();
 
     if (_operatorIDValidForRegion != validForRegion) {
         _operatorIDValidForRegion = validForRegion;
@@ -219,3 +224,5 @@ DECLARE_SETTINGSFACT(RemoteIDSettings,  altitudeFixed)
 DECLARE_SETTINGSFACT(RemoteIDSettings,  classificationType)
 DECLARE_SETTINGSFACT(RemoteIDSettings,  categoryEU)
 DECLARE_SETTINGSFACT(RemoteIDSettings,  classEU)
+DECLARE_SETTINGSFACT(RemoteIDSettings, categoryChina)
+DECLARE_SETTINGSFACT(RemoteIDSettings, classChina)

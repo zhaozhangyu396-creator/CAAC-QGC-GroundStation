@@ -35,11 +35,19 @@ Item {
                 const from = root.screenPoint(guide.from)
                 const to = root.screenPoint(guide.to)
                 if (![from.x, from.y, to.x, to.y].every(isFinite)) { continue }
-                ctx.strokeStyle = guide.kind === 2 ? palette.colorBlue : palette.colorYellowGreen
+                ctx.strokeStyle = guide.kind >= 2 ? palette.colorBlue : palette.colorYellowGreen
                 ctx.beginPath()
                 ctx.moveTo(from.x, from.y)
                 ctx.lineTo(to.x, to.y)
                 ctx.stroke()
+                const marker = guide.intersection || guide.midpoint
+                if (marker) {
+                    const center = root.screenPoint(marker)
+                    ctx.beginPath()
+                    ctx.arc(center.x, center.y, ScreenTools.defaultFontPixelWidth * 0.5, 0, Math.PI * 2)
+                    ctx.fillStyle = palette.colorBlue
+                    ctx.fill()
+                }
             }
         }
     }

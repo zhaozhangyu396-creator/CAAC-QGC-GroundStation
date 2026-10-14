@@ -102,7 +102,7 @@ Menu {
     MenuItem {
         objectName: "caacContextDeleteWaypoint"
         visible: root.waypoint && !root.waypoint.homePosition
-        text: root.waypoint ? qsTr("Delete waypoint %1").arg(root.waypoint.sequenceNumber) : qsTr("Delete")
+        text: root.waypoint ? qsTr("Delete waypoint %1").arg(root.waypoint.waypointNumber) : qsTr("Delete")
         enabled: root.waypoint && root.waypoint.command === 16
         onTriggered: {
             if (root.controller.selectWaypoint(root.waypoint)) { root.controller.removeCurrentWaypoint() }
@@ -135,7 +135,7 @@ Menu {
         MenuItem {
             objectName: "caacContextWaypointHome"
             visible: root.waypoint && !root.waypoint.homePosition
-            text: root.waypoint ? qsTr("Use waypoint %1 as takeoff point").arg(root.waypoint.sequenceNumber) : ""
+            text: root.waypoint ? qsTr("Use waypoint %1 as takeoff point").arg(root.waypoint.waypointNumber) : ""
             enabled: root.waypoint && root.waypoint.command === 16
             onTriggered: root.controller.useWaypointAsHome(root.waypoint)
         }

@@ -15,6 +15,12 @@ Rectangle {
     color: QGroundControl.globalPalette.window
     radius: ScreenTools.defaultBorderRadius
     readonly property real spacingSize: ScreenTools.defaultFontPixelWidth
+    readonly property string selectedPage: mainWindow.caacSettingsPage
+    Component.onCompleted: mainWindow.caacSettingsMenu = root
+    Component.onDestruction: {
+        mainWindow.caacSettingsMenu = null
+        mainWindow.caacVehicleConfigView = null
+    }
     function settingsPage(name) {
         if (mainWindow.allowViewSwitch()) {
             mainWindow.closeIndicatorDrawer()
@@ -77,29 +83,38 @@ Rectangle {
                     objectName: "toolbar_connections"
                     text: qsTr("Connection")
                     imageSource: "/InstrumentValueIcons/usb.svg"
-                    onClicked: root.settingsPage("Comm Links")
+                    checked: root.selectedPage === "Connection"
+                    onClicked: { if (mainWindow.allowViewSwitch()) { mainWindow.caacSettingsPage = "Connection" } }
                 }
                 NavigationButton {
                     objectName: "toolbar_rtk"
                     text: "RTK"
                     imageSource: "/InstrumentValueIcons/globe.svg"
-                    onClicked: root.settingsPage("RTK Corrections")
+                    checked: root.selectedPage === "RTK"
+                    onClicked: { if (mainWindow.allowViewSwitch()) { mainWindow.caacSettingsPage = "RTK" } }
                 }
                 NavigationButton {
                     objectName: "toolbar_rid"
                     text: "RID"
                     imageSource: "/qmlimages/RidIconManNoID.svg"
-                    onClicked: root.settingsPage("Remote ID")
+                    checked: root.selectedPage === "RID"
+                    onClicked: { if (mainWindow.allowViewSwitch()) { mainWindow.caacSettingsPage = "RID" } }
                 }
                 NavigationButton {
                     objectName: "toolbar_viewConfigure"
                     text: qsTr("Vehicle setup")
                     imageSource: "/res/GearWithPaperPlane.svg"
+                    checked: root.selectedPage === "VehicleSetup"
                     onClicked: {
-                        if (mainWindow.allowViewSwitch()) { mainWindow.closeIndicatorDrawer(); mainWindow.showVehicleConfig() }
+                        if (mainWindow.allowViewSwitch()) { mainWindow.showVehicleConfig() }
                     }
                 }
-                NavigationButton { objectName: "toolbar_preferences"; text: qsTr("Preferences"); checked: true }
+                NavigationButton {
+                    objectName: "toolbar_preferences"
+                    text: qsTr("Preferences")
+                    checked: root.selectedPage === "Preferences"
+                    onClicked: { if (mainWindow.allowViewSwitch()) { mainWindow.caacSettingsPage = "Preferences" } }
+                }
                 NavigationButton {
                     objectName: "toolbar_viewSettings"
                     text: qsTr("Application settings")
@@ -110,6 +125,20 @@ Rectangle {
                     text: QGroundControl.corePlugin.simulation.active ? qsTr("Cancel simulation") : qsTr("Simulation")
                     imageSource: "/InstrumentValueIcons/play.svg"
                     onClicked: { mainWindow.closeIndicatorDrawer(); mainWindow.togglePlanningSimulation() }
+                }
+                NavigationButton {
+                    objectName: "toolbar_safety"
+                    text: qsTr("Safety")
+                    imageSource: "/InstrumentValueIcons/shield.svg"
+                    checked: root.selectedPage === "Safety"
+                    onClicked: { if (mainWindow.allowViewSwitch()) { mainWindow.caacSettingsPage = "Safety" } }
+                }
+                NavigationButton {
+                    objectName: "toolbar_uom"
+                    text: "UOM"
+                    imageSource: "/InstrumentValueIcons/airplane.svg"
+                    checked: root.selectedPage === "UOM"
+                    onClicked: { if (mainWindow.allowViewSwitch()) { mainWindow.caacSettingsPage = "UOM" } }
                 }
                 NavigationButton {
                     objectName: "toolbar_planningStats"
@@ -145,8 +174,35 @@ Rectangle {
         ColumnLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            QGCLabel { text: qsTr("Preferences"); font.bold: true }
-            CaacPreferences { Layout.fillWidth: true; Layout.fillHeight: true }
+            QGCLabel {
+                text: root.selectedPage === "Connection" ? qsTr("Connection")
+                    : root.selectedPage === "RTK" ? "RTK" : root.selectedPage === "RID" ? "RID"
+                    : root.selectedPage === "Safety" ? qsTr("Safety") : root.selectedPage === "UOM" ? "UOM" : qsTr("Preferences")
+                // Vehicle setup shares this panel with Preferences.
+                visible: root.selectedPage !== "VehicleSetup"
+                font.bold: true
+            }
+            Loader {
+                objectName: "caacSettingsSubmenu"
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                source: root.selectedPage === "Connection" ? "qrc:/qml/QGroundControl/AppSettings/CommLinksSettings.qml"
+                    : root.selectedPage === "VehicleSetup" ? "qrc:/qml/QGroundControl/VehicleSetup/VehicleConfigView.qml"
+                    : root.selectedPage === "RTK" ? "qrc:/qml/QGroundControl/AppSettings/RTKCorrectionsSettings.qml"
+                    : root.selectedPage === "RID" ? "qrc:/qml/CAAC/Plan/CaacRIDSettings.qml"
+                    : root.selectedPage === "Safety" ? "qrc:/qml/CAAC/Plan/CaacSafetySettings.qml"
+                    : root.selectedPage === "UOM" ? "qrc:/qml/CAAC/Plan/CaacUOMSettings.qml"
+                    : "qrc:/qml/CAAC/Plan/CaacPreferences.qml"
+                onLoaded: {
+                    if (root.selectedPage === "Connection" || root.selectedPage === "RTK") { item.fillAvailableWidth = true }
+                    if (root.selectedPage === "VehicleSetup") {
+                        item.embedded = true
+                        mainWindow.vehicleConfigReady(item)
+                    } else {
+                        mainWindow.caacVehicleConfigView = null
+                    }
+                }
+            }
             QGCLabel { text: QGroundControl.qgcVersion; font.pointSize: ScreenTools.smallFontPointSize; Layout.fillWidth: true }
         }
     }

@@ -28,6 +28,10 @@ Item {
     function collapsePanels() {
         if (customEditor.editorItem) { customEditor.editorItem.activePanel = -1; customEditor.editorItem.showMissionTree = false }
     }
+    function prepareUpload() {
+        const editor = customEditor.editorItem
+        return !customEditor.enabled || !editor || typeof editor.prepareUpload !== "function" || editor.prepareUpload()
+    }
     property var  _missionController: planMasterController.missionController
     property real _toolsMargin:       ScreenTools.defaultFontPixelWidth * 0.75
 
@@ -56,7 +60,9 @@ Item {
     Item {
         id:                     panelOpenCloseButton
         anchors.right:          parent.left
-        anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenter: root.editorMap.directMissionItemEditing ? undefined : parent.verticalCenter
+        anchors.top: root.editorMap.directMissionItemEditing ? parent.top : undefined
+        anchors.topMargin: root.editorMap.directMissionItemEditing ? Math.max(0, (root.navigationHeight - height) / 2) : 0
         width:                  toggleButtonRect.width - toggleButtonRect.radius
         height:                 toggleButtonRect.height
         clip:                   true
@@ -81,6 +87,7 @@ Item {
         }
 
         QGCMouseArea {
+            objectName: "caacPlanningPanelToggle"
             anchors.fill: parent
 
             onClicked: {
@@ -100,7 +107,9 @@ Item {
     //-------------------------------------------------------
     // Right Panel Controls
     Item {
+        objectName: "caacPlanningPanelContents"
         anchors.fill: rightPanelBackground
+        clip: !panelOpenCloseButton._expanded
 
         DeadMouseArea {
             anchors.fill:   parent

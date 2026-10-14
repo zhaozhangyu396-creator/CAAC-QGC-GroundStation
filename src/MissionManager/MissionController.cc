@@ -1277,8 +1277,13 @@ void MissionController::_recalcSequence(void)
 
     _inRecalcSequence = true;
     int sequenceNumber = 0;
+    int waypointNumber = 0;
     for (int i=0; i<_visualItems->count(); i++) {
         VisualMissionItem* item = qobject_cast<VisualMissionItem*>(_visualItems->get(i));
+        auto* simple = qobject_cast<SimpleMissionItem*>(item);
+        item->setWaypointNumber(i == 0                                                ? 0
+                                : simple && simple->command() == MAV_CMD_NAV_WAYPOINT ? ++waypointNumber
+                                                                                      : -1);
         item->setSequenceNumber(sequenceNumber);
         sequenceNumber = item->lastSequenceNumber() + 1;
     }

@@ -10,7 +10,8 @@
         "sendSelfIDOn": "ridSettings.sendSelfID.rawValue",
         "locationIsFixed": "ridSettings.locationType.rawValue === RemoteIDSettings.LocationType.FIXED",
         "locationIsLive": "ridSettings.locationType.rawValue === RemoteIDSettings.LocationType.LIVE",
-        "classificationIsEU": "ridSettings.classificationType.rawValue === RemoteIDSettings.ClassificationType.EU"
+        "classificationIsEU": "ridSettings.classificationType.rawValue === RemoteIDSettings.ClassificationType.EU",
+        "isChinaRegion": "ridSettings.region.rawValue === RemoteIDSettings.RegionOperation.China"
     },
     "groups": [
         {
@@ -137,6 +138,15 @@
                     "setting": "remoteIDSettings.classEU",
                     "enableWhen": "classificationIsEU"
                 }
+            ]
+        },
+        {
+            "heading": "China Vehicle Info",
+            "keywords": ["china", "classification", "category", "class"],
+            "showWhen": "isChinaRegion",
+            "controls": [
+                {"setting": "remoteIDSettings.categoryChina"},
+                {"setting": "remoteIDSettings.classChina"}
             ]
         }
     ]

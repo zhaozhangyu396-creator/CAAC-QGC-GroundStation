@@ -14,6 +14,7 @@ CheckBox {
     property var            color:          qgcPal.text
     property bool           showSpacer:     true
     property ButtonGroup    buttonGroup:    null
+    readonly property bool vehicleSetupStyle: ScreenTools.isVehicleSetupItem(control)
 
     property real _sectionSpacer: ScreenTools.defaultFontPixelWidth / 2  // spacing between section headings
 
@@ -36,6 +37,17 @@ CheckBox {
             text:               control.text
             color:              control.color
             Layout.fillWidth:   true
+            leftPadding:        control.vehicleSetupStyle ? ScreenTools.defaultFontPixelWidth : 0
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                width: ScreenTools.defaultFontPixelWidth * 0.35
+                height: parent.height
+                color: qgcPal.colorGreen
+                radius: width / 2
+                visible: control.vehicleSetupStyle
+            }
 
             QGCColoredImage {
                 anchors.right:          parent.right
@@ -51,7 +63,7 @@ CheckBox {
         Rectangle {
             Layout.fillWidth:   true
             height:             1
-            color:              qgcPal.text
+            color:              control.vehicleSetupStyle ? qgcPal.groupBorder : qgcPal.text
         }
     }
 

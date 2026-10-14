@@ -1,22 +1,29 @@
 #include <QtCore/QRegularExpression>
 #include <QtCore/QScopeGuard>
+#include <QtGui/QClipboard>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QImage>
 #include <QtGui/QWheelEvent>
 #include <QtQml/QJSValue>
 #include <QtQuick/QQuickItem>
+#include <QtQuick/QQuickItemGrabResult>
 #include <QtQuick/QQuickWindow>
 #include <QtTest/QSignalSpy>
 
 #include "CaacCorePlugin.h"
 #include "CaacFlightDistance.h"
 #include "Fact.h"
+#include "FlightMapSettings.h"
 #include "MissionController.h"
 #include "MockLink.h"
 #include "ParameterManager.h"
 #include "PlanMasterController.h"
 #include "QGCGeo.h"
+#include "QGCMapEngineManager.h"
 #include "QmlUITestBase.h"
+#include "RadioStatusFactGroup.h"
+#include "RemoteIDManager.h"
+#include "SettingsManager.h"
 #include "TrajectoryPoints.h"
 #include "Vehicle.h"
 
@@ -27,7 +34,113 @@ class CaacFlightDataUITest : public QmlUITestBase
 private slots:
     void _liveFlightData();
     void _dashboardInteractions();
+    void _safetyAndUomTelemetry();
 };
+
+void CaacFlightDataUITest::_safetyAndUomTelemetry()
+{
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    QVERIFY(verifyText(QStringLiteral("caacRCRSSIIndicatorValue"), QStringLiteral("--"),
+                       QStringLiteral("offline RC signal")));
+    QVERIFY(verifyText(QStringLiteral("caacTelemetryRSSIIndicatorValue"), QStringLiteral("--"),
+                       QStringLiteral("offline data link signal")));
+    Vehicle* vehicle = nullptr;
+    auto mock = connectMockLinkAndWaitReady(
+        []() {
+            auto* config = new MockConfiguration(QStringLiteral("Safety and UOM telemetry test"));
+            config->setFirmwareType(MAV_AUTOPILOT_PX4);
+            config->setVehicleType(MAV_TYPE_QUADROTOR);
+            config->setSendRadioStatus(false);
+            config->setSendStatusText(false);
+            return MockLink::startMockLink(config);
+        },
+        vehicle);
+    QVERIFY(mock && vehicle);
+    const auto disconnect = qScopeGuard([&]() { disconnectMockLink(mock); });
+    vehicle->rcRSSI()->setRawValue(0);
+    QTRY_VERIFY_WITH_TIMEOUT(
+        verifyText(QStringLiteral("caacRCRSSIIndicatorValue"), QStringLiteral("0%"), QStringLiteral("RC signal")),
+        TestTimeout::mediumMs());
+    vehicle->rcRSSI()->setRawValue(80);
+    QTRY_VERIFY_WITH_TIMEOUT(
+        verifyText(QStringLiteral("caacRCRSSIIndicatorValue"), QStringLiteral("80%"), QStringLiteral("RC signal")),
+        TestTimeout::mediumMs());
+    vehicle->rcRSSI()->setRawValue(255);
+    QTRY_VERIFY_WITH_TIMEOUT(
+        verifyText(QStringLiteral("caacRCRSSIIndicatorValue"), QStringLiteral("--"), QStringLiteral("RC signal")),
+        TestTimeout::mediumMs());
+    mavlink_message_t radio{};
+    mavlink_msg_radio_status_pack(vehicle->id(), MAV_COMP_ID_AUTOPILOT1, &radio, uint8_t(-60), uint8_t(-65), 100, 0, 0,
+                                  0, 0);
+    vehicle->radioStatusFactGroup()->handleMessage(vehicle, radio);
+    QTRY_VERIFY_WITH_TIMEOUT(verifyText(QStringLiteral("caacTelemetryRSSIIndicatorValue"), QStringLiteral("-60 dBm"),
+                                        QStringLiteral("data link signal")),
+                             TestTimeout::mediumMs());
+    for (const auto* name : {"caacTopFlightTime", "caacConnectionStatusButton", "caacRCRSSIIndicatorValue",
+                             "caacTelemetryRSSIIndicatorValue"}) {
+        auto* indicator = findVisibleItem(_rootItem, QLatin1String(name));
+        QVERIFY(indicator);
+        QVERIFY(indicator->mapToScene(QPointF()).x() > _rootItem->width() / 2);
+    }
+    QVERIFY(clickButton(QStringLiteral("toolbar_qgcLogo")));
+    const auto navigation = QStringLiteral("caacSettingsNavigationScroller");
+    QVERIFY(clickButtonScrolled(QStringLiteral("toolbar_safety"), navigation));
+    auto* safety = findVisibleItem(_rootItem, QStringLiteral("caacSafetySettings"));
+    QVERIFY(safety);
+    auto* cruise = vehicle->parameterManager()->getParameter(vehicle->defaultComponentId(), "MPC_XY_CRUISE");
+    QVERIFY(cruise);
+    const auto original = cruise->rawValue();
+    auto* field =
+        findVisibleItemScrolled(QStringLiteral("caacSafety_MPC_XY_CRUISE_value"), QStringLiteral("caacSafetyScroller"));
+    QVERIFY(field && field->isEnabled());
+    QVERIFY(
+        clickButtonScrolled(QStringLiteral("caacSafety_MPC_XY_CRUISE_value"), QStringLiteral("caacSafetyScroller")));
+    QTest::keyClick(_window, Qt::Key_A, Qt::ControlModifier);
+    QTest::keyClick(_window, Qt::Key_7);
+    QTest::keyClick(_window, Qt::Key_Tab);
+    QCOMPARE(cruise->rawValue(), original);
+    const int writes = mock->receivedMavlinkMessageCount(MAVLINK_MSG_ID_PARAM_SET);
+    QVERIFY(
+        clickButtonScrolled(QStringLiteral("caacSafetyConfirm_RTL_RETURN_ALT"), QStringLiteral("caacSafetyScroller")));
+    QTRY_COMPARE_WITH_TIMEOUT(cruise->rawValue().toDouble(), 7.0, TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(mock->receivedMavlinkMessageCount(MAVLINK_MSG_ID_PARAM_SET) > writes,
+                             TestTimeout::mediumMs());
+    uint8_t mac[20]{};
+    uint8_t serial[20] = "CAAC-TEST-SERIAL";
+    mavlink_message_t identity{};
+    mavlink_msg_open_drone_id_basic_id_pack(vehicle->id(), MAV_COMP_ID_ODID_TXRX_1, &identity, vehicle->id(), 0, mac,
+                                            MAV_ODID_ID_TYPE_SERIAL_NUMBER, MAV_ODID_UA_TYPE_HELICOPTER_OR_MULTIROTOR,
+                                            serial);
+    mock->respondWithMavlinkMessage(identity, true);
+    QTRY_COMPARE_WITH_TIMEOUT(vehicle->remoteIDManager()->aircraftSerial(), QStringLiteral("CAAC-TEST-SERIAL"),
+                              TestTimeout::mediumMs());
+    QVERIFY(clickButtonScrolled(QStringLiteral("toolbar_uom"), navigation));
+    auto* uom = findVisibleItem(_rootItem, QStringLiteral("caacUOMSettings"));
+    QVERIFY(uom);
+    QCOMPARE(uom->property("vehicle").value<Vehicle*>(), vehicle);
+    QCOMPARE(uom->property("serial").toString(), vehicle->remoteIDManager()->aircraftSerial());
+    QVERIFY(clickButton(QStringLiteral("caacUOMSerialTab")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacUOMCopyAll"), QStringLiteral("caacUOMScroller")));
+    QVERIFY(QGuiApplication::clipboard()->text().contains(QStringLiteral("CAAC-TEST-SERIAL")));
+    QVERIFY(clickButton(QStringLiteral("caacUOMTelemetryTab")));
+    auto* heading =
+        findVisibleItemScrolled(QStringLiteral("caacUOMTelemetry_heading"), QStringLiteral("caacUOMScroller"));
+    QVERIFY(heading);
+    const auto expectedHeading = [&]() {
+        return vehicle->heading()->cookedValueString() + " " + vehicle->heading()->cookedUnits();
+    };
+    vehicle->heading()->setRawValue(123.4);
+    QTRY_COMPARE_WITH_TIMEOUT(heading->property("text").toString(), expectedHeading(), TestTimeout::mediumMs());
+    vehicle->heading()->setRawValue(234.5);
+    QTRY_COMPARE_WITH_TIMEOUT(heading->property("text").toString(), expectedHeading(), TestTimeout::mediumMs());
+    QSignalSpy restorePending(vehicle->parameterManager(), &ParameterManager::pendingWritesChanged);
+    cruise->setRawValue(original);
+    QTRY_VERIFY_WITH_TIMEOUT(restorePending.count() >= 2 && !vehicle->parameterManager()->pendingWrites(),
+                             TestTimeout::mediumMs());
+}
 
 void CaacFlightDataUITest::_dashboardInteractions()
 {
@@ -46,6 +159,20 @@ void CaacFlightDataUITest::_dashboardInteractions()
     vehicle->heading()->setRawValue(123.4);
     QTRY_VERIFY_WITH_TIMEOUT(std::abs(arrow->property("headingAngle").toDouble() - 123.4) < 1e-6,
                              TestTimeout::mediumMs());
+    auto* compassValue = findVisibleItem(_rootItem, QStringLiteral("caacTelemetryHeadingValue"));
+    QVERIFY(compassValue);
+    QCOMPARE(compassValue->property("text").toString(), QStringLiteral("123.4°"));
+    const auto valuePosition = compassValue->mapToItem(arrow, QPointF());
+    QVERIFY(valuePosition.y() > arrow->height() / 2);
+    QVERIFY(QRectF(0, 0, arrow->width(), arrow->height())
+                .contains(QRectF(valuePosition, QSizeF(compassValue->width(), compassValue->height()))));
+    if (const auto path = qgetenv("CAAC_HEADING_UI_PREVIEW"); !path.isEmpty()) {
+        const auto capture = arrow->grabToImage();
+        QVERIFY(capture);
+        QSignalSpy ready(capture.data(), &QQuickItemGrabResult::ready);
+        QTRY_VERIFY_WITH_TIMEOUT(!ready.isEmpty(), TestTimeout::mediumMs());
+        QVERIFY(capture->saveToFile(QString::fromUtf8(path)));
+    }
     auto* heading = findVisibleItem(_rootItem, QStringLiteral("caacDashboardHeadingValue"));
     QVERIFY(heading);
     QVERIFY(heading->property("text").toString().startsWith(vehicle->heading()->cookedValueString()));
@@ -109,6 +236,24 @@ void CaacFlightDataUITest::_liveFlightData()
     QVERIFY(verifyVisibility(QStringLiteral("caacFlyDataPanel"), false, QStringLiteral("only map panel")));
     auto* mapSettings = findVisibleItem(_rootItem, QStringLiteral("caacMapSettingsPanel"));
     QVERIFY(mapSettings);
+    auto* mapFacts = SettingsManager::instance()->flightMapSettings();
+    const auto originalProvider = mapFacts->mapProvider()->rawValue();
+    const auto originalMapType = mapFacts->mapType()->rawValue();
+    const auto restoreMap = qScopeGuard([&]() {
+        mapFacts->mapProvider()->setRawValue(originalProvider);
+        mapFacts->mapType()->setRawValue(originalMapType);
+    });
+    auto* provider = findVisibleItem(_rootItem, QStringLiteral("caacMapProvider"));
+    QVERIFY(provider && provider->property("count").toInt() > 1);
+    QVERIFY(scrollIntoView(provider, QStringLiteral("caacFlyPanelsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacMapProvider")));
+    QTest::keyClick(_window, Qt::Key_Home);
+    QTest::keyClick(_window, Qt::Key_Down);
+    QTest::keyClick(_window, Qt::Key_Return);
+    QTRY_COMPARE_WITH_TIMEOUT(mapFacts->mapProvider()->rawValue().toString(),
+                              provider->property("currentText").toString(), TestTimeout::mediumMs());
+    QVERIFY(QGCMapEngineManager::mapTypeList(mapFacts->mapProvider()->rawValue().toString())
+                .contains(mapFacts->mapType()->rawValue().toString()));
     auto* addCombo = findVisibleItem(_rootItem, QStringLiteral("caacMapDoubleClickAdd"));
     QVERIFY(addCombo);
     QVERIFY(scrollIntoView(addCombo, QStringLiteral("caacFlyPanelsScroller")));
@@ -182,30 +327,8 @@ void CaacFlightDataUITest::_liveFlightData()
                                         QStringLiteral("任务模式"), QStringLiteral("返航模式")};
         QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightModes(), expectedModes, TestTimeout::longMs());
         QVERIFY(clickButton(QStringLiteral("toolbar_flightModeIndicator")));
-        QVERIFY(clickButton(QStringLiteral("indicatorDrawerExpandButton")));
-        auto* geofence = findVisibleItem(_rootItem, QStringLiteral("caacGeofenceAction"));
-        QVERIFY(geofence);
-        QVariant actionLabels = geofence->property("model");
-        if (actionLabels.canConvert<QJSValue>()) {
-            actionLabels = actionLabels.value<QJSValue>().toVariant();
-        }
-        QCOMPARE(
-            actionLabels.toStringList(),
-            QStringList({QStringLiteral("无行为"), QStringLiteral("警告"), QStringLiteral("保持悬停"),
-                         QStringLiteral("返航"), QStringLiteral("飞行中止（停止动力输出）"), QStringLiteral("降落")}));
-        auto* geofenceFact = geofence->property("fact").value<Fact*>();
-        QVERIFY(geofenceFact);
-        const auto savedGeofenceAction = geofenceFact->rawValue();
-        const auto restoreGeofenceAction =
-            qScopeGuard([geofenceFact, savedGeofenceAction] { geofenceFact->setRawValue(savedGeofenceAction); });
-        for (int i = 0; i < 6; ++i) {
-            QCOMPARE(geofenceFact->enumValues().at(i).toInt(), i);
-            QVERIFY(QMetaObject::invokeMethod(geofence, "activated", Q_ARG(int, i)));
-            QTRY_COMPARE_WITH_TIMEOUT(geofenceFact->rawValue().toInt(), i, TestTimeout::mediumMs());
-            QTRY_VERIFY_WITH_TIMEOUT(!vehicle->parameterManager()->pendingWrites(), TestTimeout::mediumMs());
-        }
-        geofenceFact->setRawValue(savedGeofenceAction);
-        QTRY_VERIFY_WITH_TIMEOUT(!vehicle->parameterManager()->pendingWrites(), TestTimeout::mediumMs());
+        QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("indicatorDrawerExpandButton"), 0));
+        QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacGeofenceAction"), 0));
         auto* drawerLoader = findItem(_rootItem, QStringLiteral("indicatorDrawerLoader"));
         QVERIFY(drawerLoader);
         QTest::keyClick(_window, Qt::Key_Escape);

@@ -11,6 +11,7 @@ import QGroundControl.FlyView
 import QGroundControl.FlightMap
 import QGroundControl.PlanView
 import QGroundControl.Toolbar
+import CAAC.Plan
 
 /// @brief Native QML top level window
 /// All properties defined here are visible to all QML pages.
@@ -78,6 +79,7 @@ ApplicationWindow {
         readonly property real      defaultTextHeight:              ScreenTools.defaultFontPixelHeight
         readonly property real      defaultTextWidth:               ScreenTools.defaultFontPixelWidth
         readonly property var       planMasterControllerFlyView:    flyView.planController
+        readonly property var       planMasterControllerPlanView:   planView._planMasterController
         readonly property var       guidedControllerFlyView:        flyView.guidedController
 
         // Number of QGCTextField's with validation errors. Used to prevent closing panels with validation errors.
@@ -135,6 +137,7 @@ ApplicationWindow {
     }
 
     function showPlanView() {
+        closeIndicatorDrawer()
         flyView.visible = false
         planView.visible = true
         toolDrawer.visible = false
@@ -162,24 +165,65 @@ ApplicationWindow {
     }
 
     function showAnalyzeTool() {
-        showTool(qsTr("Analyze Tools"), "qrc:/qml/QGroundControl/AnalyzeView/AnalyzeView.qml", "/qmlimages/Analyze.svg")
+        showProtectedTool(function() {
+            showTool(qsTr("Analyze Tools"), "qrc:/qml/QGroundControl/AnalyzeView/AnalyzeView.qml", "/qmlimages/Analyze.svg")
+        })
     }
 
-    function showVehicleConfig() {
-        showTool(qsTr("Vehicle Configuration"), "qrc:/qml/QGroundControl/VehicleSetup/VehicleConfigView.qml", "/qmlimages/Gears.svg")
+    Component { id: accessDialogComponent; CaacAccessDialog { } }
+    function showProtectedTool(action) {
+        if (!QGroundControl.corePlugin.directMissionItemEditing) { action(); return }
+        QGroundControl.corePlugin.accessController.ensureDefaultPassword()
+        const dialog = accessDialogComponent.createObject(mainWindow)
+        if (dialog) { dialog.accessGranted.connect(action); dialog.open() }
+    }
+    function changeAccessPassword() {
+        QGroundControl.corePlugin.accessController.ensureDefaultPassword()
+        const dialog = accessDialogComponent.createObject(mainWindow, {changePassword: true})
+        if (dialog) { dialog.open() }
+    }
+    function showVehicleConfig(afterOpen = null) {
+        showProtectedTool(function() {
+            if (QGroundControl.corePlugin.directMissionItemEditing) {
+                caacVehicleConfigAfterOpen = afterOpen
+                if (caacSettingsMenu) {
+                    caacSettingsPage = "VehicleSetup"
+                    if (caacVehicleConfigView) {
+                        caacVehicleConfigView.showNavigation()
+                        vehicleConfigReady(caacVehicleConfigView)
+                    }
+                } else {
+                    showToolSelectDialog("VehicleSetup")
+                }
+            } else {
+                showTool(qsTr("Vehicle Configuration"), "qrc:/qml/QGroundControl/VehicleSetup/VehicleConfigView.qml", "/qmlimages/Gears.svg")
+                if (afterOpen) { afterOpen(toolDrawerLoader.item) }
+            }
+        })
+    }
+
+    property var caacSettingsMenu: null
+    property var caacVehicleConfigView: null
+    property var caacVehicleConfigAfterOpen: null
+
+    function vehicleConfigReady(view) {
+        caacVehicleConfigView = view
+        const action = caacVehicleConfigAfterOpen
+        caacVehicleConfigAfterOpen = null
+        if (action) { action(view) }
     }
 
     function showVehicleConfigParametersPage() {
-        showVehicleConfig()
-        toolDrawerLoader.item.showParametersPanel()
+        showVehicleConfig(function(view) { view.showParametersPanel() })
     }
 
     function showKnownVehicleComponentConfigPage(knownVehicleComponent) {
-        showVehicleConfig()
-        let vehicleComponent = globals.activeVehicle.autopilotPlugin.findKnownVehicleComponent(knownVehicleComponent)
-        if (vehicleComponent) {
-            toolDrawerLoader.item.showVehicleComponentPanel(vehicleComponent)
-        }
+        const requestedVehicle = globals.activeVehicle
+        showVehicleConfig(function(view) {
+            if (!requestedVehicle || requestedVehicle !== globals.activeVehicle) { return }
+            const vehicleComponent = requestedVehicle.autopilotPlugin.findKnownVehicleComponent(knownVehicleComponent)
+            if (vehicleComponent) { view.showVehicleComponentPanel(vehicleComponent) }
+        })
     }
 
     function showSettingsTool(settingsPage = "") {
@@ -373,8 +417,11 @@ ApplicationWindow {
         }
     }
 
-    function showToolSelectDialog() {
+    property string caacSettingsPage: "Preferences"
+
+    function showToolSelectDialog(settingsPage = "Preferences") {
         if (mainWindow.allowViewSwitch()) {
+            mainWindow.caacSettingsPage = settingsPage
             mainWindow.showIndicatorDrawer(toolSelectComponent, null)
         }
     }

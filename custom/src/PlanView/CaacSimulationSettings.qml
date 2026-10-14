@@ -14,6 +14,7 @@ ColumnLayout {
     required property real horizontalSpeed
     readonly property var _settings: routeController.simulationSettings
     property bool _previewReady: false
+    property bool draftDirty: false
     readonly property var _previewValues: {
         const settings = Object.assign({}, _settings)
         settings.closed = closed.checked
@@ -39,7 +40,7 @@ ColumnLayout {
             for (let i = 1; i < _items.count; ++i) {
                 const item = _items.get(i)
                 if (item.isSimpleItem && item.command === 16) {
-                    points.push({label: qsTr("Waypoint %1").arg(item.sequenceNumber), sequence: item.sequenceNumber})
+                    points.push({label: qsTr("Waypoint %1").arg(item.waypointNumber), sequence: item.sequenceNumber})
                 }
             }
         }
@@ -50,9 +51,9 @@ ColumnLayout {
     function values() {
         return {horizontalSpeed: horizontalSpeed, verticalSpeed: number(vertical.text),
             yawRate: number(yawRate.text), windSpeed: _settings.windSpeed, windBearing: _settings.windBearing,
-            turnMode: turn.currentIndex, climbMode: climb.currentIndex, holdSeconds: hold.visible ? number(hold.text) : _settings.holdSeconds,
-            specifyYaw: yawMode.currentIndex === 1, yaw: yaw.visible ? number(yaw.text) : _settings.yaw, closed: closed.checked,
-            loopMode: loop.currentIndex, loopCount: loopCount.visible ? number(loopCount.text) : _settings.loopCount, endBehavior: ending.currentIndex,
+            turnMode: turn.currentIndex, climbMode: climb.currentIndex, holdSeconds: (turn.currentIndex === 0 || turn.currentIndex === 3) ? number(hold.text) : _settings.holdSeconds,
+            specifyYaw: yawMode.currentIndex === 1, yaw: yawMode.currentIndex === 1 ? number(yaw.text) : _settings.yaw, closed: closed.checked,
+            loopMode: loop.currentIndex, loopCount: loop.currentIndex === 1 ? number(loopCount.text) : _settings.loopCount, endBehavior: ending.currentIndex,
             startSequence: start.currentIndex >= 0 ? _points[start.currentIndex].sequence : NaN,
             returnSequence: ending.currentIndex === 0 ? _settings.returnSequence
                 : returning.currentIndex >= 0 ? _points[returning.currentIndex].sequence : NaN,
@@ -62,6 +63,7 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.minimumWidth: 0
         validator: DoubleValidator { locale: "C" }
+        onTextEdited: root.draftDirty = true
     }
     spacing: ScreenTools.defaultFontPixelHeight * 0.5
     CaacSettingsSection {
@@ -76,7 +78,7 @@ ColumnLayout {
                 objectName: "caacSimTurnMode"
                 Layout.fillWidth: true
                 model: [qsTr("Point turn"), qsTr("Coordinated turn"), qsTr("Adaptive coordinated turn"), qsTr("No turn")]
-                currentIndex: root._settings.turnMode
+                currentIndex: root._settings.turnMode; onActivated: root.draftDirty = true
             }
             QGCLabel { text: qsTr("Hold duration (s)"); visible: turn.currentIndex === 0 || turn.currentIndex === 3 }
             NumberField {
@@ -87,7 +89,7 @@ ColumnLayout {
             QGCComboBox {
                 id: yawMode; objectName: "caacSimSpecifyYaw"; Layout.fillWidth: true
                 model: [qsTr("Unspecified"), qsTr("Specified")]
-                currentIndex: root._settings.specifyYaw ? 1 : 0
+                currentIndex: root._settings.specifyYaw ? 1 : 0; onActivated: root.draftDirty = true
                 visible: hold.visible
             }
             QGCLabel { text: qsTr("Specified heading (degrees)"); visible: yawMode.visible && yawMode.currentIndex === 1 }
@@ -111,14 +113,14 @@ ColumnLayout {
             QGCComboBox {
                 id: climb; objectName: "caacSimClimbMode"; Layout.fillWidth: true
                 model: [qsTr("Point climb"), qsTr("Coordinated climb")]
-                currentIndex: root._settings.climbMode
+                currentIndex: root._settings.climbMode; onActivated: root.draftDirty = true
             }
         }
     }
     CaacSettingsSection {
         objectName: "caacSimLoopsSection"
         title: qsTr("Closed route and loops")
-        QGCCheckBox { id: closed; objectName: "caacSimClosedRoute"; text: qsTr("Close route"); checked: root._settings.closed }
+        QGCCheckBox { id: closed; objectName: "caacSimClosedRoute"; text: qsTr("Close route"); checked: root._settings.closed; onClicked: root.draftDirty = true }
         GridLayout {
             columns: root.width < ScreenTools.defaultFontPixelWidth * 35 ? 1 : 2
             Layout.fillWidth: true
@@ -126,7 +128,7 @@ ColumnLayout {
             QGCComboBox {
                 id: loop; objectName: "caacSimLoopMode"; Layout.fillWidth: true
                 model: [qsTr("No loop"), qsTr("Specified count"), qsTr("Loop forever")]
-                currentIndex: root._settings.loopMode
+                currentIndex: root._settings.loopMode; onActivated: root.draftDirty = true
             }
             QGCLabel { text: qsTr("Total route executions"); visible: loop.currentIndex === 1 }
             NumberField {
@@ -136,18 +138,18 @@ ColumnLayout {
             QGCLabel { text: qsTr("Start point") }
             QGCComboBox {
                 id: start; objectName: "caacSimStartPoint"; Layout.fillWidth: true
-                model: root._points; textRole: "label"; currentIndex: root.pointIndex(root._settings.startSequence)
+                model: root._points; textRole: "label"; currentIndex: root.pointIndex(root._settings.startSequence); onActivated: root.draftDirty = true
             }
             QGCLabel { text: qsTr("End behavior") }
             QGCComboBox {
                 id: ending; objectName: "caacSimEndBehavior"; Layout.fillWidth: true
-                model: [qsTr("Hover in place"), qsTr("Return")]; currentIndex: root._settings.endBehavior
+                model: [qsTr("Hover in place"), qsTr("Return")]; currentIndex: root._settings.endBehavior; onActivated: root.draftDirty = true
             }
             QGCLabel { text: qsTr("Return point"); visible: ending.currentIndex === 1 }
             QGCComboBox {
                 id: returning; objectName: "caacSimReturnPoint"; Layout.fillWidth: true
                 visible: ending.currentIndex === 1
-                model: root._points; textRole: "label"; currentIndex: root.pointIndex(root._settings.returnSequence)
+                model: root._points; textRole: "label"; currentIndex: root.pointIndex(root._settings.returnSequence); onActivated: root.draftDirty = true
             }
         }
         QGCLabel {

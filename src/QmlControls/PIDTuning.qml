@@ -7,8 +7,13 @@ import QGroundControl
 import QGroundControl.Controls
 import QGroundControl.FactControls
 
-RowLayout {
-    spacing: _margins
+GridLayout {
+    id: pidLayout
+    readonly property bool vehicleSetupStyle: ScreenTools.isVehicleSetupItem(pidLayout)
+    columns: vehicleSetupStyle ? 1 : 2
+    width: vehicleSetupStyle ? availableWidth : implicitWidth
+    rowSpacing: _margins
+    columnSpacing: _margins
 
     QGCPalette { id: qgcPal }
 
@@ -184,8 +189,10 @@ RowLayout {
 
         GraphsView {
             id:                     chart
-            width:                  Math.max(_minChartWidth, availableWidth - rightPanel.width - parent.spacing - _margins)
-            height:                 Math.max(_minChartHeight, availableHeight - leftPanelBottomColumn.height - chartTitleLabel.height - legendRow.height - parent.spacing * 3 - _margins)
+            width:                  pidLayout.vehicleSetupStyle ? availableWidth
+                                        : Math.max(_minChartWidth, availableWidth - rightPanel.width - parent.spacing - _margins)
+            height:                 pidLayout.vehicleSetupStyle ? ScreenTools.defaultFontPixelHeight * 12
+                                        : Math.max(_minChartHeight, availableHeight - leftPanelBottomColumn.height - chartTitleLabel.height - legendRow.height - parent.spacing * 3 - _margins)
 
             property real _minChartWidth:   ScreenTools.defaultFontPixelWidth * 40
             property real _minChartHeight:  ScreenTools.defaultFontPixelHeight * 15
@@ -341,6 +348,7 @@ RowLayout {
     ColumnLayout {
         id:                 rightPanel
         Layout.alignment:   Qt.AlignTop
+        Layout.fillWidth:   true
 
         RowLayout {
             visible: showAutoTuning
@@ -365,6 +373,7 @@ RowLayout {
 
         ColumnLayout {
             visible: !showAutoTuning || useManualTuningRadio.checked
+            Layout.fillWidth: true
 
             Column {
                 RowLayout {
@@ -402,6 +411,7 @@ RowLayout {
                         headingDescription:     description
                         visible:                _currentAxis === paramRepeater.axisIndex
                         Layout.preferredWidth:  ScreenTools.defaultFontPixelWidth * 40
+                        Layout.fillWidth: pidLayout.vehicleSetupStyle
 
                         FactSlider {
                             fact:                   controller.getParameterFact(-1, param)
@@ -453,4 +463,4 @@ RowLayout {
         }
     }
 
-} // RowLayout
+}

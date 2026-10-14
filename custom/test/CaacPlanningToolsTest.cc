@@ -35,8 +35,11 @@ private slots:
     void _dragSnapping_data();
     void _dragSnapping();
     void _perpendicularAndSymmetry();
+    void _edgeMidpoints();
+    void _routeIntersections();
     void _pointRelationsAndVertex();
     void _synchronizeWaypointDefaults();
+    void _displayNumbersAndLoopSelection();
     void _planningPreferences();
 };
 
@@ -46,10 +49,8 @@ void CaacPlanningToolsTest::_planningPreferences()
     QVERIFY(plugin);
     const auto original = plugin->planningPreferences();
     const auto restore = qScopeGuard([&]() { plugin->updatePlanningPreferences(original); });
-    const QVariantMap disabled{{"horizontalSnap", false},
-                               {"verticalSnap", false},
-                               {"angleSnap", false},
-                               {"symmetrySnap", false},
+    const QVariantMap disabled{{"horizontalSnap", false}, {"verticalSnap", false}, {"angleSnap", false},
+                               {"symmetrySnap", false},   {"midpointSnap", false}, {"intersectionSnap", false},
                                {"snapAngle", 30.0}};
     QSignalSpy changes(plugin, &CaacCorePlugin::mapPreferencesChanged);
     QVERIFY(plugin->updatePlanningPreferences(disabled));
@@ -79,6 +80,45 @@ void CaacPlanningToolsTest::_planningPreferences()
     const auto snapped = editor.snapWaypointDrag(item, raw, 2);
     QVERIFY(!snapped.value("guides").toList().isEmpty());
     QVERIFY(std::abs(QGCGeo::geodesicAzimuth(origin, snapped.value("coordinate").value<QGeoCoordinate>()) - 90) < 1e-6);
+}
+
+void CaacPlanningToolsTest::_displayNumbersAndLoopSelection()
+{
+    PlanMasterController master;
+    master.start();
+    CaacRouteEditorController editor;
+    editor.setPlanMasterController(&master);
+    auto* mission = master.missionController();
+    const QGeoCoordinate home(30, 120, 20);
+    mission->setHomePosition(home);
+    for (int i = 1; i <= 4; ++i) {
+        QVERIFY(editor.addWaypoint(QGCGeo::geodesicDestination(home, i * 90, 100)));
+    }
+    auto settings = editor.simulationSettings();
+    settings["startSequence"] = 3;
+    settings["returnSequence"] = 4;
+    settings["closed"] = true;
+    settings["loopMode"] = 1;
+    settings["loopCount"] = 4;
+    QVERIFY(editor.setSimulationSettings(settings));
+    const auto before = master.saveToJson();
+    QVERIFY(editor.syncWaypointDefaults({{"specifySpeed", true}, {"speed", 8.0}}));
+    for (int i = 1; i <= 4; ++i) {
+        auto* point = mission->visualItems()->value<SimpleMissionItem*>(i);
+        QCOMPARE(point->waypointNumber(), i);
+        QCOMPARE(point->sequenceNumber(), 2 * i - 1);
+    }
+    QCOMPARE(editor.simulationSettings().value("startSequence").toInt(), 5);
+    QCOMPARE(editor.simulationSettings().value("returnSequence").toInt(), 7);
+    QVERIFY(editor.setMissionFlightSpeed(true, 8));
+    QCOMPARE(mission->visualItems()->value<SimpleMissionItem*>(4)->waypointNumber(), 4);
+    QCOMPARE(editor.simulationSettings().value("startSequence").toInt(), 6);
+    QCOMPARE(editor.simulationSettings().value("returnSequence").toInt(), 8);
+    QVERIFY(editor.undo());
+    QVERIFY(editor.undo());
+    QCOMPARE(master.saveToJson(), before);
+    QCOMPARE(editor.simulationSettings().value("startSequence").toInt(), 3);
+    QCOMPARE(editor.simulationSettings().value("returnSequence").toInt(), 4);
 }
 
 void CaacPlanningToolsTest::_synchronizeWaypointDefaults()
@@ -167,6 +207,55 @@ void CaacPlanningToolsTest::_dragSnapping()
     QCOMPARE(editor.snapWaypointDrag(nullptr, raw, 2).value("coordinate").value<QGeoCoordinate>(), raw);
 }
 
+void CaacPlanningToolsTest::_edgeMidpoints()
+{
+    auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
+    QVERIFY(plugin);
+    const auto original = plugin->planningPreferences();
+    const auto restore = qScopeGuard([&]() { plugin->updatePlanningPreferences(original); });
+    QVERIFY(plugin->updatePlanningPreferences({{"horizontalSnap", false},
+                                               {"verticalSnap", false},
+                                               {"angleSnap", false},
+                                               {"symmetrySnap", false},
+                                               {"intersectionSnap", false},
+                                               {"midpointSnap", true}}));
+    for (const auto& origin : {QGeoCoordinate(30, 120, 20), QGeoCoordinate(80, 179.999, 20)}) {
+        PlanMasterController master;
+        master.start();
+        CaacRouteEditorController editor;
+        editor.setPlanMasterController(&master);
+        auto* mission = master.missionController();
+        mission->setHomePosition(origin);
+        const auto a = QGCGeo::geodesicDestination(origin, 63, 100);
+        const auto b = QGCGeo::geodesicDestination(a, 333, 80);
+        const auto c = QGCGeo::geodesicDestination(origin, 333, 80);
+        for (const auto& point : {a, b, c}) {
+            QVERIFY(editor.addWaypoint(point));
+        }
+        auto settings = editor.simulationSettings();
+        settings["closed"] = true;
+        QVERIFY(editor.setSimulationSettings(settings));
+        const auto before = master.saveToJson();
+        auto* moved = mission->visualItems()->value<SimpleMissionItem*>(1);
+        for (const auto& edge : {qMakePair(b, c), qMakePair(c, origin)}) {
+            const auto midpoint =
+                QGCGeo::geodesicDestination(edge.first, QGCGeo::geodesicAzimuth(edge.first, edge.second),
+                                            QGCGeo::geodesicDistance(edge.first, edge.second) / 2);
+            auto raw = QGCGeo::geodesicDestination(midpoint, 18, 0.5);
+            raw.setAltitude(42);
+            const auto result = editor.snapWaypointDrag(moved, raw, 1);
+            const auto snapped = result.value("coordinate").value<QGeoCoordinate>();
+            QVERIFY(QGCGeo::geodesicDistance(snapped, midpoint) < 0.001);
+            QCOMPARE(snapped.altitude(), 42.0);
+            QCOMPARE(result.value("guides").toList().first().toMap().value("kind").toInt(), 3);
+            QCOMPARE(master.saveToJson(), before);
+            QVERIFY(plugin->updatePlanningPreferences({{"midpointSnap", false}}));
+            QCOMPARE(editor.snapWaypointDrag(moved, raw, 1).value("coordinate").value<QGeoCoordinate>(), raw);
+            QVERIFY(plugin->updatePlanningPreferences({{"midpointSnap", true}}));
+        }
+    }
+}
+
 void CaacPlanningToolsTest::_perpendicularAndSymmetry()
 {
     PlanMasterController master;
@@ -195,6 +284,63 @@ void CaacPlanningToolsTest::_perpendicularAndSymmetry()
     const auto symmetricPoint = symmetric.value("coordinate").value<QGeoCoordinate>();
     QVERIFY(std::abs(QGCGeo::geodesicDistance(origin, symmetricPoint) -
                      QGCGeo::geodesicDistance(next, symmetricPoint)) < 0.01);
+}
+
+void CaacPlanningToolsTest::_routeIntersections()
+{
+    auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
+    QVERIFY(plugin);
+    const auto original = plugin->planningPreferences();
+    const auto restore = qScopeGuard([&]() { plugin->updatePlanningPreferences(original); });
+    QVERIFY(plugin->updatePlanningPreferences({{"horizontalSnap", false},
+                                               {"verticalSnap", false},
+                                               {"angleSnap", false},
+                                               {"symmetrySnap", false},
+                                               {"midpointSnap", false},
+                                               {"intersectionSnap", true}}));
+    for (const auto& origin : {QGeoCoordinate(30, 120, 20), QGeoCoordinate(80, 179.999, 20)}) {
+        PlanMasterController master;
+        master.start();
+        CaacRouteEditorController editor;
+        editor.setPlanMasterController(&master);
+        auto* mission = master.missionController();
+        mission->setHomePosition(origin);
+        const auto a = QGCGeo::geodesicDestination(origin, 90, 100);
+        const auto b = QGCGeo::geodesicDestination(a, 0, 100);
+        const auto c = QGCGeo::geodesicDestination(origin, 0, 100);
+        const auto d = QGCGeo::geodesicDestination(origin, 270, 100);
+        for (const auto& point : {a, b, c, d}) {
+            QVERIFY(editor.addWaypoint(point));
+        }
+        auto* moved = mission->visualItems()->value<SimpleMissionItem*>(4);
+        const auto before = master.saveToJson();
+        const auto target = QGCGeo::geodesicDestination(origin, 90, 30);
+        auto raw = QGCGeo::geodesicDestination(target, 0, 0.5);
+        raw.setAltitude(42);
+        const auto result = editor.snapWaypointDrag(moved, raw, 1);
+        const auto snapped = result.value("coordinate").value<QGeoCoordinate>();
+        QVERIFY(QGCGeo::geodesicDistance(snapped, target) < 0.01);
+        QCOMPARE(snapped.altitude(), 42.0);
+        QCOMPARE(result.value("guides").toList().first().toMap().value("kind").toInt(), 4);
+        QCOMPARE(master.saveToJson(), before);
+        QVERIFY(plugin->updatePlanningPreferences({{"intersectionSnap", false}}));
+        QCOMPARE(editor.snapWaypointDrag(moved, raw, 1).value("coordinate").value<QGeoCoordinate>(), raw);
+        QVERIFY(plugin->updatePlanningPreferences({{"intersectionSnap", true}}));
+        const auto outside = QGCGeo::geodesicDestination(origin, 90, 120);
+        QCOMPARE(editor.snapWaypointDrag(moved, outside, 1).value("coordinate").value<QGeoCoordinate>(), outside);
+
+        // The closing segment is eligible only when it actually forms part of the route.
+        moved = mission->visualItems()->value<SimpleMissionItem*>(2);
+        const auto closingTarget = QGCGeo::geodesicDestination(origin, 270, 30);
+        raw = QGCGeo::geodesicDestination(closingTarget, 0, 0.5);
+        QCOMPARE(editor.snapWaypointDrag(moved, raw, 1).value("coordinate").value<QGeoCoordinate>(), raw);
+        auto settings = editor.simulationSettings();
+        settings["closed"] = true;
+        QVERIFY(editor.setSimulationSettings(settings));
+        const auto closed = editor.snapWaypointDrag(moved, raw, 1);
+        QVERIFY(QGCGeo::geodesicDistance(closed.value("coordinate").value<QGeoCoordinate>(), closingTarget) < 0.01);
+        QCOMPARE(closed.value("guides").toList().first().toMap().value("kind").toInt(), 4);
+    }
 }
 
 void CaacPlanningToolsTest::_pointRelationsAndVertex()

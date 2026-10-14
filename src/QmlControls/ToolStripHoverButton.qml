@@ -73,7 +73,7 @@ Button {
 
         Column {
             anchors.horizontalCenter: parent.horizontalCenter
-            y: control.compactLabel ? (parent.height - control.roundDiameter * 0.55) / 2
+            y: control.compactLabel ? (parent.height - height + (control.roundStyle ? control.roundDiameter * 0.225 : 0)) / 2
                 : control.roundStyle ? control.roundDiameter * 0.225 : (parent.height - height) / 2
             spacing:            control.roundStyle ? control.roundDiameter * 0.3 : 0
 
@@ -140,6 +140,7 @@ Button {
 
             QGCLabel {
                 id:                         innerText
+                objectName:                 control.objectName + "_label"
                 style:                      control.roundStyle ? Text.Outline : Text.Normal
                 styleColor:                 qgcPal.windowShadeDark
                 text:                       control.text

@@ -64,9 +64,10 @@ void CaacRouteEditorTest::_testWaypointLabelsFollowSpeedCommands()
     connect(&editor, &CaacRouteEditorController::coordinateItemsChanged, this, [&]() { observedLabel = label(); });
     QVERIFY(editor.updateWaypoint(first, 30.001, 120, 50, true, 5));
     QCOMPARE(second->sequenceNumber(), originalNumber + 1);
+    QCOMPARE(second->waypointNumber(), 2);
     QVERIFY(!labelsChanged.isEmpty());
     QCOMPARE(observedLabel, QCoreApplication::translate("CaacRouteEditorController", "Waypoint %1 · %2")
-                                .arg(second->sequenceNumber())
+                                .arg(second->waypointNumber())
                                 .arg(second->commandName()));
     QCOMPARE(second->coordinate(), secondCoordinate);
     labelsChanged.clear();
@@ -74,7 +75,7 @@ void CaacRouteEditorTest::_testWaypointLabelsFollowSpeedCommands()
     QCOMPARE(second->sequenceNumber(), originalNumber);
     QVERIFY(!labelsChanged.isEmpty());
     QCOMPARE(observedLabel, QCoreApplication::translate("CaacRouteEditorController", "Waypoint %1 · %2")
-                                .arg(second->sequenceNumber())
+                                .arg(second->waypointNumber())
                                 .arg(second->commandName()));
 }
 

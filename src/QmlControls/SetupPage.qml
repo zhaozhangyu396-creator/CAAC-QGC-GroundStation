@@ -13,13 +13,14 @@ Item {
     enabled:        !_disableDueToArmed && !_disableDueToFlying
 
     property alias  pageComponent:          pageLoader.sourceComponent
-    property string pageName:               vehicleComponent ? vehicleComponent.name : ""
+    property string pageName:               ScreenTools.vehicleComponentName(vehicleComponent)
     property string pageDescription:        vehicleComponent ? vehicleComponent.description : ""
-    property real   availableWidth:         width - pageLoader.x
+    property real   availableWidth:         width - pageLoader.x - (vehicleSetupStyle ? _margins : 0)
     property real   availableHeight:        height - pageLoader.y
     property bool   showAdvanced:           false
     property alias  advanced:               advancedCheckBox.checked
     property string sectionIdFilter:        ""
+    readonly property bool vehicleSetupStyle: ScreenTools.isVehicleSetupItem(setupView)
 
     function sectionVisible(sectionId) {
         if (pageLoader.item && typeof pageLoader.item.sectionVisible === "function") {
@@ -51,6 +52,7 @@ Item {
     }
 
     QGCFlickable {
+        objectName:     "vehicleSetup_scroller"
         anchors.fill:   parent
         contentWidth:   Math.max(availableWidth, pageLoader.x + pageLoader.item.width)
         contentHeight:  Math.max(availableHeight, pageLoader.y + pageLoader.item.height)
@@ -61,7 +63,8 @@ Item {
             width:              availableWidth
             spacing:            _margins
             layoutDirection:    Qt.RightToLeft
-            visible:            showAdvanced || (pageDescription !== "" && !ScreenTools.isShortScreen)
+            visible:            vehicleSetupStyle || showAdvanced || (pageDescription !== "" && !ScreenTools.isShortScreen)
+            x:                  vehicleSetupStyle ? _margins : 0
 
             QGCCheckBox {
                 id:         advancedCheckBox
@@ -72,6 +75,29 @@ Item {
             ColumnLayout {
                 spacing:            _margins
                 Layout.fillWidth:   true
+
+                RowLayout {
+                    objectName: "vehicleSetup_header"
+                    Layout.fillWidth: true
+                    Layout.topMargin: setupView._margins
+                    Layout.bottomMargin: setupView._margins
+                    visible: setupView.vehicleSetupStyle && setupView.pageName !== ""
+                    spacing: ScreenTools.defaultFontPixelWidth
+                    Rectangle {
+                        width: ScreenTools.defaultFontPixelWidth * 0.35
+                        height: ScreenTools.defaultFontPixelHeight * 1.2
+                        radius: width / 2
+                        color: qgcPal.colorGreen
+                    }
+                    QGCLabel {
+                        objectName: "vehicleSetup_title"
+                        Layout.fillWidth: true
+                        text: setupView.pageName
+                        font.pointSize: ScreenTools.mediumFontPointSize
+                        font.bold: true
+                        wrapMode: Text.WordWrap
+                    }
+                }
 
                 QGCLabel {
                     Layout.fillWidth:   true
@@ -93,6 +119,7 @@ Item {
         Loader {
             id:                 pageLoader
             objectName:         "setupPage_contentLoader"
+            x:                  vehicleSetupStyle ? _margins : 0
             anchors.topMargin:  _margins
             anchors.top:        headingRow.bottom
         }

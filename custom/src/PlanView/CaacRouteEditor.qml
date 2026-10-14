@@ -33,6 +33,7 @@ Column {
     readonly property var currentItem: editorController.currentItem
     readonly property var routeController: editorController
     property var simulationPreviewSettings: null
+    function prepareUpload() { return globalSettings.prepareUpload() }
     readonly property var simulationPreviewSegments: {
         void editorController.coordinateItems
         return editorController.simulationPreviewSegments(simulationPreviewSettings || editorController.simulationSettings)
@@ -306,7 +307,7 @@ Column {
             text: !root._draggedWaypoint ? ""
                 : root._dragLeg.distance === undefined ? qsTr("No valid previous waypoint")
                 : qsTr("Waypoint %1 → %2 · Distance: %3 m").arg(root._dragLeg.previousNumber)
-                    .arg(root._draggedWaypoint.sequenceNumber).arg(root._dragLeg.distance.toFixed(2))
+                    .arg(root._draggedWaypoint.waypointNumber).arg(root._dragLeg.distance.toFixed(2))
                     + "\n" + (root._dragLeg.angle !== undefined
                         ? qsTr("Interior angle: %1°").arg(root._dragLeg.angle.toFixed(2))
                         : qsTr("Interior angle: unavailable (no incoming leg)"))
@@ -666,6 +667,7 @@ Column {
         CaacPanelDragHandle {
             objectName: "caacPlanningPanelDragHandle"
             anchors.fill: parent
+            enabled: false
             onMoved: (delta) => root.movePanel(delta)
         }
 
@@ -693,6 +695,7 @@ Column {
     }
 
     CaacGlobalSettings {
+        id: globalSettings
         objectName: "caacGlobalSettingsPanel"
         width: root.width
         height: Math.max(ScreenTools.defaultFontPixelHeight * 8,
@@ -804,7 +807,7 @@ Column {
                 }
                 QGCLabel {
                     objectName: "caacWaypointNumber_" + card.object.sequenceNumber
-                    text: card.object.sequenceNumber
+                    text: card.object.waypointNumber
                     font.pointSize: ScreenTools.largeFontPointSize
                     font.bold: true
                     color: card._textColor
@@ -1093,6 +1096,10 @@ Column {
             editorController.beginEdit()
         }
         function onMissionItemDragFinished(item) {
+            if (item && item.sequenceNumber === 0 && item.coordinate.isValid) {
+                item.dirty = true
+                root.planMasterController.missionController.setCurrentPlanViewSeqNum(0, true)
+            }
             root._draggedWaypoint = null
             root._dragGuides = []
             editorController.endEdit()

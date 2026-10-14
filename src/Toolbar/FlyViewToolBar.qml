@@ -15,6 +15,9 @@ Item {
     height: _statusHeight
 
     readonly property real _statusHeight: ScreenTools.toolbarHeight
+    readonly property bool _compactToolbar: QGroundControl.corePlugin.directMissionItemEditing
+    readonly property real _iconExtent: ScreenTools.defaultFontPixelHeight * (_compactToolbar ? 0.85 : 1)
+    readonly property real _fontPointSize: _compactToolbar ? ScreenTools.smallFontPointSize : ScreenTools.defaultFontPointSize
     property alias flightToolStrip: flightActions
     property bool flightSettingsExpanded: false
     signal displayPreFlightChecklist
@@ -31,6 +34,34 @@ Item {
     }
 
     QGCPalette { id: qgcPal }
+
+    component LinkStrength: RowLayout {
+        id: indicator
+        required property string iconSource
+        required property string label
+        property bool available: false
+        property real percent: 0
+        property string valueText: "--"
+        spacing: ScreenTools.defaultFontPixelWidth * 0.35
+        Accessible.name: label + ": " + valueText
+        QGCColoredImage {
+            source: indicator.iconSource
+            color: qgcPal.text
+            Layout.preferredWidth: control._iconExtent
+            Layout.preferredHeight: Layout.preferredWidth
+            fillMode: Image.PreserveAspectFit
+        }
+        SignalStrength {
+            size: control._iconExtent
+            percent: indicator.available ? indicator.percent : 0
+            opacity: indicator.available ? 1 : 0.5
+        }
+        QGCLabel {
+            objectName: indicator.objectName + "Value"
+            text: indicator.valueText
+            font.pointSize: ScreenTools.smallFontPointSize
+        }
+    }
 
     QGCFlickable {
         anchors.left:       parent.left
@@ -59,7 +90,7 @@ Item {
                 RowLayout {
                     id:         leftPanelLayout
                     height:     parent.height
-                    spacing:    ScreenTools.defaultFontPixelWidth * 2
+                    spacing:    ScreenTools.defaultFontPixelWidth * (control._compactToolbar ? 0.35 : 2)
                     scale:      Math.min(1, leftPanel.width / Math.max(1, implicitWidth))
                     transformOrigin: Item.Left
 
@@ -74,6 +105,8 @@ Item {
                             Layout.fillHeight:  true
                             icon.source:        "/res/gear-white.svg"
                             logo:               false
+                            iconExtent:         control._compactToolbar ? control._iconExtent : Math.min(ScreenTools.defaultFontPixelHeight * 2, height * 0.75)
+                            _horizontalMargin:  ScreenTools.defaultFontPixelWidth * (control._compactToolbar ? 0.6 : 1)
                             onClicked:          mainWindow.showToolSelectDialog()
                         }
 
@@ -125,7 +158,7 @@ Item {
 
             Item {
                 id:     rightPanel
-                width:  Math.min(flyViewIndicators.implicitWidth, control.width * 0.28)
+                width:  Math.min(rightIndicators.implicitWidth, control.width * 0.48)
                 height: parent.height
 
                 Rectangle {
@@ -133,13 +166,109 @@ Item {
                     color:          qgcPal.window
                 }
 
-                FlyViewToolBarIndicators {
-                    id:     flyViewIndicators
+                RowLayout {
+                    id: rightIndicators
                     height: parent.height * 0.72
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.right: parent.right
                     scale: Math.min(1, rightPanel.width / Math.max(1, implicitWidth))
                     transformOrigin: Item.Right
+                    spacing: ScreenTools.defaultFontPixelWidth * (control._compactToolbar ? 0.65 : 1)
+                    RowLayout {
+                        spacing: ScreenTools.defaultFontPixelWidth * 0.5
+                        QGCColoredImage {
+                            source: "/InstrumentValueIcons/timer.svg"
+                            color: qgcPal.text
+                            Layout.preferredWidth: control._iconExtent
+                            Layout.preferredHeight: Layout.preferredWidth
+                            fillMode: Image.PreserveAspectFit
+                        }
+                        QGCLabel {
+                            objectName: "caacTopFlightTime"
+                            readonly property var flightTime: control._activeVehicle ? control._activeVehicle.getFact("flightTime") : null
+                            text: flightTime ? flightTime.valueString : "00:00:00"
+                            color: qgcPal.text
+                            font.pointSize: control._fontPointSize
+                            Accessible.name: qsTr("Flight time") + ": " + text
+                        }
+                    }
+                    QGCButton {
+                        id: connectionButton
+                        objectName: "caacConnectionStatusButton"
+                        readonly property bool connected: !!control._activeVehicle && !control._communicationLost
+                        heightFactor: 0.25
+                        _horizontalPadding: ScreenTools.defaultFontPixelWidth * (control._compactToolbar ? 0.6 : 2)
+                        implicitWidth: contentItem.implicitWidth + leftPadding + rightPadding
+                        backgroundColor: qgcPal.window
+                        text: connected ? qsTr("Connected") : qsTr("Not connected")
+                        ToolTip.visible: hovered
+                        ToolTip.text: qsTr("Open connection settings")
+                        contentItem: RowLayout {
+                            spacing: ScreenTools.defaultFontPixelWidth * 0.5
+                            Item {
+                                Layout.preferredWidth: control._iconExtent
+                                Layout.preferredHeight: Layout.preferredWidth
+                                QGCColoredImage {
+                                    anchors.fill: parent
+                                    source: "/InstrumentValueIcons/link.svg"
+                                    color: qgcPal.text
+                                    fillMode: Image.PreserveAspectFit
+                                }
+                                Canvas {
+                                    anchors.fill: parent
+                                    visible: !connectionButton.connected
+                                    readonly property color lineColor: qgcPal.text
+                                    readonly property color coverColor: qgcPal.window
+                                    onLineColorChanged: requestPaint()
+                                    onCoverColorChanged: requestPaint()
+                                    onPaint: {
+                                        const ctx = getContext("2d")
+                                        ctx.reset()
+                                        ctx.beginPath()
+                                        ctx.moveTo(width * 0.1, height * 0.1)
+                                        ctx.lineTo(width * 0.9, height * 0.9)
+                                        ctx.strokeStyle = coverColor
+                                        ctx.lineWidth = width * 0.22
+                                        ctx.stroke()
+                                        ctx.strokeStyle = lineColor
+                                        ctx.lineWidth = width * 0.1
+                                        ctx.stroke()
+                                    }
+                                }
+                            }
+                            QGCLabel { text: connectionButton.text; color: qgcPal.text; font.pointSize: control._fontPointSize }
+                        }
+                        onClicked: {
+                            if (mainWindow.allowViewSwitch()) {
+                                mainWindow.showToolSelectDialog("Connection")
+                            }
+                        }
+                    }
+                    LinkStrength {
+                        objectName: "caacRCRSSIIndicator"
+                        visible: QGroundControl.corePlugin.directMissionItemEditing
+                        iconSource: "/qmlimages/RC.svg"
+                        label: qsTr("RC signal strength")
+                        readonly property var fact: control._activeVehicle ? control._activeVehicle.rcRSSI : null
+                        available: !!fact && !control._communicationLost && fact.rawValue >= 0 && fact.rawValue <= 100
+                        percent: available ? Number(fact.rawValue) : 0
+                        valueText: available ? Math.round(percent) + "%" : "--"
+                    }
+                    LinkStrength {
+                        objectName: "caacTelemetryRSSIIndicator"
+                        visible: QGroundControl.corePlugin.directMissionItemEditing
+                        iconSource: "/qmlimages/TelemRSSI.svg"
+                        label: qsTr("Telemetry signal strength")
+                        readonly property var radio: control._activeVehicle ? control._activeVehicle.radioStatus : null
+                        available: !!radio && radio.telemetryAvailable && !control._communicationLost && isFinite(Number(radio.lrssi.rawValue))
+                        percent: available ? Math.max(0, Math.min(100, (Number(radio.lrssi.rawValue) + 100) * 2)) : 0
+                        valueText: available ? radio.lrssi.valueString + " " + radio.lrssi.units : "--"
+                    }
+                    FlyViewToolBarIndicators {
+                        id: flyViewIndicators
+                        Layout.fillHeight: true
+                        hideSignalStrengthIndicators: QGroundControl.corePlugin.directMissionItemEditing
+                    }
                 }
             }
         }
@@ -166,110 +295,51 @@ Item {
             transformOrigin: Item.Left
             spacing: ScreenTools.defaultFontPixelWidth * 0.5
             QGCButton {
+                id: flightSettingsButton
                 objectName: "caacFlightSettingsButton"
                 text: qsTr("Flight settings")
                 checked: control.flightSettingsExpanded
                 checkable: true
                 heightFactor: 0.25
+                pointSize: control._fontPointSize
+                _horizontalPadding: ScreenTools.defaultFontPixelWidth * (control._compactToolbar ? 0.6 : 2)
+                implicitWidth: contentItem.implicitWidth + leftPadding + rightPadding
                 backgroundColor: checked ? qgcPal.colorGreen : qgcPal.window
                 textColor: qgcPal.text
                 onClicked: control.flightSettingsExpanded = checked
             }
-            QGCButton {
-                objectName: "caacArmMenuButton"
-                heightFactor: 0.25
-                backgroundColor: qgcPal.window
-                textColor: qgcPal.text
-                text: control._activeVehicle && control._activeVehicle.armed ? qsTr("Disarm") : qsTr("Arm")
-                enabled: !!control._activeVehicle
-                onClicked: mainStatusIndicator.dropStatusSection(1, this)
-            }
-            QGCButton {
-                objectName: "caacVehicleMessagesButton"
-                heightFactor: 0.25
-                backgroundColor: qgcPal.window
-                textColor: qgcPal.text
-                text: qsTr("Messages")
-                enabled: !!control._activeVehicle
-                onClicked: mainStatusIndicator.dropStatusSection(2, this)
+            RowLayout {
+                objectName: "caacArmStatusIndicator"
+                spacing: ScreenTools.defaultFontPixelWidth * 0.35
+                Accessible.name: qsTr("Propeller lock status") + ": " + armStatus.text
+                QGCColoredImage {
+                    visible: !!control._activeVehicle
+                    source: control._activeVehicle && control._activeVehicle.armed ? "/qmlimages/Armed.svg" : "/qmlimages/Disarmed.svg"
+                    color: qgcPal.text
+                    Layout.preferredWidth: control._iconExtent
+                    Layout.preferredHeight: Layout.preferredWidth
+                    fillMode: Image.PreserveAspectFit
+                }
+                QGCLabel {
+                    id: armStatus
+                    objectName: "caacArmStatusValue"
+                    font.pointSize: control._fontPointSize
+                    text: !control._activeVehicle ? "--" : control._activeVehicle.armed ? qsTr("Armed") : qsTr("Disarmed")
+                }
             }
             QGCButton {
                 objectName: "caacSensorStatusButton"
                 heightFactor: 0.25
+                pointSize: control._fontPointSize
+                _horizontalPadding: ScreenTools.defaultFontPixelWidth * (control._compactToolbar ? 0.6 : 2)
+                implicitWidth: contentItem.implicitWidth + leftPadding + rightPadding
                 backgroundColor: qgcPal.window
                 textColor: qgcPal.text
                 text: qsTr("Sensor status")
                 enabled: !!control._activeVehicle
                 onClicked: mainStatusIndicator.dropStatusSection(3, this)
             }
-            RowLayout {
-                spacing: ScreenTools.defaultFontPixelWidth * 0.5
-                QGCColoredImage {
-                    source: "/InstrumentValueIcons/timer.svg"
-                    color: qgcPal.text
-                    Layout.preferredWidth: ScreenTools.defaultFontPixelHeight
-                    Layout.preferredHeight: Layout.preferredWidth
-                    fillMode: Image.PreserveAspectFit
-                }
-                QGCLabel {
-                    objectName: "caacTopFlightTime"
-                    readonly property var flightTime: control._activeVehicle ? control._activeVehicle.getFact("flightTime") : null
-                    text: flightTime ? flightTime.valueString : "00:00:00"
-                    color: qgcPal.text
-                    Accessible.name: qsTr("Flight time") + ": " + text
-                }
-            }
-            QGCButton {
-                id: connectionButton
-                objectName: "caacConnectionStatusButton"
-                readonly property bool connected: !!control._activeVehicle && !control._communicationLost
-                heightFactor: 0.25
-                backgroundColor: qgcPal.window
-                text: connected ? qsTr("Connected") : qsTr("Not connected")
-                ToolTip.visible: hovered
-                ToolTip.text: qsTr("Open connection settings")
-                contentItem: RowLayout {
-                    spacing: ScreenTools.defaultFontPixelWidth * 0.5
-                    Item {
-                        Layout.preferredWidth: ScreenTools.defaultFontPixelHeight * 1.2
-                        Layout.preferredHeight: Layout.preferredWidth
-                        QGCColoredImage {
-                            anchors.fill: parent
-                            source: "/InstrumentValueIcons/link.svg"
-                            color: qgcPal.text
-                            fillMode: Image.PreserveAspectFit
-                        }
-                        Canvas {
-                            anchors.fill: parent
-                            visible: !connectionButton.connected
-                            readonly property color lineColor: qgcPal.text
-                            readonly property color coverColor: qgcPal.window
-                            onLineColorChanged: requestPaint()
-                            onCoverColorChanged: requestPaint()
-                            onPaint: {
-                                const ctx = getContext("2d")
-                                ctx.reset()
-                                ctx.beginPath()
-                                ctx.moveTo(width * 0.1, height * 0.1)
-                                ctx.lineTo(width * 0.9, height * 0.9)
-                                ctx.strokeStyle = coverColor
-                                ctx.lineWidth = width * 0.22
-                                ctx.stroke()
-                                ctx.strokeStyle = lineColor
-                                ctx.lineWidth = width * 0.1
-                                ctx.stroke()
-                            }
-                        }
-                    }
-                    QGCLabel { text: connectionButton.text; color: qgcPal.text }
-                }
-                onClicked: {
-                    if (mainWindow.allowViewSwitch()) {
-                        mainWindow.closeIndicatorDrawer()
-                        mainWindow.showSettingsTool("Comm Links")
-                    }
-                }
-            }
+
         }
     }
 
@@ -277,8 +347,9 @@ Item {
         objectName: "caacFlightSettingsPanel"
         parent: control.parent
         visible: control.visible && control.flightSettingsExpanded && !guidedActionConfirm.visible
-        x: Math.max(control._margins, (parent.width - width) / 2)
-        y: control.y + control.height + ScreenTools.defaultFontPixelHeight * 3.5
+        x: Math.max(control._margins, Math.min(flightSettingsButton.mapToItem(parent, 0, 0).x,
+            parent.width - width - control._margins))
+        y: control.mapToItem(parent, 0, control.height).y + control._margins
         width: flightActions.width + control._margins * 2
         height: flightActions.height + control._margins * 2
         radius: ScreenTools.defaultBorderRadius
@@ -293,11 +364,11 @@ Item {
             x: control._margins
             y: control._margins
             maxWidth: Math.min(control.parent.width - control._margins * 4, ScreenTools.defaultFontPixelHeight * 16)
-            maxHeight: ScreenTools.defaultFontPixelHeight * 8
-            roundButtonHeight: ScreenTools.defaultFontPixelHeight * 3.4
+            maxHeight: Math.max(0, control.parent.height - parent.y - control._margins * 3)
+            roundButtonHeight: ScreenTools.defaultFontPixelHeight * 3.9
             roundButtonMaximumDiameter: ScreenTools.defaultFontPixelHeight * 2.3
             compactLabels: true
-            onActionTriggered: control.flightSettingsExpanded = false
+            onActionTriggered: { if (!QGroundControl.corePlugin.directMissionItemEditing) { control.flightSettingsExpanded = false } }
             onDisplayPreFlightChecklist: control.displayPreFlightChecklist()
         }
     }

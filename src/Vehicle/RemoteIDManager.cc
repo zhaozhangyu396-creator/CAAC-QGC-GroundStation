@@ -59,8 +59,33 @@ void RemoteIDManager::mavlinkMessageReceived(mavlink_message_t& message )
     // So far we are only listening to this one, as heartbeat won't be sent if connected by CAN
     case MAVLINK_MSG_ID_OPEN_DRONE_ID_ARM_STATUS:
         _handleArmStatus(message);
+        break;
+    case MAVLINK_MSG_ID_OPEN_DRONE_ID_BASIC_ID:
+        _handleBasicID(message);
+        break;
     default:
         break;
+    }
+}
+
+void RemoteIDManager::_handleBasicID(const mavlink_message_t& message)
+{
+    if (!_vehicle || message.sysid != _vehicle->id() ||
+        (message.compid != MAV_COMP_ID_AUTOPILOT1 &&
+         (message.compid < MAV_COMP_ID_ODID_TXRX_1 || message.compid > MAV_COMP_ID_ODID_TXRX_3))) {
+        return;
+    }
+    mavlink_open_drone_id_basic_id_t basicID{};
+    mavlink_msg_open_drone_id_basic_id_decode(&message, &basicID);
+    if (basicID.id_type != MAV_ODID_ID_TYPE_SERIAL_NUMBER || basicID.ua_type > MAV_ODID_UA_TYPE_OTHER) {
+        return;
+    }
+    const auto* bytes = reinterpret_cast<const char*>(basicID.uas_id);
+    const QString serial = QString::fromUtf8(bytes, qstrnlen(bytes, sizeof(basicID.uas_id)));
+    if (_aircraftSerial != serial || _aircraftType != basicID.ua_type) {
+        _aircraftSerial = serial;
+        _aircraftType = basicID.ua_type;
+        emit aircraftSerialChanged();
     }
 }
 
@@ -283,10 +308,13 @@ void RemoteIDManager::_sendSystem()
     QGeoCoordinate gcsPosition(0, 0, 0);
     const uint32_t locationType = _settings->locationType()->rawValue().toUInt();
     // Location types:
-    // 0 -> TAKEOFF (not supported yet)
+    // 0 -> TAKEOFF
     // 1 -> LIVE GNNS
     // 2 -> FIXED
-    if (locationType == LocationTypes::FIXED) {
+    if (locationType == LocationTypes::TAKEOFF) {
+        gcsPosition = _vehicle->homePosition();
+        _updateGcsPositionStatus(gcsPosition.isValid() && qIsFinite(gcsPosition.altitude()));
+    } else if (locationType == LocationTypes::FIXED) {
         const double lat = _settings->latitudeFixed()->rawValue().toDouble();
         const double lon = _settings->longitudeFixed()->rawValue().toDouble();
         const double alt = _settings->altitudeFixed()->rawValue().toDouble();
@@ -342,15 +370,22 @@ void RemoteIDManager::_sendSystem()
 
     if (sharedLink) {
         mavlink_message_t msg;
+        // Open Drone ID defines EU classification fields only; China keeps its taxonomy in separate Facts.
+        const bool chinaRegion =
+            _settings->region()->rawValue().toInt() == static_cast<int>(RemoteIDSettings::RegionOperation::China);
 
         mavlink_msg_open_drone_id_system_pack_chan(
             MAVLinkProtocol::instance()->getSystemId(), MAVLinkProtocol::getComponentId(), sharedLink->mavlinkChannel(),
             &msg, _targetSystem, _targetComponent, _id_or_mac_unknown, _settings->locationType()->rawValue().toUInt(),
-            _settings->classificationType()->rawValue().toUInt(),
+            chinaRegion ? static_cast<uint32_t>(MAV_ODID_CLASSIFICATION_TYPE_UNDECLARED)
+                        : _settings->classificationType()->rawValue().toUInt(),
             _gcsPositionUsable ? (gcsPosition.latitude() * 1.0e7) : MAVLINK_UNKNOWN_LAT,
             _gcsPositionUsable ? (gcsPosition.longitude() * 1.0e7) : MAVLINK_UNKNOWN_LON, AREA_COUNT, AREA_RADIUS,
-            MAVLINK_UNKNOWN_METERS, MAVLINK_UNKNOWN_METERS, _settings->categoryEU()->rawValue().toUInt(),
-            _settings->classEU()->rawValue().toUInt(),
+            MAVLINK_UNKNOWN_METERS, MAVLINK_UNKNOWN_METERS,
+            chinaRegion ? static_cast<uint32_t>(MAV_ODID_CATEGORY_EU_UNDECLARED)
+                        : _settings->categoryEU()->rawValue().toUInt(),
+            chinaRegion ? static_cast<uint32_t>(MAV_ODID_CLASS_EU_UNDECLARED)
+                        : _settings->classEU()->rawValue().toUInt(),
             _gcsPositionUsable && qIsFinite(gcsPosition.altitude()) ? gcsPosition.altitude() : MAVLINK_UNKNOWN_METERS,
             _timestamp2019());
         _vehicle->sendMessageOnLinkThreadSafe(sharedLink.get(), msg);

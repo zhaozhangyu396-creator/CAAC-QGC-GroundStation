@@ -168,10 +168,16 @@ ColumnLayout {
                         required property var modelData
                         objectName: "caacMoveRouteDirection_" + modelData.bearing
                         text: modelData.text
-                        Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 3
-                        Layout.preferredHeight: ScreenTools.defaultFontPixelHeight * 1.6
+                        Layout.preferredWidth: ScreenTools.defaultFontPixelHeight * 1.6
+                        Layout.preferredHeight: Layout.preferredWidth
+                        Layout.minimumWidth: Layout.preferredWidth
+                        Layout.maximumWidth: Layout.preferredWidth
+                        Layout.minimumHeight: Layout.preferredHeight
+                        Layout.maximumHeight: Layout.preferredHeight
                         leftPadding: 0
                         rightPadding: 0
+                        topPadding: 0
+                        bottomPadding: 0
                         opacity: modelData.bearing < 0 ? 0 : 1
                         enabled: modelData.bearing >= 0
                         onClicked: root.routeController.moveRouteBy(modelData.bearing, root.number(distance.text), translateHome.checked)

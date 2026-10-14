@@ -19,6 +19,8 @@ private slots:
     void cleanup() override;
 
     void _operatorIDBroadcastGating();
+    void _airframeSerialFiltering();
+    void _takeoffLocationChina();
     void _operatorIDBroadcastNullPadded();
     void _basicIDMissingFlagFollowsArmStatusError();
     void _liveGpsFailureDiagnostics_data();
@@ -34,5 +36,6 @@ private:
     QVariant _savedOperatorIDType;
     QVariant _savedRegion;
     QVariant _savedSendOperatorID;
+    QVariant _savedSendBasicID;
     QVariant _savedLocationType;
 };

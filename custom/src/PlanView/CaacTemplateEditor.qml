@@ -169,12 +169,16 @@ Item {
             }
             Canvas {
                 id: preview
+                objectName: "caacTemplatePreview"
                 Layout.fillWidth: true
                 Layout.preferredHeight: ScreenTools.defaultFontPixelHeight * 8
                 property var vertices: root._preview
                 property int shape: tabs.currentIndex
+                readonly property var vertexLabels: shape === 1 ? Array.from({length: 6}, (_, index) =>
+                    "ABCDEF"[(hexStart.currentIndex + (direction.currentIndex === 0 ? index : -index) + 6) % 6]) : []
                 onVerticesChanged: requestPaint()
                 onShapeChanged: requestPaint()
+                onVertexLabelsChanged: requestPaint()
                 onWidthChanged: requestPaint()
                 onHeightChanged: requestPaint()
                 onPaint: {
@@ -195,7 +199,7 @@ Item {
                     const ys = points.map(point => point.y)
                     const minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs)
                     const minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys)
-                    const scale = Math.min(width / Math.max(1, maxX - minX), height / Math.max(1, maxY - minY)) * 0.8
+                    const scale = Math.min(width / Math.max(1, maxX - minX), height / Math.max(1, maxY - minY)) * (shape === 1 ? 0.7 : 0.8)
                     ctx.strokeStyle = QGroundControl.globalPalette.text
                     ctx.fillStyle = ctx.strokeStyle
                     ctx.lineWidth = 2
@@ -206,6 +210,19 @@ Item {
                         if (index === 0) { ctx.moveTo(x, y) } else { ctx.lineTo(x, y) }
                     })
                     ctx.stroke()
+                    if (shape === 1) {
+                        ctx.font = (ScreenTools.defaultFontPixelHeight * 0.8) + "px sans-serif"
+                        ctx.textAlign = "center"
+                        ctx.textBaseline = "middle"
+                        points.slice(0, 6).forEach((point, index) => {
+                            const dx = point.x - (minX + maxX) / 2
+                            const dy = point.y - (minY + maxY) / 2
+                            const length = Math.max(1, Math.hypot(dx, dy))
+                            const offset = ScreenTools.defaultFontPixelHeight * 0.65
+                            ctx.fillText(vertexLabels[index], width / 2 + dx * scale + dx / length * offset,
+                                height / 2 + dy * scale + dy / length * offset)
+                        })
+                    }
                 }
             }
         }

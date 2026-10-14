@@ -12,15 +12,29 @@ ColumnLayout {
 
     property string heading
     property string iconSource
+    readonly property bool vehicleSetupStyle: ScreenTools.isVehicleSetupItem(control)
 
     property real _margins: ScreenTools.defaultFontPixelHeight / 2
 
     QGCPalette { id: qgcPal; colorGroupEnabled: true }
 
-    QGCLabel {
-        text: control.heading
-        font.pointSize: ScreenTools.largeFontPointSize
+    RowLayout {
+        Layout.fillWidth: true
         visible: control.heading !== ""
+        spacing: ScreenTools.defaultFontPixelWidth
+        Rectangle {
+            width: ScreenTools.defaultFontPixelWidth * 0.35
+            height: ScreenTools.defaultFontPixelHeight
+            color: qgcPal.colorGreen
+            radius: width / 2
+            visible: control.vehicleSetupStyle
+        }
+        QGCLabel {
+            Layout.fillWidth: true
+            text: control.heading
+            font.pointSize: control.vehicleSetupStyle ? ScreenTools.defaultFontPointSize : ScreenTools.largeFontPointSize
+            wrapMode: Text.WordWrap
+        }
     }
 
     Rectangle {

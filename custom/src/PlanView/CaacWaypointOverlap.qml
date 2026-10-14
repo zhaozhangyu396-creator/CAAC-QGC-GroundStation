@@ -40,7 +40,7 @@ Item {
             const point = mapControl.mapToItem(root, projected.x, projected.y)
             if (!isFinite(point.x) || !isFinite(point.y)) { continue }
             const candidate = {point: point, coordinate: item.coordinate,
-                label: i === 0 ? qsTr("Takeoff point") : item.sequenceNumber.toString()}
+                label: i === 0 ? qsTr("Takeoff point") : item.waypointNumber.toString()}
             points.push(candidate)
             const offset = Math.hypot(point.x - position.x, point.y - position.y)
             if (offset <= distance) { closest = candidate; distance = offset }

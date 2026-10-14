@@ -1,16 +1,62 @@
 #include "PX4SensorsCalibrationUITest.h"
 
+#include <algorithm>
+
 #include <QtCore/QElapsedTimer>
 #include <QtQuick/QQuickItem>
+#include <QtQuick/QQuickItemGrabResult>
 #include <QtQuick/QQuickWindow>
+#include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
 #include "MockLink.h"
 #include "ParameterManager.h"
+#include "QGCCorePlugin.h"
 #include "SensorsComponentController.h"
 #include "Vehicle.h"
 
 UT_REGISTER_TEST(PX4SensorsCalibrationUITest, TestLabel::Integration)
+
+void PX4SensorsCalibrationUITest::_testMotorSafetyGate()
+{
+    if (!QGCCorePlugin::instance()->directMissionItemEditing()) {
+        QSKIP("The integrated calibration motor controls are specific to the CAAC interface");
+    }
+    runWithMockLink([] { return MockLink::startPX4MockLink(); },
+                    [&](QPointer<MockLink>, Vehicle* vehicle) {
+                        _navigateToSensorsPanel();
+                        if (QTest::currentTestFailed()) {
+                            return;
+                        }
+                        auto* safetyCheck = findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_enableMotorTest"));
+                        auto* slider = findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_motorSlider_1"));
+                        QVERIFY(safetyCheck);
+                        QVERIFY(slider);
+                        QVERIFY(!safetyCheck->property("checked").toBool());
+                        QVERIFY(!slider->isEnabled());
+                        QVERIFY(clickButtonScrolled(QStringLiteral("sensorsSetup_enableMotorTest"),
+                                                    QStringLiteral("sensorsSetup_buttonScroller")));
+                        QTRY_VERIFY(slider->isEnabled());
+                        QSignalSpy commands(vehicle, &Vehicle::mavCommandResult);
+                        slider->setProperty("value", 20);
+                        QVERIFY(QMetaObject::invokeMethod(slider, "moved"));
+                        QTRY_VERIFY_WITH_TIMEOUT(std::any_of(commands.cbegin(), commands.cend(),
+                                                             [](const QList<QVariant>& result) {
+                                                                 return result.at(2).toInt() == MAV_CMD_DO_MOTOR_TEST &&
+                                                                        result.at(3).toInt() == MAV_RESULT_ACCEPTED;
+                                                             }),
+                                                 5000);
+                        vehicle->setArmed(true, false);
+                        QTRY_VERIFY_WITH_TIMEOUT(vehicle->armed(), 5000);
+                        QTRY_VERIFY(!safetyCheck->property("checked").toBool());
+                        QVERIFY(!slider->isEnabled());
+                        QCOMPARE(slider->property("value").toInt(), 0);
+                        vehicle->setArmed(false, false);
+                        QTRY_VERIFY_WITH_TIMEOUT(!vehicle->armed(), 5000);
+                        QVERIFY(!safetyCheck->property("checked").toBool());
+                        QVERIFY(!slider->isEnabled());
+                    });
+}
 
 namespace {
 
@@ -19,16 +65,30 @@ struct PoseInfo {
     const char *objectName;     ///< VehicleRotationCal objectName in SensorsSetup.qml
     const char *rotateImage;    ///< Image shown while rotating on this side (mag cal)
     const char *stillImage;     ///< Image shown while holding still on this side (accel cal)
+    const char* customImage;
 };
 
 constexpr PoseInfo kPoses[MockLinkPX4Calibration::kSideCount] = {
-    { MockLinkPX4Calibration::Pose::RightSideUp, "sensorsCal_downSide",       "VehicleDownRotate.png",       "VehicleDown.png" },
-    { MockLinkPX4Calibration::Pose::UpsideDown,  "sensorsCal_upsideDownSide", "VehicleUpsideDownRotate.png", "VehicleUpsideDown.png" },
-    { MockLinkPX4Calibration::Pose::NoseDown,    "sensorsCal_noseDownSide",   "VehicleNoseDownRotate.png",   "VehicleNoseDown.png" },
-    { MockLinkPX4Calibration::Pose::TailDown,    "sensorsCal_tailDownSide",   "VehicleTailDownRotate.png",   "VehicleTailDown.png" },
-    { MockLinkPX4Calibration::Pose::Left,        "sensorsCal_leftSide",       "VehicleLeftRotate.png",       "VehicleLeft.png" },
-    { MockLinkPX4Calibration::Pose::Right,       "sensorsCal_rightSide",      "VehicleRightRotate.png",      "VehicleRight.png" },
+    {MockLinkPX4Calibration::Pose::RightSideUp, "sensorsCal_downSide", "VehicleDownRotate.png", "VehicleDown.png",
+     "pose-01.png"},
+    {MockLinkPX4Calibration::Pose::UpsideDown, "sensorsCal_upsideDownSide", "VehicleUpsideDownRotate.png",
+     "VehicleUpsideDown.png", "pose-02.png"},
+    {MockLinkPX4Calibration::Pose::NoseDown, "sensorsCal_noseDownSide", "VehicleNoseDownRotate.png",
+     "VehicleNoseDown.png", "pose-03.png"},
+    {MockLinkPX4Calibration::Pose::TailDown, "sensorsCal_tailDownSide", "VehicleTailDownRotate.png",
+     "VehicleTailDown.png", "pose-04.png"},
+    {MockLinkPX4Calibration::Pose::Left, "sensorsCal_leftSide", "VehicleLeftRotate.png", "VehicleLeft.png",
+     "pose-05.png"},
+    {MockLinkPX4Calibration::Pose::Right, "sensorsCal_rightSide", "VehicleRightRotate.png", "VehicleRight.png",
+     "pose-06.png"},
 };
+
+const char* poseImage(const PoseInfo& info, bool rotating)
+{
+    return QGCCorePlugin::instance()->directMissionItemEditing() ? info.customImage
+           : rotating                                            ? info.rotateImage
+                                                                 : info.stillImage;
+}
 
 bool waitForCalState(QQuickItem *item, SensorsComponentController::SideCalState expected, int timeoutMs)
 {
@@ -56,14 +116,16 @@ void PX4SensorsCalibrationUITest::_navigateToSensorsPanel()
     QQuickItem *sensorsBtn = clickSidebarButton(QStringLiteral("vehicleConfig_comp_Sensors"));
     if (QTest::currentTestFailed()) return;
 
-    // Clicking the Sensors button expands its section tree and auto-selects the
-    // first section (Compass), since SensorsComponent::showFirstSectionOnRootClick
-    // is true
+    // CAAC opens the accelerometer section first to match the calibration panel;
+    // the stock interface opens the first firmware section (Compass).
     QVERIFY2(sensorsBtn->property("expanded").toBool(), "Sensors section tree not expanded after clicking Sensors button");
-    QQuickItem *compassSection = findVisibleItem(_rootItem, QStringLiteral("vehicleConfig_section_Compass"), 3000);
-    QVERIFY2(compassSection, "Compass section button not visible after clicking Sensors button");
-    QVERIFY2(QTest::qWaitFor([&] { return compassSection->property("sectionChecked").toBool(); }, 3000),
-             "Compass section not selected by default after clicking Sensors button");
+    const auto initialSection = QGCCorePlugin::instance()->directMissionItemEditing()
+                                    ? QStringLiteral("vehicleConfig_section_Accelerometer")
+                                    : QStringLiteral("vehicleConfig_section_Compass");
+    QQuickItem* selectedSection = findItem(_rootItem, initialSection);
+    QVERIFY2(selectedSection, "Initial sensor section button not visible after clicking Sensors button");
+    QVERIFY2(QTest::qWaitFor([&] { return selectedSection->property("sectionChecked").toBool(); }, 3000),
+             "Initial sensor section not selected after clicking Sensors button");
 
     QVERIFY2(findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_calibrateCompass"), 3000),
              "Calibrate Compass button not found after opening Sensors page");
@@ -106,7 +168,7 @@ void PX4SensorsCalibrationUITest::_verifySensorsSetupStates(const SensorsSetupSt
     };
 
     for (const ButtonCheck &check : checks) {
-        QQuickItem *btn = findVisibleItem(_rootItem, QLatin1String(check.objectName), 3000);
+        QQuickItem* btn = findItem(_rootItem, QLatin1String(check.objectName));
         QVERIFY2(btn, qPrintable(QStringLiteral("Button not found (%1): %2")
                                      .arg(QLatin1String(context), QLatin1String(check.objectName))));
         const QVariant complete = btn->property(check.propertyName);
@@ -125,7 +187,7 @@ void PX4SensorsCalibrationUITest::_verifySensorsSetupStates(const SensorsSetupSt
 
 void PX4SensorsCalibrationUITest::_startCalibration(const QString &calibrateButtonObjectName)
 {
-    QVERIFY2(clickButton(calibrateButtonObjectName),
+    QVERIFY2(clickButtonScrolled(calibrateButtonObjectName, QStringLiteral("sensorsSetup_buttonScroller")),
              qPrintable(QStringLiteral("Failed to click calibrate button: %1").arg(calibrateButtonObjectName)));
 
     // Accept the pre-calibration dialog which sends MAV_CMD_PREFLIGHT_CALIBRATION
@@ -162,6 +224,25 @@ void PX4SensorsCalibrationUITest::_testMagCalibration()
 
     _verifyAllPosesState(SensorsComponentController::SideCalStateIdle, "idle preview");
     if (QTest::currentTestFailed()) return;
+
+    if (auto* preview = findVisibleItem(_rootItem, QStringLiteral("sensorCalibrationPreview"), 0)) {
+        auto* large = findVisibleItem(preview, QStringLiteral("sensorCalibrationLargePreview"));
+        QVERIFY(large);
+        QVERIFY(large->height() > preview->height() / 2);
+        QVERIFY(
+            clickButtonScrolled(QStringLiteral("sensorsCal_leftSide"), QStringLiteral("sensorsSetup_buttonScroller")));
+        QTRY_VERIFY_WITH_TIMEOUT(
+            large->property("source").toUrl().toString().endsWith(QLatin1String(poseImage(kPoses[4], false))), 3000);
+        QVERIFY(
+            clickButtonScrolled(QStringLiteral("sensorsCal_downSide"), QStringLiteral("sensorsSetup_buttonScroller")));
+        if (const auto path = qgetenv("CAAC_CALIBRATION_UI_PREVIEW"); !path.isEmpty()) {
+            const auto capture = preview->grabToImage();
+            QVERIFY(capture);
+            QSignalSpy ready(capture.data(), &QQuickItemGrabResult::ready);
+            QTRY_VERIFY_WITH_TIMEOUT(!ready.isEmpty(), 3000);
+            QVERIFY(capture->saveToFile(QString::fromUtf8(path)));
+        }
+    }
 
     _startCalibration(QStringLiteral("sensorsSetup_calibrateCompass"));
     if (QTest::currentTestFailed()) return;
@@ -200,8 +281,25 @@ void PX4SensorsCalibrationUITest::_testMagCalibration()
         // Orientation detected: the side goes InProgress with the rotate animation
         QVERIFY2(waitForCalState(side, SensorsComponentController::SideCalStateInProgress, 5000),
                  qPrintable(QStringLiteral("Side never went in-progress: %1").arg(sideName)));
-        QCOMPARE(side->property("calInProgressText").toString(), QStringLiteral("Rotate"));
-        QVERIFY2(side->property("imageSource").toString().endsWith(QLatin1String(info.rotateImage)),
+        if (auto* large = findVisibleItem(_rootItem, QStringLiteral("sensorCalibrationLargePreview"), 0)) {
+            QTRY_VERIFY_WITH_TIMEOUT(
+                large->property("source").toUrl().toString().endsWith(QLatin1String(poseImage(info, true))), 3000);
+        }
+        QCOMPARE(side->property("calInProgressText").toString(), QGCCorePlugin::instance()->directMissionItemEditing()
+                                                                     ? QStringLiteral("旋转")
+                                                                     : QStringLiteral("Rotate"));
+        if (sidesDone == 0) {
+            if (const auto path = qgetenv("CAAC_CALIBRATION_PROGRESS_PREVIEW"); !path.isEmpty()) {
+                auto* preview = findVisibleItem(_rootItem, QStringLiteral("sensorCalibrationPreview"));
+                QVERIFY(preview);
+                const auto capture = preview->grabToImage();
+                QVERIFY(capture);
+                QSignalSpy ready(capture.data(), &QQuickItemGrabResult::ready);
+                QTRY_VERIFY_WITH_TIMEOUT(!ready.isEmpty(), 3000);
+                QVERIFY(capture->saveToFile(QString::fromUtf8(path)));
+            }
+        }
+        QVERIFY2(side->property("imageSource").toString().endsWith(QLatin1String(poseImage(info, true))),
                  qPrintable(QStringLiteral("Wrong rotate image for %1: %2")
                                 .arg(sideName, side->property("imageSource").toString())));
 
@@ -428,8 +526,10 @@ void PX4SensorsCalibrationUITest::_testAccelCalibration()
         // vehicle must be held still, so the static (non-rotating) image stays up
         QVERIFY2(waitForCalState(side, SensorsComponentController::SideCalStateInProgress, 5000),
                  qPrintable(QStringLiteral("Side never went in-progress: %1").arg(sideName)));
-        QCOMPARE(side->property("calInProgressText").toString(), QStringLiteral("Hold Still"));
-        QVERIFY2(side->property("imageSource").toString().endsWith(QLatin1String(info.stillImage)),
+        QCOMPARE(side->property("calInProgressText").toString(), QGCCorePlugin::instance()->directMissionItemEditing()
+                                                                     ? QStringLiteral("保持静止")
+                                                                     : QStringLiteral("Hold Still"));
+        QVERIFY2(side->property("imageSource").toString().endsWith(QLatin1String(poseImage(info, false))),
                  qPrintable(QStringLiteral("Wrong hold-still image for %1: %2")
                                 .arg(sideName, side->property("imageSource").toString())));
 

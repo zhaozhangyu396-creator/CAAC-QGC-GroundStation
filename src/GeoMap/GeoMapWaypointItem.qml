@@ -100,7 +100,7 @@ GeoMapItem {
 
     QGCLabel {
         anchors.centerIn: parent
-        text: root.item ? root.item.sequenceNumber : ""
+        text: root.item ? (QGroundControl.corePlugin.directMissionItemEditing ? root.item.waypointNumber : root.item.sequenceNumber) : ""
         color: "white"
         font.bold: true
     }

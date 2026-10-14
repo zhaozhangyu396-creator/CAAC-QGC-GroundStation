@@ -357,8 +357,72 @@ Item {
     property bool _showStatusPreview: !controller.calibrationActive &&
         (sectionIdFilter === "Level Horizon" || sectionIdFilter === "Airspeed")
 
+    SensorCalibrationPanel {
+        id: caacPanel
+        anchors.fill: parent
+        visible: QGroundControl.corePlugin.directMissionItemEditing
+        calibrationActive: controller.calibrationActive
+        compassAvailable: sectionVisible("Compass")
+        accelAvailable: sectionVisible("Accelerometer")
+        levelAvailable: sectionVisible("Level Horizon")
+        levelEnabled: cal_acc0_id.value !== 0 && cal_gyro0_id.value !== 0
+        accelComplete: cal_acc0_id.value !== 0
+        compassComplete: cal_mag0_id.value !== 0
+        progress: progressBar.value
+        helpText: orientationCalAreaHelpText.text
+        statusText: statusTextArea.text
+        sectionId: _root.sectionIdFilter
+        sideStates: [controller.orientationCalDownSideState, controller.orientationCalLeftSideState,
+            controller.orientationCalRightSideState, controller.orientationCalNoseDownSideState,
+            controller.orientationCalTailDownSideState, controller.orientationCalUpsideDownSideState]
+        sideVisible: [controller.orientationCalDownSideVisible, controller.orientationCalLeftSideVisible,
+            controller.orientationCalRightSideVisible, controller.orientationCalNoseDownSideVisible,
+            controller.orientationCalTailDownSideVisible, controller.orientationCalUpsideDownSideVisible]
+        sideRotating: sideStates.map(state => _sideRotating(state))
+        onStartAccel: _startCalibration("accel", accelHelp, qsTr("Calibrate Accelerometer"))
+        onStartLevel: _startCalibration("level", levelHelp, qsTr("Level Horizon"))
+        onStartCompass: _startCalibration("compass", compassHelp, qsTr("Calibrate Compass"))
+        onCancel: controller.cancelCalibration()
+        additionalControls: Component {
+            ColumnLayout {
+                spacing: ScreenTools.defaultFontPixelHeight / 2
+                QGCButton {
+                    Layout.fillWidth: true
+                    text: qsTr("Calibrate Gyroscope")
+                    visible: _root.sectionVisible("Gyroscope")
+                    onClicked: {
+                        caacPanel.currentType = "gyro"
+                        _startCalibration("gyro", gyroHelp, qsTr("Calibrate Gyro"))
+                    }
+                }
+                QGCButton {
+                    Layout.fillWidth: true
+                    text: qsTr("Calibrate Airspeed")
+                    visible: _root.sectionVisible("Airspeed")
+                    onClicked: _startCalibration("airspeed", airspeedHelp, qsTr("Calibrate Airspeed"))
+                }
+                QGCButton {
+                    Layout.fillWidth: true
+                    text: qsTr("Set Orientations")
+                    visible: _root.orientationsButtonVisible()
+                    onClicked: {
+                        setOrientationsDialogShowBoardOrientation = true
+                        setOrientationsDialogFactory.open({ title: qsTr("Set Orientations"), showRebootMessage: false })
+                    }
+                }
+                QGCButton {
+                    Layout.fillWidth: true
+                    text: qsTr("Factory Reset")
+                    visible: _root.orientationsButtonVisible()
+                    onClicked: controller.resetFactoryParameters()
+                }
+            }
+        }
+    }
+
     ColumnLayout {
         anchors.fill: parent
+        visible: !QGroundControl.corePlugin.directMissionItemEditing
         spacing: 0
 
         // Calibration trigger buttons — one per section, shown based on sectionIdFilter
@@ -482,6 +546,7 @@ Item {
                 }
 
                 Flow {
+                    visible: !QGroundControl.corePlugin.directMissionItemEditing
                     anchors.topMargin:  ScreenTools.defaultFontPixelWidth
                     anchors.top:        orientationCalAreaHelpText.bottom
                     anchors.bottom:     parent.bottom

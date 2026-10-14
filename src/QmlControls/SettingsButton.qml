@@ -12,7 +12,9 @@ Button {
     autoExclusive:  true
     icon.color:     textColor
 
-    property color textColor: checked || pressed ? qgcPal.buttonHighlightText : qgcPal.buttonText
+    readonly property bool vehicleSetupStyle: ScreenTools.isVehicleSetupItem(control)
+    property color textColor: vehicleSetupStyle && (checked || pressed) ? qgcPal.colorGreen
+        : checked || pressed ? qgcPal.buttonHighlightText : qgcPal.buttonText
     property bool expandable: false
     property bool expanded:   false
 
@@ -24,9 +26,19 @@ Button {
     }
 
     background: Rectangle {
-        color:      qgcPal.buttonHighlight
+        color:      control.vehicleSetupStyle ? qgcPal.windowShade : qgcPal.buttonHighlight
         opacity:    checked || pressed ? 1 : enabled && hovered ? .2 : 0
         radius:     ScreenTools.defaultFontPixelWidth / 2
+
+        Rectangle {
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+            width: ScreenTools.defaultFontPixelWidth * 0.35
+            height: parent.height * 0.6
+            radius: width / 2
+            color: qgcPal.colorGreen
+            visible: control.vehicleSetupStyle && (control.checked || control.pressed)
+        }
     }
 
     contentItem: RowLayout {
@@ -43,7 +55,7 @@ Button {
             id:                     displayText
             Layout.fillWidth:       true
             text:                   control.text
-            font.pointSize:         ScreenTools.menuFontPointSize
+            font.pointSize:         control.vehicleSetupStyle ? ScreenTools.defaultFontPointSize : ScreenTools.menuFontPointSize
             wrapMode:               Text.WordWrap
             color:                  control.textColor
             horizontalAlignment:    QGCLabel.AlignLeft

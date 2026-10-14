@@ -74,6 +74,10 @@ Item {
         enabled: !!control.activeVehicle
         text: control.activeVehicle ? control.activeVehicle.flightMode : qsTr("Flight mode")
         heightFactor: 0.25
+        pointSize: ScreenTools.smallFontPointSize
+        _horizontalPadding: ScreenTools.defaultFontPixelWidth * 0.6
+        _iconHeight: ScreenTools.defaultFontPixelHeight * 0.85
+        implicitWidth: contentItem.implicitWidth + leftPadding + rightPadding
         backgroundColor: qgcPal.window
         textColor: qgcPal.text
         iconSource: "/qmlimages/FlightModesComponentIcon.png"
@@ -84,12 +88,12 @@ Item {
         id: drawerComponent
 
         ToolIndicatorPage {
-            showExpand:         true
+            showExpand:         !QGroundControl.corePlugin.directMissionItemEditing
             waitForParameters:                  false
             expandedComponentWaitForParameters: true
 
             contentComponent:    flightModeContentComponent
-            expandedComponent:   flightModeExpandedComponent
+            expandedComponent:   QGroundControl.corePlugin.directMissionItemEditing ? null : flightModeExpandedComponent
 
             onExpandedChanged: {
                 if (!expanded) {

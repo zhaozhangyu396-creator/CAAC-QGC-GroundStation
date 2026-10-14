@@ -185,6 +185,8 @@ Item {
                         }
                     }
                     SnapSwitch { settingKey: "symmetrySnap"; label: qsTr("Perpendicular bisector snapping") }
+                    SnapSwitch { settingKey: "midpointSnap"; label: qsTr("Edge midpoint snapping") }
+                    SnapSwitch { settingKey: "intersectionSnap"; label: qsTr("Route intersection snapping") }
                     QGCLabel {
                         Layout.fillWidth: true
                         wrapMode: Text.WordWrap
@@ -217,6 +219,12 @@ Item {
                             backgroundColor: checked ? "#25b86d" : QGroundControl.globalPalette.button
                             onClicked: QGroundControl.settingsManager.appSettings.indoorPalette.rawValue = 0
                         }
+                    }
+                    QGCButton {
+                        objectName: "caacChangeAccessPassword"
+                        text: qsTr("Change access password")
+                        Layout.fillWidth: true
+                        onClicked: mainWindow.changeAccessPassword()
                     }
                 }
                 ColumnLayout {

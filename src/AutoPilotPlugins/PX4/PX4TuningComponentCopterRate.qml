@@ -7,13 +7,19 @@ import QGroundControl.Controls
 import QGroundControl.FactControls
 
 ColumnLayout {
+    id: ratePage
+    readonly property bool vehicleSetupStyle: ScreenTools.isVehicleSetupItem(ratePage)
+    width: vehicleSetupStyle ? _availableWidth : implicitWidth
     property real _availableHeight:     availableHeight
     property real _availableWidth:      availableWidth
     property Fact _airmode:             controller.getParameterFact(-1, "MC_AIRMODE", false)
     property Fact _thrustModelFactor:   controller.getParameterFact(-1, "THR_MDL_FAC", false)
 
-    RowLayout {
-        spacing: ScreenTools.defaultFontPixelWidth
+    GridLayout {
+        Layout.fillWidth: true
+        columns: ratePage.vehicleSetupStyle ? 2 : 5
+        rowSpacing: ScreenTools.defaultFontPixelHeight / 2
+        columnSpacing: ScreenTools.defaultFontPixelWidth
 
         QGCLabel {
             textFormat:         Text.RichText
@@ -28,6 +34,7 @@ ColumnLayout {
         }
 
         Item {
+            visible: !ratePage.vehicleSetupStyle
             width: 1
             height: 1
         }

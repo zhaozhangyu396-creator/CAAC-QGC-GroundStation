@@ -99,6 +99,16 @@ add_qgc_test(
     TIMEOUT
     120
 )
+if(WIN32)
+    # Native Windows fonts are required for the setup pages' geometry and mouse interactions.
+    foreach(_px4_setup_test PX4VehicleConfigUITest PX4SensorsCalibrationUITest PX4AirframeSetupUITest)
+        set_property(
+            TEST ${_px4_setup_test}
+            APPEND
+            PROPERTY ENVIRONMENT_MODIFICATION "QT_QPA_PLATFORM=set:windows"
+        )
+    endforeach()
+endif()
 add_qgc_test(AppCloseWarningUITest LABELS Integration NoSanitizer TIMEOUT 120)
 add_qgc_test(FlyViewCameraCaptureUITest LABELS Integration NoSanitizer TIMEOUT 120)
 add_qgc_test(FlyViewCameraZoomUITest LABELS Integration NoSanitizer TIMEOUT 120)

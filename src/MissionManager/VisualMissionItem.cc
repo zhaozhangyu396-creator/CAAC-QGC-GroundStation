@@ -25,6 +25,14 @@ VisualMissionItem::VisualMissionItem(const VisualMissionItem& other, bool flyVie
     _commonInit();
 }
 
+void VisualMissionItem::setWaypointNumber(int number)
+{
+    if (_waypointNumber != number) {
+        _waypointNumber = number;
+        emit waypointNumberChanged();
+    }
+}
+
 void VisualMissionItem::_commonInit(void)
 {
     // Don't get terrain altitude information for submarines or boats

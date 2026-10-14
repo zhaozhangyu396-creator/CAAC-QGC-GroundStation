@@ -119,6 +119,7 @@ Item {
         }
 
         function upload() {
+            if (!rightPanel.prepareUpload()) { return }
             if (!checkReadyForSaveUpload(false /* save */)) {
                 return
             }
@@ -320,6 +321,7 @@ Item {
                 // Collapse layer switcher on any map click
                 layerSwitcher.expanded = false
                 collapseTimer.stop()
+                collapsePlanningPanels()
 
                 if (!mainWindow.allowViewSwitch()) {
                     return

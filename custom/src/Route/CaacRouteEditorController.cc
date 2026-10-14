@@ -651,7 +651,7 @@ QVariantMap CaacRouteEditorController::waypointLeg(QObject* object) const
     }
     const double distance = QGCGeo::geodesicDistance(previous->coordinate(), item->coordinate());
     QVariantMap result{{QStringLiteral("distance"), distance},
-                       {QStringLiteral("previousNumber"), previous->sequenceNumber()}};
+                       {QStringLiteral("previousNumber"), previous->waypointNumber()}};
     if (distance < 0.001) {
         return result;
     }
@@ -702,6 +702,8 @@ QVariantMap CaacRouteEditorController::snapWaypointDrag(QObject* object, const Q
     const bool verticalSnap = preferences.value(QStringLiteral("verticalSnap"), true).toBool();
     const bool angleSnap = preferences.value(QStringLiteral("angleSnap"), true).toBool();
     const bool symmetrySnap = preferences.value(QStringLiteral("symmetrySnap"), true).toBool();
+    const bool midpointSnap = preferences.value(QStringLiteral("midpointSnap"), true).toBool();
+    const bool intersectionSnap = preferences.value(QStringLiteral("intersectionSnap"), true).toBool();
 
     struct Guide
     {
@@ -729,12 +731,17 @@ QVariantMap CaacRouteEditorController::snapWaypointDrag(QObject* object, const Q
         }
     };
     QList<QPointF> references;
+    QList<VisualMissionItem*> vertices;
     VisualMissionItem* next = nullptr;
     for (int i = 0; i < mission->visualItems()->count(); ++i) {
         auto* reference = mission->visualItems()->value<VisualMissionItem*>(i);
-        if (!reference || reference == item || !reference->coordinate().isValid() ||
+        if (!reference || !reference->coordinate().isValid() ||
             (i != 0 && (!reference->isSimpleItem() || !reference->specifiesCoordinate() ||
                         reference->isStandaloneCoordinate()))) {
+            continue;
+        }
+        vertices.append(reference);
+        if (reference == item) {
             continue;
         }
         const auto point = project(reference->coordinate());
@@ -747,6 +754,99 @@ QVariantMap CaacRouteEditorController::snapWaypointDrag(QObject* object, const Q
         }
         if (i > index && !next) {
             next = reference;
+        }
+    }
+    const bool closed = simulationSettings().value(QStringLiteral("closed")).toBool();
+    const int startSequence = simulationSettings().value(QStringLiteral("startSequence")).toInt();
+    auto* start = vertices.isEmpty() ? nullptr : vertices.first();
+    for (auto* vertex : vertices) {
+        if (vertex->sequenceNumber() == startSequence) {
+            start = vertex;
+            break;
+        }
+    }
+    const int edgeCount = vertices.size() - (closed ? 0 : 1);
+    if (midpointSnap) {
+        double closest = tolerance;
+        QGeoCoordinate midpoint;
+        VisualMissionItem* from = nullptr;
+        VisualMissionItem* to = nullptr;
+        for (int i = 0; i < edgeCount; ++i) {
+            auto* a = vertices[i];
+            auto* b = i + 1 < vertices.size() ? vertices[i + 1] : start;
+            if (a == item || b == item) {
+                continue;
+            }
+            const double distance = QGCGeo::geodesicDistance(a->coordinate(), b->coordinate());
+            if (distance < tolerance * 2) {
+                continue;
+            }
+            const auto center = QGCGeo::geodesicDestination(
+                a->coordinate(), QGCGeo::geodesicAzimuth(a->coordinate(), b->coordinate()), distance / 2);
+            const auto anchor = project(center);
+            if (horizontalSnap) {
+                addGuide(anchor, QPointF(1, 0), 3);
+            }
+            if (verticalSnap) {
+                addGuide(anchor, QPointF(0, 1), 3);
+            }
+            const double error = QGCGeo::geodesicDistance(coordinate, center);
+            if (error <= closest) {
+                closest = error;
+                midpoint = center;
+                from = a;
+                to = b;
+            }
+        }
+        if (midpoint.isValid()) {
+            midpoint.setAltitude(coordinate.altitude());
+            result[QStringLiteral("coordinate")] = QVariant::fromValue(midpoint);
+            result[QStringLiteral("guides")] =
+                QVariantList{QVariantMap{{QStringLiteral("from"), QVariant::fromValue(from->coordinate())},
+                                         {QStringLiteral("to"), QVariant::fromValue(to->coordinate())},
+                                         {QStringLiteral("midpoint"), QVariant::fromValue(midpoint)},
+                                         {QStringLiteral("kind"), 3}}};
+            return result;
+        }
+    }
+    if (intersectionSnap) {
+        double closest = tolerance;
+        QGeoCoordinate intersection;
+        VisualMissionItem* from = nullptr;
+        VisualMissionItem* to = nullptr;
+        for (int i = 0; i < edgeCount; ++i) {
+            auto* a = vertices[i];
+            auto* b = i + 1 < vertices.size() ? vertices[i + 1] : start;
+            if (a == item || b == item || a == b) {
+                continue;
+            }
+            const auto anchor = project(a->coordinate());
+            const auto vector = project(b->coordinate()) - anchor;
+            const double lengthSquared = QPointF::dotProduct(vector, vector);
+            if (lengthSquared < 1e-6) {
+                continue;
+            }
+            const double fraction = QPointF::dotProduct(raw - anchor, vector) / lengthSquared;
+            if (fraction < 0 || fraction > 1) {
+                continue;
+            }
+            const auto projection = anchor + vector * fraction;
+            const double error = QLineF(raw, projection).length();
+            if (error <= closest) {
+                closest = error;
+                intersection = unproject(projection);
+                from = a;
+                to = b;
+            }
+        }
+        if (intersection.isValid()) {
+            result[QStringLiteral("coordinate")] = QVariant::fromValue(intersection);
+            result[QStringLiteral("guides")] =
+                QVariantList{QVariantMap{{QStringLiteral("from"), QVariant::fromValue(from->coordinate())},
+                                         {QStringLiteral("to"), QVariant::fromValue(to->coordinate())},
+                                         {QStringLiteral("intersection"), QVariant::fromValue(intersection)},
+                                         {QStringLiteral("kind"), 4}}};
+            return result;
         }
     }
     const auto perpendicular = [](const QPointF& point) { return QPointF(-point.y(), point.x()); };
@@ -1227,7 +1327,7 @@ QVariantList CaacRouteEditorController::coordinateItems() const
                              item->isSimpleItem() ? qobject_cast<SimpleMissionItem*>(item)->command() : 0},
                             {QStringLiteral("label"),
                              i == 0 ? tr("Planned home")
-                                    : tr("Waypoint %1 · %2").arg(item->sequenceNumber()).arg(item->commandName())},
+                                    : tr("Waypoint %1 · %2").arg(item->waypointNumber()).arg(item->commandName())},
                             {QStringLiteral("coordinate"), QVariant::fromValue(item->coordinate())}});
         }
     }
@@ -1623,6 +1723,8 @@ void CaacRouteEditorController::_watchItems()
         }
         _itemConnections.append(connect(item, &VisualMissionItem::sequenceNumberChanged, this,
                                         &CaacRouteEditorController::coordinateItemsChanged));
+        _itemConnections.append(connect(item, &VisualMissionItem::waypointNumberChanged, this,
+                                        &CaacRouteEditorController::coordinateItemsChanged));
         _itemConnections.append(connect(item, &VisualMissionItem::coordinateChanged, this, [this]() {
             emit coordinateItemsChanged();
             _scheduleCapture();
@@ -1660,6 +1762,25 @@ void CaacRouteEditorController::_capture()
 void CaacRouteEditorController::beginEdit()
 {
     if (_editDepth == 0) {
+        _editSimulationSettings =
+            _masterController ? _masterController->property("caacSimulationSettings").toMap() : QVariantMap();
+        _editStartPoint = nullptr;
+        _editReturnPoint = nullptr;
+        auto* mission = _missionController();
+        if (mission && !_editSimulationSettings.isEmpty()) {
+            for (int i = 1; i < mission->visualItems()->count(); ++i) {
+                auto* point = mission->visualItems()->value<SimpleMissionItem*>(i);
+                if (!point || point->command() != MAV_CMD_NAV_WAYPOINT) {
+                    continue;
+                }
+                if (point->sequenceNumber() == _editSimulationSettings.value("startSequence").toInt()) {
+                    _editStartPoint = point;
+                }
+                if (point->sequenceNumber() == _editSimulationSettings.value("returnSequence").toInt()) {
+                    _editReturnPoint = point;
+                }
+            }
+        }
         _capture();
         if (_historyIndex >= 0 && _missionController()) {
             _history[_historyIndex].selection = _missionController()->currentPlanViewVIIndex();
@@ -1673,6 +1794,24 @@ void CaacRouteEditorController::endEdit()
     if (_editDepth > 0) {
         --_editDepth;
         if (_editDepth == 0) {
+            if (_masterController && !_editSimulationSettings.isEmpty() &&
+                _masterController->property("caacSimulationSettings").toMap() == _editSimulationSettings) {
+                auto remapped = _editSimulationSettings;
+                if (_editStartPoint) {
+                    remapped["startSequence"] = _editStartPoint->sequenceNumber();
+                }
+                if (_editReturnPoint) {
+                    remapped["returnSequence"] = _editReturnPoint->sequenceNumber();
+                }
+                if (remapped != _editSimulationSettings) {
+                    ++_editDepth;
+                    _masterController->setProperty("caacSimulationSettings", remapped);
+                    --_editDepth;
+                    emit simulationSettingsChanged();
+                }
+            }
+            _editStartPoint = nullptr;
+            _editReturnPoint = nullptr;
             _watchItems();
             _capture();
         }

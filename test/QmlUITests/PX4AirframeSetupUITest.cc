@@ -7,6 +7,7 @@
 
 #include "MockLink.h"
 #include "MultiVehicleManager.h"
+#include "QGCCorePlugin.h"
 #include "Vehicle.h"
 
 UT_REGISTER_TEST(PX4AirframeSetupUITest, TestLabel::Integration)
@@ -90,7 +91,11 @@ void PX4AirframeSetupUITest::_verifyAirframePrereq(const QString &compObjectName
     // Components which auto-select their first section on root click must do so
     // even when the prerequisite is not met
     if (!checkedSectionObjectName.isEmpty()) {
-        QQuickItem *sectionBtn = findVisibleItem(_rootItem, checkedSectionObjectName, 3000);
+        const auto expectedSection = QGCCorePlugin::instance()->directMissionItemEditing() &&
+                                             checkedSectionObjectName == QStringLiteral("vehicleConfig_section_Compass")
+                                         ? QStringLiteral("vehicleConfig_section_Accelerometer")
+                                         : checkedSectionObjectName;
+        QQuickItem* sectionBtn = findItem(_rootItem, expectedSection);
         QVERIFY2(sectionBtn,
                  qPrintable(QStringLiteral("Section button not found: %1").arg(checkedSectionObjectName)));
         QVERIFY2(QTest::qWaitFor([&] { return sectionBtn->property("sectionChecked").toBool(); }, 3000),
@@ -180,7 +185,8 @@ void PX4AirframeSetupUITest::_testApplyAirframe()
     QVERIFY2(expectedAutostartId != 0, "First Quadrotor x airframe has no autostart id");
 
     // Select the Quadrotor x airframe type box
-    QQuickItem *typeBox = findVisibleItem(_rootItem, QStringLiteral("airframeTypeBox_0"), 3000);
+    QQuickItem* typeBox =
+        findVisibleItemScrolled(QStringLiteral("airframeTypeBox_0"), QStringLiteral("vehicleSetup_scroller"));
     QVERIFY2(typeBox, "airframeTypeBox_0 not found");
     const QPointF boxCenter = typeBox->mapToScene(QPointF(typeBox->width() / 2, typeBox->height() / 2));
     QTest::mouseClick(_window, Qt::LeftButton, Qt::NoModifier, boxCenter.toPoint());
@@ -207,7 +213,8 @@ void PX4AirframeSetupUITest::_testApplyAirframe()
     // pop the reboot-required notice
     expectAppMessage(QRegularExpression(QStringLiteral("Vehicle reboot required for changes to take effect")));
 
-    QVERIFY2(clickButton(QStringLiteral("airframeSetup_applyButton")), "Failed to click Apply and Restart");
+    QVERIFY2(clickButtonScrolled(QStringLiteral("airframeSetup_applyButton"), QStringLiteral("vehicleSetup_scroller")),
+             "Failed to click Apply and Restart");
     QVERIFY2(findVisibleItem(_rootItem, QStringLiteral("popupDialog_acceptButton"), 3000),
              "Apply confirmation dialog not shown");
     QVERIFY2(clickButton(QStringLiteral("popupDialog_acceptButton")), "Failed to confirm Apply dialog");

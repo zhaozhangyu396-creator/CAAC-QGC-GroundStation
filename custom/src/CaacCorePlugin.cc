@@ -14,6 +14,7 @@
 
 #include "AppMessages.h"
 #include "AppSettings.h"
+#include "CaacAccessController.h"
 #include "CaacFlightDistance.h"
 #include "CaacSimulationController.h"
 #include "FactMetaData.h"
@@ -27,6 +28,8 @@
 #include "QGCGeo.h"
 #include "QGCMAVLink.h"
 #include "QmlObjectListModel.h"
+#include "RemoteIDManager.h"
+#include "RemoteIDSettings.h"
 #include "SimpleMissionItem.h"
 #include "UnitsSettings.h"
 #include "Vehicle.h"
@@ -65,10 +68,13 @@ CaacCorePlugin::CaacCorePlugin(QObject* parent)
     : QGCCorePlugin(parent)
 {
     _simulation = new CaacSimulationController(this);
+    _accessController = new CaacAccessController(this);
+    _accessController->ensureDefaultPassword();
     const QSettings settings;
     _doubleClickAddWaypoint = settings.value(QStringLiteral("CAAC/Map/DoubleClickAddWaypoint"), true).toBool();
     _dragWaypoints = settings.value(QStringLiteral("CAAC/Map/DragWaypoints"), true).toBool();
-    for (const auto* key : {"horizontalSnap", "verticalSnap", "angleSnap", "symmetrySnap"}) {
+    for (const auto* key :
+         {"horizontalSnap", "verticalSnap", "angleSnap", "symmetrySnap", "midpointSnap", "intersectionSnap"}) {
         _planningPreferences[QLatin1String(key)] =
             settings.value(QStringLiteral("CAAC/Planning/") + QLatin1String(key), true).toBool();
     }
@@ -122,6 +128,18 @@ void CaacCorePlugin::refreshFlightPreferenceParameter(const QString& name)
     manager->refreshParameter(ParameterManager::defaultComponentId, name);
 }
 
+void CaacCorePlugin::refreshAircraftIdentity()
+{
+    auto* vehicle = MultiVehicleManager::instance()->activeVehicle();
+    if (!vehicle) {
+        return;
+    }
+    vehicle->requestMessage(nullptr, nullptr, vehicle->compId(), MAVLINK_MSG_ID_AUTOPILOT_VERSION);
+    if (vehicle->remoteIDManager()->available()) {
+        vehicle->requestMessage(nullptr, nullptr, vehicle->compId(), MAVLINK_MSG_ID_OPEN_DRONE_ID_BASIC_ID);
+    }
+}
+
 void CaacCorePlugin::adjustSettingMetaData(const QString& settingsGroup, FactMetaData& metaData, bool& userVisible)
 {
     QGCCorePlugin::adjustSettingMetaData(settingsGroup, metaData, userVisible);
@@ -132,6 +150,16 @@ void CaacCorePlugin::adjustSettingMetaData(const QString& settingsGroup, FactMet
             metaData.setRawDefaultValue(QGCMAVLink::VehicleClassMultiRotor);
         } else if (metaData.name() == AppSettings::audioMutedName) {
             metaData.setRawDefaultValue(true);
+        }
+    } else if (settingsGroup == RemoteIDSettings::settingsGroup) {
+        if (metaData.name() == RemoteIDSettings::regionName) {
+            metaData.setRawDefaultValue(static_cast<int>(RemoteIDSettings::RegionOperation::China));
+        } else if (metaData.name() == RemoteIDSettings::locationTypeName) {
+            metaData.setRawDefaultValue(static_cast<int>(RemoteIDSettings::LocationType::TAKEOFF));
+        } else if (metaData.name() == RemoteIDSettings::sendBasicIDName) {
+            metaData.setRawDefaultValue(true);
+        } else if (metaData.name() == RemoteIDSettings::selfIDFreeName) {
+            metaData.setRawDefaultValue(QString::fromUtf8("飞行训练"));
         }
     } else if (settingsGroup == UnitsSettings::settingsGroup) {
         if (metaData.name() == UnitsSettings::horizontalDistanceUnitsName) {

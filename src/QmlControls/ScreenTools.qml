@@ -26,6 +26,19 @@ import QGroundControl
 Item {
     id: _screenTools
 
+    function isVehicleSetupItem(item) {
+        if (!QGroundControl.corePlugin.directMissionItemEditing) { return false }
+        for (let ancestor = item; ancestor; ancestor = ancestor.parent) {
+            if (ancestor.objectName === "vehicleConfig_root") { return true }
+        }
+        return false
+    }
+
+    function vehicleComponentName(component) {
+        if (!component) { return "" }
+        return qsTranslate(component.toString().split("(")[0], component.name)
+    }
+
     //-- The point and pixel font size values are computed at runtime
 
     property real defaultFontPointSize:     10
@@ -168,7 +181,7 @@ Item {
             // If using physical sizing takes up too much of the vertical real estate fall back to font based sizing
             minTouchPixels      = defaultFontPixelHeight * 3
         }
-        toolbarHeight           = defaultFontPixelHeight * 3
+        toolbarHeight           = defaultFontPixelHeight * (QGroundControl.corePlugin.directMissionItemEditing ? 2.2 : 3)
         toolbarHeight           = toolbarHeight * QGroundControl.corePlugin.options.toolbarHeightMultiplier
     }
 

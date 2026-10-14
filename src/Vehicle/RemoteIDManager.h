@@ -26,19 +26,31 @@ public:
     Q_PROPERTY(bool    gcsPositionUsable    READ gcsPositionUsable  NOTIFY gcsPositionUsableChanged)     ///< true: GCS position is valid/fresh enough to broadcast in OPEN_DRONE_ID_SYSTEM
     Q_PROPERTY(bool    vehicleReportsBasicIDMissing READ vehicleReportsBasicIDMissing NOTIFY vehicleReportsBasicIDMissingChanged) ///< true: RID device reported it has no basic ID from device parameters or GCS
     Q_PROPERTY(bool    emergencyDeclared    READ emergencyDeclared  NOTIFY emergencyDeclaredChanged)
+    Q_PROPERTY(QString aircraftSerial READ aircraftSerial NOTIFY aircraftSerialChanged)
+    Q_PROPERTY(int aircraftType READ aircraftType NOTIFY aircraftSerialChanged)
 
     // Declare emergency
     Q_INVOKABLE void setEmergency(bool declare);
 
-    bool    available           (void) const { return _available; }
-    bool    armStatusGoodToArm  (void) const { return _armStatusGoodToArm; }
-    QString armStatusError      (void) const { return _armStatusError; }
-    bool    ridDeviceCommsGood  (void) const { return _ridDeviceCommsGood; }
-    bool    gcsPositionUsable   (void) const { return _gcsPositionUsable; }
-    bool    vehicleReportsBasicIDMissing(void) const { return _vehicleReportsBasicIDMissing; }
-    bool    emergencyDeclared   (void) const { return _emergencyDeclared;}
+    bool available(void) const { return _available; }
 
-    void mavlinkMessageReceived (mavlink_message_t& message);
+    bool armStatusGoodToArm(void) const { return _armStatusGoodToArm; }
+
+    QString armStatusError(void) const { return _armStatusError; }
+
+    bool ridDeviceCommsGood(void) const { return _ridDeviceCommsGood; }
+
+    bool gcsPositionUsable(void) const { return _gcsPositionUsable; }
+
+    bool vehicleReportsBasicIDMissing(void) const { return _vehicleReportsBasicIDMissing; }
+
+    bool emergencyDeclared(void) const { return _emergencyDeclared; }
+
+    QString aircraftSerial() const { return _aircraftSerial; }
+
+    int aircraftType() const { return _aircraftType; }
+
+    void mavlinkMessageReceived(mavlink_message_t& message);
 
     enum LocationTypes {
         TAKEOFF,
@@ -54,6 +66,7 @@ signals:
     void gcsPositionUsableChanged();
     void vehicleReportsBasicIDMissingChanged();
     void emergencyDeclaredChanged();
+    void aircraftSerialChanged();
 
 private slots:
     void _odidTimeout();
@@ -61,6 +74,7 @@ private slots:
 
 private:
     void _handleArmStatus(mavlink_message_t& message);
+    void _handleBasicID(const mavlink_message_t& message);
 
     // Self ID
     void        _sendSelfIDMsg ();
@@ -93,6 +107,8 @@ private:
     bool    _vehicleReportsBasicIDMissing;
 
     bool        _emergencyDeclared;
+    QString _aircraftSerial;
+    int _aircraftType = 0;
     int         _targetSystem;
     int         _targetComponent;
 

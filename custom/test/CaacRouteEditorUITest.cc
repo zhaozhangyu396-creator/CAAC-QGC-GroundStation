@@ -332,6 +332,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QTest::mouseDClick(_window, Qt::LeftButton, Qt::NoModifier, b + QPoint(50, 0));
     QCOMPARE(mission->visualItems()->count(), 3);
     plugin->setDoubleClickAddWaypoint(true);
+    QVERIFY(clickButton(QStringLiteral("caacWaypointListButton")));
     auto* firstNumber = findVisibleItem(_rootItem, QStringLiteral("caacWaypointNumber_1"));
     QVERIFY(firstNumber);
     QCOMPARE(firstNumber->property("text").toString(), QStringLiteral("1"));
@@ -339,9 +340,8 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QVERIFY(planTree && !planTree->isVisible());
     QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacMissionSettings")));
     QVERIFY(clickButton(QStringLiteral("caacGlobalSettingsButton")));
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacMissionSettings"), QStringLiteral("caacGlobalSettingsScroller")));
-    QTRY_VERIFY_WITH_TIMEOUT(planTree->isVisible(), TestTimeout::mediumMs());
-    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacEditWaypoint")));
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacMissionSettings"), 0));
+    QVERIFY(!planTree->isVisible());
     QVERIFY(clickButton(QStringLiteral("caacWaypointListButton")));
     QTRY_VERIFY_WITH_TIMEOUT(!planTree->isVisible(), TestTimeout::mediumMs());
     auto* dragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_1"), TestTimeout::mediumMs());
@@ -566,17 +566,9 @@ void CaacRouteEditorUITest::_testMouseEditing()
     const auto beforeAdvancedNavigation = master->saveToJson();
     QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacMissionSettings")));
     QVERIFY(clickButton(QStringLiteral("caacGlobalSettingsButton")));
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacMissionSettings"), QStringLiteral("caacGlobalSettingsScroller")));
-    QTRY_VERIFY_WITH_TIMEOUT(planTree->isVisible(), TestTimeout::mediumMs());
-    QVERIFY(!editorPanel->property("relativeEditorVisible").toBool());
-    QCOMPARE(panelTitle->property("text").toString(),
-             chinese ? QStringLiteral("高级任务设置") : QStringLiteral("Advanced mission settings"));
-    auto* returnToWaypoints = findVisibleItem(_rootItem, QStringLiteral("caacReturnToWaypoints"));
-    QVERIFY(returnToWaypoints);
-    QCOMPARE(returnToWaypoints->property("text").toString(),
-             chinese ? QStringLiteral("退出高级任务设置") : QStringLiteral("Exit advanced mission settings"));
-    QVERIFY(clickButton(QStringLiteral("caacReturnToWaypoints")));
-    QTRY_VERIFY_WITH_TIMEOUT(!planTree->isVisible(), TestTimeout::mediumMs());
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacMissionSettings"), 0));
+    QVERIFY(!planTree->isVisible());
+    QVERIFY(clickButton(QStringLiteral("caacWaypointListButton")));
     QCOMPARE(master->saveToJson(), beforeAdvancedNavigation);
 
     step("edit existing waypoint by distance and angle");
@@ -738,9 +730,10 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QVERIFY(clickButton(QStringLiteral("caacRouteDragToggle")));
     QVERIFY(!editorPanel->property("routeDragMode").toBool());
 
-    step("drag planning panel title");
+    step("planning panel stays fixed");
     auto* planningHandle = findVisibleItem(_rootItem, QStringLiteral("caacPlanningPanelDragHandle"));
     QVERIFY(planningHandle);
+    QVERIFY(!planningHandle->property("enabled").toBool());
     const auto panelBeforeDrag = planningHandle->mapToScene(QPointF(0, 0));
     const auto panelPress =
         planningHandle->mapToScene(QPointF(planningHandle->width() / 2, planningHandle->height() / 2)).toPoint();
@@ -749,8 +742,18 @@ void CaacRouteEditorUITest::_testMouseEditing()
         QTest::mouseMove(_window, panelPress - QPoint(i * 10, 0));
     }
     QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, panelPress - QPoint(40, 0));
-    QTRY_VERIFY_WITH_TIMEOUT(planningHandle->mapToScene(QPointF(0, 0)).x() < panelBeforeDrag.x() - 10,
-                             TestTimeout::mediumMs());
+    QCOMPARE(planningHandle->mapToScene(QPointF(0, 0)), panelBeforeDrag);
+    auto* contents = findItem(_rootItem, QStringLiteral("caacPlanningPanelContents"));
+    auto* toggle = findVisibleItem(_rootItem, QStringLiteral("caacPlanningPanelToggle"));
+    QVERIFY(contents && toggle);
+    const auto navigationHeight = contents->parentItem()->property("navigationHeight").toDouble();
+    QVERIFY(std::abs(toggle->mapToItem(contents->parentItem(), QPointF(0, toggle->height() / 2)).y() -
+                     navigationHeight / 2) < 1);
+    QVERIFY(clickButton(QStringLiteral("caacPlanningPanelToggle")));
+    QVERIFY(contents->property("clip").toBool());
+    QVERIFY(contents->mapToScene(QPointF()).x() >= _rootItem->width() - 1);
+    QVERIFY(clickButton(QStringLiteral("caacPlanningPanelToggle")));
+    QVERIFY(!contents->property("clip").toBool());
     QVERIFY(clickButton(QStringLiteral("caacWaypointListButton")));
     QCOMPARE(editorPanel->property("activePanel").toInt(), 3);
     QVERIFY(clickButton(QStringLiteral("caacGlobalSettingsButton")));
@@ -1048,6 +1051,7 @@ void CaacRouteEditorUITest::_planningUtilities()
     QVERIFY(!panel->property("measureB").value<QGeoCoordinate>().isValid());
     QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacMeasureMapValues"), 0));
     QCOMPARE(master->saveToJson(), before);
+    QVERIFY(clickButton(QStringLiteral("caacGlobalSettingsButton")));
     auto* specify = findVisibleItem(_rootItem, QStringLiteral("caacSpecifyMissionSpeed"));
     QVERIFY(specify);
     QVERIFY(scrollIntoView(specify, QStringLiteral("caacGlobalSettingsScroller")));

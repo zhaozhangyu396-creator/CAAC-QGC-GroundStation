@@ -59,8 +59,11 @@ SetupPage {
                     color: qgcPal.text
                 }
 
-                RowLayout {
-                    spacing: ScreenTools.defaultFontPixelWidth
+                GridLayout {
+                    Layout.fillWidth: true
+                    columns: ScreenTools.isVehicleSetupItem(remoteControlCalibration) ? 1 : 3
+                    rowSpacing: ScreenTools.defaultFontPixelWidth
+                    columnSpacing: ScreenTools.defaultFontPixelWidth
 
                     QGCButton {
                         id: bindButton

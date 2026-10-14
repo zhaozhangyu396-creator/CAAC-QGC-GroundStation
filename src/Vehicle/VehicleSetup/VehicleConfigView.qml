@@ -10,6 +10,37 @@ Rectangle {
     objectName:     "vehicleConfig_root"
     color:          qgcPal.window
     z:      QGroundControl.zOrderTopMost
+    property bool embedded: false
+    property bool _embeddedPageOpened: false
+    property string _offlinePageTitle: ""
+    readonly property var _offlineFunctions: [
+        ["PX4TuningComponent", "PID Tuning", "/qmlimages/TuningComponentIcon.png"],
+        ["SensorsComponent", "Sensors", "/qmlimages/SensorsComponentIcon.png"],
+        ["SafetyComponent", "Safety", "/qmlimages/SafetyComponentIcon.png"],
+        ["JoystickComponent", "Joystick", "/qmlimages/Joystick.png"],
+        ["AirframeComponent", "Airframe", "/qmlimages/AirframeComponentIcon.png"],
+        ["MotorComponent", "Motors", "/qmlimages/MotorComponentIcon.svg"],
+        ["PowerComponent", "Power", "/qmlimages/Battery.svg"],
+        ["PX4RadioComponent", "Radio", "/qmlimages/RadioComponentIcon.png"],
+        ["FlightModesComponent", "Flight Modes", "/qmlimages/FlightModesComponentIcon.png"],
+        ["PX4FlightBehavior", "Flight Behavior", "/qmlimages/TuningComponentIcon.png"],
+        ["VehicleConfigView", "Parameters", "/qmlimages/subMenuButtonImage.png"]
+    ]
+
+    function showNavigation() {
+        if (mainWindow.allowViewSwitch()) { _embeddedPageOpened = false }
+    }
+
+    function showOfflinePage(entry) {
+        if (!mainWindow.allowViewSwitch()) { return }
+        _embeddedPageOpened = true
+        _selectedComponentIndex = -1
+        _selectedSectionIndex = -1
+        _selectedSpecial = "offline"
+        _offlinePageTitle = qsTranslate(entry[0], entry[1])
+        _messagePanelText = qsTr("请连接 PX4 飞控并完成参数读取后再设置此项。")
+        panelLoader.setSourceComponent(entry[1] === "Sensors" ? offlineSensorsComponent : messagePanelComponent)
+    }
 
     // This need to block click event leakage to underlying map.
     DeadMouseArea {
@@ -23,6 +54,7 @@ Rectangle {
     readonly property real      _horizontalMargin:  _defaultTextWidth / 2
     readonly property real      _verticalMargin:    _defaultTextHeight / 2
     readonly property real      _buttonWidth:       _defaultTextWidth * 18
+    readonly property bool      _caacStyle:         QGroundControl.corePlugin.directMissionItemEditing
     readonly property string    _armedVehicleText:  qsTr("This operation cannot be performed while the vehicle is armed.")
 
     property var    _activeVehicle:                 QGroundControl.multiVehicleManager.activeVehicle
@@ -39,6 +71,23 @@ Rectangle {
     property var    _expandedComponents:     ({})
     property int    _expandedRevision:       0
     property string _searchQuery:            ""
+
+    function _orderedComponents() {
+        if (!_fullParameterVehicleAvailable) { return [] }
+        const components = _activeVehicle.autopilotPlugin.vehicleComponents
+        const order = ["PX4TuningComponent", "SensorsComponent", "SafetyComponent", "JoystickComponent",
+            "AirframeComponent", "MotorComponent", "ActuatorComponent", "PowerComponent", "PX4RadioComponent",
+            "FlightModesComponent", "PX4FlightBehavior"]
+        const entries = components.map((component, index) => ({component: component, componentIndex: index}))
+        if (_caacStyle) {
+            entries.sort((left, right) => {
+                const leftOrder = order.indexOf(left.component.toString().split("(")[0])
+                const rightOrder = order.indexOf(right.component.toString().split("(")[0])
+                return (leftOrder < 0 ? order.length : leftOrder) - (rightOrder < 0 ? order.length : rightOrder)
+            })
+        }
+        return entries
+    }
 
     function _setExpanded(compIndex, value) {
         _expandedComponents[compIndex] = value
@@ -85,6 +134,7 @@ Rectangle {
         if (_searchQuery.trim() === "") return true
         var query = _searchQuery.toLowerCase().trim()
         if (component.name.toLowerCase().indexOf(query) !== -1) return true
+        if (ScreenTools.vehicleComponentName(component).toLowerCase().indexOf(query) !== -1) return true
         var context = _translationContext(component)
         var secs = component.sectionIds
         if (secs) {
@@ -145,6 +195,7 @@ Rectangle {
 
     function showSummaryPanel() {
         if (mainWindow.allowViewSwitch()) {
+            _embeddedPageOpened = true
             _showSummaryPanel()
         }
     }
@@ -168,6 +219,7 @@ Rectangle {
 
     function showPanel(specialName, qmlSource) {
         if (mainWindow.allowViewSwitch()) {
+            _embeddedPageOpened = true
             _selectedSpecial = specialName
             _selectedComponentIndex = -1
             _selectedSectionIndex = -1
@@ -178,6 +230,7 @@ Rectangle {
     function _navigateToComponent(compIndex, sectionIndex) {
         if (!mainWindow.allowViewSwitch()) return
         if (!_fullParameterVehicleAvailable) return
+        _embeddedPageOpened = true
 
         var components = _activeVehicle.autopilotPlugin.vehicleComponents
         if (compIndex < 0 || compIndex >= components.length) return
@@ -188,6 +241,10 @@ Rectangle {
         // If component opts in and root was clicked, auto-select first section
         if (sectionIndex < 0 && vehicleComponent.showFirstSectionOnRootClick && vehicleComponent.sectionIds.length > 0) {
             sectionIndex = 0
+            if (_caacStyle && _corePlugin.options.showSensorCalibrationAccel) {
+                const accelIndex = vehicleComponent.sectionIds.indexOf("Accelerometer")
+                if (accelIndex >= 0) { sectionIndex = accelIndex }
+            }
         }
         _selectedSectionIndex = sectionIndex
 
@@ -346,15 +403,40 @@ Rectangle {
         }
     }
 
+    Component {
+        id: offlineSensorsComponent
+        SensorCalibrationPanel {
+            vehicle: null
+            calibrationEnabled: false
+            levelEnabled: false
+            sideStates: [0, 0, 0, 0, 0, 0]
+            sideVisible: [true, true, true, true, true, true]
+            sideRotating: [false, false, false, false, false, false]
+        }
+    }
+
     ColumnLayout {
         id:                 leftPanel
-        width:              Math.max(buttonColumn.implicitWidth + _horizontalMargin, ScreenTools.defaultFontPixelWidth * 22)
+        width:              embedded ? parent.width - _horizontalMargin * 2
+                                : Math.max(buttonColumn.implicitWidth + _horizontalMargin, ScreenTools.defaultFontPixelWidth * 22)
+        visible:            !embedded || !_embeddedPageOpened
         anchors.topMargin:  _verticalMargin
         anchors.top:        parent.top
         anchors.bottom:     parent.bottom
         anchors.leftMargin: _horizontalMargin
         anchors.left:       parent.left
         spacing:            _verticalMargin / 2
+
+        QGCLabel {
+            Layout.fillWidth: true
+            Layout.leftMargin: _horizontalMargin
+            Layout.topMargin: _verticalMargin
+            Layout.bottomMargin: _verticalMargin
+            text: qsTr("无人机设置")
+            font.pointSize: ScreenTools.mediumFontPointSize
+            font.bold: true
+            visible: vehicleConfigView._caacStyle
+        }
 
         QGCTextField {
             id:                 searchField
@@ -405,7 +487,7 @@ Rectangle {
                 // Vehicle component tree
                 Repeater {
                     id:     componentRepeater
-                    model:  _fullParameterVehicleAvailable ? _activeVehicle.autopilotPlugin.vehicleComponents : 0
+                    model:  vehicleConfigView._orderedComponents()
 
                     ColumnLayout {
                         id:             compColumn
@@ -414,15 +496,16 @@ Rectangle {
 
                         required property int index
                         required property var modelData
+                        readonly property int componentIndex: modelData.componentIndex
 
-                        property var    comp:           modelData
+                        property var    comp:           modelData.component
                         property string compName:       comp ? comp.name : ""
                         property var    compSectionIds: comp ? comp.sectionIds : []
-                        property bool   isSelected:     vehicleConfigView._selectedComponentIndex === index && vehicleConfigView._selectedSpecial === ""
+                        property bool   isSelected:     vehicleConfigView._selectedComponentIndex === componentIndex && vehicleConfigView._selectedSpecial === ""
                         property bool   hasSections:    compSectionIds.length > 1
                         property bool   isSearching:    vehicleConfigView._searchQuery.trim() !== ""
                         property bool   matchesSearch:  comp ? vehicleConfigView._componentMatchesSearch(comp) : false
-                        property bool   isExpanded:     hasSections && (isSearching ? matchesSearch : vehicleConfigView._isExpanded(index))
+                        property bool   isExpanded:     hasSections && (isSearching ? matchesSearch : vehicleConfigView._isExpanded(componentIndex))
 
                         visible: vehicleConfigView._componentVisible(comp)
 
@@ -431,18 +514,18 @@ Rectangle {
                             objectName:         "vehicleConfig_comp_" + compColumn.compName.replace(/ /g, "")
                             icon.source:        compColumn.comp ? compColumn.comp.iconResource : ""
                             setupComplete:      compColumn.comp ? compColumn.comp.setupComplete : true
-                            text:               compColumn.compName
+                            text:               ScreenTools.vehicleComponentName(compColumn.comp)
                             expandable:         compColumn.hasSections
                             expanded:           compColumn.isExpanded
                             checked:            compColumn.isSelected && vehicleConfigView._selectedSectionIndex === -1
 
                             onClicked: {
-                                vehicleConfigView._navigateToComponent(compColumn.index, -1)
+                                vehicleConfigView._navigateToComponent(compColumn.componentIndex, -1)
                                 if (compColumn.hasSections) {
                                     if (compColumn.isSelected && compColumn.isExpanded) {
-                                        vehicleConfigView._setExpanded(compColumn.index, false)
+                                        vehicleConfigView._setExpanded(compColumn.componentIndex, false)
                                     } else if (!compColumn.isExpanded) {
-                                        vehicleConfigView._setExpanded(compColumn.index, true)
+                                        vehicleConfigView._setExpanded(compColumn.componentIndex, true)
                                     }
                                 }
                             }
@@ -450,9 +533,9 @@ Rectangle {
                             onToggleExpand: {
                                 if (!mainWindow.allowViewSwitch()) return
                                 var expanding = !compColumn.isExpanded
-                                vehicleConfigView._setExpanded(compColumn.index, expanding)
+                                vehicleConfigView._setExpanded(compColumn.componentIndex, expanding)
                                 if (!expanding && compColumn.isSelected) {
-                                    vehicleConfigView._navigateToComponent(compColumn.index, -1)
+                                    vehicleConfigView._navigateToComponent(compColumn.componentIndex, -1)
                                 }
                             }
                         }
@@ -493,11 +576,12 @@ Rectangle {
                                     if (typeof panelLoader.item.sectionVisible !== "function") return true
                                     return panelLoader.item.sectionVisible(modelData)
                                 }
-                                property color textColor: sectionChecked || pressed ? qgcPal.buttonHighlightText : qgcPal.buttonText
+                                property color textColor: vehicleConfigView._caacStyle && (sectionChecked || pressed) ? qgcPal.colorGreen
+                                    : sectionChecked || pressed ? qgcPal.buttonHighlightText : qgcPal.buttonText
                                 visible: sectionMatchesSearch && sectionContentVisible
 
                                 background: Rectangle {
-                                    color:   qgcPal.buttonHighlight
+                                    color:   vehicleConfigView._caacStyle ? qgcPal.windowShade : qgcPal.buttonHighlight
                                     opacity: sectionBtn.sectionChecked || sectionBtn.pressed ? 1 : sectionBtn.enabled && sectionBtn.hovered ? 0.2 : 0
                                     radius:  ScreenTools.defaultFontPixelWidth / 2
                                 }
@@ -523,10 +607,24 @@ Rectangle {
                                 }
 
                                 onClicked: {
-                                    vehicleConfigView._navigateToComponent(compColumn.index, sectionIndex)
+                                    vehicleConfigView._navigateToComponent(compColumn.componentIndex, sectionIndex)
                                 }
                             }
                         }
+                    }
+                }
+
+                Repeater {
+                    model: vehicleConfigView.embedded && !vehicleConfigView._fullParameterVehicleAvailable
+                        ? vehicleConfigView._offlineFunctions : []
+                    ConfigButton {
+                        required property var modelData
+                        objectName: "vehicleConfig_offline_" + modelData[1].replace(/ /g, "")
+                        Layout.fillWidth: true
+                        text: qsTranslate(modelData[0], modelData[1])
+                        icon.source: modelData[2]
+                        setupComplete: false
+                        onClicked: vehicleConfigView.showOfflinePage(modelData)
                     }
                 }
 
@@ -578,6 +676,7 @@ Rectangle {
 
     Rectangle {
         id:                     divider
+        visible:                !embedded
         anchors.topMargin:      _verticalMargin
         anchors.bottomMargin:   _verticalMargin
         anchors.leftMargin:     _horizontalMargin
@@ -588,16 +687,70 @@ Rectangle {
         color:                  qgcPal.windowShade
     }
 
+    RowLayout {
+        id: embeddedBackBar
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.margins: _horizontalMargin
+        visible: embedded && _embeddedPageOpened
+        QGCButton {
+            objectName: "vehicleConfig_backToMenu"
+            text: qsTr("返回无人机设置")
+            Layout.fillWidth: true
+            onClicked: vehicleConfigView.showNavigation()
+        }
+    }
+
+    RowLayout {
+        id: specialPageHeader
+        objectName: "vehicleSetup_header"
+        anchors.left: embedded ? parent.left : divider.right
+        anchors.right: parent.right
+        anchors.top: embeddedBackBar.visible ? embeddedBackBar.bottom : parent.top
+        anchors.margins: _defaultTextHeight
+        spacing: _defaultTextWidth
+        visible: vehicleConfigView._caacStyle && (!embedded || _embeddedPageOpened)
+            && panelLoader.item && typeof panelLoader.item.pageName === "undefined"
+
+        Rectangle {
+            width: _defaultTextWidth * 0.35
+            height: _defaultTextHeight * 1.2
+            color: qgcPal.colorGreen
+            radius: width / 2
+        }
+        QGCLabel {
+            Layout.fillWidth: true
+            font.pointSize: ScreenTools.mediumFontPointSize
+            font.bold: true
+            text: {
+                if (vehicleConfigView._selectedSpecial === "offline") { return vehicleConfigView._offlinePageTitle }
+                if (vehicleConfigView._selectedComponentIndex >= 0 && vehicleConfigView._fullParameterVehicleAvailable) {
+                    return ScreenTools.vehicleComponentName(vehicleConfigView._activeVehicle.autopilotPlugin.vehicleComponents[
+                        vehicleConfigView._selectedComponentIndex])
+                }
+                switch (vehicleConfigView._selectedSpecial) {
+                case "parameters": return qsTr("Parameters")
+                case "firmware": return qsTr("Firmware")
+                case "opticalflow": return qsTr("Optical Flow")
+                default: return qsTr("Summary")
+                }
+            }
+        }
+    }
+
     Loader {
         id:                     panelLoader
         objectName:             "vehicleConfig_panelLoader"
+        visible:                !embedded || _embeddedPageOpened
         anchors.topMargin:      _verticalMargin
         anchors.bottomMargin:   _verticalMargin
         anchors.leftMargin:     _horizontalMargin
         anchors.rightMargin:    _horizontalMargin
-        anchors.left:           divider.right
+        anchors.left:           embedded ? parent.left : divider.right
         anchors.right:          parent.right
-        anchors.top:            parent.top
+        anchors.top:            specialPageHeader.visible ? specialPageHeader.bottom
+                                    : embeddedBackBar.visible ? embeddedBackBar.bottom : parent.top
         anchors.bottom:         parent.bottom
 
         function setSource(source, vehicleComponent) {

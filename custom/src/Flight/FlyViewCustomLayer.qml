@@ -189,7 +189,7 @@ Item {
         readonly property real maximumDiameter: Math.max(0, root.height
             - 2 * (emergencyControls.height + root._margin) - emergencyValues.implicitHeight - spacing)
         x: sideInset + (availableWidth - width) / 2
-        y: (root.height - height) / 2
+        y: Math.max(0, Math.min((root.height - height) / 2, emergencyControls.y - root._margin - height))
         width: availableWidth
         spacing: ScreenTools.defaultFontPixelHeight
         visible: root._simulationEmergency

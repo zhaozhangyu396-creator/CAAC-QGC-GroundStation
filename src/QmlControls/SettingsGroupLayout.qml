@@ -24,6 +24,7 @@ ColumnLayout {
     property string headingDescription
     property bool   showDividers:       true
     property bool   showBorder:         true
+    readonly property bool vehicleSetupStyle: ScreenTools.isVehicleSetupItem(control)
 
     property real _margins: ScreenTools.defaultFontPixelHeight / 2
 
@@ -42,10 +43,23 @@ ColumnLayout {
         spacing:            0
         visible:            heading !== ""
 
-        QGCLabel {
-            text:           heading
-            font.pointSize: headingPointSize
-            font.bold:      true
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: ScreenTools.defaultFontPixelWidth
+            Rectangle {
+                width: ScreenTools.defaultFontPixelWidth * 0.35
+                height: ScreenTools.defaultFontPixelHeight
+                color: QGroundControl.globalPalette.colorGreen
+                radius: width / 2
+                visible: control.vehicleSetupStyle
+            }
+            QGCLabel {
+                Layout.fillWidth: true
+                text: control.heading
+                font.pointSize: control.headingPointSize
+                font.bold: true
+                wrapMode: Text.WordWrap
+            }
         }
 
         QGCLabel {
@@ -62,9 +76,9 @@ ColumnLayout {
         Layout.fillWidth:   true
         implicitWidth:      _contentLayout.implicitWidth + (showBorder ? _margins * 2 : 0)
         implicitHeight:     _contentLayout.implicitHeight + (showBorder ? _margins * 2: 0)
-        color:              "transparent"
+        color:              control.vehicleSetupStyle ? QGroundControl.globalPalette.windowShade : "transparent"
         border.color:       outerBorderColor
-        border.width:       showBorder ? 1 : 0
+        border.width:       showBorder && !control.vehicleSetupStyle ? 1 : 0
         radius:             ScreenTools.defaultFontPixelHeight / 2
 
         Repeater {

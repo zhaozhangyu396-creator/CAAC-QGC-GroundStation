@@ -15,6 +15,7 @@ Button {
     checkable:          false
 
     property bool logo: false
+    property real iconExtent: Math.min(ScreenTools.defaultFontPixelHeight * 2, button.height * 0.75)
 
     property real _horizontalMargin: ScreenTools.defaultFontPixelWidth
 
@@ -34,7 +35,7 @@ Button {
         // tint their monochrome icon through QGCColoredImage. Plain `Row` skips visible:false items.
         QGCVectorImage {
             visible:                button.logo
-            height:                 ScreenTools.defaultFontPixelHeight * 2
+            height:                 button.iconExtent
             width:                  implicitHeight > 0 ? height * implicitWidth / implicitHeight : height
             source:                 visible ? button.icon.source : ""
             anchors.verticalCenter: parent.verticalCenter
@@ -61,7 +62,7 @@ Button {
         }
         QGCColoredImage {
             visible:                !button.logo
-            height:                 ScreenTools.defaultFontPixelHeight * 2
+            height:                 button.iconExtent
             width:                  height
             sourceSize.height:      parent.height
             fillMode:               Image.PreserveAspectFit

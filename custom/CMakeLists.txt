@@ -33,6 +33,10 @@ qgc_set_qt_resource_alias(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacCalculatorMath.js
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacPreferences.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacSettingsMenu.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacRIDSettings.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacSafetySettings.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacUOMSettings.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacAccessDialog.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacAttitudeInstrument.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacSimulationEmergencyDialog.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacMissionActionDialog.qml
@@ -75,6 +79,10 @@ qt_add_qml_module(
               src/PlanView/CaacCalculatorMath.js
               src/PlanView/CaacPreferences.qml
               src/PlanView/CaacSettingsMenu.qml
+              src/PlanView/CaacRIDSettings.qml
+              src/PlanView/CaacSafetySettings.qml
+              src/PlanView/CaacUOMSettings.qml
+              src/PlanView/CaacAccessDialog.qml
               src/Flight/CaacAttitudeInstrument.qml
               src/Flight/CaacSimulationEmergencyDialog.qml
               src/Flight/CaacMissionActionDialog.qml
@@ -102,6 +110,8 @@ qt_add_resources(
 
 set(CUSTOM_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CaacCorePlugin.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CaacAccessController.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CaacAccessController.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CaacCorePlugin.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Route/CaacRouteEditorController.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Route/CaacRouteEditorController.cc
@@ -133,6 +143,17 @@ qt_add_resources(
 set(CUSTOM_LIBRARIES
     CaacPlanModule
     PARENT_SCOPE
+)
+qt_add_resources(
+    ${CMAKE_PROJECT_NAME} caac_calibration_images
+    PREFIX "/CAAC/Calibration"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/assets/calibration"
+    FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/calibration/pose-01.png
+          ${CMAKE_CURRENT_SOURCE_DIR}/assets/calibration/pose-02.png
+          ${CMAKE_CURRENT_SOURCE_DIR}/assets/calibration/pose-03.png
+          ${CMAKE_CURRENT_SOURCE_DIR}/assets/calibration/pose-04.png
+          ${CMAKE_CURRENT_SOURCE_DIR}/assets/calibration/pose-05.png
+          ${CMAKE_CURRENT_SOURCE_DIR}/assets/calibration/pose-06.png
 )
 set(CUSTOM_INCLUDE_DIRECTORIES
     ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src/Route ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight

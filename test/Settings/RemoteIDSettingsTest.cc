@@ -1,5 +1,6 @@
 #include "RemoteIDSettingsTest.h"
 
+#include <QtCore/QScopeGuard>
 #include <QtCore/QSettings>
 #include <QtTest/QSignalSpy>
 
@@ -27,6 +28,7 @@ void RemoteIDSettingsTest::init()
     _savedOperatorIDType = settings->operatorIDType()->rawValue();
     _savedRegion = settings->region()->rawValue();
     _savedSendOperatorID = settings->sendOperatorID()->rawValue();
+    _savedSendBasicID = settings->sendBasicID()->rawValue();
     _savedLocationType = settings->locationType()->rawValue();
     _savedBasicID = settings->basicID()->rawValue();
     _savedBasicIDType = settings->basicIDType()->rawValue();
@@ -45,12 +47,41 @@ void RemoteIDSettingsTest::cleanup()
     settings->operatorIDEU()->setRawValue(_savedOperatorIDEU);
     settings->operatorIDFAA()->setRawValue(_savedOperatorIDFAA);
     settings->sendOperatorID()->setRawValue(_savedSendOperatorID);
+    settings->sendBasicID()->setRawValue(_savedSendBasicID);
     settings->locationType()->setRawValue(_savedLocationType);
     settings->basicID()->setRawValue(_savedBasicID);
     settings->basicIDType()->setRawValue(_savedBasicIDType);
     settings->basicIDUaType()->setRawValue(_savedBasicIDUaType);
 
     UnitTest::cleanup();
+}
+
+void RemoteIDSettingsTest::_chinaClassification()
+{
+    auto* settings = SettingsManager::instance()->remoteIDSettings();
+    const auto category = settings->categoryChina()->rawValue();
+    const auto aircraftClass = settings->classChina()->rawValue();
+    const auto restore = qScopeGuard([&]() {
+        settings->categoryChina()->setRawValue(category);
+        settings->classChina()->setRawValue(aircraftClass);
+    });
+    const auto euCategory = settings->categoryEU()->rawValue();
+    const auto euClass = settings->classEU()->rawValue();
+    settings->region()->setRawValue(static_cast<int>(RemoteIDSettings::RegionOperation::China));
+    QCOMPARE(settings->locationType()->rawValue().toInt(), 0);
+    QVERIFY(settings->sendBasicID()->rawValue().toBool());
+    QVERIFY(!settings->sendOperatorID()->rawValue().toBool());
+    QVERIFY(!settings->operatorIDValidForRegion());
+    QCOMPARE(settings->region()->enumValues().size(), 3);
+    QCOMPARE(settings->categoryChina()->enumValues().size(), 4);
+    QCOMPARE(settings->classChina()->enumValues().size(), 6);
+    settings->categoryChina()->setRawValue(2);
+    settings->classChina()->setRawValue(3);
+    QCOMPARE(settings->categoryEU()->rawValue(), euCategory);
+    QCOMPARE(settings->classEU()->rawValue(), euClass);
+    const QSettings saved;
+    QCOMPARE(saved.value(settings->SettingsGroup::settingsGroup() + "/categoryChina").toInt(), 2);
+    QCOMPARE(saved.value(settings->SettingsGroup::settingsGroup() + "/classChina").toInt(), 3);
 }
 
 void RemoteIDSettingsTest::_euValidatorValidation_data()

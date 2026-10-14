@@ -25,10 +25,14 @@ ColumnLayout {
 
     property real _channelValueDisplayWidth: ScreenTools.defaultFontPixelWidth * 30
     property bool _deadbandActive: useDeadband
+    readonly property bool vehicleSetupStyle: ScreenTools.isVehicleSetupItem(root)
+    width: vehicleSetupStyle ? availableWidth : implicitWidth
 
     QGCPalette { id: qgcPal; colorGroupEnabled: root.enabled }
 
-    RowLayout {
+    GridLayout {
+        Layout.fillWidth: true
+        columns: root.vehicleSetupStyle ? 1 : 2
         // Left Column - Attitude Controls display
         ColumnLayout {
             Layout.alignment: Qt.AlignTop
@@ -310,9 +314,11 @@ ColumnLayout {
     }
 
     // Additional Setup + Channel Monitor
-    RowLayout {
+    GridLayout {
+        columns: root.vehicleSetupStyle ? 1 : 3
         Layout.fillWidth: true
-        spacing: ScreenTools.defaultFontPixelHeight
+        rowSpacing: ScreenTools.defaultFontPixelHeight
+        columnSpacing: ScreenTools.defaultFontPixelHeight
 
 
         Item {

@@ -40,6 +40,7 @@ void RemoteIDManagerTest::init()
     _savedOperatorIDType = settings->operatorIDType()->rawValue();
     _savedRegion = settings->region()->rawValue();
     _savedSendOperatorID = settings->sendOperatorID()->rawValue();
+    _savedSendBasicID = settings->sendBasicID()->rawValue();
     _savedLocationType = settings->locationType()->rawValue();
 }
 
@@ -55,9 +56,60 @@ void RemoteIDManagerTest::cleanup()
     settings->operatorIDEU()->setRawValue(_savedOperatorIDEU);
     settings->operatorIDFAA()->setRawValue(_savedOperatorIDFAA);
     settings->sendOperatorID()->setRawValue(_savedSendOperatorID);
+    settings->sendBasicID()->setRawValue(_savedSendBasicID);
     settings->locationType()->setRawValue(_savedLocationType);
 
     VehicleTestNoInitialConnect::cleanup();
+}
+
+void RemoteIDManagerTest::_airframeSerialFiltering()
+{
+    auto* manager = vehicle()->remoteIDManager();
+    const QByteArray serial("12345678901234567890");
+    uint8_t mac[20]{};
+    const auto messageFor = [&](int system, int component, int type) {
+        mavlink_message_t message{};
+        mavlink_msg_open_drone_id_basic_id_pack(system, component, &message, vehicle()->id(), 0, mac, type,
+                                                MAV_ODID_UA_TYPE_HELICOPTER_OR_MULTIROTOR,
+                                                reinterpret_cast<const uint8_t*>(serial.constData()));
+        return message;
+    };
+    for (const auto& invalid :
+         {messageFor(vehicle()->id() + 1, MAV_COMP_ID_AUTOPILOT1, 1),
+          messageFor(vehicle()->id(), MAV_COMP_ID_CAMERA, 1), messageFor(vehicle()->id(), MAV_COMP_ID_AUTOPILOT1, 2)}) {
+        auto message = invalid;
+        manager->mavlinkMessageReceived(message);
+        QVERIFY(manager->aircraftSerial().isEmpty());
+    }
+    auto valid = messageFor(vehicle()->id(), MAV_COMP_ID_ODID_TXRX_1, 1);
+    manager->mavlinkMessageReceived(valid);
+    QCOMPARE(manager->aircraftSerial(), QString::fromLatin1(serial));
+    QCOMPARE(manager->aircraftType(), int(MAV_ODID_UA_TYPE_HELICOPTER_OR_MULTIROTOR));
+}
+
+void RemoteIDManagerTest::_takeoffLocationChina()
+{
+    auto* settings = SettingsManager::instance()->remoteIDSettings();
+    auto* manager = vehicle()->remoteIDManager();
+    QTRY_VERIFY_WITH_TIMEOUT(vehicle()->homePosition().isValid(), 10000);
+    settings->region()->setRawValue(static_cast<int>(RemoteIDSettings::RegionOperation::China));
+    QVERIFY(QMetaObject::invokeMethod(manager, "_sendMessages", Qt::DirectConnection));
+    mavlink_message_t message{};
+    mavlink_open_drone_id_system_t system{};
+    QTRY_VERIFY_WITH_TIMEOUT(
+        ([&]() {
+            if (!mockLink()->lastReceivedMavlinkMessage(MAVLINK_MSG_ID_OPEN_DRONE_ID_SYSTEM, message)) {
+                return false;
+            }
+            mavlink_msg_open_drone_id_system_decode(&message, &system);
+            return system.operator_latitude == qRound64(vehicle()->homePosition().latitude() * 1e7) &&
+                   system.operator_longitude == qRound64(vehicle()->homePosition().longitude() * 1e7);
+        })(),
+        5000);
+    QCOMPARE(system.operator_location_type, uint8_t(RemoteIDManager::LocationTypes::TAKEOFF));
+    QCOMPARE(system.classification_type, uint8_t(MAV_ODID_CLASSIFICATION_TYPE_UNDECLARED));
+    QCOMPARE(system.category_eu, uint8_t(MAV_ODID_CATEGORY_EU_UNDECLARED));
+    QCOMPARE(system.class_eu, uint8_t(MAV_ODID_CLASS_EU_UNDECLARED));
 }
 
 // The basic-ID-missing flag must track the CURRENT arm status error: it is set while the

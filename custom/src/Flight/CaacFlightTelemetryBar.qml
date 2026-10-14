@@ -101,6 +101,7 @@ Rectangle {
                         for (const fraction of [0.81, 0.68, 0.5]) {
                             ctx.beginPath(); ctx.arc(0, 0, r * fraction, 0, Math.PI * 2); ctx.stroke()
                         }
+                        ctx.translate(0, -r * 0.16)
                         ctx.rotate((isFinite(root.headingAngle) ? root.headingAngle : 0) * Math.PI / 180)
                         ctx.fillStyle = isFinite(root.headingAngle) ? "white" : "#888888"
                         ctx.beginPath()
@@ -108,12 +109,25 @@ Rectangle {
                         ctx.lineTo(0, r * 0.12); ctx.lineTo(-r * 0.27, r * 0.24)
                         ctx.closePath(); ctx.fill()
                     }
-                    MouseArea {
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        acceptedButtons: Qt.NoButton
-                        ToolTip.visible: containsMouse
-                        ToolTip.text: isFinite(root.headingAngle) ? root.headingAngle.toFixed(1) + "°" : "—"
+                    Rectangle {
+                        objectName: "caacTelemetryHeadingFrame"
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        y: parent.height * 0.69
+                        width: headingValue.implicitWidth + ScreenTools.defaultFontPixelWidth * 0.6
+                        height: headingValue.implicitHeight + ScreenTools.defaultFontPixelHeight * 0.18
+                        color: "black"
+                        border.color: "white"
+                        border.width: 1
+                        radius: 2
+                        z: 1
+                        QGCLabel {
+                            id: headingValue
+                            objectName: "caacTelemetryHeadingValue"
+                            anchors.centerIn: parent
+                            text: isFinite(root.headingAngle) ? root.headingAngle.toFixed(1) + "°" : "—"
+                            color: "white"
+                            font.pointSize: ScreenTools.smallFontPointSize * 0.85
+                        }
                     }
                 }
             }

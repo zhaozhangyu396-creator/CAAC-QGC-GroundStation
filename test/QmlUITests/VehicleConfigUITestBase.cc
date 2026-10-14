@@ -1,12 +1,15 @@
 #include "VehicleConfigUITestBase.h"
 
+#include <QtCore/QDir>
 #include <QtCore/QElapsedTimer>
 #include <QtCore/QLocale>
 #include <QtCore/QPointer>
 #include <QtCore/QRegularExpression>
 #include <QtCore/QScopeGuard>
 #include <QtQuick/QQuickItem>
+#include <QtQuick/QQuickItemGrabResult>
 #include <QtQuick/QQuickWindow>
+#include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
 #include "AppSettings.h"
@@ -49,6 +52,16 @@ void VehicleConfigUITestBase::navigateToConfigureView()
 {
     QVERIFY2(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewConfigure")),
              "Failed to navigate to Configure view");
+    QTRY_VERIFY_WITH_TIMEOUT(findVisibleItem(_rootItem, QStringLiteral("caacAccessPassword"), 0) ||
+                                 findVisibleItem(_rootItem, QStringLiteral("vehicleConfig_root"), 0),
+                             3000);
+    if (findVisibleItem(_rootItem, QStringLiteral("caacAccessPassword"), 0)) {
+        QVERIFY(clickButton(QStringLiteral("caacAccessPassword")));
+        for (int digit = 0; digit < 3; ++digit) {
+            QTest::keyClick(_window, Qt::Key_3);
+        }
+        QVERIFY(acceptDialog());
+    }
     QTest::qWait(_viewDelay);
 
     QVERIFY2(findVisibleItem(_rootItem, QStringLiteral("vehicleConfig_root"), 3000),
@@ -57,6 +70,12 @@ void VehicleConfigUITestBase::navigateToConfigureView()
 
 QQuickItem *VehicleConfigUITestBase::clickSidebarButton(const QString &objectName)
 {
+    if (findVisibleItem(_rootItem, QStringLiteral("vehicleConfig_backToMenu"), 0)) {
+        if (!clickButton(QStringLiteral("vehicleConfig_backToMenu"))) {
+            QTest::qFail("Failed to return to the inline vehicle settings menu", __FILE__, __LINE__);
+            return nullptr;
+        }
+    }
     QQuickItem *btn = findVisibleItem(_rootItem, objectName, 3000);
     if (!btn) {
         QTest::qFail(qPrintable(QStringLiteral("Sidebar button not found: %1").arg(objectName)), __FILE__, __LINE__);
@@ -118,6 +137,9 @@ void VehicleConfigUITestBase::clickThroughAllComponents(Vehicle *vehicle, const 
              qPrintable(QStringLiteral("%1No vehicle components found").arg(prefix)));
 
     for (const QVariant &compVariant : components) {
+        if (findVisibleItem(_rootItem, QStringLiteral("vehicleConfig_backToMenu"), 0)) {
+            QVERIFY(clickButton(QStringLiteral("vehicleConfig_backToMenu")));
+        }
         auto *comp = compVariant.value<VehicleComponent *>();
         if (!comp) {
             continue;
@@ -155,7 +177,8 @@ void VehicleConfigUITestBase::clickThroughAllComponents(Vehicle *vehicle, const 
             // Matches objectName in VehicleConfigView.qml: "vehicleConfig_section_" + id without spaces
             const QString sectionButtonName =
                 QStringLiteral("vehicleConfig_section_") + QString(sectionId).remove(QLatin1Char(' '));
-            if (!findVisibleItem(_rootItem, sectionButtonName, 250)) {
+            auto* section = findItem(_rootItem, sectionButtonName);
+            if (!section || !section->property("sectionContentVisible").toBool()) {
                 // Section hidden by sectionVisible() filtering – skip silently
                 continue;
             }
@@ -186,6 +209,20 @@ void VehicleConfigUITestBase::verifyPanelContentVisible(const QString &context)
 
     QVERIFY2(QTest::qWaitFor([&] { return hasVisibleContent(target); }, 3000),
              qPrintable(context + QStringLiteral(": page loaded but renders no visible content (blank page)")));
+
+    if (const auto previewDirectory = qgetenv("CAAC_VEHICLE_SETUP_PREVIEWS"); !previewDirectory.isEmpty()) {
+        QDir directory(QString::fromUtf8(previewDirectory));
+        QVERIFY(directory.mkpath(QStringLiteral(".")));
+        QString fileName = context;
+        fileName.replace(QRegularExpression(QStringLiteral("[^\\p{L}\\p{N}_-]+")), QStringLiteral("_"));
+        auto* config = findVisibleItem(_rootItem, QStringLiteral("vehicleConfig_root"));
+        QVERIFY(config);
+        const auto capture = config->grabToImage();
+        QVERIFY(capture);
+        QSignalSpy ready(capture.data(), &QQuickItemGrabResult::ready);
+        QTRY_VERIFY_WITH_TIMEOUT(!ready.isEmpty(), 3000);
+        QVERIFY(capture->saveToFile(directory.filePath(fileName + QStringLiteral(".png"))));
+    }
 }
 
 void VehicleConfigUITestBase::clickThroughAllComponentsAllLocales(Vehicle *vehicle, const QString &vehicleName)
@@ -339,7 +376,8 @@ void VehicleConfigUITestBase::runAPMFullAccelCal()
 {
     // APM requires accel cal before compass can be run.
     // Click Accelerometer button → orientation dialog opens → accept (full cal, not simple).
-    QVERIFY2(clickButton(QStringLiteral("sensorsSetup_calibrateAccel")),
+    QVERIFY2(clickButtonScrolled(QStringLiteral("sensorsSetup_calibrateAccel"),
+                                 QStringLiteral("sensorsSetup_buttonScroller")),
              "Failed to click Accelerometer button");
 
     // Accept the orientation/pre-cal dialog (do NOT check the Simple checkbox)
@@ -387,7 +425,9 @@ void VehicleConfigUITestBase::runAPMFullAccelCal()
         QVERIFY2(QTest::qWaitFor([&] { return nextBtn && nextBtn->property("enabled").toBool(); }, 3000),
                  qPrintable(QStringLiteral("Next button not enabled for side: %1")
                                 .arg(QLatin1String(pose.sideObjectName))));
-        QVERIFY2(clickButton(QStringLiteral("sensorsSetup_nextButton")), "Failed to click Next button");
+        QVERIFY2(clickButtonScrolled(QStringLiteral("sensorsSetup_nextButton"),
+                                     QStringLiteral("sensorsSetup_buttonScroller")),
+                 "Failed to click Next button");
     }
 
     // After the last pose MockLink sends ACCELCAL_VEHICLE_POS_SUCCESS → _stopCalibration(Success)
@@ -414,7 +454,8 @@ void VehicleConfigUITestBase::runAPMFullAccelCal()
 
 void VehicleConfigUITestBase::runAPMCompassCal()
 {
-    QVERIFY2(clickButton(QStringLiteral("sensorsSetup_calibrateCompass")),
+    QVERIFY2(clickButtonScrolled(QStringLiteral("sensorsSetup_calibrateCompass"),
+                                 QStringLiteral("sensorsSetup_buttonScroller")),
              "Failed to click Compass button");
 
     // Orientation dialog opens → accept to start MAV_CMD_DO_START_MAG_CAL

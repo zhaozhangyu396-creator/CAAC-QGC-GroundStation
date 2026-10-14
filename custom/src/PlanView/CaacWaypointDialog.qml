@@ -73,7 +73,7 @@ QGCPopupDialog {
         spacing: ScreenTools.defaultFontPixelHeight * 0.5
 
         QGCLabel {
-            text: root.waypoint ? qsTr("Waypoint %1").arg(root.waypoint.sequenceNumber) : ""
+            text: root.waypoint ? qsTr("Waypoint %1").arg(root.waypoint.waypointNumber) : ""
             font.bold: true
         }
 

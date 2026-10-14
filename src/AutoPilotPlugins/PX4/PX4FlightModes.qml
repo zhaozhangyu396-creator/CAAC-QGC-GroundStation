@@ -43,15 +43,16 @@ SetupPage {
             QGCFlickable {
                 anchors.fill:   parent
                 clip:           true
-                contentWidth:   column2.x + column2.width
-                contentHeight:  Math.max(column1.height, column2.height)
+                contentWidth:   settingsRow.width
+                contentHeight:  column1.height
 
                 Column {
                     id:         column1
                     spacing:    _margins
 
-                    Row {
+                    Grid {
                         id:         settingsRow
+                        columns: QGroundControl.corePlugin.directMissionItemEditing ? 1 : 2
                         spacing:    _margins
 
                         Column {
@@ -138,7 +139,7 @@ SetupPage {
                                     anchors.margins:    ScreenTools.defaultFontPixelWidth
                                     anchors.left:       parent.left
                                     anchors.top:        parent.top
-                                    columns:            2
+                                    columns:            QGroundControl.corePlugin.directMissionItemEditing ? 1 : 2
                                     columnSpacing:      ScreenTools.defaultFontPixelWidth
 
                                     Repeater {

@@ -13,7 +13,8 @@ class RemoteIDSettings : public SettingsGroup
 public:
     enum class RegionOperation {
         FAA,
-        EU
+        EU,
+        China
     };
     Q_ENUM(RegionOperation)
 
@@ -70,6 +71,8 @@ public:
     DEFINE_SETTINGFACT(classificationType)
     DEFINE_SETTINGFACT(categoryEU)
     DEFINE_SETTINGFACT(classEU)
+    DEFINE_SETTINGFACT(categoryChina)
+    DEFINE_SETTINGFACT(classChina)
 
 signals:
     void operatorIDValidForRegionChanged();

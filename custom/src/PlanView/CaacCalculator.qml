@@ -23,14 +23,14 @@ QGCPopupDialog {
     readonly property real cardSpacing: ScreenTools.defaultFontPixelWidth
     readonly property var windDirections: [
         {label: qsTr("Select wind direction"), angle: 0},
-        {label: "NNE · 22.5°", angle: 22.5}, {label: "NE · 45°", angle: 45},
-        {label: "ENE · 67.5°", angle: 67.5}, {label: "E · 90°", angle: 90},
-        {label: "ESE · 112.5°", angle: 112.5}, {label: "SE · 135°", angle: 135},
-        {label: "SSE · 157.5°", angle: 157.5}, {label: "S · 180°", angle: 180},
-        {label: "SSW · 202.5°", angle: 202.5}, {label: "SW · 225°", angle: 225},
-        {label: "WSW · 247.5°", angle: 247.5}, {label: "W · 270°", angle: 270},
-        {label: "WNW · 292.5°", angle: 292.5}, {label: "NW · 315°", angle: 315},
-        {label: "NNW · 337.5°", angle: 337.5}, {label: "N · 360°", angle: 360}
+        {label: qsTr("NNE · 22.5°"), angle: 22.5}, {label: qsTr("NE · 45°"), angle: 45},
+        {label: qsTr("ENE · 67.5°"), angle: 67.5}, {label: qsTr("E · 90°"), angle: 90},
+        {label: qsTr("ESE · 112.5°"), angle: 112.5}, {label: qsTr("SE · 135°"), angle: 135},
+        {label: qsTr("SSE · 157.5°"), angle: 157.5}, {label: qsTr("S · 180°"), angle: 180},
+        {label: qsTr("SSW · 202.5°"), angle: 202.5}, {label: qsTr("SW · 225°"), angle: 225},
+        {label: qsTr("WSW · 247.5°"), angle: 247.5}, {label: qsTr("W · 270°"), angle: 270},
+        {label: qsTr("WNW · 292.5°"), angle: 292.5}, {label: qsTr("NW · 315°"), angle: 315},
+        {label: qsTr("NNW · 337.5°"), angle: 337.5}, {label: qsTr("N · 360°"), angle: 360}
     ]
     readonly property var relativeWind: [
         {label: qsTr("Wind from front right"), angle: 45},

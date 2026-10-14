@@ -9,6 +9,7 @@ Rectangle {
     signal titleDragged(point delta)
     readonly property var _settings: QGroundControl.settingsManager.flightMapSettings
     readonly property var _types: QGroundControl.mapEngineManager.mapTypeList(_settings.mapProvider.rawValue)
+    readonly property var _providers: QGroundControl.mapEngineManager.mapProviderList
     readonly property var _follow: QGroundControl.settingsManager.flyViewSettings.keepMapCenteredOnVehicle
     implicitHeight: contents.implicitHeight + ScreenTools.defaultFontPixelHeight
     color: palette.windowShadeDark
@@ -42,6 +43,21 @@ Rectangle {
             columns: 2
             rowSpacing: ScreenTools.defaultFontPixelHeight
             columnSpacing: ScreenTools.defaultFontPixelWidth
+            QGCLabel { text: qsTr("Provider") }
+            QGCComboBox {
+                objectName: "caacMapProvider"
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                model: root._providers
+                currentIndex: root._providers.indexOf(root._settings.mapProvider.rawValue)
+                onActivated: (index) => {
+                    const provider = root._providers[index]
+                    const types = QGroundControl.mapEngineManager.mapTypeList(provider)
+                    if (!provider || !types.length) { return }
+                    root._settings.mapProvider.rawValue = provider
+                    if (types.indexOf(root._settings.mapType.rawValue) < 0) { root._settings.mapType.rawValue = types[0] }
+                }
+            }
             QGCLabel { text: qsTr("Type") }
             QGCComboBox {
                 objectName: "caacMapType"

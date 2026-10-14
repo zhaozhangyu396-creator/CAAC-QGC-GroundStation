@@ -21,9 +21,12 @@ SetupPage {
     Component {
         id: pageComponent
 
-        Row {
+        Grid {
+            columns: QGroundControl.corePlugin.directMissionItemEditing ? 1 : 2
+            width: QGroundControl.corePlugin.directMissionItemEditing ? availableWidth : implicitWidth
             spacing:                        ScreenTools.defaultFontPixelWidth * 4
-            property var _leftColumnWidth:  Math.max(actuatorTesting.implicitWidth, mixerUi.implicitWidth) + (_margins * 2)
+            property var _leftColumnWidth:  QGroundControl.corePlugin.directMissionItemEditing ? availableWidth
+                                               : Math.max(actuatorTesting.implicitWidth, mixerUi.implicitWidth) + (_margins * 2)
 
             ColumnLayout {
                 spacing:                    ScreenTools.defaultFontPixelHeight

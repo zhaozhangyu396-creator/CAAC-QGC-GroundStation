@@ -86,7 +86,7 @@ Rectangle {
                             QGCButton {
                                 Layout.fillWidth: true
                                 Layout.preferredHeight: titleHeight
-                                text: capitalizeWords(modelData.name)
+                                text: capitalizeWords(ScreenTools.vehicleComponentName(modelData))
                                 rightPadding: setupIndicator.visible ? setupIndicator.width + ScreenTools.defaultFontPixelWidth * 2 : leftPadding
 
                                 // Setup indicator

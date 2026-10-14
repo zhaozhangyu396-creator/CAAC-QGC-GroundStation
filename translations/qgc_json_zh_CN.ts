@@ -1875,6 +1875,16 @@
       <source>ce marking</source>
       <translation>CE标志</translation>
     </message>
+    <message>
+      <extracomment>.groups[China Vehicle Info].heading</extracomment>
+      <source>China Vehicle Info</source>
+      <translation>中国无人机信息</translation>
+    </message>
+    <message>
+      <extracomment>.groups[China Vehicle Info].keywords[0]</extracomment>
+      <source>china</source>
+      <translation>中国</translation>
+    </message>
   </context>
   <context>
     <name>SettingsPages.json</name>
@@ -10204,6 +10214,62 @@
       <location filename="../src/Settings/RemoteID.SettingsGroup.json"/>
       <source>eu,class,ce marking</source>
       <translation>欧盟,等级,CE 标记</translation>
+    </message>
+    <message>
+      <extracomment>.QGC.MetaData.Facts[region].enumStrings</extracomment>
+      <translatorcomment>Only use english comma ',' to separate strings</translatorcomment>
+      <source>FAA,EU,China</source>
+      <translation>美国FAA,欧洲EU,中国</translation>
+    </message>
+    <message>
+      <extracomment>.QGC.MetaData.Facts[region].keywords</extracomment>
+      <translatorcomment>Only use english comma ',' to separate strings</translatorcomment>
+      <source>region,faa,eu,remote id ,china</source>
+      <translation>区域,美国FAA,欧洲EU,远程识别,中国</translation>
+    </message>
+    <message>
+      <extracomment>.QGC.MetaData.Facts[locationType].enumStrings</extracomment>
+      <translatorcomment>Only use english comma ',' to separate strings</translatorcomment>
+      <source>Takeoff,Live GNSS,Fixed (not for FAA)</source>
+      <translation>起飞点,实时GNSS,固定坐标（不适用于FAA）</translation>
+    </message>
+    <message>
+      <extracomment>.QGC.MetaData.Facts[categoryChina].shortDesc</extracomment>
+      <source>China operation category.</source>
+      <translation>中国运行类别。</translation>
+    </message>
+    <message>
+      <extracomment>.QGC.MetaData.Facts[categoryChina].label</extracomment>
+      <source>China operation category</source>
+      <translation>中国运行类别</translation>
+    </message>
+    <message>
+      <extracomment>.QGC.MetaData.Facts[categoryChina].keywords</extracomment>
+      <translatorcomment>Only use english comma ',' to separate strings</translatorcomment>
+      <source>china,category</source>
+      <translation>中国,运行类别</translation>
+    </message>
+    <message>
+      <extracomment>.QGC.MetaData.Facts[classChina].shortDesc</extracomment>
+      <source>China unmanned aircraft class.</source>
+      <translation>中国无人驾驶航空器等级。</translation>
+    </message>
+    <message>
+      <extracomment>.QGC.MetaData.Facts[classChina].enumStrings</extracomment>
+      <translatorcomment>Only use english comma ',' to separate strings</translatorcomment>
+      <source>Undeclared,Micro,Light,Small,Medium,Large</source>
+      <translation>未声明,微型无人驾驶航空器,轻型无人驾驶航空器,小型无人驾驶航空器,中型无人驾驶航空器,大型无人驾驶航空器</translation>
+    </message>
+    <message>
+      <extracomment>.QGC.MetaData.Facts[classChina].label</extracomment>
+      <source>China UA class</source>
+      <translation>中国UA等级</translation>
+    </message>
+    <message>
+      <extracomment>.QGC.MetaData.Facts[classChina].keywords</extracomment>
+      <translatorcomment>Only use english comma ',' to separate strings</translatorcomment>
+      <source>china,class</source>
+      <translation>中国,等级</translation>
     </message>
   </context>
   <context>
