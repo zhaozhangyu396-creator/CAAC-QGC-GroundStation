@@ -720,7 +720,7 @@ QPointer<MockLink> QmlUITestBase::connectMockLinkAndWaitReady(const std::functio
         return {};
     };
 
-    if (!waitForSignal(spyVehicle, 10000, QStringLiteral("activeVehicleChanged"))) {
+    if (!waitForSignal(spyVehicle, TestTimeout::longMs(), QStringLiteral("activeVehicleChanged"))) {
         return failAndDisconnect("Timeout waiting for vehicle connection");
     }
 
@@ -734,7 +734,7 @@ QPointer<MockLink> QmlUITestBase::connectMockLinkAndWaitReady(const std::functio
         return failAndDisconnect("Failed to create spy for initialConnectComplete");
     }
     if (!vehicle->isInitialConnectComplete()) {
-        if (!waitForSignal(spyConnect, 10000, QStringLiteral("initialConnectComplete"))) {
+        if (!waitForSignal(spyConnect, TestTimeout::longMs(), QStringLiteral("initialConnectComplete"))) {
             return failAndDisconnect("Timeout waiting for initial connect");
         }
     }
@@ -745,7 +745,8 @@ QPointer<MockLink> QmlUITestBase::connectMockLinkAndWaitReady(const std::functio
         return failAndDisconnect("Failed to create spy for parameterReadyVehicleAvailableChanged");
     }
     if (!MultiVehicleManager::instance()->parameterReadyVehicleAvailable()) {
-        if (!waitForSignal(spyParamsReady, 15000, QStringLiteral("parameterReadyVehicleAvailableChanged"))) {
+        if (!waitForSignal(spyParamsReady, TestTimeout::longMs(),
+                           QStringLiteral("parameterReadyVehicleAvailableChanged"))) {
             return failAndDisconnect("Timeout waiting for parameters to be ready");
         }
     }

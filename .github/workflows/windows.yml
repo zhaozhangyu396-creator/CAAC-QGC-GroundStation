@@ -25,6 +25,7 @@ on:
         options:
           - Release
           - Debug
+          - RelWithDebInfo
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.build_type || 'Release' }}
@@ -164,9 +165,9 @@ jobs:
         with:
           build-dir: ${{ runner.temp }}/build
           build-type: ${{ matrix.build_type }}
-          preset: ${{ matrix.build_type == 'Debug' && format('{0}-debug', matrix.preset) || matrix.preset }}
+          preset: ${{ matrix.build_type != 'Release' && format('{0}-debug', matrix.preset) || matrix.preset }}
           testing: >-
-            ${{ matrix.variant == 'amd64' && matrix.build_type == 'Debug' &&
+            ${{ matrix.variant == 'amd64' && matrix.build_type != 'Release' &&
                 github.repository == 'zhaozhangyu396-creator/CAAC-QGC-GroundStation' && hashFiles('custom/test/CaacRouteEditorTest.cc') != '' }}
           extra-args: >-
             -DQGC_BUILD_PORTABLE_TESTS=${{ matrix.variant == 'amd64' && 'ON' || 'OFF' }}
@@ -248,7 +249,7 @@ jobs:
 
       - name: Run CAAC waypoint editor tests
         id: caac
-        if: matrix.variant == 'amd64' && matrix.build_type == 'Debug' && hashFiles('custom/test/CaacRouteEditorTest.cc') != ''
+        if: matrix.variant == 'amd64' && matrix.build_type != 'Release' && hashFiles('custom/test/CaacRouteEditorTest.cc') != ''
         uses: ./.github/actions/run-unit-tests
         env:
           CAAC_QT_SYMBOL_PATH: ${{ steps.caac-qt-symbols.outputs.symbol_path }}
