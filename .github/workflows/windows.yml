@@ -170,7 +170,7 @@ jobs:
             ${{ matrix.variant == 'amd64' && matrix.build_type != 'Release' &&
                 github.repository == 'zhaozhangyu396-creator/CAAC-QGC-GroundStation' && hashFiles('custom/test/CaacRouteEditorTest.cc') != '' }}
           extra-args: >-
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+            -DCMAKE_BUILD_TYPE:STRING=${{ matrix.build_type }}
             -DQGC_BUILD_PORTABLE_TESTS=${{ matrix.variant == 'amd64' && 'ON' || 'OFF' }}
             -DQGC_ENABLE_GST_VIDEOSTREAMING=${{ matrix.gstreamer && 'ON' || 'OFF' }}
             -DQGC_CPACK_GENERATOR=NSIS
@@ -185,8 +185,8 @@ jobs:
           import os
           from pathlib import Path
           cache = Path(os.environ['RUNNER_TEMP']) / 'build' / 'CMakeCache.txt'
-          configured = next(line.split('=', 1)[1] for line in cache.read_text().splitlines()
-                            if line.startswith('CMAKE_BUILD_TYPE:STRING='))
+          configured = next((line.split('=', 1)[1] for line in cache.read_text(encoding='utf-8').splitlines()
+                             if line.startswith('CMAKE_BUILD_TYPE:')), None)
           expected = os.environ['CAAC_EXPECTED_BUILD_TYPE']
           if configured != expected:
               raise SystemExit(f'Expected {expected}, configured {configured}')
