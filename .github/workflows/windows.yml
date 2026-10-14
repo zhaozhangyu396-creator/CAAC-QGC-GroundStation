@@ -170,10 +170,28 @@ jobs:
             ${{ matrix.variant == 'amd64' && matrix.build_type != 'Release' &&
                 github.repository == 'zhaozhangyu396-creator/CAAC-QGC-GroundStation' && hashFiles('custom/test/CaacRouteEditorTest.cc') != '' }}
           extra-args: >-
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
             -DQGC_BUILD_PORTABLE_TESTS=${{ matrix.variant == 'amd64' && 'ON' || 'OFF' }}
             -DQGC_ENABLE_GST_VIDEOSTREAMING=${{ matrix.gstreamer && 'ON' || 'OFF' }}
             -DQGC_CPACK_GENERATOR=NSIS
             ${{ matrix.variant == 'arm64-cross' && format('-DQT_HOST_PATH={0}', steps.build-setup.outputs.host_qt_root_dir) || '' }}
+
+      - name: Verify selected build configuration
+        shell: bash
+        env:
+          CAAC_EXPECTED_BUILD_TYPE: ${{ matrix.build_type }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          cache = Path(os.environ['RUNNER_TEMP']) / 'build' / 'CMakeCache.txt'
+          configured = next(line.split('=', 1)[1] for line in cache.read_text().splitlines()
+                            if line.startswith('CMAKE_BUILD_TYPE:STRING='))
+          expected = os.environ['CAAC_EXPECTED_BUILD_TYPE']
+          if configured != expected:
+              raise SystemExit(f'Expected {expected}, configured {configured}')
+          print(f'Confirmed CMake build configuration: {configured}')
+          PY
 
       - name: Resolve GStreamer root
         id: gst-root
