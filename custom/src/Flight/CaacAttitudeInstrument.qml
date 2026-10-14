@@ -24,6 +24,7 @@ Item {
     onRollAngleChanged: dial.requestPaint()
     onPitchAngleChanged: dial.requestPaint()
 
+    onHeadingAngleChanged: dial.requestPaint()
     Canvas {
         id: dial
         anchors.fill: parent
@@ -32,99 +33,101 @@ Item {
         onPaint: {
             const ctx = getContext("2d")
             ctx.reset()
-            const radius = Math.min(width, height) / 2
-            const edge = radius * 0.985
+            const r = Math.min(width, height) / 2
+            if (r <= 0) { return }
+            const inner = r * 0.55
             ctx.translate(width / 2, height / 2)
+            ctx.fillStyle = "#1d1b32"
+            ctx.beginPath()
+            ctx.arc(0, 0, r * 0.985, 0, Math.PI * 2)
+            ctx.fill()
+            ctx.strokeStyle = "#596071"
+            ctx.lineWidth = Math.max(1, r * 0.008)
+            ctx.stroke()
+            ctx.textAlign = "center"
+            ctx.textBaseline = "middle"
+            ctx.font = Math.max(7, Math.round(r * 0.085)) + 'px "' + ScreenTools.normalFontFamily + '"'
+            for (let bearing = 0; bearing < 360; bearing += 15) {
+                ctx.save()
+                ctx.rotate(bearing * Math.PI / 180)
+                ctx.strokeStyle = bearing % 45 === 0 ? "white" : "#82828e"
+                ctx.beginPath()
+                ctx.moveTo(0, -r * 0.72)
+                ctx.lineTo(0, -r * 0.79)
+                ctx.stroke()
+                if (r >= 100 || bearing % 45 === 0) {
+                    ctx.fillStyle = "white"
+                    ctx.fillText(bearing + "°", 0, -r * 0.88)
+                }
+                ctx.restore()
+            }
+            const names = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+            ctx.font = Math.max(7, Math.round(r * 0.09)) + 'px "' + ScreenTools.normalFontFamily + '"'
+            ctx.fillStyle = "white"
+            for (let i = 0; i < names.length; ++i) {
+                const angle = i * Math.PI / 4
+                ctx.fillText(names[i], Math.sin(angle) * r * 0.64, -Math.cos(angle) * r * 0.64)
+            }
             ctx.save()
             ctx.beginPath()
-            ctx.arc(0, 0, edge, 0, Math.PI * 2)
+            ctx.arc(0, 0, inner, 0, Math.PI * 2)
             ctx.clip()
             ctx.save()
             ctx.rotate(-root.rollAngle * Math.PI / 180)
-            ctx.translate(0, root.pitchAngle * radius / 40)
-            const sky = ctx.createLinearGradient(0, -radius, 0, radius)
-            sky.addColorStop(0, Qt.lighter(palette.brandPrimary, 1.15))
-            sky.addColorStop(1, Qt.darker(palette.brandPrimary, 1.25))
-            ctx.fillStyle = sky
-            ctx.fillRect(-radius * 4, -radius * 8, radius * 8, radius * 8)
-            const ground = ctx.createLinearGradient(0, 0, 0, radius)
-            ground.addColorStop(0, palette.colorYellowGreen)
-            ground.addColorStop(1, palette.colorGreen)
-            ctx.fillStyle = ground
-            ctx.fillRect(-radius * 4, 0, radius * 8, radius * 8)
+            ctx.translate(0, root.pitchAngle * inner / 30)
+            ctx.fillStyle = "#3da4ef"
+            ctx.fillRect(-inner * 6, -inner * 12, inner * 12, inner * 12)
+            ctx.fillStyle = "#67b663"
+            ctx.fillRect(-inner * 6, 0, inner * 12, inner * 12)
             ctx.strokeStyle = "white"
             ctx.fillStyle = "white"
-            ctx.lineWidth = radius * 0.009
-            ctx.font = Math.round(radius * 0.09) + 'px "' + ScreenTools.normalFontFamily + '"'
-            ctx.textAlign = "center"
-            ctx.textBaseline = "middle"
+            ctx.lineWidth = Math.max(1, r * 0.006)
+            ctx.font = Math.max(7, Math.round(r * 0.065)) + 'px "' + ScreenTools.normalFontFamily + '"'
             for (let angle = -90; angle <= 90; angle += 5) {
-                const y = -angle * radius / 40
-                if (Math.abs(y + root.pitchAngle * radius / 40) > radius * 0.55) { continue }
-                const halfLine = radius * (angle % 10 === 0 ? 0.19 : 0.14)
+                const y = -angle * inner / 30
+                if (Math.abs(y + root.pitchAngle * inner / 30) > inner * 0.85) { continue }
+                const halfLine = inner * (angle % 10 === 0 ? 0.3 : 0.16)
                 ctx.beginPath()
                 ctx.moveTo(-halfLine, y)
                 ctx.lineTo(halfLine, y)
                 ctx.stroke()
-                if (angle % 10 === 0) {
-                    ctx.fillText(String(angle), -radius * 0.34, y)
-                    ctx.fillText(String(angle), radius * 0.34, y)
+                if (angle !== 0 && angle % 10 === 0) {
+                    ctx.fillText(angle + "°", -inner * 0.52, y)
+                    ctx.fillText(angle + "°", inner * 0.52, y)
                 }
             }
-            ctx.restore()
-            ctx.strokeStyle = "white"
-            ctx.fillStyle = "white"
-            ctx.font = Math.round(radius * 0.09) + 'px "' + ScreenTools.normalFontFamily + '"'
-            ctx.textAlign = "center"
-            ctx.textBaseline = "middle"
-            for (const angle of [-60, -45, -30, -20, -10, 0, 10, 20, 30, 45, 60]) {
-                ctx.save()
-                ctx.rotate(angle * Math.PI / 180)
-                ctx.beginPath()
-                ctx.moveTo(0, -radius * 0.85)
-                ctx.lineTo(0, -radius * (angle % 30 === 0 ? 0.76 : 0.81))
-                ctx.lineWidth = radius * 0.016
-                ctx.stroke()
-                if (angle % 30 === 0) {
-                    ctx.fillText(String(Math.abs(angle)), 0, -radius * 0.69)
-                }
-                ctx.restore()
-            }
-            ctx.restore()
-            ctx.strokeStyle = "white"
-            ctx.lineWidth = radius * 0.025
-            ctx.beginPath()
-            ctx.arc(0, 0, edge - ctx.lineWidth / 2, 0, Math.PI * 2)
-            ctx.stroke()
-            ctx.save()
-            ctx.rotate(root.rollIndicatorAngle * Math.PI / 180)
-            ctx.fillStyle = palette.colorRed
-            ctx.beginPath()
-            ctx.moveTo(0, -radius * 0.94)
-            ctx.lineTo(-radius * 0.045, -radius * 0.83)
-            ctx.lineTo(0, -radius * 0.85)
-            ctx.lineTo(radius * 0.045, -radius * 0.83)
-            ctx.closePath()
-            ctx.fill()
-            ctx.lineWidth = radius * 0.009
-            ctx.stroke()
             ctx.restore()
             ctx.strokeStyle = palette.colorRed
-            ctx.lineWidth = radius * 0.026
-            ctx.lineCap = "round"
+            ctx.lineWidth = Math.max(1, r * 0.012)
             ctx.beginPath()
-            ctx.moveTo(-radius * 0.72, 0)
-            ctx.lineTo(-radius * 0.35, 0)
-            ctx.moveTo(-radius * 0.26, radius * 0.08)
-            ctx.lineTo(0, 0)
-            ctx.lineTo(radius * 0.26, radius * 0.08)
-            ctx.moveTo(radius * 0.35, 0)
-            ctx.lineTo(radius * 0.72, 0)
+            ctx.moveTo(-inner * 0.45, 0)
+            ctx.lineTo(inner * 0.45, 0)
             ctx.stroke()
+            ctx.font = 'bold ' + Math.max(8, Math.round(r * 0.11)) + 'px "' + ScreenTools.normalFontFamily + '"'
+            ctx.fillStyle = "white"
+            ctx.fillText(root.attitudeAvailable ? Math.round(root.pitchAngle).toString() : "—", 0, 0)
+            ctx.restore()
+            ctx.strokeStyle = "#85888b"
+            ctx.lineWidth = Math.max(1, r * 0.027)
+            ctx.beginPath()
+            ctx.arc(0, 0, inner, 0, Math.PI * 2)
+            ctx.stroke()
+            ctx.save()
+            ctx.rotate((isFinite(root.headingAngle) ? root.headingAngle : 0) * Math.PI / 180)
+            ctx.fillStyle = palette.colorRed
+            ctx.beginPath()
+            ctx.moveTo(0, -r * 0.61)
+            ctx.lineTo(-r * 0.07, -r * 0.43)
+            ctx.lineTo(0, -r * 0.46)
+            ctx.lineTo(r * 0.07, -r * 0.43)
+            ctx.closePath()
+            ctx.fill()
+            ctx.restore()
         }
     }
 
     Rectangle {
+        visible: false
         anchors.horizontalCenter: parent.horizontalCenter
         y: root.height * 0.81
         width: root.width * 0.24

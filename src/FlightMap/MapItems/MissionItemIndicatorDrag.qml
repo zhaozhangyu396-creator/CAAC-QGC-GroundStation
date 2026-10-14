@@ -20,6 +20,7 @@ Rectangle {
     property var itemCoordinate ///< Coordinate we are updating during drag
     property bool editOnRightClick: false
     property bool dragEnabled: true
+    property var coordinateFilter: null
     readonly property bool missionItemDragger: true
     property Item gestureTarget: itemDragger
     property int gesturePriority: -1
@@ -47,9 +48,14 @@ Rectangle {
     onYChanged: liveDrag()
 
     function liveDrag() {
-        if (!itemDragger._preventCoordinateBindingLoop && (itemDrag.drag.active || _externalDragActive)) {
+        if (!itemDragger._preventCoordinateBindingLoop &&
+                ((itemDrag.drag.active && gestureTarget === itemDragger) || _externalDragActive)) {
             var point = Qt.point(itemDragger.x + _touchMarginHorizontal + itemIndicator.anchorPoint.x, itemDragger.y + _touchMarginVertical + itemIndicator.anchorPoint.y)
             var coordinate = mapControl.toCoordinate(point, false /* clipToViewPort */)
+            if (typeof coordinateFilter === "function") {
+                coordinate = coordinateFilter(coordinate)
+            }
+            if (!coordinate || !coordinate.isValid) { return }
             itemDragger._preventCoordinateBindingLoop = true
             coordinate.altitude = itemCoordinate.altitude
             itemCoordinate = coordinate

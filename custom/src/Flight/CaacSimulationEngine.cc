@@ -29,12 +29,23 @@ void CaacSimulationEngine::initialize(const QGeoCoordinate& home, const Options&
     _state = {};
     _state.position = home;
     _jumpCounts.clear();
+    _waypointOptions.clear();
     _wait = -1;
     _returnLanding = false;
 }
 
+bool CaacSimulationEngine::setHorizontalSpeed(double speed)
+{
+    if (!std::isfinite(speed) || speed <= 0 || speed > 100) {
+        return false;
+    }
+    _options.horizontalSpeed = speed;
+    return true;
+}
+
 bool CaacSimulationEngine::load(const QMap<uint16_t, mavlink_mission_item_int_t>& mission, const QGeoCoordinate& home,
-                                const Options& options, QString& error)
+                                const Options& options, QString& error,
+                                const QMap<int, WaypointOptions>& waypointOptions)
 {
     if (!home.isValid() || !std::isfinite(home.altitude()) || mission.isEmpty() || mission.size() > 5000 ||
         !std::isfinite(options.horizontalSpeed) || options.horizontalSpeed <= 0 || options.horizontalSpeed > 100 ||
@@ -97,6 +108,16 @@ bool CaacSimulationEngine::load(const QMap<uint16_t, mavlink_mission_item_int_t>
             return false;
         }
     }
+    for (auto it = waypointOptions.cbegin(); it != waypointOptions.cend(); ++it) {
+        if (!mission.contains(it.key()) || mission.value(it.key()).command != MAV_CMD_NAV_WAYPOINT ||
+            !std::isfinite(it->verticalSpeed) || it->verticalSpeed <= 0 || it->verticalSpeed > 30 || it->turnMode < 0 ||
+            it->turnMode > 3 || it->climbMode < 0 || it->climbMode > 1) {
+            error =
+                QCoreApplication::translate("CaacSimulationEngine", "Invalid simulation settings or empty mission.");
+            return false;
+        }
+    }
+    _waypointOptions = waypointOptions;
     _items = mission;
     _home = home;
     _options = options;
@@ -227,26 +248,28 @@ double CaacSimulationEngine::_rotate(double target, double seconds, double rate)
 
 bool CaacSimulationEngine::_move(const QGeoCoordinate& target, double seconds, bool landing)
 {
+    const auto legOptions = _waypointOptions.value(
+        _state.sequence, WaypointOptions{_options.verticalSpeed, _options.turnMode, _options.climbMode});
     const auto before = _state.position;
     const double previousHeading = _state.heading;
     const double distance = QGCGeo::geodesicDistance(before, target);
     const double height = target.altitude() - before.altitude();
     const double bearing = distance > 0.01 ? QGCGeo::geodesicAzimuth(before, target) : _state.heading;
     double fraction = distance > 0.01 ? std::min(1.0, _options.horizontalSpeed * seconds / distance) : 1.0;
-    if (_options.climbMode == 0 && std::abs(height) > 0.01 && !landing) {
+    if (legOptions.climbMode == 0 && std::abs(height) > 0.01 && !landing) {
         fraction = 0;
     }
-    if (_options.turnMode == 0 && distance > 0.01 && _rotate(bearing, seconds, _options.yawRate) > 1) {
+    if (legOptions.turnMode == 0 && distance > 0.01 && _rotate(bearing, seconds, _options.yawRate) > 1) {
         fraction = 0;
-    } else if (_options.turnMode == 1 || _options.turnMode == 2) {
+    } else if (legOptions.turnMode == 1 || legOptions.turnMode == 2) {
         const double rate =
-            _options.turnMode == 2
+            legOptions.turnMode == 2
                 ? std::clamp(_options.yawRate * _options.horizontalSpeed / std::max(distance, 1.0), 10.0, 180.0)
                 : _options.yawRate;
         _rotate(bearing, seconds, rate);
     }
-    double altitudeStep = std::clamp(height, -_options.verticalSpeed * seconds, _options.verticalSpeed * seconds);
-    if (_options.climbMode == 1 && distance > 0.01 && std::abs(height) > 0.01) {
+    double altitudeStep = std::clamp(height, -legOptions.verticalSpeed * seconds, legOptions.verticalSpeed * seconds);
+    if (legOptions.climbMode == 1 && distance > 0.01 && std::abs(height) > 0.01) {
         fraction = std::min(fraction, std::abs(altitudeStep / height));
         altitudeStep = height * fraction;
     }

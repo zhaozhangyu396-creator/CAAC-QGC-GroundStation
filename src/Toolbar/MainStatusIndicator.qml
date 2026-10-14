@@ -17,8 +17,15 @@ RowLayout {
     property var    _vehicleInAir:      _activeVehicle ? _activeVehicle.airborne || _activeVehicle.landing : false
     property bool   _vtolInFWDFlight:   _activeVehicle ? _activeVehicle.vtolInFwdFlight : false
     property bool   _rebootRequired:    _activeVehicle ? _activeVehicle.rebootRequired : false
+    property int _drawerSection: 0
+
+    function dropStatusSection(section, anchor) {
+        _drawerSection = section
+        mainWindow.showIndicatorDrawer(_activeVehicle ? overallStatusIndicatorPage : overallStatusOfflineIndicatorPage, anchor)
+    }
 
     function dropMainStatusIndicator() {
+        _drawerSection = 0
         let overallStatusComponent = _activeVehicle ? overallStatusIndicatorPage : overallStatusOfflineIndicatorPage
         mainWindow.showIndicatorDrawer(overallStatusComponent, control)
     }
@@ -220,10 +227,12 @@ RowLayout {
             property bool parametersReady: QGroundControl.multiVehicleManager.parameterReadyVehicleAvailable
 
             RowLayout {
+                objectName: "mainStatusArmingSection"
                 Layout.fillWidth:   true
                 spacing:            ScreenTools.defaultFontPixelWidth
                 // Stop controls must stay reachable without parameters
-                visible:            parametersReady || _guidedController.showEmergencyStop || _guidedController.showDisarm || _rebootRequired
+                visible: (control._drawerSection === 0 || control._drawerSection === 1)
+                    && (parametersReady || _guidedController.showEmergencyStop || _guidedController.showDisarm || _rebootRequired)
 
                 QGCDelayButton {
                     objectName: "mainStatusArmButton"
@@ -333,7 +342,8 @@ RowLayout {
             RowLayout {
                 Layout.fillWidth:   true
                 spacing:            ScreenTools.defaultFontPixelWidth
-                visible:            _activeVehicle && _activeVehicle.newStableFirmwareVersion !== ""
+                visible: (control._drawerSection === 0 || control._drawerSection === 1)
+                    && _activeVehicle && _activeVehicle.newStableFirmwareVersion !== ""
 
                 QGCLabel {
                     objectName:         "mainStatusFirmwareUpdateLabel"
@@ -360,6 +370,8 @@ RowLayout {
             SettingsGroupLayout {
                 Layout.fillWidth:   true
                 heading:            qsTr("Vehicle Messages")
+                objectName: "mainStatusVehicleMessagesSection"
+                visible: control._drawerSection === 0 || control._drawerSection === 2
 
                 VehicleMessageList {
                     id:                 vehicleMessageList
@@ -376,7 +388,9 @@ RowLayout {
             SettingsGroupLayout {
                 Layout.fillWidth:   true
                 heading:            qsTr("Sensor Status")
-                visible:            parametersReady && !_healthAndArmingChecksSupported
+                objectName: "mainStatusSensorSection"
+                visible: (control._drawerSection === 0 || control._drawerSection === 3)
+                    && parametersReady && (!_healthAndArmingChecksSupported || control._drawerSection === 3)
 
                 GridLayout {
                     rowSpacing:     _spacing
@@ -399,7 +413,9 @@ RowLayout {
             SettingsGroupLayout {
                 Layout.fillWidth:   true
                 heading:            qsTr("Overall Status")
-                visible:            parametersReady && _healthAndArmingChecksSupported && _activeVehicle.healthAndArmingCheckReport.problemsForCurrentMode.count > 0
+                visible: (control._drawerSection === 0 || control._drawerSection === 3)
+                    && parametersReady && _healthAndArmingChecksSupported
+                    && _activeVehicle.healthAndArmingCheckReport.problemsForCurrentMode.count > 0
 
                 // List health and arming checks
                 Repeater {

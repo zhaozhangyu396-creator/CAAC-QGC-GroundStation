@@ -24,6 +24,7 @@ Map {
     property alias  positionTracker:                _positionTracker                            ///< Auto-centering policy, for derived maps to layer follow behavior on
     property bool   planView:                       false   ///< true: map being using for Plan view, items should be draggable
     property bool   directMissionItemEditing:       false
+    property var    missionItemDragEditor: null
     property bool   pinchZoomDisabledByVirtualJoysticks: false ///< true: disable pinch-to-zoom while virtual joystick thumbs are down
 
     property var    _activeVehicle:             QGroundControl.multiVehicleManager.activeVehicle

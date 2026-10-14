@@ -10,7 +10,20 @@ ToolIndicatorPage {
 
     property real _toolButtonHeight: ScreenTools.defaultFontPixelHeight * 3
 
-    contentComponent: Component {
+    contentComponent: QGroundControl.corePlugin.directMissionItemEditing ? caacMenuComponent : stockMenuComponent
+    Component {
+        id: caacMenuComponent
+        Item {
+            implicitWidth: menuLoader.item ? menuLoader.item.width : 0
+            implicitHeight: menuLoader.item ? menuLoader.item.height : 0
+            Loader {
+                id: menuLoader
+                source: "qrc:/qml/CAAC/Plan/CaacSettingsMenu.qml"
+            }
+        }
+    }
+    Component {
+        id: stockMenuComponent
         GridLayout {
             columns: 2
             columnSpacing: ScreenTools.defaultFontPixelWidth
@@ -18,6 +31,7 @@ ToolIndicatorPage {
 
             SubMenuButton {
                 objectName: "toolbar_viewFly"
+                visible: !QGroundControl.corePlugin.directMissionItemEditing
                 implicitHeight: root._toolButtonHeight
                 Layout.fillWidth: true
                 text: qsTr("Fly")
@@ -32,6 +46,7 @@ ToolIndicatorPage {
 
             SubMenuButton {
                 objectName: "toolbar_viewPlan"
+                visible: !QGroundControl.corePlugin.directMissionItemEditing
                 implicitHeight: root._toolButtonHeight
                 Layout.fillWidth: true
                 text: qsTr("Plan")
@@ -41,6 +56,19 @@ ToolIndicatorPage {
                         mainWindow.closeIndicatorDrawer()
                         mainWindow.showPlanView()
                     }
+                }
+            }
+
+            SubMenuButton {
+                objectName: "toolbar_viewFlightPlan"
+                visible: QGroundControl.corePlugin.directMissionItemEditing
+                implicitHeight: root._toolButtonHeight
+                Layout.fillWidth: true
+                text: qsTr("Flight and plan")
+                imageResource: "/qmlimages/Plan.svg"
+                onClicked: {
+                    mainWindow.closeIndicatorDrawer()
+                    mainWindow.showPlanView()
                 }
             }
 
@@ -87,6 +115,33 @@ ToolIndicatorPage {
                         mainWindow.closeIndicatorDrawer()
                         mainWindow.showSettingsTool()
                     }
+                }
+            }
+
+            SubMenuButton {
+                objectName: "toolbar_simulation"
+                implicitHeight: root._toolButtonHeight
+                Layout.fillWidth: true
+                visible: QGroundControl.corePlugin.directMissionItemEditing
+                readonly property bool simulationActive: visible && QGroundControl.corePlugin.simulation.active
+                text: simulationActive ? qsTr("Cancel simulation") : qsTr("Simulation")
+                imageResource: simulationActive ? "/res/XDelete.svg" : "/InstrumentValueIcons/play.svg"
+                onClicked: {
+                    mainWindow.closeIndicatorDrawer()
+                    mainWindow.togglePlanningSimulation()
+                }
+            }
+
+            SubMenuButton {
+                objectName: "toolbar_planningStats"
+                implicitHeight: root._toolButtonHeight
+                Layout.fillWidth: true
+                visible: QGroundControl.corePlugin.directMissionItemEditing
+                text: qsTr("Statistics")
+                imageResource: "/res/chevron-double-right.svg"
+                onClicked: {
+                    mainWindow.closeIndicatorDrawer()
+                    mainWindow.togglePlanningStatistics()
                 }
             }
 

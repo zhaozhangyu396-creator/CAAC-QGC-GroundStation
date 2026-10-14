@@ -22,6 +22,7 @@
 #include "MissionController.h"
 #include "MissionManager.h"
 #include "MultiVehicleManager.h"
+#include "ParameterManager.h"
 #include "PlanMasterController.h"
 #include "QGCGeo.h"
 #include "QGCMAVLink.h"
@@ -67,6 +68,58 @@ CaacCorePlugin::CaacCorePlugin(QObject* parent)
     const QSettings settings;
     _doubleClickAddWaypoint = settings.value(QStringLiteral("CAAC/Map/DoubleClickAddWaypoint"), true).toBool();
     _dragWaypoints = settings.value(QStringLiteral("CAAC/Map/DragWaypoints"), true).toBool();
+    for (const auto* key : {"horizontalSnap", "verticalSnap", "angleSnap", "symmetrySnap"}) {
+        _planningPreferences[QLatin1String(key)] =
+            settings.value(QStringLiteral("CAAC/Planning/") + QLatin1String(key), true).toBool();
+    }
+    const double angle = settings.value(QStringLiteral("CAAC/Planning/snapAngle"), 15.0).toDouble();
+    _planningPreferences[QStringLiteral("snapAngle")] =
+        std::isfinite(angle) && angle >= 1 && angle <= 90 ? angle : 15.0;
+}
+
+bool CaacCorePlugin::updatePlanningPreferences(const QVariantMap& values)
+{
+    auto updated = _planningPreferences;
+    for (auto it = values.cbegin(); it != values.cend(); ++it) {
+        if (!updated.contains(it.key())) {
+            return false;
+        }
+        if (it.key() == QStringLiteral("snapAngle")) {
+            bool valid = false;
+            const double angle = it.value().toDouble(&valid);
+            if (!valid || !std::isfinite(angle) || angle < 1 || angle > 90) {
+                return false;
+            }
+            updated[it.key()] = angle;
+        } else {
+            if (it.value().metaType().id() != QMetaType::Bool) {
+                return false;
+            }
+            updated[it.key()] = it.value().toBool();
+        }
+    }
+    if (updated != _planningPreferences) {
+        _planningPreferences = updated;
+        QSettings settings;
+        for (auto it = values.cbegin(); it != values.cend(); ++it) {
+            settings.setValue(QStringLiteral("CAAC/Planning/") + it.key(), _planningPreferences.value(it.key()));
+        }
+        emit mapPreferencesChanged();
+    }
+    return true;
+}
+
+void CaacCorePlugin::refreshFlightPreferenceParameter(const QString& name)
+{
+    auto* vehicle = MultiVehicleManager::instance()->activeVehicle();
+    if (!vehicle) {
+        return;
+    }
+    auto* manager = vehicle->parameterManager();
+    if (!manager || !manager->parameterExists(ParameterManager::defaultComponentId, name)) {
+        return;
+    }
+    manager->refreshParameter(ParameterManager::defaultComponentId, name);
 }
 
 void CaacCorePlugin::adjustSettingMetaData(const QString& settingsGroup, FactMetaData& metaData, bool& userVisible)

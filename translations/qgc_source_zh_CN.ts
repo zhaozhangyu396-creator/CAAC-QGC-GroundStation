@@ -5582,6 +5582,10 @@ Click Ok to start the auto-tuning process.
   <context>
     <name>CaacRouteEditor</name>
     <message>
+        <source>Click: center map on takeoff point. Double-click: center map on aircraft.</source>
+        <translation>单击：地图居中到起飞点。双击：地图居中到无人机。</translation>
+    </message>
+    <message>
       <source>Global</source>
       <translation>全局</translation>
     </message>
@@ -5595,7 +5599,7 @@ Click Ok to start the auto-tuning process.
     </message>
     <message>
       <source>Points</source>
-      <translation>航点</translation>
+      <translation>航点设置</translation>
     </message>
     <message>
       <source>Global settings</source>
@@ -5611,7 +5615,7 @@ Click Ok to start the auto-tuning process.
     </message>
     <message>
       <source>Relative coordinate editor</source>
-      <translation>相对坐标编辑器</translation>
+      <translation>相对坐标编辑</translation>
     </message>
     <message>
       <location filename="../custom/src/PlanView/CaacRouteEditor.qml" line="101"/>
@@ -5783,6 +5787,22 @@ Click Ok to start the auto-tuning process.
     <message>
       <source>Delete selected (%1)</source>
       <translation>删除选中（%1）</translation>
+    </message>
+    <message>
+        <source>Waypoint settings</source>
+        <translation>航点设置</translation>
+    </message>
+    <message>
+        <source>Center takeoff point</source>
+        <translation>起飞点居中</translation>
+    </message>
+    <message>
+        <source>Zoom in</source>
+        <translation>放大地图</translation>
+    </message>
+    <message>
+        <source>Zoom out</source>
+        <translation>缩小地图</translation>
     </message>
 </context>
   <context>
@@ -5974,6 +5994,26 @@ Click Ok to start the auto-tuning process.
         <source>Unable to create the landing point.</source>
         <translation>无法创建降落点。</translation>
     </message>
+    <message>
+        <source>Invalid waypoint simulation settings.</source>
+        <translation>航点模拟参数无效，请检查垂直速度、变高方式与转弯方式。</translation>
+    </message>
+    <message>
+        <source>This angle cannot be reached on the previous leg extension.</source>
+        <translation>沿上一航段延长线无法达到该夹角，请调整角度或相邻航点位置。</translation>
+    </message>
+    <message>
+        <source>Check waypoint altitude and flight speed.</source>
+        <translation>请检查航点高度和飞行速度。</translation>
+    </message>
+    <message>
+        <source>No ordinary waypoints to synchronize.</source>
+        <translation>没有可同步的普通航点。</translation>
+    </message>
+    <message>
+        <source>When H is fixed, select two waypoints or use H as the rotation center.</source>
+        <translation>固定 H 点时，请选择两个航点，或以 H 点为旋转中心。</translation>
+    </message>
 </context>
   <context>
     <name>CaacWaypointDialog</name>
@@ -6105,7 +6145,67 @@ Click Ok to start the auto-tuning process.
       <source>No incoming leg at the previous point: use a bearing (true north 0°, east 90°).</source>
       <translation>上一点没有前一航段，请使用方位角（真北 0°、正东 90°）。</translation>
     </message>
-  </context>
+      <message>
+        <source>Current vertex angle</source>
+        <translation>此点夹角</translation>
+    </message>
+    <message>
+        <source>Bearing (degrees)</source>
+        <translation>方位角（°）</translation>
+    </message>
+    <message>
+        <source>Interior angle at previous waypoint (degrees)</source>
+        <translation>内夹角（°）</translation>
+    </message>
+    <message>
+        <source>Current vertex angle (degrees)</source>
+        <translation>此点夹角（°）</translation>
+    </message>
+    <message>
+        <source>Vertical speed (m/s)</source>
+        <translation>垂直速度（米/秒）</translation>
+    </message>
+    <message>
+        <source>Altitude change mode</source>
+        <translation>变高方式</translation>
+    </message>
+    <message>
+        <source>Change altitude before the leg</source>
+        <translation>航线前变换高度</translation>
+    </message>
+    <message>
+        <source>Change altitude along the leg</source>
+        <translation>航线中变换高度</translation>
+    </message>
+    <message>
+        <source>Turn mode</source>
+        <translation>转弯方式</translation>
+    </message>
+    <message>
+        <source>Point turn</source>
+        <translation>定点转弯</translation>
+    </message>
+    <message>
+        <source>Coordinated turn</source>
+        <translation>协调转弯</translation>
+    </message>
+    <message>
+        <source>Adaptive coordinated turn</source>
+        <translation>自适应协调转弯</translation>
+    </message>
+    <message>
+        <source>No turn</source>
+        <translation>不转弯</translation>
+    </message>
+    <message>
+        <source>Next leg heading</source>
+        <translation>下一段机头朝向</translation>
+    </message>
+    <message>
+        <source>The current vertex angle matches the map. Editing it moves this point along the previous leg extension. Vertical speed, climb and turn modes apply to the built-in simulation.</source>
+        <translation>此点夹角与地图标注一致，修改时沿上一航段延长线移动此点。垂直速度、变高方式与转弯方式用于内置模拟。</translation>
+    </message>
+</context>
   <context>
     <name>CalcAmpsPerVoltDialog</name>
     <message>
@@ -8280,7 +8380,11 @@ VTOL</source>
       <source>Configure</source>
       <translation>配置</translation>
     </message>
-  </context>
+      <message>
+        <source>Flight mode</source>
+        <translation>飞行模式</translation>
+    </message>
+</context>
   <context>
     <name>FlightModeMenu</name>
     <message>
@@ -8607,11 +8711,51 @@ VTOL</source>
   <context>
     <name>FlyViewToolBar</name>
     <message>
+        <source>Connected</source>
+        <translation>已连接</translation>
+    </message>
+    <message>
+        <source>Not connected</source>
+        <translation>未连接</translation>
+    </message>
+    <message>
+        <source>Open connection settings</source>
+        <translation>打开连接设置</translation>
+    </message>
+    <message>
+        <source>Flight time</source>
+        <translation>飞行时间</translation>
+    </message>
+    <message>
+        <source>Messages</source>
+        <translation>消息</translation>
+    </message>
+    <message>
       <location filename="../src/Toolbar/FlyViewToolBar.qml" line="95"/>
       <source>Disconnect</source>
       <translation>断开连接</translation>
     </message>
-  </context>
+      <message>
+        <source>Flight settings</source>
+        <translation>飞行设置</translation>
+    </message>
+    <message>
+        <source>Disarm</source>
+        <translation>上锁</translation>
+    </message>
+    <message>
+        <source>Arm</source>
+        <translation>解锁</translation>
+    </message>
+    <message>
+        <source>Vehicle messages</source>
+        <translation>无人机消息</translation>
+    </message>
+    <message>
+        <source>Sensor status</source>
+        <translation>传感器状态</translation>
+    </message>
+</context>
   <context>
     <name>FlyViewTopRightPanel</name>
     <message>
@@ -21571,7 +21715,23 @@ Click 'Ok' to upload the Plan anyway.</source>
       <source>Update</source>
       <translation>更新</translation>
     </message>
-  </context>
+      <message>
+        <source>Cancel simulation</source>
+        <translation>取消模拟</translation>
+    </message>
+    <message>
+        <source>Simulation</source>
+        <translation>模拟</translation>
+    </message>
+    <message>
+        <source>Statistics</source>
+        <translation>统计数据</translation>
+    </message>
+    <message>
+        <source>Flight and plan</source>
+        <translation>飞行规划</translation>
+    </message>
+</context>
   <context>
     <name>SensorsComponent</name>
     <message>
@@ -22504,7 +22664,11 @@ If a vehicle still has this key configured, you will no longer be able to commun
       <source>Loiter</source>
       <translation>盘旋</translation>
     </message>
-  </context>
+      <message>
+        <source>Invalid waypoint simulation settings.</source>
+        <translation>航点模拟参数无效，请检查垂直速度、变高方式与转弯方式。</translation>
+    </message>
+</context>
   <context>
     <name>SimulatedCameraControl</name>
     <message>
@@ -24854,6 +25018,10 @@ If a vehicle still has this key configured, you will no longer be able to commun
 <context>
     <name>FlyViewCustomLayer</name>
     <message>
+        <source>Clear trajectory</source>
+        <translation>清除航迹</translation>
+    </message>
+    <message>
         <source>Altitude</source>
         <translation>高度</translation>
     </message>
@@ -24888,6 +25056,10 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
       <source>Simulation controls</source>
       <translation>模拟控制</translation>
+    </message>
+    <message>
+        <source>Calculator</source>
+        <translation>计算器</translation>
     </message>
 </context>
   <context>
@@ -25264,6 +25436,22 @@ If a vehicle still has this key configured, you will no longer be able to commun
       <source>Horizontal speed (m/s)</source>
       <translation>水平速度（米/秒）</translation>
     </message>
+    <message>
+        <source>Save simulation settings</source>
+        <translation>保存模拟设置</translation>
+    </message>
+    <message>
+        <source>Rotate and translate</source>
+        <translation>旋转平移</translation>
+    </message>
+    <message>
+        <source>Synchronize existing waypoint speeds</source>
+        <translation>同步已设航点速度</translation>
+    </message>
+    <message>
+        <source>Synchronize existing waypoint altitudes</source>
+        <translation>同步已设航点高度</translation>
+    </message>
 </context>
 <context>
     <name>CaacCoordinateField</name>
@@ -25464,6 +25652,10 @@ altitude</source>
     <message>
       <source>Simulation emergency</source>
       <translation>模拟应急</translation>
+    </message>
+    <message>
+        <source>Change flight speed</source>
+        <translation>更改航速</translation>
     </message>
 </context>
   <context>
@@ -26048,6 +26240,10 @@ altitude</source>
         <source>Delete coordinate axes</source>
         <translation>删除坐标轴</translation>
     </message>
+    <message>
+        <source>H point and waypoint relations</source>
+        <translation>H 点与航点关系</translation>
+    </message>
 </context>
 <context>
     <name>CaacWaypointOverlap</name>
@@ -26141,6 +26337,538 @@ altitude</source>
     <message>
         <source>A → B: %1 m · %2°</source>
         <translation>A → B：%1 米 · %2°</translation>
+    </message>
+</context>
+<context>
+    <name>CaacHomeRelationsDialog</name>
+    <message>
+        <source>H point and waypoint relations</source>
+        <translation>H 点与航点关系</translation>
+    </message>
+    <message>
+        <source>Takeoff height (relative, m)</source>
+        <translation>起飞高度（相对起飞点，米）</translation>
+    </message>
+    <message>
+        <source>Position editing</source>
+        <translation>位置编辑</translation>
+    </message>
+    <message>
+        <source>Bearing and distance</source>
+        <translation>方位角与距离</translation>
+    </message>
+    <message>
+        <source>Extended waypoint line</source>
+        <translation>两航点连线延长线</translation>
+    </message>
+    <message>
+        <source>Cardinal offset</source>
+        <translation>方向偏角</translation>
+    </message>
+    <message>
+        <source>Target point</source>
+        <translation>目标点</translation>
+    </message>
+    <message>
+        <source>Reference point</source>
+        <translation>坐标基准点</translation>
+    </message>
+    <message>
+        <source>Point B</source>
+        <translation>B 点</translation>
+    </message>
+    <message>
+        <source>Bearing (degrees)</source>
+        <translation>方位角（°）</translation>
+    </message>
+    <message>
+        <source>Direction</source>
+        <translation>生成方向</translation>
+    </message>
+    <message>
+        <source>North</source>
+        <translation>北</translation>
+    </message>
+    <message>
+        <source>East</source>
+        <translation>东</translation>
+    </message>
+    <message>
+        <source>South</source>
+        <translation>南</translation>
+    </message>
+    <message>
+        <source>West</source>
+        <translation>西</translation>
+    </message>
+    <message>
+        <source>Distance (m)</source>
+        <translation>相对距离（米）</translation>
+    </message>
+    <message>
+        <source>Move entire route</source>
+        <translation>整体移动</translation>
+    </message>
+    <message>
+        <source>Confirm moves the target point. Extension starts at B and continues in the A to B direction. Cardinal offset turns the first direction towards the second by 0° to 90°.</source>
+        <translation>确定后移动目标点。延长线从 B 点沿 A→B 方向继续；方向偏角表示从第一个方向向第二个方向偏转 0°～90°。</translation>
+    </message>
+</context>
+<context>
+    <name>CaacTransformSettings</name>
+    <message>
+        <source>Drag entire route</source>
+        <translation>启用航线拖拽</translation>
+    </message>
+    <message>
+        <source>Route rotation</source>
+        <translation>航线旋转</translation>
+    </message>
+    <message>
+        <source>Bearing (degrees)</source>
+        <translation>方位角（°）</translation>
+    </message>
+    <message>
+        <source>Include H point</source>
+        <translation>包含 H 点</translation>
+    </message>
+    <message>
+        <source>Rotate</source>
+        <translation>旋转</translation>
+    </message>
+    <message>
+        <source>Route translation</source>
+        <translation>航线平移</translation>
+    </message>
+    <message>
+        <source>Reference point</source>
+        <translation>坐标基准点</translation>
+    </message>
+    <message>
+        <source>Longitude (°)</source>
+        <translation>经度（°）</translation>
+    </message>
+    <message>
+        <source>Latitude (°)</source>
+        <translation>纬度（°）</translation>
+    </message>
+    <message>
+        <source>Translate route</source>
+        <translation>平移航线</translation>
+    </message>
+    <message>
+        <source>Directional translation</source>
+        <translation>方向平移</translation>
+    </message>
+    <message>
+        <source>Distance (m)</source>
+        <translation>相对距离（米）</translation>
+    </message>
+    <message>
+        <source>Rotation around a waypoint</source>
+        <translation>航点旋转</translation>
+    </message>
+    <message>
+        <source>Centre</source>
+        <translation>圆心</translation>
+    </message>
+    <message>
+        <source>Angle (degrees)</source>
+        <translation>角度（°）</translation>
+    </message>
+</context>
+<context>
+    <name>CaacFlightDashboard</name>
+    <message>
+        <source>Altitude</source>
+        <translation>高度</translation>
+    </message>
+    <message>
+        <source>Speed</source>
+        <translation>速度</translation>
+    </message>
+    <message>
+        <source>Pitch</source>
+        <translation>俯仰角</translation>
+    </message>
+    <message>
+        <source>Voltage</source>
+        <translation>电压</translation>
+    </message>
+    <message>
+        <source>Heading</source>
+        <translation>机头指向</translation>
+    </message>
+    <message>
+        <source>Home distance</source>
+        <translation>距家</translation>
+    </message>
+    <message>
+        <source>Roll</source>
+        <translation>横滚角</translation>
+    </message>
+    <message>
+        <source>Enlarge or restore dashboard</source>
+        <translation>放大或还原仪表板</translation>
+    </message>
+</context>
+<context>
+    <name>CaacFlightSpeedDialog</name>
+    <message>
+        <source>Change flight speed</source>
+        <translation>更改航速</translation>
+    </message>
+    <message>
+        <source>Enter a valid flight speed within the aircraft limits.</source>
+        <translation>请输入飞机允许范围内的有效航速。</translation>
+    </message>
+    <message>
+        <source>Airspeed</source>
+        <translation>空速</translation>
+    </message>
+    <message>
+        <source>Horizontal speed</source>
+        <translation>水平速度</translation>
+    </message>
+    <message>
+        <source>Later waypoint speed commands may override this speed.</source>
+        <translation>后续航点的速度命令可能覆盖此航速。</translation>
+    </message>
+</context>
+<context>
+    <name>CaacFlightTelemetryBar</name>
+    <message>
+        <source>Battery</source>
+        <translation>电池</translation>
+    </message>
+    <message>
+        <source>Flight altitude</source>
+        <translation>飞行高度</translation>
+    </message>
+    <message>
+        <source>Home distance</source>
+        <translation>距家</translation>
+    </message>
+    <message>
+        <source>Horizontal speed</source>
+        <translation>水平速度</translation>
+    </message>
+    <message>
+        <source>Vertical speed</source>
+        <translation>垂直速度</translation>
+    </message>
+    <message>
+        <source>Target distance</source>
+        <translation>目标距离</translation>
+    </message>
+</context>
+<context>
+    <name>CaacCalculator</name>
+    <message>
+        <source>Angle calculator</source>
+        <translation>角度计算器</translation>
+    </message>
+    <message>
+        <source>Select wind direction</source>
+        <translation>选择预设风向</translation>
+    </message>
+    <message>
+        <source>Wind from front right</source>
+        <translation>正右前侧来风</translation>
+    </message>
+    <message>
+        <source>Wind from front</source>
+        <translation>正前侧来风</translation>
+    </message>
+    <message>
+        <source>Wind from right</source>
+        <translation>正右侧来风</translation>
+    </message>
+    <message>
+        <source>Wind from rear right</source>
+        <translation>正右后侧来风</translation>
+    </message>
+    <message>
+        <source>Wind from rear</source>
+        <translation>正后侧来风</translation>
+    </message>
+    <message>
+        <source>Wind from rear left</source>
+        <translation>正左后侧来风</translation>
+    </message>
+    <message>
+        <source>Wind from left</source>
+        <translation>正左侧来风</translation>
+    </message>
+    <message>
+        <source>Wind from front left</source>
+        <translation>正左前侧来风</translation>
+    </message>
+    <message>
+        <source>Enter a wind direction from 0° to 360°.</source>
+        <translation>请输入 0°～360° 的风向。</translation>
+    </message>
+    <message>
+        <source>Enter whole hours from 0 to 23 and minutes from 0 to 59.</source>
+        <translation>请输入 0～23 的整数小时和 0～59 的整数分钟。</translation>
+    </message>
+    <message>
+        <source>The input for arcsin and arccos must be between -1 and 1.</source>
+        <translation>arcsin 和 arccos 的输入值必须在 -1～1 之间。</translation>
+    </message>
+    <message>
+        <source>The tangent is undefined at this angle.</source>
+        <translation>此角度的正切值无定义。</translation>
+    </message>
+    <message>
+        <source>Enter exactly two sides, or one side and an angle.</source>
+        <translation>请只填写两条边，或一条边和一个角度。</translation>
+    </message>
+    <message>
+        <source>The acute angle must be greater than 0° and less than 90°.</source>
+        <translation>锐角必须大于 0° 且小于 90°。</translation>
+    </message>
+    <message>
+        <source>The hypotenuse must be longer than either leg.</source>
+        <translation>斜边必须大于任一直角边。</translation>
+    </message>
+    <message>
+        <source>Enter finite, positive side lengths.</source>
+        <translation>请输入有限的正数边长。</translation>
+    </message>
+    <message>
+        <source>Enter a finite number.</source>
+        <translation>请输入有限数值。</translation>
+    </message>
+    <message>
+        <source>Calculate</source>
+        <translation>计算</translation>
+    </message>
+    <message>
+        <source>Copy</source>
+        <translation>复制</translation>
+    </message>
+    <message>
+        <source>Wind direction to heading</source>
+        <translation>风向角度计算</translation>
+    </message>
+    <message>
+        <source>Wind direction (degrees)</source>
+        <translation>风向角度（°）</translation>
+    </message>
+    <message>
+        <source>Relative wind direction</source>
+        <translation>飞行方式</translation>
+    </message>
+    <message>
+        <source>True north is 0°; angles increase clockwise.</source>
+        <translation>正北为 0°，角度顺时针增加。</translation>
+    </message>
+    <message>
+        <source>Heading: %1°</source>
+        <translation>航向角：%1°</translation>
+    </message>
+    <message>
+        <source>Time to angle</source>
+        <translation>时间角度计算</translation>
+    </message>
+    <message>
+        <source>Hours (0–23)</source>
+        <translation>时（0～23）</translation>
+    </message>
+    <message>
+        <source>Minutes (0–59)</source>
+        <translation>分（0～59）</translation>
+    </message>
+    <message>
+        <source>24 hours = 360°; 1 hour = 15°.</source>
+        <translation>24 小时对应 360°，1 小时对应 15°。</translation>
+    </message>
+    <message>
+        <source>Angle: %1°</source>
+        <translation>角度：%1°</translation>
+    </message>
+    <message>
+        <source>Trigonometric functions</source>
+        <translation>三角函数计算</translation>
+    </message>
+    <message>
+        <source>Function</source>
+        <translation>函数</translation>
+    </message>
+    <message>
+        <source>Input value</source>
+        <translation>输入值</translation>
+    </message>
+    <message>
+        <source>Radian mode</source>
+        <translation>弧度模式</translation>
+    </message>
+    <message>
+        <source>Right triangle</source>
+        <translation>直角三角形计算</translation>
+    </message>
+    <message>
+        <source>Hypotenuse c</source>
+        <translation>斜边 c</translation>
+    </message>
+    <message>
+        <source>Vertical leg a</source>
+        <translation>垂直直角边 a</translation>
+    </message>
+    <message>
+        <source>Horizontal leg b</source>
+        <translation>水平直角边 b</translation>
+    </message>
+    <message>
+        <source>Angle θ (degrees)</source>
+        <translation>夹角 θ（°）</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>清空</translation>
+    </message>
+</context>
+<context>
+    <name>CaacPreferences</name>
+    <message>
+        <source>This parameter is unavailable on the connected aircraft.</source>
+        <translation>已连接的无人机不提供此参数。</translation>
+    </message>
+    <message>
+        <source>Read</source>
+        <translation>获取</translation>
+    </message>
+    <message>
+        <source>Write</source>
+        <translation>写入</translation>
+    </message>
+    <message>
+        <source>Waypoint drawing</source>
+        <translation>航点绘制</translation>
+    </message>
+    <message>
+        <source>Ground station UI</source>
+        <translation>地面站 UI</translation>
+    </message>
+    <message>
+        <source>Flight parameters</source>
+        <translation>飞行参数</translation>
+    </message>
+    <message>
+        <source>Drawing</source>
+        <translation>绘图</translation>
+    </message>
+    <message>
+        <source>Horizontal alignment</source>
+        <translation>水平线吸附</translation>
+    </message>
+    <message>
+        <source>Vertical alignment</source>
+        <translation>垂直线吸附</translation>
+    </message>
+    <message>
+        <source>Angle snapping</source>
+        <translation>角度吸附</translation>
+    </message>
+    <message>
+        <source>Snap angle (degrees)</source>
+        <translation>吸附角度（°）</translation>
+    </message>
+    <message>
+        <source>Perpendicular bisector snapping</source>
+        <translation>中垂线吸附</translation>
+    </message>
+    <message>
+        <source>Alignment uses nearby waypoints. Angle snapping includes perpendicular guides and multiples of the selected angle.</source>
+        <translation>以邻近航点对齐；角度吸附包含垂直辅助线及所选角度的倍数方向。</translation>
+    </message>
+    <message>
+        <source>Tools</source>
+        <translation>工具</translation>
+    </message>
+    <message>
+        <source>Angle calculator</source>
+        <translation>角度计算器</translation>
+    </message>
+    <message>
+        <source>Theme</source>
+        <translation>主题</translation>
+    </message>
+    <message>
+        <source>Dark</source>
+        <translation>暗色</translation>
+    </message>
+    <message>
+        <source>Light</source>
+        <translation>亮色</translation>
+    </message>
+    <message>
+        <source>Values use the aircraft parameter units and limits.</source>
+        <translation>使用无人机参数原有的单位和允许范围。</translation>
+    </message>
+    <message>
+        <source>Connect an aircraft to read or write flight parameters.</source>
+        <translation>请连接无人机后获取或写入飞行参数。</translation>
+    </message>
+    <message>
+        <source>Waypoint acceptance radius</source>
+        <translation>航点接受半径</translation>
+    </message>
+    <message>
+        <source>Horizontal cruise speed</source>
+        <translation>水平巡航速度</translation>
+    </message>
+    <message>
+        <source>Horizontal acceleration</source>
+        <translation>水平加速度</translation>
+    </message>
+</context>
+<context>
+    <name>CaacSettingsMenu</name>
+    <message>
+        <source>Main view</source>
+        <translation>主界面</translation>
+    </message>
+    <message>
+        <source>Connection</source>
+        <translation>连接</translation>
+    </message>
+    <message>
+        <source>Vehicle setup</source>
+        <translation>无人机设置</translation>
+    </message>
+    <message>
+        <source>Preferences</source>
+        <translation>偏好</translation>
+    </message>
+    <message>
+        <source>Application settings</source>
+        <translation>应用设置</translation>
+    </message>
+    <message>
+        <source>Cancel simulation</source>
+        <translation>取消模拟</translation>
+    </message>
+    <message>
+        <source>Simulation</source>
+        <translation>模拟</translation>
+    </message>
+    <message>
+        <source>Statistics</source>
+        <translation>统计数据</translation>
+    </message>
+    <message>
+        <source>Analyze</source>
+        <translation>分析</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>关闭</translation>
+    </message>
+    <message>
+        <source>Update</source>
+        <translation>更新</translation>
     </message>
 </context>
 </TS>

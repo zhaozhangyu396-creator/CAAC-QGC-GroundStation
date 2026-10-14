@@ -16,6 +16,25 @@ Item {
     readonly property var _home: _points.length ? _points[0].coordinate : QtPositioning.coordinate()
     readonly property var _missionItems: editor.planMasterController ? editor.planMasterController.missionController.visualItems : null
     readonly property var _speedSection: _missionItems && _missionItems.count ? _missionItems.get(0).speedSection : null
+    readonly property var _homeItem: _missionItems && _missionItems.count ? _missionItems.get(0) : null
+    readonly property var _vehicle: QGroundControl.multiVehicleManager.activeVehicle
+    readonly property string _homePositionKey: _home.isValid ? _home.latitude + ":" + _home.longitude : ""
+    readonly property real _availableHomeAltitude: {
+        if (!_home.isValid) { return NaN }
+        if (_vehicle && _vehicle.homePosition.isValid && _home.distanceTo(_vehicle.homePosition) < 2
+            && isFinite(_vehicle.homePosition.altitude)) { return _vehicle.homePosition.altitude }
+        if (_vehicle && !_vehicle.airborne && _vehicle.coordinate.isValid && _home.distanceTo(_vehicle.coordinate) < 2
+            && isFinite(_vehicle.altitudeAMSL.rawValue)) { return Number(_vehicle.altitudeAMSL.rawValue) }
+        if (_homeItem && isFinite(_homeItem.terrainAltitude)) { return _homeItem.terrainAltitude }
+        return _home.altitude
+    }
+    function fillHomeAltitude() {
+        if (homeAltitude && !homeAltitude.manuallyEdited) {
+            homeAltitude.text = isFinite(_availableHomeAltitude) ? _availableHomeAltitude.toString() : ""
+        }
+    }
+    on_AvailableHomeAltitudeChanged: fillHomeAltitude()
+    on_HomePositionKeyChanged: { if (homeAltitude) { homeAltitude.manuallyEdited = false }; fillHomeAltitude() }
     function number(value) { return value.trim().length ? Number(value) : NaN }
     component NumberField: QGCTextField {
         Layout.fillWidth: true
@@ -82,7 +101,13 @@ Item {
                         value: root._home.isValid ? root._home.latitude : NaN
                     }
                     QGCLabel { text: qsTr("Home AMSL altitude (m)") }
-                    NumberField { id: homeAltitude; objectName: "caacHomeAltitude"; text: root._home.isValid ? root._home.altitude.toString() : "" }
+                    NumberField {
+                        id: homeAltitude
+                        objectName: "caacHomeAltitude"
+                        property bool manuallyEdited: false
+                        Component.onCompleted: root.fillHomeAltitude()
+                        onTextEdited: manuallyEdited = true
+                    }
                 }
                 QGCButton {
                     objectName: "caacApplyHome"
@@ -123,10 +148,24 @@ Item {
                     font.pointSize: ScreenTools.smallFontPointSize
                     wrapMode: Text.WordWrap
                 }
+                QGCButton {
+                    objectName: "caacSyncWaypointSpeed"
+                    Layout.fillWidth: true
+                    text: qsTr("Synchronize existing waypoint speeds")
+                    enabled: specifySpeed.enabled
+                    onClicked: root.routeController.syncWaypointDefaults({specifySpeed: specifySpeed.checked, speed: root.number(missionSpeed.text)})
+                }
                 QGCLabel { text: qsTr("New waypoint altitude") }
                 FactTextField {
+                    objectName: "caacDefaultWaypointAltitude"
                     Layout.fillWidth: true
                     fact: QGroundControl.settingsManager.appSettings.defaultMissionItemAltitude
+                }
+                QGCButton {
+                    objectName: "caacSyncWaypointAltitude"
+                    Layout.fillWidth: true
+                    text: qsTr("Synchronize existing waypoint altitudes")
+                    onClicked: root.routeController.syncWaypointDefaults({altitude: QGroundControl.settingsManager.appSettings.defaultMissionItemAltitude.rawValue})
                 }
                 QGCLabel {
                     Layout.fillWidth: true
@@ -150,8 +189,15 @@ Item {
                         text: root.routeController.simulationSettings.horizontalSpeed.toString()
                     }
                 }
+                QGCButton {
+                    objectName: "caacSaveSimulationSettings"
+                    Layout.fillWidth: true
+                    text: qsTr("Save simulation settings")
+                    onClicked: root.routeController.setSimulationSettings(simulationSettings.values())
+                }
             }
             CaacSimulationSettings {
+                id: simulationSettings
                 Layout.fillWidth: true
                 routeController: root.routeController
                 editor: root.editor
@@ -159,85 +205,12 @@ Item {
                 horizontalSpeed: root.number(simHorizontalSpeed.text)
             }
             CaacSettingsSection {
-                objectName: "caacRotationSection"
-                title: qsTr("Route rotation")
-                QGCButton {
-                    objectName: "caacGlobalRotate"
+                objectName: "caacTransformSection"
+                title: qsTr("Rotate and translate")
+                CaacTransformSettings {
                     Layout.fillWidth: true
-                    text: qsTr("Rotate / align two points")
-                    onClicked: root.editor.openGeometry(1)
-                }
-            }
-            CaacSettingsSection {
-                objectName: "caacTranslationSection"
-                title: qsTr("Route translation")
-                GridLayout {
-                    columns: root.width < ScreenTools.defaultFontPixelWidth * 35 ? 1 : 2
-                    Layout.fillWidth: true
-                    rowSpacing: ScreenTools.defaultFontPixelHeight * 0.5
-                    QGCLabel { text: qsTr("Translation method") }
-                    QGCComboBox {
-                        id: method
-                        objectName: "caacTranslateMethod"
-                        Layout.fillWidth: true
-                        Layout.minimumWidth: 0
-                        model: [qsTr("Specified coordinates"), qsTr("Precise movement")]
-                    }
-                    QGCLabel { text: qsTr("Reference point"); visible: method.currentIndex === 0 }
-                    QGCComboBox {
-                        id: reference
-                        objectName: "caacTranslateReference"
-                        Layout.fillWidth: true
-                        Layout.minimumWidth: 0
-                        model: root._points
-                        textRole: "label"
-                        visible: method.currentIndex === 0
-                    }
-                    QGCLabel { text: qsTr("Longitude (°)"); visible: method.currentIndex === 0 }
-                    NumberField {
-                        id: longitude
-                        objectName: "caacTranslateLongitude"
-                        text: reference.currentIndex >= 0 && reference.currentIndex < root._points.length ? root._points[reference.currentIndex].coordinate.longitude.toString() : ""
-                        visible: method.currentIndex === 0
-                    }
-                    QGCLabel { text: qsTr("Latitude (°)"); visible: method.currentIndex === 0 }
-                    NumberField {
-                        id: latitude
-                        objectName: "caacTranslateLatitude"
-                        text: reference.currentIndex >= 0 && reference.currentIndex < root._points.length ? root._points[reference.currentIndex].coordinate.latitude.toString() : ""
-                        visible: method.currentIndex === 0
-                    }
-                    QGCLabel { text: qsTr("Bearing (°)"); visible: method.currentIndex === 1 }
-                    NumberField { id: angle; objectName: "caacTranslateBearing"; text: "0"; visible: method.currentIndex === 1 }
-                    QGCLabel { text: qsTr("Distance (m)"); visible: method.currentIndex === 1 }
-                    NumberField { id: distance; objectName: "caacTranslateDistance"; text: "0"; visible: method.currentIndex === 1 }
-                }
-                QGCButton {
-                    objectName: "caacTranslateApply"
-                    Layout.fillWidth: true
-                    text: qsTr("Translate route")
-                    enabled: root._points.length > 1
-                    primary: true
-                    onClicked: {
-                        if (method.currentIndex === 1) {
-                            root.routeController.moveRouteBy(root.number(angle.text), root.number(distance.text))
-                        } else if (reference.currentIndex >= 0 && reference.currentIndex < root._points.length) {
-                            root.routeController.translateRoute(root._points[reference.currentIndex].coordinate,
-                                QtPositioning.coordinate(root.number(latitude.text), root.number(longitude.text)))
-                        }
-                    }
-                }
-                QGCCheckBox {
-                    objectName: "caacRouteDragToggle"
-                    text: qsTr("Drag entire route")
-                    checked: root.editor.routeDragMode
-                    onClicked: root.editor.routeDragMode = checked
-                }
-                QGCLabel {
-                    Layout.fillWidth: true
-                    text: qsTr("Translation and route dragging include home, takeoff and landing points. Complex patterns must first be converted to simple items.")
-                    font.pointSize: ScreenTools.smallFontPointSize
-                    wrapMode: Text.WordWrap
+                    routeController: root.routeController
+                    editor: root.editor
                 }
             }
             CaacSettingsSection {

@@ -123,7 +123,7 @@ Item {
     }
 
     Connections {
-        target: root.mapControl
+        target: root.mapControl && root.mapControl.center !== undefined ? root.mapControl : null
         function onCenterChanged() { ++root._projectionRevision }
         function onBearingChanged() { ++root._projectionRevision }
         function onZoomLevelChanged() { ++root._projectionRevision }

@@ -76,6 +76,7 @@ private:
     QPointer<PlanMasterController> _planningPlan;
     CaacSimulationEngine _engine;
     CaacSimulationEngine::Options _options;
+    QMap<int, CaacSimulationEngine::WaypointOptions> _waypointOptions;
     QGeoCoordinate _home;
     QGeoCoordinate _guidedTarget;
     QJsonObject _sourceMission;

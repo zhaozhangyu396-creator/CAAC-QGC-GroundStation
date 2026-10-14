@@ -390,7 +390,9 @@ bool QmlUITestBase::clickToolSelectDropdownButton(const QString& viewObjectName,
                      __FILE__, __LINE__);
         return false;
     }
-    if (!clickButton(viewObjectName)) {
+    const bool sidebar = findVisibleItem(_rootItem, QStringLiteral("caacSettingsNavigationScroller"), 0);
+    if (!(sidebar ? clickButtonScrolled(viewObjectName, QStringLiteral("caacSettingsNavigationScroller"))
+                  : clickButton(viewObjectName))) {
         QTest::qFail(qPrintable(QStringLiteral("Failed to click tool select dropdown button: %1").arg(viewObjectName)),
                      __FILE__, __LINE__);
         return false;

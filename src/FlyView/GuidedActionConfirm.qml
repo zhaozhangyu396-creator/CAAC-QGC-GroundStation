@@ -13,6 +13,7 @@ Item {
     property var    guidedController
     property var    guidedValueSlider
     property var    messageDisplay
+    property bool   registrationEnabled: true
     property string title
     property string message
     property int    action
@@ -25,7 +26,15 @@ Item {
     property real _margins:         2
     property bool _emergencyAction: action === guidedController.actionEmergencyStop
 
-    Component.onCompleted: guidedController.confirmDialog = this
+    function registerConfirmation() {
+        if (guidedController && (registrationEnabled || !guidedController.confirmDialog)) {
+            guidedController.confirmDialog = control
+        }
+    }
+
+    onRegistrationEnabledChanged: registerConfirmation()
+    onGuidedControllerChanged: registerConfirmation()
+    Component.onCompleted: registerConfirmation()
 
     onHideTriggerChanged: {
         if (hideTrigger) {

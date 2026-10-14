@@ -25,6 +25,7 @@ class CaacCorePlugin : public QGCCorePlugin
     Q_PROPERTY(bool doubleClickAddWaypoint READ doubleClickAddWaypoint WRITE setDoubleClickAddWaypoint NOTIFY
                    mapPreferencesChanged)
     Q_PROPERTY(bool dragWaypoints READ dragWaypoints WRITE setDragWaypoints NOTIFY mapPreferencesChanged)
+    Q_PROPERTY(QVariantMap planningPreferences READ planningPreferences NOTIFY mapPreferencesChanged)
 
 public:
     explicit CaacCorePlugin(QObject* parent = nullptr);
@@ -52,6 +53,11 @@ public:
 
     void setDoubleClickAddWaypoint(bool enabled);
     void setDragWaypoints(bool enabled);
+
+    QVariantMap planningPreferences() const { return _planningPreferences; }
+
+    Q_INVOKABLE bool updatePlanningPreferences(const QVariantMap& values);
+    Q_INVOKABLE void refreshFlightPreferenceParameter(const QString& name);
     Q_INVOKABLE QVariantMap routeLegMetrics(const QGeoCoordinate& from, const QGeoCoordinate& to) const;
     Q_INVOKABLE QVariantMap coordinateToDms(double value, int maximumDegrees) const;
     Q_INVOKABLE double coordinateFromDms(double degrees, double minutes, double seconds, bool negative,
@@ -83,6 +89,7 @@ private:
     bool _initialized = false;
     bool _doubleClickAddWaypoint = true;
     bool _dragWaypoints = true;
+    QVariantMap _planningPreferences;
     CaacSimulationController* _simulation = nullptr;
     QPointer<QTimer> _flightAltitudeUpdateTimer;
 };

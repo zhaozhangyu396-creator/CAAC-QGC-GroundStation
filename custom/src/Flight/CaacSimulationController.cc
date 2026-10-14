@@ -178,10 +178,16 @@ bool CaacSimulationController::start(PlanMasterController* plan)
         _home.setAltitude(0);
     }
     _engine.initialize(_home, _options);
+    _waypointOptions.clear();
     _link->_vehicleAltitudeAMSL = _home.altitude();
     connect(_link, &MockLink::simulationAltitudeRequested, this, [this](double altitude) {
         _holdAltitude = altitude;
         _guidedTarget = _link ? _link->property("caacGuidedTarget").value<QGeoCoordinate>() : QGeoCoordinate();
+    });
+    connect(_link, &MockLink::simulationSpeedRequested, this, [this](double speed) {
+        if (_link && _engine.setHorizontalSpeed(speed)) {
+            _options.horizontalSpeed = speed;
+        }
     });
     connect(
         _link->_missionItemHandler, &MockLinkMissionItemHandler::missionUploaded, this,
@@ -192,7 +198,8 @@ bool CaacSimulationController::start(PlanMasterController* plan)
             const auto before = _engine.state();
             const bool wasLoaded = _engine.loaded();
             QString error;
-            if (!_engine.load(_link->_missionItemHandler->uploadedMission(), _home, _options, error)) {
+            if (!_engine.load(_link->_missionItemHandler->uploadedMission(), _home, _options, error,
+                              _waypointOptions)) {
                 _fail(error);
                 return;
             }
@@ -350,7 +357,7 @@ bool CaacSimulationController::restart()
         return false;
     }
     QString error;
-    if (!_engine.load(_link->_missionItemHandler->uploadedMission(), _home, _options, error)) {
+    if (!_engine.load(_link->_missionItemHandler->uploadedMission(), _home, _options, error, _waypointOptions)) {
         _fail(error);
         return false;
     }
@@ -575,10 +582,21 @@ bool CaacSimulationController::_prepareFlightPlan()
             }
         }
     }
-    const auto captureNumbers = [this, &waypointOrigins]() {
+    const auto captureNumbers = [this, &waypointOrigins, existingFlow]() {
         _pendingWaypointNumbers.clear();
+        const auto previousOptions = _waypointOptions;
+        _waypointOptions.clear();
         for (auto it = waypointOrigins.cbegin(); it != waypointOrigins.cend(); ++it) {
             _pendingWaypointNumbers.insert(it.key()->sequenceNumber(), {it.value(), it.key()->coordinate()});
+            const auto settings = it.key()->caacFlightSettings();
+            if (!settings.isEmpty() && it.key()->command() == MAV_CMD_NAV_WAYPOINT) {
+                _waypointOptions.insert(it.key()->sequenceNumber(),
+                                        {settings.value("verticalSpeed").toDouble(), settings.value("turnMode").toInt(),
+                                         settings.value("climbMode").toInt()});
+            } else if (existingFlow && it.key()->command() == MAV_CMD_NAV_WAYPOINT &&
+                       previousOptions.contains(it.key()->sequenceNumber())) {
+                _waypointOptions.insert(it.key()->sequenceNumber(), previousOptions.value(it.key()->sequenceNumber()));
+            }
         }
     };
     if (existingFlow) {
@@ -599,12 +617,13 @@ bool CaacSimulationController::_prepareFlightPlan()
         }
     }
     for (auto* waypoint : waypoints) {
-        if (_settingsExplicit && (_options.turnMode == 0 || _options.turnMode == 3) &&
-            waypoint->missionItem().param1() == 0) {
+        if (_settingsExplicit && waypoint->caacFlightSettings().isEmpty() &&
+            (_options.turnMode == 0 || _options.turnMode == 3) && waypoint->missionItem().param1() == 0) {
             waypoint->missionItem().setParam1(_settings.value("holdSeconds").toDouble());
         }
-        if (_settingsExplicit && (_options.turnMode == 0 || _options.turnMode == 3) &&
-            std::isnan(waypoint->missionItem().param4()) && _settings.value("specifyYaw").toBool()) {
+        if (_settingsExplicit && waypoint->caacFlightSettings().isEmpty() &&
+            (_options.turnMode == 0 || _options.turnMode == 3) && std::isnan(waypoint->missionItem().param4()) &&
+            _settings.value("specifyYaw").toBool()) {
             waypoint->missionItem().setParam4(_settings.value("yaw").toDouble());
         }
     }
@@ -682,6 +701,7 @@ bool CaacSimulationController::_prepareFlightPlan()
             _fail(tr("Unable to close the simulation route."));
             return false;
         }
+        finishPoint->setCaacFlightSettings(selectedStart->caacFlightSettings());
     }
     const int loopMode = _settings.value("loopMode").toInt();
     if (loopMode > 0) {

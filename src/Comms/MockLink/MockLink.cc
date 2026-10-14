@@ -2192,6 +2192,16 @@ void MockLink::_handleCommandLong(const mavlink_message_t &msg)
     uint8_t commandResult = MAV_RESULT_UNSUPPORTED;
 
     switch (request.command) {
+        case MAV_CMD_DO_CHANGE_SPEED:
+            if (_caacSimulation && request.param1 == 1.0f && request.param4 == 0.0f) {
+                if (std::isfinite(request.param2) && request.param2 > 0 && request.param2 <= 100) {
+                    emit simulationSpeedRequested(request.param2);
+                    commandResult = MAV_RESULT_ACCEPTED;
+                } else {
+                    commandResult = MAV_RESULT_DENIED;
+                }
+            }
+            break;
         case MAV_CMD_DO_REPOSITION:
             if (_caacSimulation) {
                 const QGeoCoordinate target(request.param5, request.param6, request.param7);

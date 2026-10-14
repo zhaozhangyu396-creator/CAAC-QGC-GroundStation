@@ -17,6 +17,7 @@ ToolStripActionList {
     readonly property var _simulation: QGroundControl.corePlugin.simulation
     readonly property bool _simulatedVehicle: _vehicle && _simulation.active && _simulation.vehicle === _vehicle
     property Component _missionDialog: Component { CaacMissionActionDialog { } }
+    property Component _speedDialog: Component { CaacFlightSpeedDialog { } }
     property var _pendingVehicle: null
     property bool _pendingAltitude: false
     on_GuidedChanged: disableAutomaticConfirmations()
@@ -126,6 +127,16 @@ ToolStripActionList {
             iconSource: "/InstrumentValueIcons/arrow-thick-up.svg"
             enabled: root._hasMission
             onTriggered: { if (enabled) { root.openMissionDialog(true) } }
+        },
+        ToolStripAction {
+            objectName: "caacChangeFlightSpeed"
+            text: qsTr("Change flight speed")
+            iconSource: "/InstrumentValueIcons/arrow-thick-right.svg"
+            enabled: root._vehicle && root._vehicle.initialConnectComplete && root._vehicle.armed
+                && root._vehicle.airborne && root._vehicle.supports.guidedMode
+            onTriggered: {
+                if (enabled) { root._guided.closeAll(); _speedDialog.createObject(mainWindow).open() }
+            }
         },
         ToolStripAction {
             objectName: "caacSimulationEmergency"

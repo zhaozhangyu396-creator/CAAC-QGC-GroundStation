@@ -6,10 +6,13 @@
 
 #include <QtCore/QEvent>
 #include <QtCore/QJsonArray>
+#include <QtCore/QLineF>
 #include <QtCore/QScopeGuard>
 #include <QtCore/QSet>
+#include <QtCore/QtMath>
 #include <QtPositioning/QGeoRectangle>
 
+#include "CaacCorePlugin.h"
 #include "CaacRouteGeometry.h"
 #include "CaacRouteTemplates.h"
 #include "CaacSimulationController.h"
@@ -54,6 +57,62 @@ bool CaacRouteEditorController::setMissionFlightSpeed(bool specified, double spe
         section->flightSpeed()->setRawValue(speed);
     }
     section->setSpecifyFlightSpeed(specified);
+    return true;
+}
+
+bool CaacRouteEditorController::syncWaypointDefaults(const QVariantMap& properties)
+{
+    if (!_canEdit() || _rotationPreviewActive) {
+        return false;
+    }
+    const bool syncAltitude = properties.contains(QStringLiteral("altitude"));
+    const bool syncSpeed = properties.contains(QStringLiteral("specifySpeed"));
+    bool altitudeValid = false;
+    bool speedValid = false;
+    const double altitude = properties.value(QStringLiteral("altitude")).toDouble(&altitudeValid);
+    const double speed = properties.value(QStringLiteral("speed")).toDouble(&speedValid);
+    const bool specifySpeed = properties.value(QStringLiteral("specifySpeed")).toBool();
+    QList<SimpleMissionItem*> waypoints;
+    bool orderChanges = false;
+    auto* model = _missionController()->visualItems();
+    for (int i = 1; i < model->count(); ++i) {
+        auto* item = model->value<SimpleMissionItem*>(i);
+        if (!item || item->command() != MAV_CMD_NAV_WAYPOINT) {
+            continue;
+        }
+        auto* section = qobject_cast<SpeedSection*>(item->speedSection());
+        if ((syncAltitude &&
+             (!altitudeValid || !std::isfinite(altitude) || altitude < item->altitude()->rawMin().toDouble() ||
+              altitude > item->altitude()->rawMax().toDouble())) ||
+            (syncSpeed && (!section || !section->available() ||
+                           (specifySpeed && (!speedValid || !std::isfinite(speed) || speed <= 0 ||
+                                             speed < section->flightSpeed()->rawMin().toDouble() ||
+                                             speed > section->flightSpeed()->rawMax().toDouble()))))) {
+            return _fail(tr("Check waypoint altitude and flight speed."));
+        }
+        orderChanges = orderChanges || (syncSpeed && section->specifyFlightSpeed() != specifySpeed);
+        waypoints.append(item);
+    }
+    if (waypoints.isEmpty() || (!syncAltitude && !syncSpeed)) {
+        return _fail(tr("No ordinary waypoints to synchronize."));
+    }
+    if (orderChanges && !_canChangeOrder()) {
+        return false;
+    }
+    beginEdit();
+    const auto finish = qScopeGuard([this]() { endEdit(); });
+    for (auto* item : waypoints) {
+        if (syncAltitude) {
+            item->altitude()->setRawValue(altitude);
+        }
+        if (syncSpeed) {
+            auto* section = qobject_cast<SpeedSection*>(item->speedSection());
+            if (specifySpeed) {
+                section->flightSpeed()->setRawValue(speed);
+            }
+            section->setSpecifyFlightSpeed(specifySpeed);
+        }
+    }
     return true;
 }
 
@@ -475,7 +534,11 @@ QVariantMap CaacRouteEditorController::waypointAdvancedProperties(QObject* objec
         return {};
     }
     const auto& command = item->missionItem();
+    const auto settings = item->caacFlightSettings().isEmpty() ? simulationSettings() : item->caacFlightSettings();
     return {{QStringLiteral("supported"), true},
+            {QStringLiteral("verticalSpeed"), settings.value("verticalSpeed")},
+            {QStringLiteral("turnMode"), settings.value("turnMode")},
+            {QStringLiteral("climbMode"), settings.value("climbMode")},
             {QStringLiteral("holdSeconds"), command.param1()},
             {QStringLiteral("specifyYaw"), std::isfinite(command.param4())},
             {QStringLiteral("yaw"), std::isfinite(command.param4()) ? command.param4() : 0}};
@@ -498,10 +561,29 @@ bool CaacRouteEditorController::updateWaypointProperties(QObject* object, const 
     const double hold = number("holdSeconds");
     const bool specifyYaw = properties.value(QStringLiteral("specifyYaw")).toBool();
     const double yaw = number("yaw");
+    const bool legSettingsSpecified = properties.contains(QStringLiteral("verticalSpeed")) ||
+                                      properties.contains(QStringLiteral("turnMode")) ||
+                                      properties.contains(QStringLiteral("climbMode"));
+    const double verticalSpeed = number("verticalSpeed");
+    const double turnMode = number("turnMode");
+    const double climbMode = number("climbMode");
+    if (legSettingsSpecified &&
+        (!item || item->command() != MAV_CMD_NAV_WAYPOINT || !std::isfinite(verticalSpeed) || verticalSpeed <= 0 ||
+         verticalSpeed > 30 || !std::isfinite(turnMode) || turnMode != std::floor(turnMode) || turnMode < 0 ||
+         turnMode > 3 || !std::isfinite(climbMode) || climbMode != std::floor(climbMode) || climbMode < 0 ||
+         climbMode > 1)) {
+        return _fail(tr("Invalid waypoint simulation settings."));
+    }
     if (advanced && (!item || _missionController()->visualItemIndexForObject(item) < 1 ||
                      item->command() != MAV_CMD_NAV_WAYPOINT || !std::isfinite(hold) || hold < 0 ||
                      hold > std::numeric_limits<float>::max() || (specifyYaw && !std::isfinite(yaw)))) {
         return _fail(tr("Enter a nonnegative hold duration and a valid waypoint yaw."));
+    }
+    const bool vertexSpecified = properties.contains(QStringLiteral("vertexAngle"));
+    const auto vertexCoordinate =
+        vertexSpecified ? waypointVertexCoordinate(object, number("vertexAngle")) : QGeoCoordinate();
+    if (vertexSpecified && !vertexCoordinate.isValid()) {
+        return _fail(tr("This angle cannot be reached on the previous leg extension."));
     }
     beginEdit();
     const auto finish = qScopeGuard([this]() { endEdit(); });
@@ -509,7 +591,9 @@ bool CaacRouteEditorController::updateWaypointProperties(QObject* object, const 
     const bool specifySpeed = properties.value(QStringLiteral("specifySpeed")).toBool();
     const double speed = number("speed");
     const bool updated =
-        properties.value(QStringLiteral("relative")).toBool()
+        vertexSpecified ? updateWaypoint(object, vertexCoordinate.latitude(), vertexCoordinate.longitude(), altitude,
+                                         specifySpeed, speed)
+        : properties.value(QStringLiteral("relative")).toBool()
             ? updateRelativeWaypoint(object, number("angle"), number("distance"),
                                      properties.value(QStringLiteral("interiorAngle")).toBool(), altitude, specifySpeed,
                                      speed)
@@ -520,6 +604,11 @@ bool CaacRouteEditorController::updateWaypointProperties(QObject* object, const 
     if (advanced) {
         item->missionItem().setParam1(hold);
         item->missionItem().setParam4(specifyYaw ? std::remainder(yaw, 360) : std::numeric_limits<double>::quiet_NaN());
+    }
+    if (legSettingsSpecified) {
+        item->setCaacFlightSettings({{"verticalSpeed", verticalSpeed},
+                                     {"turnMode", static_cast<int>(turnMode)},
+                                     {"climbMode", static_cast<int>(climbMode)}});
     }
     return true;
 }
@@ -575,6 +664,329 @@ QVariantMap CaacRouteEditorController::waypointLeg(QObject* object) const
                           bearing - QGCGeo::geodesicAzimuth(previous->coordinate(), incoming->coordinate())));
     }
     return result;
+}
+
+QVariantMap CaacRouteEditorController::snapWaypointDrag(QObject* object, const QGeoCoordinate& coordinate,
+                                                        double tolerance) const
+{
+    QVariantMap result{{QStringLiteral("coordinate"), QVariant::fromValue(coordinate)},
+                       {QStringLiteral("guides"), QVariantList()}};
+    auto* mission = _missionController();
+    auto* item = qobject_cast<SimpleMissionItem*>(object);
+    const int index = mission && item ? mission->visualItemIndexForObject(item) : -1;
+    auto* previous = _previousCoordinateItem(index);
+    if (!mission || !item || item->command() != MAV_CMD_NAV_WAYPOINT || !previous || !coordinate.isValid() ||
+        !std::isfinite(tolerance) || tolerance <= 0) {
+        return result;
+    }
+    tolerance = std::clamp(tolerance, 0.02, 50.0);
+    const auto origin = previous->coordinate();
+    const auto project = [&](const QGeoCoordinate& point) {
+        const double distance = QGCGeo::geodesicDistance(origin, point);
+        if (distance < 0.001) {
+            return QPointF();
+        }
+        const double bearing = qDegreesToRadians(QGCGeo::geodesicAzimuth(origin, point));
+        return QPointF(distance * std::sin(bearing), distance * std::cos(bearing));
+    };
+    const auto unproject = [&](const QPointF& point) {
+        auto target = QGCGeo::geodesicDestination(origin, qRadiansToDegrees(std::atan2(point.x(), point.y())),
+                                                  std::hypot(point.x(), point.y()));
+        target.setAltitude(coordinate.altitude());
+        return target;
+    };
+    const auto raw = project(coordinate);
+    const auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
+    const auto preferences = plugin ? plugin->planningPreferences() : QVariantMap();
+    const bool horizontalSnap = preferences.value(QStringLiteral("horizontalSnap"), true).toBool();
+    const bool verticalSnap = preferences.value(QStringLiteral("verticalSnap"), true).toBool();
+    const bool angleSnap = preferences.value(QStringLiteral("angleSnap"), true).toBool();
+    const bool symmetrySnap = preferences.value(QStringLiteral("symmetrySnap"), true).toBool();
+
+    struct Guide
+    {
+        QPointF anchor;
+        QPointF direction;
+        QPointF projection;
+        double error;
+        int kind;
+    };
+
+    QList<Guide> candidates;
+    const auto addGuide = [&](const QPointF& anchor, const QPointF& vector, int kind, bool cardinal = false) {
+        const double length = std::hypot(vector.x(), vector.y());
+        if (length < 0.001) {
+            return;
+        }
+        const auto direction = vector / length;
+        const auto offset = raw - anchor;
+        const auto projection = anchor + direction * QPointF::dotProduct(offset, direction);
+        const double error = QLineF(raw, projection).length();
+        const double radius = std::hypot(offset.x(), offset.y());
+        if (error <= tolerance &&
+            (!cardinal || (radius > tolerance * 2 && error <= radius * std::sin(qDegreesToRadians(6.0))))) {
+            candidates.append({anchor, direction, projection, error, kind});
+        }
+    };
+    QList<QPointF> references;
+    VisualMissionItem* next = nullptr;
+    for (int i = 0; i < mission->visualItems()->count(); ++i) {
+        auto* reference = mission->visualItems()->value<VisualMissionItem*>(i);
+        if (!reference || reference == item || !reference->coordinate().isValid() ||
+            (i != 0 && (!reference->isSimpleItem() || !reference->specifiesCoordinate() ||
+                        reference->isStandaloneCoordinate()))) {
+            continue;
+        }
+        const auto point = project(reference->coordinate());
+        references.append(point);
+        if (horizontalSnap) {
+            addGuide(point, QPointF(1, 0), 0, reference == previous);
+        }
+        if (verticalSnap) {
+            addGuide(point, QPointF(0, 1), 0, reference == previous);
+        }
+        if (i > index && !next) {
+            next = reference;
+        }
+    }
+    const auto perpendicular = [](const QPointF& point) { return QPointF(-point.y(), point.x()); };
+    if (angleSnap && std::hypot(raw.x(), raw.y()) > tolerance * 2) {
+        const double increment = preferences.value(QStringLiteral("snapAngle"), 15.0).toDouble();
+        const double bearing = std::round(qRadiansToDegrees(std::atan2(raw.x(), raw.y())) / increment) * increment;
+        const double axis = std::abs(std::remainder(bearing, 180.0));
+        if ((verticalSnap || axis > 1e-6) && (horizontalSnap || std::abs(axis - 90) > 1e-6)) {
+            const double radians = qDegreesToRadians(bearing);
+            addGuide(QPointF(), QPointF(std::sin(radians), std::cos(radians)), 0, true);
+        }
+    }
+    auto* incoming = _previousCoordinateItem(mission->visualItemIndexForObject(previous));
+    if (incoming && angleSnap) {
+        const auto direction = -project(incoming->coordinate());
+        addGuide(QPointF(), perpendicular(direction), 1);
+        if (next) {
+            addGuide(project(next->coordinate()), direction, 1);
+        }
+    }
+    if (next && symmetrySnap) {
+        const auto opposite = project(next->coordinate());
+        addGuide(opposite / 2, perpendicular(opposite), 2);
+    } else if (incoming && symmetrySnap) {
+        const auto opposite = project(incoming->coordinate());
+        addGuide(opposite / 2, perpendicular(opposite), 2);
+    }
+    if (candidates.isEmpty()) {
+        return result;
+    }
+    std::stable_sort(candidates.begin(), candidates.end(), [](const Guide& a, const Guide& b) {
+        return std::abs(a.error - b.error) < 1e-6 ? a.kind > b.kind : a.error < b.error;
+    });
+    auto snapped = candidates.first().projection;
+    QList<Guide> active{candidates.first()};
+    for (int i = 1; i < candidates.size(); ++i) {
+        const auto& a = candidates.first();
+        const auto& b = candidates[i];
+        const double determinant = a.direction.x() * b.direction.y() - a.direction.y() * b.direction.x();
+        if (std::abs(determinant) < 0.5) {
+            continue;
+        }
+        const auto offset = b.anchor - a.anchor;
+        const auto intersection =
+            a.anchor + a.direction * ((offset.x() * b.direction.y() - offset.y() * b.direction.x()) / determinant);
+        if (QLineF(raw, intersection).length() > tolerance ||
+            std::any_of(references.cbegin(), references.cend(),
+                        [&](const QPointF& point) { return QLineF(point, intersection).length() < tolerance * 0.5; })) {
+            continue;
+        }
+        snapped = intersection;
+        active.append(b);
+        break;
+    }
+    QVariantList guides;
+    for (const auto& guide : active) {
+        const double extent = std::max(QLineF(guide.anchor, snapped).length() * 1.2, tolerance * 8);
+        guides.append(QVariantMap{
+            {QStringLiteral("from"), QVariant::fromValue(unproject(guide.anchor - guide.direction * extent))},
+            {QStringLiteral("to"), QVariant::fromValue(unproject(guide.anchor + guide.direction * extent))},
+            {QStringLiteral("kind"), guide.kind}});
+    }
+    result.insert(QStringLiteral("coordinate"), QVariant::fromValue(unproject(snapped)));
+    result.insert(QStringLiteral("guides"), guides);
+    return result;
+}
+
+QGeoCoordinate CaacRouteEditorController::waypointVertexCoordinate(QObject* object, double angle) const
+{
+    auto* item = qobject_cast<SimpleMissionItem*>(object);
+    if (!item || !std::isfinite(angle) || angle < 0 || angle > 180) {
+        return {};
+    }
+    QVariantMap vertex;
+    for (const auto& entry : waypointAngles(simulationSettings().value("closed").toBool())) {
+        const auto candidate = entry.toMap();
+        if (candidate.value("sequence").toInt() == item->sequenceNumber()) {
+            vertex = candidate;
+            break;
+        }
+    }
+    if (vertex.isEmpty()) {
+        return {};
+    }
+    if (std::abs(vertex.value("angle").toDouble() - angle) < 1e-8) {
+        return item->coordinate();
+    }
+    if (angle <= 0 || angle >= 180) {
+        return {};
+    }
+    const auto previous = vertex.value("previous").value<QGeoCoordinate>();
+    const auto next = vertex.value("next").value<QGeoCoordinate>();
+    const double bearing = QGCGeo::geodesicAzimuth(previous, item->coordinate());
+    const double side = QGCGeo::geodesicDistance(previous, next);
+    const double delta = qDegreesToRadians(std::remainder(QGCGeo::geodesicAzimuth(previous, next) - bearing, 360.0));
+    const double cross = std::abs(side * std::sin(delta));
+    if (cross < 0.01) {
+        return {};
+    }
+    double distance = side * std::cos(delta) + cross / std::tan(qDegreesToRadians(angle));
+    const auto residual = [&](double metres) {
+        const auto point = QGCGeo::geodesicDestination(previous, bearing, metres);
+        return std::abs(std::remainder(QGCGeo::geodesicAzimuth(point, next) - QGCGeo::geodesicAzimuth(point, previous),
+                                       360.0)) -
+               angle;
+    };
+    for (int iteration = 0; iteration < 24; ++iteration) {
+        if (!std::isfinite(distance) || distance < 0.01 || distance > 20000000) {
+            return {};
+        }
+        const double error = residual(distance);
+        if (std::abs(error) < 1e-7) {
+            auto point = QGCGeo::geodesicDestination(previous, bearing, distance);
+            point.setAltitude(item->coordinate().altitude());
+            return point;
+        }
+        const double step = std::min(distance / 2, std::max(0.01, distance * 1e-5));
+        const double derivative = (residual(distance + step) - residual(distance - step)) / (2 * step);
+        if (!std::isfinite(derivative) || std::abs(derivative) < 1e-12) {
+            return {};
+        }
+        distance -= std::clamp(error / derivative, -distance * 0.5, distance * 0.5);
+    }
+    return {};
+}
+
+QVariantList CaacRouteEditorController::waypointAngles(bool closed) const
+{
+    QVariantList result;
+    auto* mission = _missionController();
+    if (!mission) {
+        return result;
+    }
+    QList<VisualMissionItem*> points;
+    QList<SimpleMissionItem*> waypoints;
+    for (int i = 0; i < mission->visualItems()->count(); ++i) {
+        auto* point = mission->visualItems()->value<VisualMissionItem*>(i);
+        if (point && point->coordinate().isValid() &&
+            (i == 0 || (point->isSimpleItem() && point->specifiesCoordinate() && !point->isStandaloneCoordinate()))) {
+            points.append(point);
+            if (auto* simple = qobject_cast<SimpleMissionItem*>(point);
+                simple && simple->command() == MAV_CMD_NAV_WAYPOINT) {
+                waypoints.append(simple);
+            }
+        }
+    }
+    for (auto* item : waypoints) {
+        const int index = points.indexOf(item);
+        auto* previous = index > 0 ? points[index - 1] : nullptr;
+        auto* next = index + 1 < points.size() ? points[index + 1] : nullptr;
+        if (closed && waypoints.size() > 2) {
+            if (item == waypoints.first()) {
+                previous = waypoints.last();
+            }
+            if (item == waypoints.last()) {
+                next = waypoints.first();
+            }
+        }
+        const auto vertex = item->coordinate();
+        if (!previous || !next || QGCGeo::geodesicDistance(vertex, previous->coordinate()) < 0.01 ||
+            QGCGeo::geodesicDistance(vertex, next->coordinate()) < 0.01) {
+            continue;
+        }
+        const double from = QGCGeo::geodesicAzimuth(vertex, previous->coordinate());
+        const double to = QGCGeo::geodesicAzimuth(vertex, next->coordinate());
+        result.append(QVariantMap{{QStringLiteral("sequence"), item->sequenceNumber()},
+                                  {QStringLiteral("coordinate"), QVariant::fromValue(vertex)},
+                                  {QStringLiteral("previous"), QVariant::fromValue(previous->coordinate())},
+                                  {QStringLiteral("next"), QVariant::fromValue(next->coordinate())},
+                                  {QStringLiteral("angle"), std::abs(std::remainder(to - from, 360.0))}});
+    }
+    return result;
+}
+
+bool CaacRouteEditorController::applyWaypointRelation(int targetIndex, int referenceIndex, int secondIndex,
+                                                      bool extendedLeg, double bearing, double distance,
+                                                      bool moveWholeRoute, double takeoffHeight)
+{
+    if (!_canEdit() || _rotationPreviewActive) {
+        return false;
+    }
+    auto* model = _missionController()->visualItems();
+    const auto pointAt = [&](int index) -> VisualMissionItem* {
+        if (index < 0 || index >= model->count()) {
+            return nullptr;
+        }
+        auto* point = model->value<VisualMissionItem*>(index);
+        return point && point->coordinate().isValid() &&
+                       (index == 0 ||
+                        (point->isSimpleItem() && point->specifiesCoordinate() && !point->isStandaloneCoordinate()))
+                   ? point
+                   : nullptr;
+    };
+    auto* target = pointAt(targetIndex);
+    auto* reference = pointAt(referenceIndex);
+    auto* simple = qobject_cast<SimpleMissionItem*>(target);
+    if (!target || !reference || target == reference ||
+        (targetIndex > 0 && (!simple || simple->command() != MAV_CMD_NAV_WAYPOINT)) || !std::isfinite(bearing) ||
+        !std::isfinite(distance) || distance < 0 || distance > 20000000) {
+        return _fail(tr("Select a simple coordinate reference point."));
+    }
+    auto anchor = reference->coordinate();
+    if (extendedLeg) {
+        auto* second = pointAt(secondIndex);
+        if (!second || second == target || QGCGeo::geodesicDistance(anchor, second->coordinate()) < 0.01) {
+            return _fail(tr("Select a simple coordinate reference point."));
+        }
+        bearing = QGCGeo::geodesicAzimuth(second->coordinate(), anchor) + 180;
+        anchor = second->coordinate();
+    }
+    auto coordinate = QGCGeo::geodesicDestination(anchor, bearing, distance);
+    coordinate.setAltitude(target->coordinate().altitude());
+    if (!coordinate.isValid()) {
+        return _fail(tr("Enter valid reference and target coordinates."));
+    }
+    auto settings = simulationSettings();
+    if (takeoffHeight != -1) {
+        settings.insert(QStringLiteral("takeoffHeight"), takeoffHeight);
+        const auto error = CaacSimulationController::validateSettings(settings);
+        if (!error.isEmpty()) {
+            return _fail(error);
+        }
+    }
+    beginEdit();
+    const auto finish = qScopeGuard([this]() { endEdit(); });
+    if (moveWholeRoute) {
+        if (!translateRoute(target->coordinate(), coordinate)) {
+            return false;
+        }
+    } else if (targetIndex == 0) {
+        if (!updatePlannedHome(coordinate.latitude(), coordinate.longitude(), coordinate.altitude())) {
+            return false;
+        }
+    } else {
+        target->setCoordinate(coordinate);
+    }
+    if (takeoffHeight != -1) {
+        return setSimulationSettings(settings);
+    }
+    return true;
 }
 
 bool CaacRouteEditorController::updateWaypointLeg(QObject* object, double bearing, double distance)
@@ -811,6 +1223,8 @@ QVariantList CaacRouteEditorController::coordinateItems() const
             (i == 0 || (item->isSimpleItem() && item->specifiesCoordinate() && !item->isStandaloneCoordinate()))) {
             result.append(
                 QVariantMap{{QStringLiteral("index"), i},
+                            {QStringLiteral("command"),
+                             item->isSimpleItem() ? qobject_cast<SimpleMissionItem*>(item)->command() : 0},
                             {QStringLiteral("label"),
                              i == 0 ? tr("Planned home")
                                     : tr("Waypoint %1 · %2").arg(item->sequenceNumber()).arg(item->commandName())},
@@ -865,7 +1279,8 @@ bool CaacRouteEditorController::rotateRoute(double clockwiseDegrees)
     return rotateRouteAround(_rotationCenter, clockwiseDegrees);
 }
 
-bool CaacRouteEditorController::rotateRouteAround(const QGeoCoordinate& center, double clockwiseDegrees)
+bool CaacRouteEditorController::rotateRouteAround(const QGeoCoordinate& center, double clockwiseDegrees,
+                                                  bool includeHome)
 {
     QList<QGeoCoordinate> coordinates;
     QList<QObject*> items;
@@ -883,7 +1298,9 @@ bool CaacRouteEditorController::rotateRouteAround(const QGeoCoordinate& center, 
                                    CaacRouteGeometry::normalizedAngle(routeOrientation() + clockwiseDegrees));
     for (int i = 0; i < items.size(); ++i) {
         auto* item = qobject_cast<VisualMissionItem*>(items[i]);
-        item->setCoordinate(result->at(i));
+        if (includeHome || !item->homePosition()) {
+            item->setCoordinate(result->at(i));
+        }
     }
     _missionController()->setDirty(true);
     return true;
@@ -895,7 +1312,7 @@ bool CaacRouteEditorController::alignRoute(int fromIndex, int toIndex, double ta
 }
 
 bool CaacRouteEditorController::alignRouteAround(const QGeoCoordinate& center, int fromIndex, int toIndex,
-                                                 double targetBearing)
+                                                 double targetBearing, bool includeHome)
 {
     if (!_canEdit()) {
         return false;
@@ -909,11 +1326,15 @@ bool CaacRouteEditorController::alignRouteAround(const QGeoCoordinate& center, i
     if (!a || !b || (fromIndex > 0 && !a->specifiesCoordinate()) || (toIndex > 0 && !b->specifiesCoordinate())) {
         return _fail(tr("Select two existing coordinate points."));
     }
+    if (!includeHome && (fromIndex == 0 || toIndex == 0) &&
+        QGCGeo::geodesicDistance(center, _missionController()->plannedHomePosition()) > 0.001) {
+        return _fail(tr("When H is fixed, select two waypoints or use H as the rotation center."));
+    }
     const auto angle = CaacRouteGeometry::alignmentAngle(a->coordinate(), b->coordinate(), center, targetBearing);
     if (!angle) {
         return _fail(tr("The two points must be distinct and the target bearing must be valid."));
     }
-    return rotateRouteAround(center, *angle);
+    return rotateRouteAround(center, *angle, includeHome);
 }
 
 bool CaacRouteEditorController::insertRelativeWaypoint(int referenceIndex, int afterIndex, double angle,
@@ -1088,7 +1509,8 @@ bool CaacRouteEditorController::insertTemplate(int shape, int referenceIndex, co
     return true;
 }
 
-bool CaacRouteEditorController::translateRoute(const QGeoCoordinate& reference, const QGeoCoordinate& target)
+bool CaacRouteEditorController::translateRoute(const QGeoCoordinate& reference, const QGeoCoordinate& target,
+                                               bool includeHome)
 {
     QList<QGeoCoordinate> coordinates;
     QList<QObject*> items;
@@ -1111,13 +1533,16 @@ bool CaacRouteEditorController::translateRoute(const QGeoCoordinate& reference, 
     beginEdit();
     const auto finish = qScopeGuard([this]() { endEdit(); });
     for (int i = 0; i < items.size(); ++i) {
-        qobject_cast<VisualMissionItem*>(items[i])->setCoordinate(result[i]);
+        auto* item = qobject_cast<VisualMissionItem*>(items[i]);
+        if (includeHome || !item->homePosition()) {
+            item->setCoordinate(result[i]);
+        }
     }
     _missionController()->setDirty(true);
     return true;
 }
 
-bool CaacRouteEditorController::moveRouteBy(double bearing, double distance)
+bool CaacRouteEditorController::moveRouteBy(double bearing, double distance, bool includeHome)
 {
     auto* mission = _missionController();
     if (!_canEdit() || !mission) {
@@ -1125,7 +1550,8 @@ bool CaacRouteEditorController::moveRouteBy(double bearing, double distance)
     }
     const auto reference = mission->plannedHomePosition();
     const auto target = CaacRouteGeometry::relativePoint(reference, bearing, distance);
-    return target ? translateRoute(reference, *target) : _fail(tr("Enter a valid bearing and positive distance."));
+    return target ? translateRoute(reference, *target, includeHome)
+                  : _fail(tr("Enter a valid bearing and positive distance."));
 }
 
 bool CaacRouteEditorController::updatePlannedHome(double latitude, double longitude, double amslAltitude)

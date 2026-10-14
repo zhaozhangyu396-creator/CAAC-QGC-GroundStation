@@ -8,7 +8,8 @@ import QGroundControl.FactControls
 
 Item {
     id:                     control
-    Layout.preferredWidth:  mainLayout.width
+    Layout.preferredWidth:  toolbarButtonStyle ? toolbarModeButton.implicitWidth : mainLayout.width
+    property bool toolbarButtonStyle: false
 
     property bool   showIndicator:          true
     property bool   waitForParameters:      false
@@ -26,6 +27,7 @@ Item {
 
     RowLayout {
         id:                     mainLayout
+        visible: !control.toolbarButtonStyle
         anchors.verticalCenter: parent.verticalCenter
         spacing:                ScreenTools.defaultFontPixelWidth / 2
 
@@ -60,7 +62,22 @@ Item {
 
     MouseArea {
         anchors.fill:   mainLayout
+        visible: !control.toolbarButtonStyle
         onClicked:      mainWindow.showIndicatorDrawer(drawerComponent, control)
+    }
+
+    QGCButton {
+        id: toolbarModeButton
+        objectName: "caacFlightModeButton"
+        anchors.verticalCenter: parent.verticalCenter
+        visible: control.toolbarButtonStyle
+        enabled: !!control.activeVehicle
+        text: control.activeVehicle ? control.activeVehicle.flightMode : qsTr("Flight mode")
+        heightFactor: 0.25
+        backgroundColor: qgcPal.window
+        textColor: qgcPal.text
+        iconSource: "/qmlimages/FlightModesComponentIcon.png"
+        onClicked: mainWindow.showIndicatorDrawer(drawerComponent, control)
     }
 
     Component {
@@ -155,9 +172,11 @@ Item {
                     visible: editMode || !hiddenFlightModesList.find(item => { return item === modelData } )
 
                     QGCDelayButton {
-                        pointSize:          ScreenTools.menuFontPointSize
+                        pointSize: control.toolbarButtonStyle ? ScreenTools.defaultFontPointSize : ScreenTools.menuFontPointSize
                         id:                 modeButton
                         text:               modelData
+                        backgroundColor: control.toolbarButtonStyle && activeVehicle && activeVehicle.flightMode === modelData
+                            ? qgcPal.colorGreen : qgcPal.button
                         delay:              flightModeSettings.requireModeChangeConfirmation.rawValue ? defaultDelay : 0
                         Layout.fillWidth:   true
 

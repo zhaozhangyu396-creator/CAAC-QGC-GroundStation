@@ -42,7 +42,59 @@ private slots:
     void _settingsHistoryAndFile();
     void _guidedTargetPreservesMission();
     void _manualFlightWithoutMission();
+    void _waypointLegOptions();
+    void _runtimeFlightSpeed();
 };
+
+void CaacSimulationEngineTest::_runtimeFlightSpeed()
+{
+    CaacSimulationEngine engine;
+    const QGeoCoordinate home(30, 120, 20);
+    engine.initialize(home, {});
+    engine.setAltitude(22);
+    auto target = QGCGeo::geodesicDestination(home, 90, 1000);
+    target.setAltitude(22);
+    engine.advanceGuidedTarget(target, 0.1);
+    QVERIFY(std::abs(std::hypot(engine.state().northSpeed, engine.state().eastSpeed) - 5) < 1e-5);
+    const auto before = engine.state().position;
+    QVERIFY(!engine.setHorizontalSpeed(0));
+    QVERIFY(!engine.setHorizontalSpeed(qQNaN()));
+    QVERIFY(!engine.setHorizontalSpeed(101));
+    QCOMPARE(engine.state().position, before);
+    QVERIFY(engine.setHorizontalSpeed(8));
+    engine.advanceGuidedTarget(target, 0.1);
+    QVERIFY(std::abs(std::hypot(engine.state().northSpeed, engine.state().eastSpeed) - 8) < 1e-5);
+}
+
+void CaacSimulationEngineTest::_waypointLegOptions()
+{
+    const QGeoCoordinate home(30, 120, 20);
+    const auto target = QGCGeo::geodesicDestination(home, 90, 100);
+    QMap<uint16_t, mavlink_mission_item_int_t> mission{{0, waypoint(0, target, 10)}};
+    CaacSimulationEngine engine;
+    QString error;
+    const CaacSimulationEngine::Options defaults{
+        .horizontalSpeed = 10, .verticalSpeed = 10, .turnMode = 1, .climbMode = 1};
+    QVERIFY2(engine.load(mission, home, defaults, error, {{0, {0.5, 3, 0}}}), qPrintable(error));
+    for (int i = 0; i < 10; ++i) {
+        engine.advance(1);
+    }
+    QVERIFY(QGCGeo::geodesicDistance(home, engine.state().position) < 0.01);
+    QCOMPARE(engine.state().position.altitude(), 25.0);
+    QCOMPARE(engine.state().heading, 0.0);
+    const auto before = engine.state();
+    QVERIFY(!engine.load(mission, home, defaults, error, {{0, {0, 0, 0}}}));
+    QCOMPARE(engine.state().position, before.position);
+    QVERIFY2(engine.load(mission, home, defaults, error, {{0, {10, 3, 1}}}), qPrintable(error));
+    engine.advance(1);
+    QVERIFY(QGCGeo::geodesicDistance(home, engine.state().position) > 9.9);
+    QVERIFY(engine.state().position.altitude() > 20);
+    QCOMPARE(engine.state().heading, 0.0);
+    QVERIFY2(engine.load(mission, home, defaults, error, {{0, {10, 0, 1}}}), qPrintable(error));
+    engine.advance(0.1);
+    QVERIFY(QGCGeo::geodesicDistance(home, engine.state().position) < 0.01);
+    QVERIFY(engine.state().heading > 0);
+}
 
 void CaacSimulationEngineTest::_manualFlightWithoutMission()
 {

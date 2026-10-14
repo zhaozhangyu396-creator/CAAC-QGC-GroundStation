@@ -35,12 +35,20 @@ public:
         bool finished = false;
     };
 
+    struct WaypointOptions
+    {
+        double verticalSpeed = 2;
+        int turnMode = 1;
+        int climbMode = 1;
+    };
+
     void initialize(const QGeoCoordinate& home, const Options& options);
     bool load(const QMap<uint16_t, mavlink_mission_item_int_t>& mission, const QGeoCoordinate& home,
-              const Options& options, QString& error);
+              const Options& options, QString& error, const QMap<int, WaypointOptions>& waypointOptions = {});
     bool jump(int sequence);
     void advance(double seconds);
     void pause();
+    bool setHorizontalSpeed(double speed);
     void setAltitude(double amslAltitude);
     void advanceHoldAltitude(double amslAltitude, double seconds);
     void advanceGuidedTarget(const QGeoCoordinate& target, double seconds);
@@ -61,6 +69,7 @@ private:
     double _rotate(double target, double seconds, double rate);
     QMap<uint16_t, mavlink_mission_item_int_t> _items;
     QMap<int, int> _jumpCounts;
+    QMap<int, WaypointOptions> _waypointOptions;
     QGeoCoordinate _home;
     Options _options;
     State _state;

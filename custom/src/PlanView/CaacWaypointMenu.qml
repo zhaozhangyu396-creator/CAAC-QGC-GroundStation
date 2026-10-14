@@ -128,6 +128,11 @@ Menu {
             onTriggered: root.editor.centerPlannedHome()
         }
         MenuItem {
+            objectName: "caacContextHomeRelations"
+            text: qsTr("H point and waypoint relations")
+            onTriggered: root.editor.openHomeRelations()
+        }
+        MenuItem {
             objectName: "caacContextWaypointHome"
             visible: root.waypoint && !root.waypoint.homePosition
             text: root.waypoint ? qsTr("Use waypoint %1 as takeoff point").arg(root.waypoint.sequenceNumber) : ""

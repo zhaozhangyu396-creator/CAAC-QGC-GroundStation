@@ -49,7 +49,7 @@ ColumnLayout {
     function number(value) { return value.trim().length ? Number(value) : NaN }
     function values() {
         return {horizontalSpeed: horizontalSpeed, verticalSpeed: number(vertical.text),
-            yawRate: number(yawRate.text), windSpeed: number(windSpeed.text), windBearing: number(windBearing.text),
+            yawRate: number(yawRate.text), windSpeed: _settings.windSpeed, windBearing: _settings.windBearing,
             turnMode: turn.currentIndex, climbMode: climb.currentIndex, holdSeconds: hold.visible ? number(hold.text) : _settings.holdSeconds,
             specifyYaw: yawMode.currentIndex === 1, yaw: yaw.visible ? number(yaw.text) : _settings.yaw, closed: closed.checked,
             loopMode: loop.currentIndex, loopCount: loopCount.visible ? number(loopCount.text) : _settings.loopCount, endBehavior: ending.currentIndex,
@@ -153,24 +153,6 @@ ColumnLayout {
         QGCLabel {
             Layout.fillWidth: true; wrapMode: Text.WordWrap
             text: qsTr("Count 1 executes once. Takeoff runs once; loops begin at the selected waypoint. Returning to a waypoint ends in a hover; returning home lands in this simulation.")
-        }
-    }
-    CaacSettingsSection {
-        objectName: "caacSimWindSection"
-        title: qsTr("Simulation wind")
-        GridLayout {
-            columns: root.width < ScreenTools.defaultFontPixelWidth * 35 ? 1 : 2
-            Layout.fillWidth: true
-            QGCLabel { text: qsTr("Wind speed (m/s)") }
-            NumberField { id: windSpeed; objectName: "caacSimWindSpeed"; text: root._settings.windSpeed.toString() }
-            QGCLabel { text: qsTr("Wind direction (towards, degrees)") }
-            NumberField { id: windBearing; objectName: "caacSimWindBearing"; text: root._settings.windBearing.toString() }
-        }
-        QGCButton {
-            objectName: "caacSaveSimulationSettings"
-            Layout.fillWidth: true
-            text: qsTr("Save simulation settings")
-            onClicked: root.routeController.setSimulationSettings(root.values())
         }
     }
 }

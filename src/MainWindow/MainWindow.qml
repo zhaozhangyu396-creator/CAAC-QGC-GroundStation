@@ -139,8 +139,15 @@ ApplicationWindow {
         planView.visible = true
         toolDrawer.visible = false
     }
+    function togglePlanningSimulation() { planView.togglePlanningSimulation() }
+    function togglePlanningStatistics() { showPlanView(); planView.togglePlanningStatistics() }
 
     function showFlyView() {
+        if (QGroundControl.corePlugin.directMissionItemEditing) {
+            showPlanView()
+            planView.collapsePlanningPanels()
+            return
+        }
         flyView.visible = true
         planView.visible = false
         toolDrawer.visible = false
@@ -318,6 +325,7 @@ ApplicationWindow {
     FlyView {
         id:                     flyView
         objectName:             "mainView_fly"
+        visible:                !QGroundControl.corePlugin.directMissionItemEditing
         anchors.fill:           parent
         enabled:                !toolDrawer.visible
     }
@@ -326,7 +334,7 @@ ApplicationWindow {
         id:             planView
         objectName:     "mainView_plan"
         anchors.fill:   parent
-        visible:        false
+        visible:        QGroundControl.corePlugin.directMissionItemEditing
         enabled:        !toolDrawer.visible
     }
 

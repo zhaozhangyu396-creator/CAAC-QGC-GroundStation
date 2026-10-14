@@ -54,6 +54,7 @@ Rectangle {
 
         PlanToolBarIndicators {
             id: toolIndicators
+            visible: QGroundControl.corePlugin.planViewEditor.toString().length === 0
             anchors.top: parent.top
             anchors.bottom: parent.bottom
             planMasterController: _root.planMasterController

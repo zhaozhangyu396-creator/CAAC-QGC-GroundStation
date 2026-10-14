@@ -13,6 +13,7 @@ import QGroundControl.FactControls
 import QGroundControl.FlyView
 import QGroundControl.Geo
 import QGroundControl.Toolbar
+import CAAC.Plan
 
 Item {
     id: _root
@@ -32,6 +33,15 @@ Item {
     property int    _editingLayer: _layerMission
     property var    _appSettings: QGroundControl.settingsManager.appSettings
     property var    _planViewSettings: QGroundControl.settingsManager.planViewSettings
+    readonly property bool unifiedFlightPlan: QGroundControl.corePlugin.directMissionItemEditing
+    readonly property bool _simulationEmergency: unifiedFlightPlan && QGroundControl.corePlugin.simulation.emergencyMode
+    function collapsePlanningPanels() { rightPanel.collapsePanels() }
+    function togglePlanningSimulation() { editorMap.simulationRequested() }
+    property bool unifiedStatisticsVisible: false
+    function togglePlanningStatistics() {
+        if (unifiedFlightPlan) { unifiedStatisticsVisible = !unifiedStatisticsVisible }
+        else { _planViewSettings.showMissionItemStatus.rawValue = !_planViewSettings.showMissionItemStatus.rawValue }
+    }
     property bool   _promptForPlanUsageShowing: false
     property bool   _addWaypointOnClick: false
 
@@ -239,8 +249,28 @@ Item {
 
     PlanViewToolBar {
         id: planToolBar
+        visible: !_root.unifiedFlightPlan
         planMasterController: _planMasterController
         showRallyPointsHelp: _editingLayer === _layerRally
+    }
+    FlyViewToolBar {
+        visible: _root.unifiedFlightPlan
+        guidedValueSlider: unifiedValueSlider
+    }
+    GuidedValueSlider {
+        id: unifiedValueSlider
+        objectName: "guidedValueSlider"
+        visible: false
+        anchors.right: parent.right
+        anchors.top: planToolBar.bottom
+        anchors.bottom: parent.bottom
+        z: QGroundControl.zOrderTopMost
+    }
+    Binding {
+        target: globals.guidedControllerFlyView
+        property: "guidedValueSlider"
+        value: unifiedValueSlider
+        when: _root.unifiedFlightPlan
     }
 
     Item {
@@ -253,6 +283,8 @@ Item {
         FlightMap {
             id: editorMap
             objectName: "planView_map"
+            visible: !_root._simulationEmergency
+            property var planMasterController: _root._planMasterController
             anchors.fill: parent
             mapName: "MissionEditor"
             allowGCSLocationCenter: true
@@ -342,6 +374,27 @@ Item {
             }
 
             // Add lines between waypoints
+            MapPolyline {
+                id: flightTrajectory
+                objectName: "caacFlightTrajectory"
+                readonly property var vehicle: QGroundControl.multiVehicleManager.activeVehicle
+                line.width: ScreenTools.defaultFontPixelWidth * 0.3
+                line.color: QGroundControl.globalPalette.colorRed
+                z: QGroundControl.zOrderTrajectoryLines
+                visible: _root.unifiedFlightPlan
+                onVehicleChanged: path = vehicle ? vehicle.trajectoryPoints.list() : []
+                Component.onCompleted: path = vehicle ? vehicle.trajectoryPoints.list() : []
+                Connections {
+                    target: flightTrajectory.vehicle ? flightTrajectory.vehicle.trajectoryPoints : null
+                    function onPointAdded(coordinate) { flightTrajectory.addCoordinate(coordinate) }
+                    function onUpdateLastPoint(coordinate) {
+                        if (flightTrajectory.pathLength() > 0) {
+                            flightTrajectory.replaceCoordinate(flightTrajectory.pathLength() - 1, coordinate)
+                        }
+                    }
+                    function onPointsCleared() { flightTrajectory.path = [] }
+                }
+            }
             MissionLineView {
                 showSpecialVisual: _missionController.isROIBeginCurrentItem
                 model: rightPanel.simulationPreviewActive ? null : _missionController.simpleFlightPathSegments
@@ -350,7 +403,8 @@ Item {
 
             // Direction arrows in waypoint lines
             MapItemView {
-                model: _editingLayer == _layerMission && !rightPanel.simulationPreviewActive ? _missionController.directionArrows : undefined
+                model: !editorMap.directMissionItemEditing && _editingLayer == _layerMission
+                    && !rightPanel.simulationPreviewActive ? _missionController.directionArrows : undefined
 
                 delegate: MapLineArrow {
                     fromCoord: object ? object.coordinate1 : undefined
@@ -373,30 +427,35 @@ Item {
                     const model = _missionController.visualItems
                     const legs = []
                     let previous = null
-                    let first = null
-                    let last = null
                     for (const point of points) {
                         if (point.index < 0 || point.index >= model.count || !point.coordinate.isValid) { continue }
                         if (point.index === 0) { previous = point; continue }
                         const item = model.get(point.index)
                         if (item.isTakeoffItem) { previous = point; continue }
                         if (item.command !== 16) { continue }
-                        if (!first) { first = point }
                         if (previous) { legs.push({ from: previous, to: point, after: point.index - 1 }) }
                         previous = point
-                        last = point
                     }
-                    if (first && last && first !== last && rightPanel.simulationPreviewActive) {
-                        legs.push({ from: last, to: first, after: last.index })
+                    if (rightPanel.simulationPreviewActive) {
+                        const previewLegs = []
+                        for (const segment of rightPanel.simulationPreviewSegments) {
+                            const from = points.find(point => point.coordinate.isValid
+                                && point.coordinate.distanceTo(segment.coordinate1) < 0.01)
+                            const to = points.find(point => point.coordinate.isValid
+                                && point.coordinate.distanceTo(segment.coordinate2) < 0.01)
+                            if (!from || !to || from.index === to.index) { continue }
+                            const after = to.index === 0 || segment.kind === "closure" || segment.kind === "loop"
+                                || segment.kind === "return" ? from.index : to.index - 1
+                            previewLegs.push({from: from, to: to, after: after})
+                        }
+                        return previewLegs
                     }
-                    return legs.filter(leg => !rightPanel.simulationPreviewActive
-                        || rightPanel.simulationPreviewSegments.some(segment =>
-                            segment.coordinate1.distanceTo(leg.from.coordinate) < 0.01
-                            && segment.coordinate2.distanceTo(leg.to.coordinate) < 0.01))
+                    return legs
                 }
                 readonly property var hoveredSegment: {
                     void editorMap.center
                     void editorMap.zoomLevel
+                    void editorMap.bearing
                     if (!routeHover.hovered || !rightPanel.routeInsertionEnabled || _editingLayer !== _layerMission) { return null }
                     const pointer = routeHover.point.position
                     const radius = ScreenTools.defaultFontPixelWidth
@@ -545,7 +604,7 @@ Item {
             anchors.top: parent.top
             z: QGroundControl.zOrderWidgets
             maxHeight: parent.height - toolStrip.y
-            visible: _editingLayer == _layerMission
+            visible: _editingLayer == _layerMission && !editorMap.directMissionItemEditing
 
             property bool _isMissionLayer: _editingLayer == _layerMission
 
@@ -650,14 +709,19 @@ Item {
 
         MapScale {
             anchors.margins: _toolsMargin
-            anchors.left: toolStrip.right
-            anchors.top: parent.top
+            anchors.left: editorMap.directMissionItemEditing ? undefined : toolStrip.right
+            anchors.right: editorMap.directMissionItemEditing
+                ? (rightPanel.panelsCollapsed ? parent.right : rightPanel.left) : undefined
+            anchors.top: editorMap.directMissionItemEditing ? undefined : parent.top
+            anchors.bottom: editorMap.directMissionItemEditing ? parent.bottom : undefined
+            z: QGroundControl.zOrderWidgets + 4
             mapControl: editorMap
             autoHide: true
         }
 
         PlanViewRightPanel {
             id: rightPanel
+            visible: !_root._simulationEmergency
             anchors.top: parent.top
             anchors.bottom: parent.bottom
             anchors.right: parent.right
@@ -779,32 +843,53 @@ Item {
             }
         }
 
+        Rectangle {
+            anchors.fill: parent
+            color: "black"
+            objectName: "caacEmergencyBlackout"
+            visible: _root._simulationEmergency
+            z: QGroundControl.zOrderWidgets + 2
+        }
+        CaacUnifiedFlightLayer {
+            id: unifiedFlightLayer
+            anchors.fill: parent
+            visible: _root.unifiedFlightPlan
+            z: QGroundControl.zOrderWidgets + 3
+            mapControl: editorMap
+            planningPaneExpanded: !rightPanel.panelsCollapsed
+            planningPanelWidth: rightPanel.width
+            planningNavigationHeight: rightPanel.navigationHeight
+        }
+
         RowLayout {
             id: missionStatus
+            objectName: "planView_statistics"
             anchors.margins: _toolsMargin
             anchors.left: _calcLeftAnchor()
             anchors.right: rightPanel.left
             anchors.bottom: parent.bottom
             spacing: 0
-            visible: !hidden && _editingLayer == _layerMission && QGroundControl.corePlugin.options.showMissionStatus
+            anchors.bottomMargin: _root.unifiedFlightPlan ? unifiedFlightLayer.telemetryHeight + _toolsMargin : _toolsMargin
+            visible: !_root._simulationEmergency && !hidden && _editingLayer == _layerMission && QGroundControl.corePlugin.options.showMissionStatus
 
-            readonly property bool hidden: _planViewSettings.showMissionItemStatus.rawValue ? false : true
+            readonly property bool hidden: _root.unifiedFlightPlan ? !_root.unifiedStatisticsVisible : !_planViewSettings.showMissionItemStatus.rawValue
 
             function showMissionStatus() {
-                _planViewSettings.showMissionItemStatus.rawValue = true
+                if (_root.unifiedFlightPlan) { _root.unifiedStatisticsVisible = true }
+                else { _planViewSettings.showMissionItemStatus.rawValue = true }
             }
 
             function _calcLeftAnchor() {
                 let bottomOfToolStrip = toolStrip.y + toolStrip.height
                 let largestStatsHeight = Math.max(terrainStatus.height, missionStats.height)
-                if (bottomOfToolStrip + largestStatsHeight > parent.height - missionStatus.anchors.margins) {
+                if (toolStrip.visible && bottomOfToolStrip + largestStatsHeight > parent.height - missionStatus.anchors.margins) {
                     return toolStrip.right
                 }
                 return parent.left
             }
 
             function _toggleMissionStatusVisibility() {
-                _planViewSettings.showMissionItemStatus.rawValue = _planViewSettings.showMissionItemStatus.rawValue ? false : true
+                _root.togglePlanningStatistics()
             }
 
             ColumnLayout {

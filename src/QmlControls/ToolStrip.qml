@@ -42,6 +42,7 @@ Rectangle {
     property alias  model:              repeater.model
     property bool   horizontal: false
     property bool   roundButtons: false
+    property bool   squareButtons: false
     property bool   doubleClickActions: false
     property int    horizontalColumns: 0
     property real   roundButtonMaximumDiameter: Infinity
@@ -66,6 +67,7 @@ Rectangle {
     }
 
     signal dropped(int index)
+    signal actionTriggered
 
     DeadMouseArea {
         anchors.fill: parent
@@ -100,6 +102,7 @@ Rectangle {
                     width:              _root._buttonWidth - (_root.compactLabels ? 0 : flickable.anchors.margins * 2)
                     height:             _root.roundButtons ? _root.roundButtonHeight : width
                     roundStyle:         _root.roundButtons
+                    squareStyle:        _root.squareButtons
                     maximumRoundDiameter: _root.roundButtonMaximumDiameter
                     compactLabel:       _root.compactLabels
                     doubleClickRequired: _root.doubleClickActions
@@ -108,6 +111,10 @@ Rectangle {
                     toolStripAction:    modelData
                     dropPanel:          _dropPanel
                     onDropped: (index) => _root.dropped(index)
+                    Connections {
+                        target: buttonTemplate.toolStripAction
+                        function onTriggered() { _root.actionTriggered() }
+                    }
 
                     onCheckedChanged: {
                         // We deal with exclusive check state manually since usinug autoExclusive caused all sorts of crazt problems

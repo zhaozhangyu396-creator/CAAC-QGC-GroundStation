@@ -67,6 +67,12 @@ public:
     Q_INVOKABLE bool updateWaypoint(QObject* item, double latitude, double longitude, double altitude,
                                     bool specifySpeed, double speed);
     Q_INVOKABLE QVariantMap waypointLeg(QObject* item) const;
+    Q_INVOKABLE QVariantMap snapWaypointDrag(QObject* item, const QGeoCoordinate& coordinate, double tolerance) const;
+    Q_INVOKABLE QVariantList waypointAngles(bool closed) const;
+    Q_INVOKABLE QGeoCoordinate waypointVertexCoordinate(QObject* item, double angle) const;
+    Q_INVOKABLE bool applyWaypointRelation(int targetIndex, int referenceIndex, int secondIndex, bool extendedLeg,
+                                           double bearing, double distance, bool moveWholeRoute,
+                                           double takeoffHeight = -1);
     Q_INVOKABLE bool updateWaypointLeg(QObject* item, double bearing, double distance);
     Q_INVOKABLE bool clearWaypoints();
     Q_INVOKABLE bool reverseWaypoints();
@@ -81,9 +87,10 @@ public:
     Q_INVOKABLE bool moveCurrentWaypoint(int offset);
     Q_INVOKABLE bool setRotationCenter(const QGeoCoordinate& coordinate);
     Q_INVOKABLE bool rotateRoute(double clockwiseDegrees);
-    Q_INVOKABLE bool rotateRouteAround(const QGeoCoordinate& center, double clockwiseDegrees);
+    Q_INVOKABLE bool rotateRouteAround(const QGeoCoordinate& center, double clockwiseDegrees, bool includeHome = true);
     Q_INVOKABLE bool alignRoute(int fromIndex, int toIndex, double targetBearing);
-    Q_INVOKABLE bool alignRouteAround(const QGeoCoordinate& center, int fromIndex, int toIndex, double targetBearing);
+    Q_INVOKABLE bool alignRouteAround(const QGeoCoordinate& center, int fromIndex, int toIndex, double targetBearing,
+                                      bool includeHome = true);
     Q_INVOKABLE bool insertRelativeWaypoint(int referenceIndex, int afterIndex, double angle, double distance,
                                             bool interiorAngle);
     Q_INVOKABLE bool setRelativeEndpoint(int referenceIndex, double angle, double distance, bool landing,
@@ -95,10 +102,12 @@ public:
     Q_INVOKABLE void clearHistory();
     Q_INVOKABLE QVariantList templateCoordinates(int shape, int referenceIndex, const QVariantMap& options) const;
     Q_INVOKABLE bool insertTemplate(int shape, int referenceIndex, const QVariantMap& options);
-    Q_INVOKABLE bool translateRoute(const QGeoCoordinate& reference, const QGeoCoordinate& target);
-    Q_INVOKABLE bool moveRouteBy(double bearing, double distance);
+    Q_INVOKABLE bool translateRoute(const QGeoCoordinate& reference, const QGeoCoordinate& target,
+                                    bool includeHome = true);
+    Q_INVOKABLE bool moveRouteBy(double bearing, double distance, bool includeHome = true);
     Q_INVOKABLE bool updatePlannedHome(double latitude, double longitude, double amslAltitude);
     Q_INVOKABLE bool setMissionFlightSpeed(bool specified, double speed);
+    Q_INVOKABLE bool syncWaypointDefaults(const QVariantMap& properties);
 
 signals:
     void planMasterControllerChanged();

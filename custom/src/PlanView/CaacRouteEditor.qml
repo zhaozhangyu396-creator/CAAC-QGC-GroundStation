@@ -10,6 +10,7 @@ import QGC
 import QGroundControl
 import QGroundControl.Controls
 import QGroundControl.FlightMap
+import QGroundControl.PlanView
 import CAAC.Plan
 
 Column {
@@ -21,7 +22,9 @@ Column {
     property var planMasterController: null
     property bool showMissionTree: false
     readonly property real _settingsButtonHeight: settingsButton.visible ? settingsButton.height : 0
-    property int activePanel: 3
+    property int activePanel: -1
+    readonly property bool panelsCollapsed: activePanel < 0 && !showMissionTree
+    readonly property real navigationHeight: panelNavigation.height
     readonly property bool relativeEditorVisible: activePanel === 1
     property bool routeDragMode: false
     property point _panelDragOffset: Qt.point(0, 0)
@@ -58,7 +61,7 @@ Column {
             id: preview
             required property var modelData
             required property int index
-            function attach() { root.attachPreviewItem(line); root.attachPreviewItem(arrow) }
+            function attach() { root.attachPreviewItem(line) }
             MapPolyline {
                 id: line
                 objectName: "caacSimulationPreview_" + preview.modelData.kind + (preview.modelData.kind === "body" ? "_" + preview.index : "")
@@ -69,17 +72,6 @@ Column {
                 line.width: ScreenTools.defaultFontPixelWidth * 0.3
                 z: QGroundControl.zOrderWaypointLines
                 Component.onDestruction: { if (attachedMap) { attachedMap.removeMapItem(line) } }
-            }
-            MapLineArrow {
-                id: arrow
-                property var attachedMap: null
-                mapControl: root.editorMap
-                fromCoord: preview.modelData.coordinate1
-                toCoord: preview.modelData.coordinate2
-                arrowPosition: 3
-                visible: root.visible && root.enabled
-                z: QGroundControl.zOrderWaypointLines + 1
-                Component.onDestruction: { if (attachedMap) { attachedMap.removeMapItem(arrow) } }
             }
             Component.onCompleted: attach()
         }
@@ -113,7 +105,8 @@ Column {
         && _managerVehicle && _managerVehicle === QGroundControl.multiVehicleManager.activeVehicle
         && _managerVehicle.initialConnectComplete && !planMasterController.syncInProgress
         && !editorController.rotationPreviewActive
-    readonly property real _transferHeight: waypointTransfer.visible ? waypointTransfer.height : 0
+    readonly property real _transferHeight: (waypointTransfer.visible ? waypointTransfer.height : 0)
+        + (fileActions.visible ? fileActions.height + root.spacing : 0)
     property bool _pickingCenter: false
     property bool _pickingHome: false
     property int measurePick: 0
@@ -121,10 +114,27 @@ Column {
         && measurePick === 0 && !routeDragMode
     property var measureA: QtPositioning.coordinate()
     property var measureB: QtPositioning.coordinate()
-    onVisibleChanged: { if (!visible) { measurePick = 0; _pickingHome = false } }
+    onVisibleChanged: {
+        if (!visible) { measurePick = 0; _pickingHome = false }
+        else { activePanel = -1; showMissionTree = false }
+    }
     onEnabledChanged: { if (!enabled) { measurePick = 0; _pickingHome = false } }
     property int _pendingOperation: 0
     property var _draggedWaypoint: null
+    property var _dragGuides: []
+    function snapDraggedWaypoint(item, coordinate) {
+        const point = editorMap.fromCoordinate(coordinate, false)
+        const nearby = editorMap.toCoordinate(Qt.point(point.x + ScreenTools.defaultFontPixelHeight * 0.75, point.y), false)
+        const tolerance = QGroundControl.corePlugin.routeLegMetrics(coordinate, nearby).distance
+        const result = editorController.snapWaypointDrag(item, coordinate, tolerance)
+        _dragGuides = result.guides || []
+        return result.coordinate || coordinate
+    }
+    Binding {
+        target: root.editorMap
+        property: "missionItemDragEditor"
+        value: root.routeInsertionEnabled ? root : null
+    }
     readonly property var _dragLeg: _draggedWaypoint && editorController.coordinateItems.length > 0
         ? editorController.waypointLeg(_draggedWaypoint) : ({})
 
@@ -134,6 +144,7 @@ Column {
         root.activePanel = 3
         root.showMissionTree = true
     }
+    function openHomeRelations() { homeRelationsFactory.open() }
     function openSimulation() {
         const simulation = QGroundControl.corePlugin.simulation
         if (simulation.active) { simulation.stop() }
@@ -153,12 +164,12 @@ Column {
     Rectangle {
         parent: root.parent
         x: root.x
-        y: root.y
+        y: root.y + panelNavigation.height
         width: root.width
-        height: root.height
+        height: Math.max(0, root.height - panelNavigation.height)
         transform: Translate { x: root._panelDragOffset.x; y: root._panelDragOffset.y }
         z: -1
-        visible: root.enabled && root.visible && !root.showMissionTree
+        visible: root.enabled && root.visible && !root.showMissionTree && !root.panelsCollapsed
         color: dragPalette.window
         opacity: 0.85
         DeadMouseArea { anchors.fill: parent }
@@ -245,6 +256,18 @@ Column {
         mapControl: root.editorMap
         segments: root.planMasterController ? root.planMasterController.missionController.simpleFlightPathSegments : null
         previewSegments: root.simulationPreviewActive ? root.simulationPreviewSegments : []
+    }
+
+    CaacWaypointGuides {
+        parent: root.editorMap
+        anchors.fill: parent
+        visible: root.enabled && root.visible
+        mapControl: root.editorMap
+        guides: root._draggedWaypoint ? root._dragGuides : []
+        angles: {
+            editorController.coordinateItems
+            return editorController.waypointAngles((root.simulationPreviewSettings || editorController.simulationSettings).closed)
+        }
     }
 
     CaacMeasureMap {
@@ -421,67 +444,104 @@ Column {
     }
 
     Rectangle {
-        parent: root.editorMap
+        objectName: "caacMapEditTools"
+        parent: root.editorMap ? root.editorMap.parent : null
         visible: root.enabled && root.visible
-        z: QGroundControl.zOrderWidgets
-        x: (root.editorMap ? root.editorMap._leftToolWidth : 0) + ScreenTools.defaultFontPixelWidth
-        y: ScreenTools.defaultFontPixelHeight * 3
-        width: root.editorMap ? Math.max(0, Math.min(toolRow.implicitWidth,
-            root.editorMap.width - root.width - x - ScreenTools.defaultFontPixelWidth)) : 0
-        height: toolRow.implicitHeight
-        color: dragPalette.window
-        radius: ScreenTools.defaultBorderRadius
-
-        RowLayout {
-            id: toolRow
-            anchors.fill: parent
-            spacing: ScreenTools.defaultFontPixelWidth * 0.5
-
-            QGCButton {
-                objectName: "caacUndo"
-                pointSize: ScreenTools.menuFontPointSize
-                Layout.fillWidth: true
-                text: qsTr("Undo")
-                heightFactor: 0.25
-                leftPadding: ScreenTools.defaultFontPixelWidth
-                rightPadding: leftPadding
-                enabled: editorController.canUndo
-                onClicked: editorController.undo()
-            }
-            QGCButton {
-                objectName: "caacRedo"
-                pointSize: ScreenTools.menuFontPointSize
-                Layout.fillWidth: true
-                text: qsTr("Redo")
-                heightFactor: 0.25
-                leftPadding: ScreenTools.defaultFontPixelWidth
-                rightPadding: leftPadding
-                enabled: editorController.canRedo
-                onClicked: editorController.redo()
-            }
-            QGCButton {
-                objectName: "caacRotateRoute"
-                pointSize: ScreenTools.menuFontPointSize
-                Layout.fillWidth: true
-                text: qsTr("Rotate / align")
-                heightFactor: 0.25
-                leftPadding: ScreenTools.defaultFontPixelWidth
-                rightPadding: leftPadding
-                onClicked: root.openGeometry(1)
-            }
-            QGCButton {
-                objectName: "caacRelativePoint"
-                pointSize: ScreenTools.menuFontPointSize
-                Layout.fillWidth: true
-                text: qsTr("Relative point")
-                heightFactor: 0.25
-                leftPadding: ScreenTools.defaultFontPixelWidth
-                rightPadding: leftPadding
-                onClicked: {
-                    root.showMissionTree = false
-                    root.activePanel = 1
+        z: QGroundControl.zOrderWidgets + 4
+        anchors.left: parent.left
+        anchors.bottom: parent.bottom
+        anchors.margins: ScreenTools.defaultFontPixelWidth * 0.75
+        width: ScreenTools.defaultFontPixelHeight * 1.25
+        height: rail.implicitHeight
+        color: "#bb202326"
+        radius: ScreenTools.defaultFontPixelWidth
+        Column {
+            id: rail
+            width: parent.width
+            component RailButton: QGCButton {
+                id: button
+                property string toolKind
+                width: rail.width
+                height: width
+                leftPadding: 0
+                rightPadding: 0
+                topPadding: 0
+                bottomPadding: 0
+                Accessible.name: text
+                ToolTip.visible: hovered
+                ToolTip.text: text
+                background: Rectangle { color: button.hovered && button.enabled ? "#39423e" : "transparent"; radius: ScreenTools.defaultBorderRadius }
+                contentItem: Canvas {
+                    opacity: button.enabled ? 1 : 0.35
+                    onPaint: {
+                        const ctx = getContext("2d")
+                        ctx.reset()
+                        ctx.strokeStyle = "#ffffff"
+                        ctx.lineWidth = width * 0.05
+                        ctx.lineCap = "round"
+                        if (button.toolKind === "center") {
+                            ctx.beginPath(); ctx.arc(width / 2, height / 2, width * 0.18, 0, Math.PI * 2)
+                            for (let i = 0; i < 4; ++i) {
+                                const angle = i * Math.PI / 2
+                                ctx.moveTo(width / 2 + Math.cos(angle) * width * 0.22, height / 2 + Math.sin(angle) * width * 0.22)
+                                ctx.lineTo(width / 2 + Math.cos(angle) * width * 0.34, height / 2 + Math.sin(angle) * width * 0.34)
+                            }
+                            ctx.stroke()
+                        } else if (button.toolKind === "undo" || button.toolKind === "redo") {
+                            if (button.toolKind === "redo") { ctx.translate(width, 0); ctx.scale(-1, 1) }
+                            ctx.beginPath()
+                            ctx.moveTo(width * 0.28, height * 0.35)
+                            ctx.lineTo(width * 0.61, height * 0.35)
+                            ctx.bezierCurveTo(width * 0.86, height * 0.35, width * 0.86, height * 0.68, width * 0.61, height * 0.68)
+                            ctx.lineTo(width * 0.35, height * 0.68)
+                            ctx.moveTo(width * 0.4, height * 0.22)
+                            ctx.lineTo(width * 0.27, height * 0.35)
+                            ctx.lineTo(width * 0.4, height * 0.48)
+                            ctx.stroke()
+                        } else {
+                            ctx.beginPath()
+                            ctx.moveTo(width * 0.27, height / 2); ctx.lineTo(width * 0.73, height / 2)
+                            if (button.toolKind === "zoomIn") { ctx.moveTo(width / 2, height * 0.27); ctx.lineTo(width / 2, height * 0.73) }
+                            ctx.stroke()
+                        }
+                    }
                 }
             }
+            RailButton {
+                id: centerButton
+                objectName: "caacHomeCenterButton"
+                text: qsTr("Click: center map on takeoff point. Double-click: center map on aircraft.")
+                toolKind: "center"
+                readonly property var vehicle: QGroundControl.multiVehicleManager.activeVehicle
+                readonly property var home: root.planMasterController ? root.planMasterController.missionController.plannedHomePosition : null
+                enabled: (home && home.isValid) || (vehicle && vehicle.coordinate.isValid)
+                onClicked: singleClick.restart()
+                Timer {
+                    id: singleClick
+                    objectName: "caacMapCenterSingleClickTimer"
+                    interval: Qt.styleHints.mouseDoubleClickInterval
+                    onTriggered: {
+                        if (centerButton.home && centerButton.home.isValid) {
+                            root.editorMap.center = centerButton.home
+                        }
+                    }
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.LeftButton
+                    onClicked: singleClick.restart()
+                    onDoubleClicked: {
+                        singleClick.stop()
+                        if (centerButton.vehicle && centerButton.vehicle.coordinate.isValid) {
+                            root.editorMap.center = centerButton.vehicle.coordinate
+                        }
+                    }
+                }
+            }
+            RailButton { objectName: "caacUndo"; text: qsTr("Undo"); toolKind: "undo"; enabled: editorController.canUndo; onClicked: editorController.undo() }
+            RailButton { objectName: "caacRedo"; text: qsTr("Redo"); toolKind: "redo"; enabled: editorController.canRedo; onClicked: editorController.redo() }
+            RailButton { objectName: "caacMapZoomIn"; text: qsTr("Zoom in"); toolKind: "zoomIn"; enabled: root.editorMap.zoomLevel < root.editorMap.maximumZoomLevel; onClicked: root.editorMap.zoomLevel = Math.min(root.editorMap.maximumZoomLevel, root.editorMap.zoomLevel + 1) }
+            RailButton { objectName: "caacMapZoomOut"; text: qsTr("Zoom out"); toolKind: "zoomOut"; enabled: root.editorMap.zoomLevel > root.editorMap.minimumZoomLevel; onClicked: root.editorMap.zoomLevel = Math.max(root.editorMap.minimumZoomLevel, root.editorMap.zoomLevel - 1) }
         }
     }
 
@@ -494,24 +554,32 @@ Column {
             required property int panelIndex
             Layout.fillWidth: true
             Layout.minimumWidth: 0
-            Layout.preferredHeight: Math.min(ScreenTools.defaultFontPixelHeight * 3,
+            readonly property real iconSize: Math.min(ScreenTools.defaultFontPixelHeight * 2.5,
                 (root.width - panelNavigation.spacing * 3) / 4)
+            Layout.preferredHeight: iconSize + ScreenTools.defaultFontPixelHeight
             checked: !root.showMissionTree && root.activePanel === panelIndex
             Accessible.name: text
             ToolTip.visible: hovered
             ToolTip.text: text
             background: Rectangle {
-                anchors.centerIn: parent
-                width: Math.min(parent.width, parent.height)
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: parent.top
+                width: button.iconSize
                 height: width
-                radius: width / 2
-                color: button.checked ? dragPalette.colorYellowGreen : "#ffffff"
+                radius: ScreenTools.defaultFontPixelWidth * 0.7
+                color: button.checked ? "#245b46" : "#d9232629"
+                border.width: 1
+                border.color: button.checked ? "#40d58b" : "#a0a5aa"
             }
             contentItem: Canvas {
+                anchors.top: parent.top
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: button.iconSize
+                height: width
                 onPaint: {
                     const ctx = getContext("2d")
                     ctx.reset()
-                    ctx.strokeStyle = "#111111"
+                    ctx.strokeStyle = "#ffffff"
                     ctx.fillStyle = ctx.strokeStyle
                     ctx.lineWidth = ScreenTools.defaultFontPixelWidth / 3
                     if (button.panelIndex === 0) {
@@ -564,19 +632,32 @@ Column {
                     }
                 }
             }
+            QGCLabel {
+                anchors.bottom: parent.bottom
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: parent.width
+                text: button.text
+                horizontalAlignment: Text.AlignHCenter
+                font.pointSize: ScreenTools.smallFontPointSize
+                color: "white"
+                style: Text.Outline
+                styleColor: "#222222"
+            }
             onClicked: {
+                const wasActive = !root.showMissionTree && root.activePanel === panelIndex
                 root.showMissionTree = false
-                root.activePanel = panelIndex
+                root.activePanel = wasActive ? -1 : panelIndex
             }
         }
-        PanelButton { objectName: "caacGlobalSettingsButton"; panelIndex: 0; text: qsTr("Global") }
-        PanelButton { objectName: "caacRelativeEditorButton"; panelIndex: 1; text: qsTr("Relative") }
+        PanelButton { objectName: "caacGlobalSettingsButton"; panelIndex: 0; text: qsTr("Global settings") }
+        PanelButton { objectName: "caacRelativeEditorButton"; panelIndex: 1; text: qsTr("Relative coordinate editor") }
         PanelButton { objectName: "caacTemplateEditorButton"; panelIndex: 2; text: qsTr("Template") }
         PanelButton { objectName: "caacWaypointListButton"; panelIndex: 3; text: qsTr("Points") }
     }
 
     Rectangle {
         id: listHeader
+        visible: !root.panelsCollapsed
         width: root.width
         height: headerContent.implicitHeight + ScreenTools.defaultFontPixelHeight
         color: dragPalette.windowShade
@@ -598,7 +679,7 @@ Column {
                 Layout.fillWidth: true
                 text: root.activePanel === 0 ? qsTr("Global settings") : root.activePanel === 2 ? qsTr("Template editor")
                     : root.relativeEditorVisible ? qsTr("Relative coordinate editor")
-                    : root.showMissionTree ? qsTr("Advanced mission settings") : qsTr("Waypoint list")
+                    : root.showMissionTree ? qsTr("Advanced mission settings") : qsTr("Waypoint settings")
                 font.bold: true
                 wrapMode: Text.WordWrap
                 horizontalAlignment: Text.AlignHCenter
@@ -671,7 +752,7 @@ Column {
         id: waypointList
         objectName: "caacWaypointList"
         width: root.width
-        height: Math.max(ScreenTools.defaultFontPixelHeight * 5,
+        height: Math.max(ScreenTools.defaultFontPixelHeight * 1.5,
             root.height - panelNavigation.height - listHeader.height - waypointBatchActions.height - pointActions.height - root._transferHeight - root._settingsButtonHeight - helpLabel.height
             - root.spacing * 6)
         visible: !root.showMissionTree && root.activePanel === 3
@@ -819,6 +900,16 @@ Column {
         }
     }
 
+    PlanToolBarIndicators {
+        id: fileActions
+        objectName: "caacWaypointFileActions"
+        width: root.width
+        visible: root.activePanel === 3 && !root.showMissionTree
+        compact: true
+        planMasterController: root.planMasterController
+        onToolbarButtonClicked: waypointPopup.close()
+    }
+
     RowLayout {
         id: waypointTransfer
         objectName: "caacWaypointTransferActions"
@@ -830,6 +921,7 @@ Column {
             Layout.fillWidth: true
             Layout.minimumWidth: 0
             pointSize: ScreenTools.menuFontPointSize
+            heightFactor: 0.25
             text: qsTr("Read waypoints")
             enabled: root._canTransfer
             onClicked: {
@@ -837,16 +929,6 @@ Column {
                 if (root.planMasterController.dirtyForSave) { readWaypointsFactory.open() }
                 else { root.planMasterController.loadFromVehicle() }
             }
-        }
-        QGCButton {
-            objectName: "caacUploadWaypoints"
-            Layout.fillWidth: true
-            Layout.minimumWidth: 0
-            pointSize: ScreenTools.menuFontPointSize
-            primary: true
-            text: qsTr("Upload waypoints")
-            enabled: root._canTransfer && root.planMasterController.containsItems
-            onClicked: { waypointPopup.close(); root.planMasterController.upload() }
         }
     }
     QGCPopupDialogFactory {
@@ -892,6 +974,7 @@ Column {
 
     QGCLabel {
         id: helpLabel
+        visible: !root.panelsCollapsed
         width: root.width
         wrapMode: Text.WordWrap
         font.pointSize: ScreenTools.smallFontPointSize
@@ -930,6 +1013,10 @@ Column {
         }
     }
 
+    QGCPopupDialogFactory {
+        id: homeRelationsFactory
+        dialogComponent: Component { CaacHomeRelationsDialog { routeController: editorController } }
+    }
     QGCPopupDialogFactory {
         id: geometryDialogFactory
         dialogComponent: Component {
@@ -1002,10 +1089,12 @@ Column {
             waypointPopup.close()
             editorController.cancelRouteOrientation()
             root._draggedWaypoint = item
+            root._dragGuides = []
             editorController.beginEdit()
         }
         function onMissionItemDragFinished(item) {
             root._draggedWaypoint = null
+            root._dragGuides = []
             editorController.endEdit()
         }
         function onMissionItemEditRequested(item) {

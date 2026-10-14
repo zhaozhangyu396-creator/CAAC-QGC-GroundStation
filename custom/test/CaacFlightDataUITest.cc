@@ -2,6 +2,7 @@
 #include <QtCore/QScopeGuard>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QImage>
+#include <QtGui/QWheelEvent>
 #include <QtQml/QJSValue>
 #include <QtQuick/QQuickItem>
 #include <QtQuick/QQuickWindow>
@@ -10,10 +11,13 @@
 #include "CaacCorePlugin.h"
 #include "CaacFlightDistance.h"
 #include "Fact.h"
+#include "MissionController.h"
 #include "MockLink.h"
 #include "ParameterManager.h"
+#include "PlanMasterController.h"
 #include "QGCGeo.h"
 #include "QmlUITestBase.h"
+#include "TrajectoryPoints.h"
 #include "Vehicle.h"
 
 class CaacFlightDataUITest : public QmlUITestBase
@@ -22,7 +26,61 @@ class CaacFlightDataUITest : public QmlUITestBase
 
 private slots:
     void _liveFlightData();
+    void _dashboardInteractions();
 };
+
+void CaacFlightDataUITest::_dashboardInteractions()
+{
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    Vehicle* vehicle = nullptr;
+    auto mock = connectMockLinkAndWaitReady([]() { return MockLink::startPX4MockLink(); }, vehicle);
+    QVERIFY(mock && vehicle);
+    auto* dashboard = findVisibleItem(_rootItem, QStringLiteral("caacFlightDashboard"));
+    auto* footer = findVisibleItem(_rootItem, QStringLiteral("caacFlightTelemetryBar"));
+    auto* arrow = findVisibleItem(_rootItem, QStringLiteral("caacTelemetryHeadingArrow"));
+    QVERIFY(dashboard && footer && arrow);
+    const auto previousHeading = vehicle->heading()->rawValue();
+    vehicle->heading()->setRawValue(123.4);
+    QTRY_VERIFY_WITH_TIMEOUT(std::abs(arrow->property("headingAngle").toDouble() - 123.4) < 1e-6,
+                             TestTimeout::mediumMs());
+    auto* heading = findVisibleItem(_rootItem, QStringLiteral("caacDashboardHeadingValue"));
+    QVERIFY(heading);
+    QVERIFY(heading->property("text").toString().startsWith(vehicle->heading()->cookedValueString()));
+    vehicle->heading()->setRawValue(previousHeading);
+    for (const auto* key : {"Altitude", "Speed", "GPS", "Pitch", "Voltage", "HomeDistance", "Roll"}) {
+        QVERIFY(
+            findVisibleItem(_rootItem, QStringLiteral("caacDashboard") + QLatin1String(key) + QStringLiteral("Value")));
+    }
+    const auto beforeWidth = dashboard->width();
+    QVERIFY(clickButton(QStringLiteral("caacDashboardZoomButton")));
+    QTRY_VERIFY_WITH_TIMEOUT(dashboard->width() > beforeWidth, TestTimeout::mediumMs());
+    QVERIFY(clickButton(QStringLiteral("caacDashboardZoomButton")));
+    QTRY_VERIFY_WITH_TIMEOUT(std::abs(dashboard->width() - beforeWidth) < 1, TestTimeout::mediumMs());
+    auto* drag = findVisibleItem(_rootItem, QStringLiteral("caacDashboardDragArea"));
+    QVERIFY(drag);
+    const auto press = drag->mapToScene(QPointF(drag->width() / 2, drag->height() / 3)).toPoint();
+    const auto before = dashboard->mapToScene(QPointF());
+    QTest::mousePress(_window, Qt::LeftButton, Qt::NoModifier, press);
+    for (int i = 1; i <= 4; ++i) {
+        QTest::mouseMove(_window, press - QPoint(i * 15, i * 8));
+    }
+    QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, press - QPoint(60, 32));
+    QTRY_VERIFY_WITH_TIMEOUT(dashboard->mapToScene(QPointF()).x() < before.x() - 20, TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(dashboard->mapToScene(QPointF()).y() < before.y() - 10, TestTimeout::mediumMs());
+    const auto wheelPosition = drag->mapToScene(QPointF(drag->width() / 2, drag->height() / 3));
+    QTest::mouseMove(_window, wheelPosition.toPoint());
+    QWheelEvent wheel(wheelPosition, _window->mapToGlobal(wheelPosition.toPoint()), QPoint(), QPoint(0, 120),
+                      Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+    QCoreApplication::sendEvent(_window, &wheel);
+    QTRY_VERIFY_WITH_TIMEOUT(dashboard->property("sizeFactor").toDouble() > 1, TestTimeout::mediumMs());
+    if (const auto screenshot = qgetenv("CAAC_DASHBOARD_UI_SCREENSHOT"); !screenshot.isEmpty()) {
+        QVERIFY(_window->grabWindow().save(QString::fromUtf8(screenshot)));
+    }
+    disconnectMockLink(mock);
+}
 
 void CaacFlightDataUITest::_liveFlightData()
 {
@@ -30,7 +88,10 @@ void CaacFlightDataUITest::_liveFlightData()
     if (QTest::currentTestFailed()) {
         return;
     }
-    QVERIFY(verifyEnabled(QStringLiteral("caacCenterVehicleButton"), false, QStringLiteral("no aircraft")));
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacCenterVehicleButton"), 0));
+    QVERIFY(verifyText(QStringLiteral("caacTopFlightTime"), QStringLiteral("00:00:00"), QStringLiteral("no aircraft")));
+    QVERIFY(verifyText(QStringLiteral("caacConnectionStatusButton"), QStringLiteral("未连接"),
+                       QStringLiteral("no aircraft")));
     QVERIFY(clickButton(QStringLiteral("caacMissionDetailsButton")));
     QVERIFY(verifyVisibility(QStringLiteral("caacMissionDetailsPanel"), true, QStringLiteral("mission panel")));
     QVERIFY(verifyText(QStringLiteral("caacMissionTarget"),
@@ -56,6 +117,9 @@ void CaacFlightDataUITest::_liveFlightData()
         QVERIFY(QTest::qWaitForWindowActive(_window));
     }
     QVERIFY(clickButton(QStringLiteral("caacMapDoubleClickAdd")));
+    if (const auto screenshot = qgetenv("CAAC_COMBO_UI_SCREENSHOT"); !screenshot.isEmpty()) {
+        QVERIFY(_window->grabWindow().save(QString::fromUtf8(screenshot)));
+    }
     QTest::keyClick(_window, Qt::Key_Home);
     QTest::keyClick(_window, Qt::Key_Return);
     auto* preferences = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
@@ -71,13 +135,15 @@ void CaacFlightDataUITest::_liveFlightData()
     QVERIFY(handle);
     QVERIFY(scrollIntoView(handle, QStringLiteral("caacFlyPanelsScroller")));
     const auto beforeDrag = handle->mapToScene(QPointF(0, 0));
+    const int dragDirection = beforeDrag.x() < _rootItem->width() / 2 ? 1 : -1;
     const auto press = handle->mapToScene(QPointF(handle->width() / 2, handle->height() / 2)).toPoint();
     QTest::mousePress(_window, Qt::LeftButton, Qt::NoModifier, press);
     for (int i = 1; i <= 4; ++i) {
-        QTest::mouseMove(_window, press - QPoint(i * 10, 0));
+        QTest::mouseMove(_window, press + QPoint(dragDirection * i * 10, 0));
     }
-    QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, press - QPoint(40, 0));
-    QTRY_VERIFY_WITH_TIMEOUT(handle->mapToScene(QPointF(0, 0)).x() < beforeDrag.x() - 10, TestTimeout::mediumMs());
+    QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, press + QPoint(dragDirection * 40, 0));
+    QTRY_VERIFY_WITH_TIMEOUT(dragDirection * (handle->mapToScene(QPointF(0, 0)).x() - beforeDrag.x()) > 10,
+                             TestTimeout::mediumMs());
     auto* pagination = findVisibleItem(_rootItem, QStringLiteral("caacFlightDataPagination"));
     QVERIFY(pagination);
     QVERIFY(scrollIntoView(pagination, QStringLiteral("caacFlyPanelsScroller")));
@@ -96,6 +162,19 @@ void CaacFlightDataUITest::_liveFlightData()
         return;
     }
     const auto disconnect = qScopeGuard([&]() { disconnectMockLink(mock); });
+    QVERIFY(verifyText(QStringLiteral("caacConnectionStatusButton"), QStringLiteral("已连接"),
+                       QStringLiteral("aircraft connected")));
+    {
+        auto* flightTime = vehicle->getFact(QStringLiteral("flightTime"));
+        QVERIFY(flightTime);
+        const auto initialTime = flightTime->rawValue();
+        const auto restoreTime = qScopeGuard([&]() { flightTime->setRawValue(initialTime); });
+        flightTime->setRawValue(3661);
+        auto* timeLabel = findVisibleItem(_rootItem, QStringLiteral("caacTopFlightTime"));
+        QVERIFY(timeLabel);
+        QTRY_COMPARE_WITH_TIMEOUT(timeLabel->property("text").toString(), QStringLiteral("01:01:01"),
+                                  TestTimeout::mediumMs());
+    }
     {
         const QStringList expectedModes{QStringLiteral("手动模式"), QStringLiteral("姿态模式"),
                                         QStringLiteral("手动特技"), QStringLiteral("定高模式"),
@@ -178,7 +257,7 @@ void CaacFlightDataUITest::_liveFlightData()
     QVERIFY(verifyText(QStringLiteral("caacNorthDistanceValue"), QStringLiteral("0.0"),
                        QStringLiteral("simulation reset API")));
 
-    auto* layer = findItem(_rootItem, QStringLiteral("caacFlyLayer"));
+    auto* layer = findVisibleItem(_rootItem, QStringLiteral("caacFlyLayer"));
     QVERIFY(layer);
     auto* map = layer->property("mapControl").value<QObject*>();
     QVERIFY(map);
@@ -186,14 +265,54 @@ void CaacFlightDataUITest::_liveFlightData()
     QVERIFY(QMetaObject::invokeMethod(map, "mapPanStart"));
     QVERIFY(map->setProperty("center", QVariant::fromValue(QGeoCoordinate(-30, -120))));
     QVERIFY(QMetaObject::invokeMethod(map, "mapPanStop"));
-    QVERIFY(clickButton(QStringLiteral("caacCenterVehicleButton")));
+    auto* center = findVisibleItem(_rootItem, QStringLiteral("caacHomeCenterButton"));
+    QVERIFY(center && center->isEnabled());
+    auto* master = map->property("planMasterController").value<PlanMasterController*>();
+    QVERIFY(master);
+    master->missionController()->setHomePosition(QGCGeo::geodesicDestination(vehicle->coordinate(), 90, 200));
+    const auto homeBefore = master->missionController()->plannedHomePosition();
+    const auto missionBefore = master->saveToJson();
+    QVERIFY(homeBefore.isValid());
+    QVERIFY(clickButton(QStringLiteral("caacHomeCenterButton")));
+    QTRY_VERIFY_WITH_TIMEOUT(
+        QGCGeo::geodesicDistance(map->property("center").value<QGeoCoordinate>(), homeBefore) < 0.01,
+        TestTimeout::mediumMs());
+    QCOMPARE(master->saveToJson(), missionBefore);
+    QVERIFY(map->setProperty("center", QVariant::fromValue(QGeoCoordinate(-30, -120))));
+    const auto centerPosition = center->mapToScene(QPointF(center->width() / 2, center->height() / 2)).toPoint();
+    QTest::mouseClick(_window, Qt::LeftButton, Qt::NoModifier, centerPosition);
+    QTest::mouseDClick(_window, Qt::LeftButton, Qt::NoModifier, centerPosition);
     QTRY_VERIFY_WITH_TIMEOUT(
         QGCGeo::geodesicDistance(map->property("center").value<QGeoCoordinate>(), vehicle->coordinate()) < 0.01,
         TestTimeout::mediumMs());
+    QCOMPARE(master->missionController()->plannedHomePosition(), homeBefore);
+    QCOMPARE(master->saveToJson(), missionBefore);
+    const auto timers = center->findChildren<QObject*>(QStringLiteral("caacMapCenterSingleClickTimer"));
+    QCOMPARE(timers.size(), 1);
+    QVERIFY(!timers.first()->property("running").toBool());
+    auto* trajectory = vehicle->property("trajectoryPoints").value<TrajectoryPoints*>();
+    QVERIFY(trajectory);
+    trajectory->start();
+    QVERIFY(QMetaObject::invokeMethod(trajectory, "_vehicleCoordinateChanged", Qt::DirectConnection,
+                                      Q_ARG(QGeoCoordinate, vehicle->coordinate())));
+    QVERIFY(
+        QMetaObject::invokeMethod(trajectory, "_vehicleCoordinateChanged", Qt::DirectConnection,
+                                  Q_ARG(QGeoCoordinate, QGCGeo::geodesicDestination(vehicle->coordinate(), 45, 20))));
+    trajectory->stop();
+    QVERIFY(!trajectory->list().isEmpty());
+    auto* mapTrajectory = findVisibleItem(_rootItem, QStringLiteral("caacFlightTrajectory"));
+    QVERIFY(mapTrajectory);
+    QSignalSpy cleared(trajectory, &TrajectoryPoints::pointsCleared);
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacClearTrajectoryButton"), QStringLiteral("caacMainToolsScroller")));
+    QCOMPARE(cleared.count(), 1);
+    QVERIFY(trajectory->list().isEmpty());
+    QCOMPARE(master->saveToJson(), missionBefore);
     disconnectMockLink(mock);
     mock.clear();
     QVERIFY(verifyText(QStringLiteral("caacNorthDistanceValue"), unavailable, QStringLiteral("aircraft disconnected")));
-    QVERIFY(verifyEnabled(QStringLiteral("caacCenterVehicleButton"), false, QStringLiteral("aircraft disconnected")));
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacCenterVehicleButton"), 0));
+    QVERIFY(verifyText(QStringLiteral("caacConnectionStatusButton"), QStringLiteral("未连接"),
+                       QStringLiteral("aircraft disconnected")));
 }
 
 UT_REGISTER_TEST(CaacFlightDataUITest, TestLabel::Integration, TestLabel::Vehicle)

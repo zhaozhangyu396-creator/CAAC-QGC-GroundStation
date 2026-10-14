@@ -23,6 +23,11 @@ Item {
         ? customEditor.editorItem.routeController || null : null
     readonly property var simulationPreviewSegments: simulationPreviewActive
         ? customEditor.editorItem.simulationPreviewSegments : []
+    readonly property bool panelsCollapsed: !customEditor.editorItem || customEditor.editorItem.panelsCollapsed
+    readonly property real navigationHeight: customEditor.editorItem ? customEditor.editorItem.navigationHeight : 0
+    function collapsePanels() {
+        if (customEditor.editorItem) { customEditor.editorItem.activePanel = -1; customEditor.editorItem.showMissionTree = false }
+    }
     property var  _missionController: planMasterController.missionController
     property real _toolsMargin:       ScreenTools.defaultFontPixelWidth * 0.75
 
@@ -123,7 +128,7 @@ Item {
             anchors.right: parent.right
             source: QGroundControl.corePlugin.planViewEditor
             readonly property var editorItem: item
-            height: !enabled ? 0 : editorItem && editorItem.showMissionTree === false
+            height: !enabled ? 0 : editorItem && editorItem.showMissionTree === false && !editorItem.panelsCollapsed
                 ? parent.height : editorItem ? editorItem.implicitHeight : 0
             enabled: root.editorMap.directMissionItemEditing
             visible: enabled

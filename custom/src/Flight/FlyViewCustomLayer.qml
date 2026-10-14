@@ -13,21 +13,29 @@ Item {
     property var occluders
     property var flightToolStrip
     property var mapControl
+    property bool planningOverlay: false
+    property bool planningPaneExpanded: false
+    property real planningNavigationHeight: 0
+    property real reservedBottomHeight: 0
+    property var missionControllerOverride: null
     property var customOccluders: tools.visible ? [Qt.rect(tools.x, tools.y, tools.width, tools.height)] : []
 
     readonly property bool _simulationEmergency: _corePlugin.simulation.emergencyMode
     property Component _emergencyDialog: Component { CaacSimulationEmergencyDialog { } }
     readonly property var _vehicle: QGroundControl.multiVehicleManager.activeVehicle
     readonly property var _corePlugin: QGroundControl.corePlugin
-    readonly property var _missionController: mapControl && mapControl.planMasterController
-        ? mapControl.planMasterController.missionController : null
+    readonly property var _missionController: missionControllerOverride || (mapControl && mapControl.planMasterController
+        ? mapControl.planMasterController.missionController : null)
     readonly property real _margin: ScreenTools.defaultFontPixelWidth
-    readonly property bool _canCenter: _vehicle && _vehicle.coordinate.isValid && mapControl
     property point _panelOffset: Qt.point(0, 0)
+    readonly property real _panelBottom: !root.planningOverlay && root.occluders
+        ? Math.min(root.occluders.bottomRight.y, root.occluders.virtualJoystickRight.y)
+        : root.height - Math.max(root.reservedBottomHeight,
+            root.planningOverlay ? ScreenTools.defaultFontPixelHeight * 5 * 1.25 + root._margin * 2 : 0)
 
     function movePanelGroup(delta) {
         const x = Math.max(root._margin, Math.min(tools.x + delta.x, root.width - tools.width - root._margin))
-        const bottom = root.occluders ? Math.min(root.occluders.bottomRight.y, root.occluders.virtualJoystickRight.y) : root.height
+        const bottom = root._panelBottom
         const y = Math.max(root._margin, Math.min(tools.y + delta.y, bottom - toolbar.height - root._margin * 2))
         _panelOffset = Qt.point(_panelOffset.x + x - tools.x, _panelOffset.y + y - tools.y)
     }
@@ -41,23 +49,35 @@ Item {
         }
     }
 
-    component RoundTool: QGCButton {
+    component SquareTool: QGCButton {
         id: button
         property string toolIcon: "data"
         Layout.minimumWidth: Layout.preferredWidth
         Layout.maximumWidth: Layout.preferredWidth
-        Layout.preferredWidth: ScreenTools.defaultFontPixelHeight * 3
-        Layout.preferredHeight: Layout.preferredWidth
+        Layout.preferredWidth: ScreenTools.defaultFontPixelHeight * 2.5
+        Layout.preferredHeight: Layout.preferredWidth + ScreenTools.defaultFontPixelHeight
         Accessible.name: text
         ToolTip.visible: hovered
         ToolTip.text: text
         background: Rectangle {
-            radius: width / 2
-            color: button.checked ? caacPalette.colorYellowGreen : (caacPalette.globalTheme === QGCPalette.Dark ? caacPalette.text : caacPalette.button)
-            opacity: button.enabled ? 1 : 0.5
+            anchors.top: parent.top
+            width: button.width
+            height: width
+            radius: ScreenTools.defaultFontPixelWidth * 0.7
+            color: button.checked ? "#245b46" : "#d9232629"
+            border.width: 1
+            border.color: button.checked ? "#40d58b" : "#a0a5aa"
         }
-        contentItem: Canvas {
-            property color iconColor: caacPalette.globalTheme === QGCPalette.Dark ? caacPalette.windowShadeDark : caacPalette.text
+        leftPadding: 0
+        rightPadding: 0
+        topPadding: 0
+        bottomPadding: 0
+        contentItem: Item {
+          Canvas {
+            anchors.top: parent.top
+            width: button.width
+            height: width
+            property color iconColor: "white"
             onIconColorChanged: requestPaint()
             onPaint: {
                 const ctx = getContext("2d")
@@ -65,19 +85,7 @@ Item {
                 ctx.strokeStyle = iconColor
                 ctx.fillStyle = iconColor
                 ctx.lineWidth = ScreenTools.defaultFontPixelWidth / 3
-                if (button.toolIcon === "center") {
-                    ctx.beginPath()
-                    ctx.arc(width / 2, height / 2, width / 5, 0, 2 * Math.PI)
-                    ctx.moveTo(width / 2, height / 8)
-                    ctx.lineTo(width / 2, height * 3 / 8)
-                    ctx.moveTo(width / 2, height * 5 / 8)
-                    ctx.lineTo(width / 2, height * 7 / 8)
-                    ctx.moveTo(width / 8, height / 2)
-                    ctx.lineTo(width * 3 / 8, height / 2)
-                    ctx.moveTo(width * 5 / 8, height / 2)
-                    ctx.lineTo(width * 7 / 8, height / 2)
-                    ctx.stroke()
-                } else if (button.toolIcon === "mission") {
+                if (button.toolIcon === "mission") {
                     ctx.beginPath()
                     ctx.moveTo(width / 2, height / 6)
                     ctx.lineTo(width * 4 / 5, height * 5 / 6)
@@ -101,6 +109,37 @@ Item {
                     ctx.moveTo(width * 3 / 5, height / 4)
                     ctx.lineTo(width * 3 / 5, height * 5 / 6)
                     ctx.stroke()
+                } else if (button.toolIcon === "clearTrajectory") {
+                    ctx.beginPath()
+                    ctx.moveTo(width * 0.58, height * 0.2)
+                    ctx.lineTo(width * 0.79, height * 0.4)
+                    ctx.lineTo(width * 0.51, height * 0.69)
+                    ctx.lineTo(width * 0.3, height * 0.49)
+                    ctx.closePath()
+                    ctx.fill()
+                    ctx.strokeStyle = "#232629"
+                    ctx.beginPath()
+                    ctx.moveTo(width * 0.42, height * 0.38)
+                    ctx.lineTo(width * 0.64, height * 0.58)
+                    ctx.stroke()
+                    ctx.strokeStyle = iconColor
+                    ctx.beginPath()
+                    ctx.moveTo(width * 0.24, height * 0.78)
+                    ctx.lineTo(width * 0.8, height * 0.78)
+                    ctx.stroke()
+                } else if (button.toolIcon === "calculator") {
+                    ctx.fillRect(width * 0.24, height * 0.2, width * 0.52, height * 0.6)
+                    ctx.strokeStyle = "#232629"
+                    ctx.lineWidth = width * 0.045
+                    ctx.beginPath()
+                    ctx.moveTo(width * 0.3, height * 0.35); ctx.lineTo(width * 0.44, height * 0.35)
+                    ctx.moveTo(width * 0.54, height * 0.29); ctx.lineTo(width * 0.67, height * 0.42)
+                    ctx.moveTo(width * 0.67, height * 0.29); ctx.lineTo(width * 0.54, height * 0.42)
+                    ctx.moveTo(width * 0.3, height * 0.6); ctx.lineTo(width * 0.44, height * 0.6)
+                    ctx.moveTo(width * 0.37, height * 0.53); ctx.lineTo(width * 0.37, height * 0.67)
+                    ctx.moveTo(width * 0.54, height * 0.56); ctx.lineTo(width * 0.68, height * 0.56)
+                    ctx.moveTo(width * 0.54, height * 0.65); ctx.lineTo(width * 0.68, height * 0.65)
+                    ctx.stroke()
                 } else {
                     ctx.strokeRect(width / 5, height / 5, width * 3 / 5, height * 3 / 5)
                     for (let i = 0; i < 3; ++i) {
@@ -108,11 +147,24 @@ Item {
                     }
                 }
             }
+          }
+        }
+        QGCLabel {
+            anchors.bottom: parent.bottom
+            width: parent.width
+            text: button.text
+            font.pointSize: ScreenTools.smallFontPointSize
+            horizontalAlignment: Text.AlignHCenter
+            color: "white"
+            style: Text.Outline
+            styleColor: "#222222"
+            fontSizeMode: Text.Fit
+            minimumPointSize: ScreenTools.smallFontPointSize * 0.7
         }
     }
 
     CaacWaypointOverlap {
-        visible: !root._simulationEmergency
+        visible: !root._simulationEmergency && !root.planningOverlay
         anchors.fill: parent
         z: QGroundControl.zOrderMapItems + 1
         mapControl: root.mapControl
@@ -121,7 +173,7 @@ Item {
     }
 
     CaacRouteLegLabels {
-        visible: !root._simulationEmergency
+        visible: !root._simulationEmergency && !root.planningOverlay
         anchors.fill: parent
         mapControl: root.mapControl
         blockedAreas: root.occluders ? root.occluders.all.concat(root.customOccluders) : root.customOccluders
@@ -188,25 +240,36 @@ Item {
         }
     }
 
-    ColumnLayout {
+    RowLayout {
         id: tools
         readonly property real baseY: root.occluders
             ? root.occluders.toolStrip.y + ScreenTools.defaultFontPixelWidth * 0.7 : root._margin
-        x: Math.max(root._margin, Math.min(root.width - width + root._panelOffset.x, root.width - width))
+        x: Math.max(root._margin, Math.min(root._margin + root._panelOffset.x, root.width - width - root._margin))
         y: Math.max(0, Math.min(baseY + root._panelOffset.y,
-            (root.occluders ? Math.min(root.occluders.bottomRight.y, root.occluders.virtualJoystickRight.y) : root.height)
+            root._panelBottom
                 - toolbar.height - root._margin * 2))
-        width: Math.min(ScreenTools.defaultFontPixelWidth * 46, parent.width / 2)
-        readonly property real availableHeight: (root.occluders ? Math.min(root.occluders.bottomRight.y, root.occluders.virtualJoystickRight.y) : root.height) - y - root._margin
-        visible: !root._simulationEmergency && availableHeight > toolbar.height
+        readonly property real panelWidth: Math.min(ScreenTools.defaultFontPixelWidth * 46, parent.width / 2)
+        width: toolbar.implicitWidth + (panelScroller.visible ? panelWidth + spacing : 0)
+        readonly property real availableHeight: root._panelBottom - y - root._margin
+        visible: !root._simulationEmergency && (!root.planningPaneExpanded || root.planningOverlay)
+            && availableHeight > 0
         spacing: root._margin
 
-        RowLayout {
+        QGCFlickable {
+            id: toolbarScroller
+            objectName: "caacMainToolsScroller"
+            Layout.alignment: Qt.AlignTop
+            Layout.preferredWidth: toolbar.implicitWidth
+            Layout.preferredHeight: Math.min(toolbar.implicitHeight, tools.availableHeight)
+            Layout.fillHeight: false
+            contentWidth: width
+            contentHeight: toolbar.implicitHeight
+            clip: true
+          ColumnLayout {
             id: toolbar
-            Layout.fillWidth: true
-            Layout.leftMargin: ScreenTools.defaultFontPixelWidth * 0.7
-            Layout.rightMargin: ScreenTools.defaultFontPixelWidth * 0.7
-            RoundTool {
+            width: parent.width
+            spacing: root._margin * 0.5
+            SquareTool {
                 id: missionButton
                 objectName: "caacMissionDetailsButton"
                 text: qsTr("Mission details")
@@ -214,16 +277,14 @@ Item {
                 checkable: true
                 onCheckedChanged: root.selectPanel(this)
             }
-            Item { Layout.fillWidth: true }
-            RoundTool {
+            SquareTool {
                 id: dataButton
                 objectName: "caacFlightDataButton"
                 text: qsTr("Flight data")
                 checkable: true
                 onCheckedChanged: root.selectPanel(this)
             }
-            Item { Layout.fillWidth: true }
-            RoundTool {
+            SquareTool {
                 id: mapButton
                 objectName: "caacMapSettingsButton"
                 text: qsTr("Map settings")
@@ -231,24 +292,30 @@ Item {
                 checkable: true
                 onCheckedChanged: root.selectPanel(this)
             }
-            Item { Layout.fillWidth: true }
-            RoundTool {
-                objectName: "caacCenterVehicleButton"
-                text: qsTr("Center aircraft")
-                toolIcon: "center"
-                enabled: root._canCenter
+            SquareTool {
+                objectName: "caacCalculatorButton"
+                text: qsTr("Calculator")
+                toolIcon: "calculator"
+                onClicked: calculatorFactory.open()
+            }
+            SquareTool {
+                objectName: "caacClearTrajectoryButton"
+                text: qsTr("Clear trajectory")
+                toolIcon: "clearTrajectory"
+                enabled: !!root._vehicle
                 onClicked: {
-                    if (root._canCenter) {
-                        root.mapControl.center = root._vehicle.coordinate
-                    }
+                    if (root._vehicle) { root._vehicle.trajectoryPoints.clear() }
                 }
             }
+          }
         }
 
         QGCFlickable {
+            id: panelScroller
             objectName: "caacFlyPanelsScroller"
-            Layout.fillWidth: true
-            Layout.preferredHeight: Math.max(0, Math.min(contentHeight, tools.availableHeight - toolbar.height - root._margin))
+            Layout.alignment: Qt.AlignTop
+            Layout.preferredWidth: tools.panelWidth
+            Layout.preferredHeight: Math.max(0, Math.min(contentHeight, tools.availableHeight))
             visible: missionButton.checked || dataButton.checked || mapButton.checked
             contentHeight: panels.implicitHeight
             contentWidth: width
@@ -270,7 +337,7 @@ Item {
                     objectName: "caacFlyDataPanel"
                     width: parent.width
                     height: Math.min(implicitHeight, Math.max(ScreenTools.defaultFontPixelHeight * 10,
-                        tools.availableHeight - toolbar.height - root._margin))
+                        tools.availableHeight))
                     visible: dataButton.checked
                     vehicle: root._vehicle
                     distance: root._corePlugin.flightDistance
@@ -285,5 +352,9 @@ Item {
                 }
             }
         }
+    }
+    QGCPopupDialogFactory {
+        id: calculatorFactory
+        dialogComponent: Component { CaacCalculator { } }
     }
 }

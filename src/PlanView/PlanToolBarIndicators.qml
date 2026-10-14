@@ -8,14 +8,17 @@ import QGroundControl.Controls
 import QGroundControl.FactControls
 
 // Toolbar for Plan View
-RowLayout {
+GridLayout {
     required property var planMasterController
     property bool showRallyPointsHelp: false
+    property bool compact: false
 
     signal toolbarButtonClicked()
 
     id: root
-    spacing: ScreenTools.defaultFontPixelWidth
+    columns: compact ? 5 : 6
+    columnSpacing: ScreenTools.defaultFontPixelWidth
+    rowSpacing: ScreenTools.defaultFontPixelHeight * 0.25
 
     property var _planMasterController: planMasterController
     property var _missionController: _planMasterController.missionController
@@ -109,30 +112,45 @@ RowLayout {
     QGCPalette { id: qgcPal }
 
     QGCButton {
-        pointSize: ScreenTools.menuFontPointSize
+        Layout.fillWidth: root.compact
+        Layout.minimumWidth: 0
+        pointSize: root.compact ? ScreenTools.smallFontPointSize : ScreenTools.menuFontPointSize
+        heightFactor: root.compact ? 0.25 : 1
+        leftPadding: root.compact ? ScreenTools.defaultFontPixelWidth * 0.3 : ScreenTools.defaultFontPixelWidth * 2
+        rightPadding: leftPadding
         objectName: "planToolbar_openButton"
         text: qsTr("Open")
-        iconSource: "/qmlimages/Plan.svg"
+        iconSource: root.compact ? "" : "/qmlimages/Plan.svg"
         enabled: !_planMasterController.syncInProgress
         onClicked: { toolbarButtonClicked(); _openButtonClicked() }
     }
 
     QGCButton {
-        pointSize: ScreenTools.menuFontPointSize
+        Layout.fillWidth: root.compact
+        Layout.minimumWidth: 0
+        pointSize: root.compact ? ScreenTools.smallFontPointSize : ScreenTools.menuFontPointSize
+        heightFactor: root.compact ? 0.25 : 1
+        leftPadding: root.compact ? ScreenTools.defaultFontPixelWidth * 0.3 : ScreenTools.defaultFontPixelWidth * 2
+        rightPadding: leftPadding
         objectName: "planToolbar_saveButton"
         text: qsTr("Save")
-        iconSource: "/res/SaveToDisk.svg"
+        iconSource: root.compact ? "" : "/res/SaveToDisk.svg"
         enabled: !_syncInProgress && _hasPlanItems
         primary: _saveDirty
         onClicked: { toolbarButtonClicked(); _saveButtonClicked() }
     }
 
     QGCButton {
-        pointSize: ScreenTools.menuFontPointSize
+        Layout.fillWidth: root.compact
+        Layout.minimumWidth: 0
+        pointSize: root.compact ? ScreenTools.smallFontPointSize : ScreenTools.menuFontPointSize
+        heightFactor: root.compact ? 0.25 : 1
+        leftPadding: root.compact ? ScreenTools.defaultFontPixelWidth * 0.3 : ScreenTools.defaultFontPixelWidth * 2
+        rightPadding: leftPadding
         id: uploadButton
-        objectName: "planToolbar_uploadButton"
+        objectName: root.compact ? "caacUploadWaypoints" : "planToolbar_uploadButton"
         text: qsTr("Upload")
-        iconSource: "/res/UploadToVehicle.svg"
+        iconSource: root.compact ? "" : "/res/UploadToVehicle.svg"
         enabled: !_syncInProgress && _hasPlanItems && !_controllerOffline
         visible: !_syncInProgress
         primary: _uploadDirty && !_controllerOffline
@@ -140,16 +158,26 @@ RowLayout {
     }
 
     QGCButton {
-        pointSize: ScreenTools.menuFontPointSize
+        Layout.fillWidth: root.compact
+        Layout.minimumWidth: 0
+        pointSize: root.compact ? ScreenTools.smallFontPointSize : ScreenTools.menuFontPointSize
+        heightFactor: root.compact ? 0.25 : 1
+        leftPadding: root.compact ? ScreenTools.defaultFontPixelWidth * 0.3 : ScreenTools.defaultFontPixelWidth * 2
+        rightPadding: leftPadding
         objectName: "planToolbar_clearButton"
         text: qsTr("Clear")
-        iconSource: "/res/TrashCan.svg"
+        iconSource: root.compact ? "" : "/res/TrashCan.svg"
         enabled: !_syncInProgress
         onClicked: { toolbarButtonClicked(); _clearClicked() }
     }
 
     QGCButton {
-        pointSize: ScreenTools.menuFontPointSize
+        Layout.fillWidth: root.compact
+        Layout.minimumWidth: 0
+        pointSize: root.compact ? ScreenTools.smallFontPointSize : ScreenTools.menuFontPointSize
+        heightFactor: root.compact ? 0.25 : 1
+        leftPadding: root.compact ? ScreenTools.defaultFontPixelWidth * 0.3 : ScreenTools.defaultFontPixelWidth * 2
+        rightPadding: leftPadding
         objectName: "planToolbar_hamburgerButton"
         iconSource: "qrc:/qmlimages/Hamburger.svg"
 

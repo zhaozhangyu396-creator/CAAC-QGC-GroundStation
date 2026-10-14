@@ -14,6 +14,13 @@ qgc_set_qt_resource_alias(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacMissionDetails.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacMapSettings.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacRouteLegLabels.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacWaypointGuides.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacHomeRelationsDialog.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacTransformSettings.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacUnifiedFlightLayer.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacFlightSpeedDialog.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacFlightDashboard.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacFlightTelemetryBar.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacTemplateEditor.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacSettingsSection.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacGlobalSettings.qml
@@ -22,6 +29,10 @@ qgc_set_qt_resource_alias(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacMeasureDialog.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacMeasureMap.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacUnitConverter.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacCalculator.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacCalculatorMath.js
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacPreferences.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacSettingsMenu.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacAttitudeInstrument.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacSimulationEmergencyDialog.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacMissionActionDialog.qml
@@ -45,6 +56,13 @@ qt_add_qml_module(
               src/Flight/CaacMissionDetails.qml
               src/Flight/CaacMapSettings.qml
               src/PlanView/CaacRouteLegLabels.qml
+              src/PlanView/CaacWaypointGuides.qml
+              src/PlanView/CaacHomeRelationsDialog.qml
+              src/PlanView/CaacTransformSettings.qml
+              src/Flight/CaacUnifiedFlightLayer.qml
+              src/Flight/CaacFlightSpeedDialog.qml
+              src/Flight/CaacFlightDashboard.qml
+              src/Flight/CaacFlightTelemetryBar.qml
               src/PlanView/CaacTemplateEditor.qml
               src/PlanView/CaacSettingsSection.qml
               src/PlanView/CaacGlobalSettings.qml
@@ -53,6 +71,10 @@ qt_add_qml_module(
               src/PlanView/CaacMeasureDialog.qml
               src/PlanView/CaacMeasureMap.qml
               src/PlanView/CaacUnitConverter.qml
+              src/PlanView/CaacCalculator.qml
+              src/PlanView/CaacCalculatorMath.js
+              src/PlanView/CaacPreferences.qml
+              src/PlanView/CaacSettingsMenu.qml
               src/Flight/CaacAttitudeInstrument.qml
               src/Flight/CaacSimulationEmergencyDialog.qml
               src/Flight/CaacMissionActionDialog.qml

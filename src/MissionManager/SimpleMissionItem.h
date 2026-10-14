@@ -1,8 +1,10 @@
 #pragma once
 
-#include "VisualMissionItem.h"
+#include <QtCore/QVariantMap>
+
 #include "MissionItem.h"
 #include "QGroundControlQmlGlobal.h"
+#include "VisualMissionItem.h"
 
 class SpeedSection;
 class CameraSection;
@@ -16,6 +18,12 @@ class SimpleMissionItem : public VisualMissionItem
     Q_MOC_INCLUDE("CameraSection.h")
 
 public:
+    Q_PROPERTY(QVariantMap caacFlightSettings READ caacFlightSettings NOTIFY caacFlightSettingsChanged)
+
+    QVariantMap caacFlightSettings() const { return _caacFlightSettings; }
+
+    bool setCaacFlightSettings(const QVariantMap& settings);
+
     SimpleMissionItem(PlanMasterController* masterController, bool flyView, bool forLoad);
     SimpleMissionItem(PlanMasterController* masterController, bool flyView, const MissionItem& missionItem);
 
@@ -139,6 +147,7 @@ public:
     void save               (QJsonArray&  missionItems) final;
 
 signals:
+    void caacFlightSettingsChanged();
     void commandChanged             (int command);
     void friendlyEditAllowedChanged (bool friendlyEditAllowed);
     void headingDegreesChanged      (double heading);
@@ -176,6 +185,7 @@ private:
     void _rebuildComboBoxFacts  (void);
 
     MissionItem     _missionItem;
+    QVariantMap _caacFlightSettings;
     bool            _rawEdit =                  false;
     bool            _dirty =                    false;
     bool            _ignoreDirtyChangeSignals = false;

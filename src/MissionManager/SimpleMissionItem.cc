@@ -1,19 +1,22 @@
 #include "SimpleMissionItem.h"
+
+#include <cmath>
+
+#include <QtCore/QJsonArray>
+#include <QtCore/QStringList>
+
+#include "AppSettings.h"
+#include "CameraSection.h"
 #include "JsonParsing.h"
 #include "MissionCommandTree.h"
 #include "MissionCommandUIInfo.h"
+#include "MultiVehicleManager.h"
+#include "PlanMasterController.h"
+#include "QGCMath.h"
 #include "QGroundControlQmlGlobal.h"
 #include "SettingsManager.h"
-#include "AppSettings.h"
-#include "PlanMasterController.h"
 #include "SpeedSection.h"
-#include "MultiVehicleManager.h"
-#include "CameraSection.h"
 #include "Vehicle.h"
-#include "QGCMath.h"
-
-#include <QtCore/QStringList>
-#include <QtCore/QJsonArray>
 
 FactMetaData* SimpleMissionItem::_altitudeMetaData =        nullptr;
 FactMetaData* SimpleMissionItem::_commandMetaData =         nullptr;
@@ -242,6 +245,27 @@ SimpleMissionItem::~SimpleMissionItem()
 {
 }
 
+bool SimpleMissionItem::setCaacFlightSettings(const QVariantMap& settings)
+{
+    if (!settings.isEmpty()) {
+        bool speedValid = false;
+        const double speed = settings.value(QStringLiteral("verticalSpeed")).toDouble(&speedValid);
+        const double turn = settings.value(QStringLiteral("turnMode"), -1).toDouble();
+        const double climb = settings.value(QStringLiteral("climbMode"), -1).toDouble();
+        if (!speedValid || !std::isfinite(speed) || speed <= 0 || speed > 30 || !std::isfinite(turn) ||
+            turn != std::floor(turn) || turn < 0 || turn > 3 || !std::isfinite(climb) || climb != std::floor(climb) ||
+            climb < 0 || climb > 1) {
+            return false;
+        }
+    }
+    if (_caacFlightSettings != settings) {
+        _caacFlightSettings = settings;
+        setDirty(true);
+        emit caacFlightSettingsChanged();
+    }
+    return true;
+}
+
 void SimpleMissionItem::save(QJsonArray&  missionItems)
 {
     QList<MissionItem*> items;
@@ -253,6 +277,9 @@ void SimpleMissionItem::save(QJsonArray&  missionItems)
         QJsonObject saveObject;
         item->save(saveObject);
         if (i == 0) {
+            if (!_caacFlightSettings.isEmpty()) {
+                saveObject[QStringLiteral("caacFlightSettings")] = QJsonObject::fromVariantMap(_caacFlightSettings);
+            }
             // This is the main simple item, save the alt/terrain data
             if (specifiesAltitude()) {
                 saveObject[_jsonAltitudeModeKey] =          _altitudeFrame;
@@ -285,6 +312,12 @@ bool SimpleMissionItem::load(QTextStream &loadStream)
 
 bool SimpleMissionItem::load(const QJsonObject& json, int sequenceNumber, QString& errorString)
 {
+    const auto settings = json.value(QStringLiteral("caacFlightSettings"));
+    if ((!settings.isUndefined() && !settings.isObject()) ||
+        !setCaacFlightSettings(settings.toObject().toVariantMap())) {
+        errorString = tr("Invalid waypoint simulation settings.");
+        return false;
+    }
     if (!_missionItem.load(json, sequenceNumber, errorString)) {
         return false;
     }

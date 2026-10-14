@@ -25,6 +25,7 @@ Button {
     property alias  contentWidth:       innerText.contentWidth
 
     property bool roundStyle: false
+    property bool squareStyle: false
     property bool compactLabel: false
     property real maximumRoundDiameter: Infinity
     property bool doubleClickRequired: false
@@ -34,7 +35,7 @@ Button {
     property real imageScale:        forceImageScale11 && (text == "") ? 0.8 : 0.6
     property real contentMargins:    roundStyle ? ScreenTools.defaultFontPixelWidth * 0.3 : innerText.height * 0.1
 
-    property color _currentContentColor: roundStyle ? (qgcPal.globalTheme === QGCPalette.Dark ? qgcPal.windowShadeDark : qgcPal.text) : (checked || pressed) ? qgcPal.buttonHighlightText : qgcPal.text
+    property color _currentContentColor: squareStyle ? "white" : roundStyle ? (qgcPal.globalTheme === QGCPalette.Dark ? qgcPal.windowShadeDark : qgcPal.text) : (checked || pressed) ? qgcPal.buttonHighlightText : qgcPal.text
     property color _currentContentColorSecondary:  (checked || pressed) ? qgcPal.text : qgcPal.buttonHighlight
 
     signal dropped(int index)
@@ -110,14 +111,14 @@ Button {
                     anchors.centerIn: parent
                     width: control.roundDiameter
                     height: width
-                    radius: width / 2
+                    radius: control.squareStyle ? ScreenTools.defaultFontPixelWidth * 0.7 : width / 2
                     visible: control.roundStyle
                     z: -1
-                    color: control.checked || control.pressed ? qgcPal.buttonHighlight
+                    color: control.squareStyle ? (control.checked || control.pressed ? "#245b46" : "#d9232629") : control.checked || control.pressed ? qgcPal.buttonHighlight
                         : (qgcPal.globalTheme === QGCPalette.Dark ? qgcPal.text : qgcPal.button)
                     opacity: control.enabled ? 1 : 0.45
-                    border.width: control.hovered && control.enabled ? ScreenTools.defaultFontPixelWidth * 0.2 : 0
-                    border.color: qgcPal.buttonHighlight
+                    border.width: control.squareStyle ? 1 : control.hovered && control.enabled ? ScreenTools.defaultFontPixelWidth * 0.2 : 0
+                    border.color: control.squareStyle ? (control.checked || control.hovered ? "#40d58b" : "#a0a5aa") : qgcPal.buttonHighlight
                 }
 
                 QGCColoredImage {

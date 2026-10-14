@@ -6,10 +6,12 @@ import QGroundControl.Controls
 
 Item {
     id:             control
-    implicitWidth:  mainLayout.width + (_toolsMargin * 2)
+    implicitWidth:  mainLayout.implicitWidth + (_toolsMargin * 2)
     implicitHeight: mainLayout.height + (_toolsMargin * 2)
 
     property real extraWidth: 0 ///< Extra width to add to the background rectangle
+    readonly property real _toolsMargin: ScreenTools.defaultFontPixelWidth * 0.75
+    QGCPalette { id: qgcPal }
 
     property alias factValueGrid:           factValueGrid
     property alias settingsGroup:           factValueGrid.settingsGroup
@@ -26,6 +28,7 @@ Item {
 
     ColumnLayout {
         id:                 mainLayout
+        width: Math.max(0, control.width - _toolsMargin * 2)
         anchors.margins:    _toolsMargin
         anchors.bottom:     parent.bottom
         anchors.left:       parent.left
@@ -53,6 +56,8 @@ Item {
             spacing: ScreenTools.defaultFontPixelWidth
             HorizontalFactValueGrid {
                 id: factValueGrid
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
             }
             ColumnLayout {
                 QGCLabel { text: qsTr("Heading"); font.pointSize: ScreenTools.smallFontPointSize }
