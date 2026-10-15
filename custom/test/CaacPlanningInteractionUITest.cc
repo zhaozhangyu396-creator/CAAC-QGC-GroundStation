@@ -480,6 +480,20 @@ void CaacPlanningInteractionUITest::_newSettingsPages()
     QVERIFY(clickButtonScrolled(QStringLiteral("settingsButton_General"), QStringLiteral("settings_buttonList")));
     auto* generalSettings = findVisibleItem(_rootItem, QStringLiteral("settingsPage_General"));
     QVERIFY(generalSettings && generalSettings->property("fillAvailableWidth").toBool());
+    QQuickItem* languageCombo = nullptr;
+    const auto* languageFact = SettingsManager::instance()->appSettings()->qLocaleLanguage();
+    for (auto* item : generalSettings->findChildren<QQuickItem*>()) {
+        if (item->property("fact").value<Fact*>() == languageFact && item->property("comboBox").isValid()) {
+            languageCombo = qobject_cast<QQuickItem*>(item->property("comboBox").value<QObject*>());
+            break;
+        }
+    }
+    QVERIFY(languageCombo);
+    const auto comboFitsPage = [&]() {
+        const auto bounds = languageCombo->mapRectToItem(generalSettings, languageCombo->boundingRect());
+        return bounds.width() > 0 && bounds.left() >= 0 && bounds.right() <= generalSettings->width() + 1;
+    };
+    QTRY_VERIFY_WITH_TIMEOUT(comboFitsPage(), TestTimeout::mediumMs());
     QVERIFY(plan->isVisible() && !drawer->isVisible());
     QVERIFY(capture(QStringLiteral("caacApplicationSettingsInline")));
     QVERIFY(clickButton(QStringLiteral("settings_backToMenu")));
