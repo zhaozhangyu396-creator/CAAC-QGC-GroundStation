@@ -641,7 +641,7 @@ Column {
                 width: parent.width
                 text: button.text
                 horizontalAlignment: Text.AlignHCenter
-                font.pointSize: ScreenTools.smallFontPointSize
+                font.pointSize: ScreenTools.defaultFontPointSize
                 color: "white"
                 style: Text.Outline
                 styleColor: "#222222"

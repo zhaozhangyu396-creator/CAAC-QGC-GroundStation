@@ -147,15 +147,15 @@ Button {
                 width:                      control.roundStyle ? control.width - control.contentMargins * 2 : implicitWidth
                 wrapMode:                   control.roundStyle && !control.compactLabel ? Text.Wrap : Text.NoWrap
                 maximumLineCount:           control.compactLabel ? 1 : control.roundStyle ? 2 : 2147483647
-                fontSizeMode:               control.compactLabel ? Text.Fit : Text.FixedSize
+                fontSizeMode:               control.squareStyle ? Text.FixedSize : control.compactLabel ? Text.Fit : Text.FixedSize
                 minimumPointSize:           ScreenTools.smallFontPointSize * 0.6
                 elide:                      control.roundStyle ? Text.ElideRight : Text.ElideNone
                 horizontalAlignment:        Text.AlignHCenter
                 font.pointSize:             ScreenTools.menuFontPointSize
-                color:                      control.roundStyle ? qgcPal.text : _currentContentColor
+                color:                      control.squareStyle ? "white" : control.roundStyle ? qgcPal.text : _currentContentColor
                 anchors.horizontalCenter:   parent.horizontalCenter
-                font.bold:                  !innerImage.visible && !innerImageColorful.visible
-                opacity:                    control.roundStyle && !control.enabled ? 0.45 : !innerImage.visible ? 0.8 : 1.0
+                font.bold:                  control.squareStyle ? false : !innerImage.visible && !innerImageColorful.visible
+                opacity:                    control.squareStyle ? 1 : control.roundStyle && !control.enabled ? 0.45 : !innerImage.visible ? 0.8 : 1.0
             }
         }
     }
