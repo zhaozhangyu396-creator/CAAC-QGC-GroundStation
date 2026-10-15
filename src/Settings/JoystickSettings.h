@@ -22,6 +22,13 @@ public:
     JoystickSettings(const QString &joystickName, int axisCount, int buttonCount, QObject* parent = nullptr);
 
     DEFINE_SETTINGFACT(calibrated)
+    DEFINE_SETTINGFACT(simulationModeSwitchEnabled)
+    DEFINE_SETTINGFACT(simulationModeSwitchAxis)
+    DEFINE_SETTINGFACT(simulationModeSwitchPositions)
+    DEFINE_SETTINGFACT(simulationModeSwitchReversed)
+    DEFINE_SETTINGFACT(simulationModeLow)
+    DEFINE_SETTINGFACT(simulationModeMiddle)
+    DEFINE_SETTINGFACT(simulationModeHigh)
     DEFINE_SETTINGFACT(circleCorrection)
     DEFINE_SETTINGFACT(useDeadband)
     DEFINE_SETTINGFACT(negativeThrust)

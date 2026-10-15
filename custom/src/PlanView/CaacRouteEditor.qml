@@ -552,6 +552,8 @@ Column {
         id: panelNavigation
         width: root.width
         spacing: ScreenTools.defaultFontPixelWidth
+        readonly property real labelHeight: Math.max(globalNavigation.labelHeight, relativeNavigation.labelHeight,
+            templateNavigation.labelHeight, waypointNavigation.labelHeight)
         component PanelButton: QGCButton {
             id: button
             required property int panelIndex
@@ -559,7 +561,8 @@ Column {
             Layout.minimumWidth: 0
             readonly property real iconSize: Math.min(ScreenTools.defaultFontPixelHeight * 2.5,
                 (root.width - panelNavigation.spacing * 3) / 4)
-            Layout.preferredHeight: iconSize + ScreenTools.defaultFontPixelHeight
+            readonly property real labelHeight: buttonLabel.implicitHeight
+            Layout.preferredHeight: iconSize + panelNavigation.labelHeight
             checked: !root.showMissionTree && root.activePanel === panelIndex
             Accessible.name: text
             ToolTip.visible: hovered
@@ -636,11 +639,14 @@ Column {
                 }
             }
             QGCLabel {
-                anchors.bottom: parent.bottom
+                id: buttonLabel
+                anchors.top: parent.top
+                anchors.topMargin: button.iconSize
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: parent.width
                 text: button.text
                 horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.Wrap
                 font.pointSize: ScreenTools.defaultFontPointSize
                 color: "white"
                 style: Text.Outline
@@ -652,10 +658,10 @@ Column {
                 root.activePanel = wasActive ? -1 : panelIndex
             }
         }
-        PanelButton { objectName: "caacGlobalSettingsButton"; panelIndex: 0; text: qsTr("Global settings") }
-        PanelButton { objectName: "caacRelativeEditorButton"; panelIndex: 1; text: qsTr("Relative coordinate editor") }
-        PanelButton { objectName: "caacTemplateEditorButton"; panelIndex: 2; text: qsTr("Template") }
-        PanelButton { objectName: "caacWaypointListButton"; panelIndex: 3; text: qsTr("Points") }
+        PanelButton { id: globalNavigation; objectName: "caacGlobalSettingsButton"; panelIndex: 0; text: qsTr("Global settings") }
+        PanelButton { id: relativeNavigation; objectName: "caacRelativeEditorButton"; panelIndex: 1; text: qsTr("Relative coordinate editor") }
+        PanelButton { id: templateNavigation; objectName: "caacTemplateEditorButton"; panelIndex: 2; text: qsTr("Template") }
+        PanelButton { id: waypointNavigation; objectName: "caacWaypointListButton"; panelIndex: 3; text: qsTr("Points") }
     }
 
     Rectangle {

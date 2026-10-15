@@ -251,6 +251,7 @@ public:
 signals:
     void simulationAltitudeRequested(double amslAltitude);
     void simulationSpeedRequested(double metersPerSecond);
+    void simulationManualControlRequested(double forward, double right, double yaw, double throttle);
     void writeBytesQueuedSignal(const QByteArray& bytes);
     void highLatencyTransmissionEnabledChanged(bool highLatencyTransmissionEnabled);
 

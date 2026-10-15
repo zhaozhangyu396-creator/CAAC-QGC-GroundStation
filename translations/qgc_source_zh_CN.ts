@@ -27586,4 +27586,118 @@ altitude</source>
       <translation>电机测试</translation>
     </message>
   </context>
+  <context>
+    <name>CaacSimulationController</name>
+    <message>
+      <source>Connect and calibrate a USB joystick before taking manual control in flight.</source>
+      <translation>请先连接并校准 USB 遥控器，再在飞行中手动接管。</translation>
+    </message>
+    <message>
+      <source>Simulation manual control; waiting for joystick input.</source>
+      <translation>模拟姿态模式，等待遥控器输入。</translation>
+    </message>
+    <message>
+      <source>Simulation controlled by USB joystick</source>
+      <translation>模拟姿态模式：USB 遥控器控制中</translation>
+    </message>
+    <message>
+      <source>Joystick input lost; simulation hovering.</source>
+      <translation>遥控器输入中断，模拟飞机已悬停。</translation>
+    </message>
+  </context>
+  <context>
+    <name>CaacSimulationJoystickSettings</name>
+    <message>
+      <source>USB joystick channel mapping</source>
+      <translation>USB 遥控器通道映射</translation>
+    </message>
+    <message>
+      <source>Connect a USB joystick to view its channels.</source>
+      <translation>请连接 USB 遥控器以查看通道。</translation>
+    </message>
+    <message>
+      <source>Calibrate and enable the joystick in Aircraft settings → Joystick. Attitude training does not hold horizontal position; center throttle holds altitude.</source>
+      <translation>请在“无人机设置 → 操纵杆”中完成校准并启用。姿态训练不保持水平位置，油门中位保持高度。</translation>
+    </message>
+    <message>
+      <source>Joystick calibration and axis mapping</source>
+      <translation>遥控器校准与操纵轴映射</translation>
+    </message>
+    <message>
+      <source>Enable USB joystick</source>
+      <translation>启用 USB 遥控器</translation>
+    </message>
+    <message>
+      <source>Channel values appear after calibration and enabling the joystick.</source>
+      <translation>完成校准并启用遥控器后显示通道值。</translation>
+    </message>
+    <message>
+      <source>Mode switch channel</source>
+      <translation>模式开关通道</translation>
+    </message>
+    <message>
+      <source>Select channel</source>
+      <translation>选择通道</translation>
+    </message>
+    <message>
+      <source>Two positions</source>
+      <translation>两段开关</translation>
+    </message>
+    <message>
+      <source>Three positions</source>
+      <translation>三段开关</translation>
+    </message>
+    <message>
+      <source>Reverse</source>
+      <translation>反向</translation>
+    </message>
+    <message>
+      <source>Low position</source>
+      <translation>低档</translation>
+    </message>
+    <message>
+      <source>Middle position</source>
+      <translation>中档</translation>
+    </message>
+    <message>
+      <source>High position</source>
+      <translation>高档</translation>
+    </message>
+    <message>
+      <source>Hover</source>
+      <translation>悬停</translation>
+    </message>
+    <message>
+      <source>Attitude mode</source>
+      <translation>姿态模式</translation>
+    </message>
+    <message>
+      <source>Mission</source>
+      <translation>航线任务</translation>
+    </message>
+    <message>
+      <source>Automatic return</source>
+      <translation>自动返航</translation>
+    </message>
+    <message>
+      <source>Land</source>
+      <translation>降落</translation>
+    </message>
+    <message>
+      <source>Enable simulation mode switch</source>
+      <translation>启用模拟飞行模式开关</translation>
+    </message>
+    <message>
+      <source>USB channels are numbered from CH1. Choose a switch axis separate from the four control axes. Enable, then move the switch to change modes. The initial position only establishes a baseline. Mapping controls the built-in simulator only.</source>
+      <translation>USB 通道从 CH1 编号。模式开关应使用四个操纵轴之外的通道。启用后拨动开关切换模式，首次连接仅识别当前档位。此映射仅控制内置模拟飞机。</translation>
+    </message>
+    <message>
+      <source>Switch position not acquired</source>
+      <translation>尚未获取开关档位</translation>
+    </message>
+    <message>
+      <source>Current position: %1</source>
+      <translation>当前档位：%1</translation>
+    </message>
+  </context>
 </TS>

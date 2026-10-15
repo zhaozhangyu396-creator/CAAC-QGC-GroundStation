@@ -52,6 +52,8 @@ public:
     void setAltitude(double amslAltitude);
     void advanceHoldAltitude(double amslAltitude, double seconds);
     void advanceGuidedTarget(const QGeoCoordinate& target, double seconds);
+    void advanceManual(double forward, double right, double yaw, double throttle, double seconds,
+                       bool attitudeMode = false);
     bool advanceLanding(double seconds);
     bool advanceReturn(double seconds);
     void restoreState(const State& state);

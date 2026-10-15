@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 #include <limits>
 
@@ -44,7 +45,76 @@ private slots:
     void _manualFlightWithoutMission();
     void _waypointLegOptions();
     void _runtimeFlightSpeed();
+    void _joystickManualFlight();
+    void _attitudeInertiaAndReturn();
 };
+
+void CaacSimulationEngineTest::_joystickManualFlight()
+{
+    const QGeoCoordinate home(30, 120, 20);
+    CaacSimulationEngine engine;
+    QString error;
+    QVERIFY(engine.load({{0, waypoint(0, QGCGeo::geodesicDestination(home, 90, 100), 10)}}, home,
+                        {.horizontalSpeed = 10, .verticalSpeed = 2, .yawRate = 90}, error));
+    engine.setAltitude(30);
+    auto state = engine.state();
+    state.heading = 90;
+    engine.restoreState(state);
+    engine.advanceManual(1, 0, 0, 0.5, 1);
+    QVERIFY(engine.state().eastSpeed > 9.9);
+    QVERIFY(std::abs(engine.state().northSpeed) < 0.01);
+    QCOMPARE(engine.state().position.altitude(), 30.0);
+    QCOMPARE(engine.state().sequence, 0);
+    QVERIFY(!engine.state().finished);
+    const auto moved = engine.state().position;
+    engine.advanceManual(0, 0, 0, 0.5, 1);
+    QCOMPARE(engine.state().position, moved);
+    QCOMPARE(engine.state().eastSpeed, 0.0);
+    engine.advanceManual(0, 0, 1, 1, 1);
+    QCOMPARE(engine.state().heading, 180.0);
+    QCOMPARE(engine.state().position.altitude(), 32.0);
+    engine.advanceManual(qQNaN(), 0, 0, 0.5, 1);
+    QCOMPARE(engine.state().position.altitude(), 32.0);
+    engine.advanceManual(0, 0, 0, 2, 1);
+    QCOMPARE(engine.state().position.altitude(), 32.0);
+    for (int i = 0; i < 10; ++i) {
+        engine.advanceManual(0, 0, 0, 0, 1);
+    }
+    QCOMPARE(engine.state().position.altitude(), 20.0);
+    QVERIFY(!engine.state().airborne);
+    engine.advanceManual(1, 1, 1, 0.5, 1);
+    QCOMPARE(engine.state().northSpeed, 0.0);
+    QCOMPARE(engine.state().eastSpeed, 0.0);
+    QCOMPARE(engine.state().sequence, 0);
+}
+
+void CaacSimulationEngineTest::_attitudeInertiaAndReturn()
+{
+    const QGeoCoordinate home(30, 120, 20);
+    CaacSimulationEngine engine;
+    engine.initialize(home, {.horizontalSpeed = 10, .verticalSpeed = 2});
+    engine.setAltitude(30);
+    engine.advanceManual(1, 0, 0, 0.5, 1, true);
+    const auto afterForward = engine.state().position;
+    const double forwardSpeed = engine.state().northSpeed;
+    QVERIFY(forwardSpeed > 5);
+    engine.advanceManual(0, 0, 0, 0.5, 1, true);
+    QVERIFY(engine.state().northSpeed > 0);
+    QVERIFY(engine.state().northSpeed < forwardSpeed);
+    QVERIFY(QGCGeo::geodesicDistance(afterForward, engine.state().position) > 4);
+    for (int i = 0; i < 50; ++i) {
+        const double northDistance = QGCGeo::geodesicDistance(home, engine.state().position) *
+                                     std::cos(QGCGeo::geodesicAzimuth(home, engine.state().position) * M_PI / 180.0);
+        const double command = std::clamp(-northDistance * 0.15 - engine.state().northSpeed * 0.3, -1.0, 1.0);
+        engine.advanceManual(command, 0, 0, 0.5, 0.1, true);
+    }
+    QVERIFY(QGCGeo::geodesicDistance(home, engine.state().position) < 2);
+    QCOMPARE(engine.state().position.altitude(), 30.0);
+    engine.pause();
+    const auto paused = engine.state().position;
+    engine.advanceManual(0, 0, 0, 0.5, 0.1, true);
+    QCOMPARE(engine.state().position, paused);
+}
 
 void CaacSimulationEngineTest::_runtimeFlightSpeed()
 {

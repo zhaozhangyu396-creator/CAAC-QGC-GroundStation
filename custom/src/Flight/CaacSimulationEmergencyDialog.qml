@@ -26,6 +26,32 @@ QGCPopupDialog {
     ColumnLayout {
         width: Math.min(root.maxContentAvailableWidth, ScreenTools.defaultFontPixelWidth * 45)
         spacing: ScreenTools.defaultFontPixelHeight * 0.5
+        QGCLabel {
+            Layout.fillWidth: true
+            wrapMode: Text.WordWrap
+            text: root._simulation.status
+        }
+        QGCButton {
+            objectName: "caacEmergencyManualControl"
+            Layout.fillWidth: true
+            text: root._simulation.manualControlActive ? qsTr("End manual control and hover") : qsTr("Attitude mode / joystick takeover")
+            enabled: root._ready && root._vehicle.airborne
+            onClicked: {
+                if (root._simulation.manualControlActive) {
+                    root._simulation.endManualControl()
+                    root.close()
+                } else if (root._simulation.beginManualControl()) {
+                    root.close()
+                }
+            }
+        }
+        CaacSimulationJoystickSettings {
+            Layout.fillWidth: true
+            onCalibrationRequested: {
+                root.close()
+                mainWindow.showVehicleConfig()
+            }
+        }
         QGCButton {
             objectName: "caacEmergencyHover"
             Layout.fillWidth: true

@@ -42,6 +42,7 @@ qgc_set_qt_resource_alias(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacAccessDialog.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacAttitudeInstrument.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacSimulationEmergencyDialog.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacSimulationJoystickSettings.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacMissionActionDialog.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacSimulationSettings.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacSimulationDialog.qml
@@ -91,6 +92,7 @@ qt_add_qml_module(
               src/PlanView/CaacAccessDialog.qml
               src/Flight/CaacAttitudeInstrument.qml
               src/Flight/CaacSimulationEmergencyDialog.qml
+              src/Flight/CaacSimulationJoystickSettings.qml
               src/Flight/CaacMissionActionDialog.qml
               src/PlanView/CaacSimulationSettings.qml
               src/PlanView/CaacSimulationDialog.qml

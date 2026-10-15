@@ -1,5 +1,6 @@
 #include <cmath>
 #include <cstdio>
+#include <memory>
 #include <utility>
 
 #include <QtCore/QLineF>
@@ -20,8 +21,13 @@
 #include "CaacRouteEditorController.h"
 #include "CaacSimulationController.h"
 #include "CaacSimulationEngine.h"
+#include "Joystick.h"
+#include "JoystickManager.h"
+#include "JoystickManagerSettings.h"
+#include "JoystickSettings.h"
 #include "MissionController.h"
 #include "MissionManager.h"
+#include "MockJoystick.h"
 #include "MockLink.h"
 #include "MultiVehicleManager.h"
 #include "PlanMasterController.h"
@@ -43,7 +49,149 @@ private slots:
     void _uploadAndFlightControls();
     void _closedRouteAndSimulationToggle();
     void _fourLoopsFromUnsavedSettings();
+    void _usbJoystickModeSwitch();
 };
+
+void CaacSimulationUITest::_usbJoystickModeSwitch()
+{
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    const QString joystickName = QStringLiteral("CAAC USB training switch");
+    auto* manager = JoystickManager::instance();
+    manager->init();
+    std::unique_ptr<MockJoystick> input(MockJoystick::create(joystickName, 5, 4, 0));
+    QVERIFY(input && input->isValid());
+    QTRY_VERIFY_WITH_TIMEOUT(manager->availableJoystickNames().contains(joystickName), TestTimeout::mediumMs());
+    SettingsManager::instance()->joystickManagerSettings()->activeJoystickName()->setRawValue(joystickName);
+    QTRY_VERIFY_WITH_TIMEOUT(manager->activeJoystick() && manager->activeJoystick()->name() == joystickName,
+                             TestTimeout::mediumMs());
+    auto* joystick = manager->activeJoystick();
+    for (int axis = 0; axis < 5; ++axis) {
+        joystick->setAxisCalibration(axis, {});
+    }
+    using Calibration = RemoteControlCalibrationController;
+    joystick->setFunctionForChannel(Calibration::stickFunctionRoll, 0);
+    joystick->setFunctionForChannel(Calibration::stickFunctionPitch, 1);
+    joystick->setFunctionForChannel(Calibration::stickFunctionYaw, 2);
+    joystick->setFunctionForChannel(Calibration::stickFunctionThrottle, 3);
+    auto* settings = joystick->settings();
+    settings->calibrated()->setRawValue(true);
+    settings->throttleModeCenterZero()->setRawValue(false);
+    settings->simulationModeSwitchAxis()->setRawValue(4);
+    settings->simulationModeSwitchPositions()->setRawValue(3);
+    settings->simulationModeSwitchReversed()->setRawValue(false);
+    settings->simulationModeSwitchEnabled()->setRawValue(true);
+    QCOMPARE(settings->simulationModeLow()->rawValue().toInt(), 3);
+    QCOMPARE(settings->simulationModeMiddle()->rawValue().toInt(), 1);
+    QCOMPARE(settings->simulationModeHigh()->rawValue().toInt(), 2);
+    QVERIFY(input->setAxis(4, Joystick::AxisMax));
+    auto* plan = findVisibleItem(_rootItem, QStringLiteral("mainView_plan"));
+    QVERIFY(plan);
+    auto* master = plan->property("_planMasterController").value<PlanMasterController*>();
+    QVERIFY(master);
+    const QGeoCoordinate home(30, 120, 0);
+    auto* mission = master->missionController();
+    mission->setHomePosition(home);
+    auto* waypoint = qobject_cast<SimpleMissionItem*>(
+        mission->insertSimpleMissionItem(QGCGeo::geodesicDestination(home, 0, 500), 1, false));
+    QVERIFY(waypoint);
+    waypoint->altitude()->setRawValue(5);
+    CaacRouteEditorController editor;
+    editor.setPlanMasterController(master);
+    auto flightSettings = CaacSimulationController::defaults();
+    flightSettings["takeoffHeight"] = 5.0;
+    flightSettings["verticalSpeed"] = 10.0;
+    QVERIFY(editor.setSimulationSettings(flightSettings));
+    auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
+    QVERIFY(plugin);
+    auto* simulation = plugin->simulation();
+    const auto stop = qScopeGuard([simulation, manager]() {
+        manager->setActiveJoystickEnabledForActiveVehicle(false);
+        simulation->stop();
+    });
+    ignoreLogMessage("Utilities.QGCSensors", QtWarningMsg,
+                     QRegularExpression(QStringLiteral("Failed to connect to pressure backend")));
+    ignoreLogMessage("Utilities.QGCSensors", QtWarningMsg,
+                     QRegularExpression(QStringLiteral("Error Initializing Pressure Sensor")));
+    QVERIFY(simulation->start(master));
+    QTRY_VERIFY_WITH_TIMEOUT(simulation->vehicle() && simulation->vehicle()->isInitialConnectComplete(),
+                             TestTimeout::longMs());
+    auto* vehicle = simulation->vehicle();
+    manager->setActiveJoystickEnabledForActiveVehicle(true);
+    QTRY_COMPARE_WITH_TIMEOUT(simulation->modeSwitchPosition(), 2, TestTimeout::mediumMs());
+    QVERIFY(simulation->modeSwitchAxisAllowed(4));
+    for (int axis = 0; axis < 4; ++axis) {
+        QVERIFY(!simulation->modeSwitchAxisAllowed(axis));
+    }
+    QSignalSpy uploaded(simulation, &CaacSimulationController::missionUploaded);
+    QVERIFY(simulation->upload(master));
+    QTRY_VERIFY_WITH_TIMEOUT(!uploaded.isEmpty(), TestTimeout::longMs());
+    vehicle->startMission();
+    QTRY_VERIFY_WITH_TIMEOUT(vehicle->airborne() && vehicle->groundSpeed()->rawValue().toDouble() > 1,
+                             TestTimeout::longMs());
+    simulation->setEmergencyMode(true);
+    QVERIFY(simulation->emergencyMode());
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacEmergencyBlackout")));
+    QVERIFY(clickButton(QStringLiteral("caacSimulationManagement")));
+    QVERIFY(clickButton(QStringLiteral("caacSimulationJoystickMappingToggle")));
+    QVERIFY(findVisibleItemScrolled(QStringLiteral("caacSimulationModeSwitchAxis"),
+                                    QStringLiteral("popupDialog_contentFlickable")));
+    QVERIFY(findVisibleItemScrolled(QStringLiteral("caacSimulationModePosition2"),
+                                    QStringLiteral("popupDialog_contentFlickable")));
+    QVERIFY(rejectDialog());
+    QVERIFY(input->setAxis(4, 0));
+    QTRY_VERIFY_WITH_TIMEOUT(simulation->manualControlActive(), TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(vehicle->flightMode() != vehicle->missionFlightMode(), TestTimeout::mediumMs());
+    const int sequence = vehicle->missionManager()->currentIndex();
+    const auto beforeManual = vehicle->coordinate();
+    QVERIFY(input->setAxis(1, Joystick::AxisMax));
+    QTRY_VERIFY_WITH_TIMEOUT(QGCGeo::geodesicDistance(beforeManual, vehicle->coordinate()) > 3,
+                             TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(vehicle->pitch()->rawValue().toDouble() < -10, TestTimeout::mediumMs());
+    QCOMPARE(vehicle->missionManager()->currentIndex(), sequence);
+    manager->setActiveJoystickEnabledForActiveVehicle(false);
+    QTRY_COMPARE_WITH_TIMEOUT(vehicle->groundSpeed()->rawValue().toDouble(), 0.0, TestTimeout::mediumMs());
+    QVERIFY(simulation->manualControlActive());
+    QVERIFY(simulation->status().contains(
+        QCoreApplication::translate("CaacSimulationController", "Joystick input lost; simulation hovering.")));
+    QVERIFY(input->setAxis(1, 0));
+    manager->setActiveJoystickEnabledForActiveVehicle(true);
+    QVERIFY(input->setAxis(4, Joystick::AxisMin));
+    QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->rtlFlightMode(), TestTimeout::mediumMs());
+    QVERIFY(input->setAxis(4, Joystick::AxisMax));
+    QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->missionFlightMode(), TestTimeout::mediumMs());
+    settings->simulationModeSwitchReversed()->setRawValue(true);
+    QTRY_COMPARE_WITH_TIMEOUT(simulation->modeSwitchPosition(), 0, TestTimeout::mediumMs());
+    QCOMPARE(vehicle->flightMode(), vehicle->missionFlightMode());
+    QVERIFY(input->setAxis(4, 0));
+    QTRY_VERIFY_WITH_TIMEOUT(simulation->manualControlActive(), TestTimeout::mediumMs());
+    QVERIFY(input->setAxis(4, Joystick::AxisMax));
+    QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->rtlFlightMode(), TestTimeout::mediumMs());
+    QSignalSpy positionUpdates(simulation, &CaacSimulationController::joystickChannelsChanged);
+    settings->simulationModeSwitchPositions()->setRawValue(2);
+    QTRY_VERIFY_WITH_TIMEOUT(positionUpdates.count() >= 10, TestTimeout::mediumMs());
+    QCOMPARE(simulation->modeSwitchPosition(), 0);
+    QVERIFY(input->setAxis(4, Joystick::AxisMin));
+    QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->missionFlightMode(), TestTimeout::mediumMs());
+    QVERIFY(input->setAxis(4, 0));
+    QSignalSpy channels(simulation, &CaacSimulationController::joystickChannelsChanged);
+    QTRY_VERIFY_WITH_TIMEOUT(channels.count() >= 5, TestTimeout::mediumMs());
+    QCOMPARE(vehicle->flightMode(), vehicle->missionFlightMode());
+    QCOMPARE(simulation->modeSwitchPosition(), 2);
+    settings->simulationModeSwitchPositions()->setRawValue(3);
+    QTRY_COMPARE_WITH_TIMEOUT(simulation->modeSwitchPosition(), 1, TestTimeout::mediumMs());
+    QVERIFY(input->setAxis(4, Joystick::AxisMin));
+    QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->missionFlightMode(), TestTimeout::mediumMs());
+    QVERIFY(input->setAxis(4, 0));
+    QTRY_VERIFY_WITH_TIMEOUT(simulation->manualControlActive(), TestTimeout::mediumMs());
+    input.reset();
+    QTRY_VERIFY_WITH_TIMEOUT(!manager->availableJoystickNames().contains(joystickName), TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(vehicle->groundSpeed()->rawValue().toDouble(), 0.0, TestTimeout::mediumMs());
+    QVERIFY(simulation->active());
+    QVERIFY(simulation->manualControlActive());
+}
 
 void CaacSimulationUITest::_fourLoopsFromUnsavedSettings()
 {

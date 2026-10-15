@@ -370,7 +370,7 @@ signals:
     void motorInterlock(bool enable);
     void unknownAction(const QString &action);
     void vehicleJoystickData(float roll, float pitch, float yaw, float throttle, uint16_t buttonsLow, uint16_t buttonsHigh, float gimbalPitch, float gimbalYaw);
-    void rawChannelValuesChanged(QVector<int> channelValues); ///< Signalled during PollingForConfiguration
+    void rawChannelValuesChanged(QVector<int> channelValues);  ///< Raw axes during configuration or vehicle polling
     void rawButtonPressedChanged(int index, bool pressed); ///< Signalled during PollingForConfiguration
 
     // Sensor event signals (for event-driven updates)

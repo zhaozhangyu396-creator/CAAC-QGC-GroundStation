@@ -946,15 +946,13 @@ void Joystick::_handleAxis()
         return;
     }
 
-    if (_pollingFlags.testFlag(PollingForConfiguration)) {
-        // Signal the axis values to Joystick Config/Cal. Axes in Joystick terminology are the same as Channels in
-        // RemoteControlCalibrationController terminology.
-        QVector<int> channelValues(_axisCount);
-        for (int axisIndex = 0; axisIndex < _axisCount; axisIndex++) {
-            channelValues[axisIndex] = _getAxisValue(axisIndex);
-        }
-        emit rawChannelValuesChanged(channelValues);
-    } else if (_pollingFlags.testFlag(PollingForVehicle)) {
+    QVector<int> channelValues(_axisCount);
+    for (int axisIndex = 0; axisIndex < _axisCount; axisIndex++) {
+        channelValues[axisIndex] = _getAxisValue(axisIndex);
+    }
+    emit rawChannelValuesChanged(channelValues);
+
+    if (!_pollingFlags.testFlag(PollingForConfiguration) && _pollingFlags.testFlag(PollingForVehicle)) {
         Vehicle *const vehicle = _pollingVehicle;
         if (!vehicle) {
             qCWarning(JoystickLog) << "Internal Error: No vehicle for joystick!";

@@ -1,11 +1,15 @@
 #include "CaacSimulationController.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include <QtCore/QCoreApplication>
 
 #include "AppMessages.h"
 #include "CaacCorePlugin.h"
+#include "Joystick.h"
+#include "JoystickManager.h"
+#include "JoystickSettings.h"
 #include "LinkManager.h"
 #include "MissionController.h"
 #include "MissionManager.h"
@@ -25,6 +29,11 @@ CaacSimulationController::CaacSimulationController(QObject* parent)
     _timer.setInterval(100);
     connect(&_timer, &QTimer::timeout, this, &CaacSimulationController::_tick);
     connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, &CaacSimulationController::stop);
+    QTimer::singleShot(0, this, [this]() {
+        auto* manager = JoystickManager::instance();
+        connect(manager, &JoystickManager::activeJoystickChanged, this, &CaacSimulationController::_setJoystick);
+        _setJoystick(manager->activeJoystick());
+    });
 }
 
 CaacSimulationController::~CaacSimulationController()
@@ -119,6 +128,169 @@ bool CaacSimulationController::ownsVehicle(const Vehicle* vehicle) const
     return vehicle && _link && vehicle->id() == _link->vehicleId();
 }
 
+bool CaacSimulationController::manualControlActive() const
+{
+    return _link && (_link->_mavBaseMode & MAV_MODE_FLAG_SAFETY_ARMED) &&
+           (_link->_mavCustomMode == PX4CustomMode::POSCTL_POSCTL ||
+            _link->_mavCustomMode == PX4CustomMode::STABILIZED);
+}
+
+void CaacSimulationController::_setJoystick(Joystick* joystick)
+{
+    disconnect(_joystickChannelsConnection);
+    _joystick = joystick;
+    _manualInputTime.invalidate();
+    _modeMappingSignature.clear();
+    _modeCandidatePosition = -1;
+    _modeLastPosition = -1;
+    _joystickChannels.clear();
+    if (joystick) {
+        _joystickChannelsConnection = connect(
+            joystick, &Joystick::rawChannelValuesChanged, this,
+            [this, source = QPointer<Joystick>(joystick)](const QVector<int>& channels) {
+                if (source && source == _joystick) {
+                    _processJoystickChannels(channels);
+                }
+            },
+            Qt::QueuedConnection);
+    }
+    emit joystickChannelsChanged();
+}
+
+void CaacSimulationController::_processJoystickChannels(const QVector<int>& channels)
+{
+    _joystickChannels.clear();
+    for (const int value : channels) {
+        _joystickChannels.append(value);
+    }
+    if (!_joystick || !_link || !_vehicle || MultiVehicleManager::instance()->activeVehicle() != _vehicle ||
+        !JoystickManager::instance()->activeJoystickEnabledForActiveVehicle()) {
+        emit joystickChannelsChanged();
+        return;
+    }
+    auto* settings = _joystick->settings();
+    const bool enabled = settings->simulationModeSwitchEnabled()->rawValue().toBool();
+    const int axis = settings->simulationModeSwitchAxis()->rawValue().toInt();
+    const int positions = settings->simulationModeSwitchPositions()->rawValue().toInt();
+    const bool reversed = settings->simulationModeSwitchReversed()->rawValue().toBool();
+    const QList<int> modes{settings->simulationModeLow()->rawValue().toInt(),
+                           settings->simulationModeMiddle()->rawValue().toInt(),
+                           settings->simulationModeHigh()->rawValue().toInt()};
+    const auto signature = QStringLiteral("%1/%2/%3/%4/%5/%6/%7")
+                               .arg(enabled)
+                               .arg(axis)
+                               .arg(positions)
+                               .arg(reversed)
+                               .arg(modes[0])
+                               .arg(modes[1])
+                               .arg(modes[2]);
+    if (_modeMappingSignature != signature) {
+        _modeMappingSignature = signature;
+        _modeCandidatePosition = -1;
+        _modeLastPosition = -1;
+    }
+    if (!enabled || !modeSwitchAxisAllowed(axis) || axis >= channels.size() || channels[axis] < Joystick::AxisMin ||
+        channels[axis] > Joystick::AxisMax || (positions != 2 && positions != 3) ||
+        !_joystick->settings()->calibrated()->rawValue().toBool()) {
+        emit joystickChannelsChanged();
+        return;
+    }
+    const double value = std::clamp(channels[axis] / 32768.0, -1.0, 1.0) * (reversed ? -1 : 1);
+    int position = positions == 2 ? (value < 0 ? 0 : 2) : (value < -0.4 ? 0 : value > 0.4 ? 2 : 1);
+    // Keep the previous candidate in a small boundary band to reject switch noise.
+    if (_modeCandidatePosition >= 0 &&
+        (positions == 2 ? std::abs(value) < 0.1 : std::abs(std::abs(value) - 0.4) < 0.1)) {
+        position = _modeCandidatePosition;
+    }
+    if (position != _modeCandidatePosition) {
+        _modeCandidatePosition = position;
+        _modeCandidateTime.restart();
+    } else if (_modeCandidateTime.isValid() && _modeCandidateTime.elapsed() >= 150 && position != _modeLastPosition) {
+        const bool firstSample = _modeLastPosition < 0;
+        _modeLastPosition = position;
+        // Reconnection and configuration establish a baseline; only a later switch movement commands a mode.
+        if (!firstSample && _vehicle->armed() && _vehicle->airborne()) {
+            _applyJoystickMode(modes[position]);
+        }
+    }
+    emit joystickChannelsChanged();
+}
+
+bool CaacSimulationController::modeSwitchAxisAllowed(int axis) const
+{
+    if (!_joystick || axis < 0 || axis >= _joystick->axisCount()) {
+        return false;
+    }
+    for (const auto function :
+         {RemoteControlCalibrationController::stickFunctionRoll, RemoteControlCalibrationController::stickFunctionPitch,
+          RemoteControlCalibrationController::stickFunctionYaw,
+          RemoteControlCalibrationController::stickFunctionThrottle}) {
+        if (_joystick->getChannelForFunction(function) == axis) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void CaacSimulationController::_applyJoystickMode(int mode)
+{
+    if (!_link || !_vehicle || !ownsVehicle(_vehicle) || MultiVehicleManager::instance()->activeVehicle() != _vehicle) {
+        return;
+    }
+    const QList<uint32_t> modes{PX4CustomMode::AUTO_LOITER, PX4CustomMode::STABILIZED, PX4CustomMode::AUTO_MISSION,
+                                PX4CustomMode::AUTO_RTL, PX4CustomMode::AUTO_LAND};
+    if (mode < 0 || mode >= modes.size() || (mode == 2 && (!_missionReady || _engine.state().finished))) {
+        return;
+    }
+    _manualInputTime.invalidate();
+    _holdAltitude = qQNaN();
+    _guidedTarget = {};
+    if (mode != 1) {
+        _engine.pause();
+    }
+    _link->_mavCustomMode = modes[mode];
+    _publish();
+    emit statusChanged();
+}
+
+bool CaacSimulationController::beginManualControl()
+{
+    auto* manager = JoystickManager::instance();
+    auto* joystick = manager->activeJoystick();
+    if (!_emergencyMode || !_link || !_vehicle || !_vehicle->isInitialConnectComplete() || !_vehicle->airborne() ||
+        MultiVehicleManager::instance()->activeVehicle() != _vehicle || !joystick || joystick->axisCount() < 4 ||
+        (joystick->requiresCalibration() && !joystick->settings()->calibrated()->rawValue().toBool())) {
+        _setStatus(tr("Connect and calibrate a USB joystick before taking manual control in flight."));
+        return false;
+    }
+    manager->setActiveJoystickEnabledForActiveVehicle(true);
+    if (!manager->activeJoystickEnabledForActiveVehicle()) {
+        return false;
+    }
+    _manualInputTime.invalidate();
+    _guidedTarget = {};
+    _holdAltitude = qQNaN();
+    _engine.pause();
+    _link->_mavCustomMode = PX4CustomMode::STABILIZED;
+    _setStatus(tr("Simulation manual control; waiting for joystick input."));
+    _publish();
+    emit statusChanged();
+    return true;
+}
+
+void CaacSimulationController::endManualControl()
+{
+    if (!manualControlActive()) {
+        return;
+    }
+    _manualInputTime.invalidate();
+    _engine.pause();
+    _link->_mavCustomMode = PX4CustomMode::AUTO_LOITER;
+    _setStatus(tr("Simulation hovering"));
+    _publish();
+    emit statusChanged();
+}
+
 int CaacSimulationController::waypointNumber(int sequence, const QGeoCoordinate& coordinate) const
 {
     const auto found = _waypointNumbers.constFind(sequence);
@@ -157,6 +329,9 @@ bool CaacSimulationController::start(PlanMasterController* plan)
     _guidedTarget = QGeoCoordinate();
     _uploadSent = false;
     _missionReady = false;
+    _manualInputTime.invalidate();
+    _modeMappingSignature.clear();
+    _modeLastPosition = -1;
     auto* config = new MockConfiguration(tr("Built-in flight simulation"));
     config->setFirmwareType(MAV_AUTOPILOT_PX4);
     config->setVehicleType(MAV_TYPE_QUADROTOR);
@@ -190,6 +365,16 @@ bool CaacSimulationController::start(PlanMasterController* plan)
             _options.horizontalSpeed = speed;
         }
     });
+    connect(_link, &MockLink::simulationManualControlRequested, this,
+            [this](double forward, double right, double yaw, double throttle) {
+                if (manualControlActive() && _vehicle && MultiVehicleManager::instance()->activeVehicle() == _vehicle) {
+                    _manualForward = forward;
+                    _manualRight = right;
+                    _manualYaw = yaw;
+                    _manualThrottle = throttle;
+                    _manualInputTime.restart();
+                }
+            });
     connect(
         _link->_missionItemHandler, &MockLinkMissionItemHandler::missionUploaded, this,
         [this]() {
@@ -226,7 +411,9 @@ bool CaacSimulationController::start(PlanMasterController* plan)
 
 bool CaacSimulationController::upload(PlanMasterController* plan)
 {
-    if (_vehicle && _vehicle->armed() && _vehicle->flightMode() == _vehicle->missionFlightMode()) {
+    if ((_vehicle && _vehicle->armed() && _vehicle->flightMode() == _vehicle->missionFlightMode()) ||
+        (_link && (_link->_mavBaseMode & MAV_MODE_FLAG_SAFETY_ARMED) &&
+         _link->_mavCustomMode == PX4CustomMode::AUTO_MISSION)) {
         const auto message = tr("当前航点任务正在执行，请先暂停当前任务，再上传新航线。");
         _setStatus(message);
         QGC::showAppMessage(message, tr("上传航线"));
@@ -314,6 +501,7 @@ void CaacSimulationController::setEmergencyMode(bool enabled)
 void CaacSimulationController::stop()
 {
     _timer.stop();
+    _manualInputTime.invalidate();
     setEmergencyMode(false);
     if (_planningPlan) {
         auto* manager = MultiVehicleManager::instance();
@@ -371,6 +559,7 @@ bool CaacSimulationController::restart()
     _link->_mavCustomMode = PX4CustomMode::AUTO_LOITER;
     _holdAltitude = qQNaN();
     _guidedTarget = QGeoCoordinate();
+    _manualInputTime.invalidate();
     if (auto* plugin = qobject_cast<CaacCorePlugin*>(parent())) {
         plugin->resetFlightDistanceForSimulationRestart(_vehicle);
     }
@@ -424,7 +613,29 @@ void CaacSimulationController::_tick()
         return;
     }
     const bool armed = _link->_mavBaseMode & MAV_MODE_FLAG_SAFETY_ARMED;
-    if (armed && _link->_mavCustomMode == PX4CustomMode::AUTO_TAKEOFF) {
+    if (!manualControlActive()) {
+        _manualInputTime.invalidate();
+    }
+    if (manualControlActive()) {
+        _guidedTarget = {};
+        _holdAltitude = qQNaN();
+        if (_manualInputTime.isValid() && _manualInputTime.elapsed() <= 500 &&
+            MultiVehicleManager::instance()->activeVehicle() == _vehicle) {
+            _engine.advanceManual(_manualForward, _manualRight, _manualYaw, _manualThrottle, 0.1,
+                                  _link->_mavCustomMode == PX4CustomMode::STABILIZED);
+            _setStatus(tr("Simulation controlled by USB joystick"));
+            if (!_engine.state().airborne) {
+                _link->_mavBaseMode &= ~MAV_MODE_FLAG_SAFETY_ARMED;
+                _link->_mavCustomMode = PX4CustomMode::AUTO_LOITER;
+                _manualInputTime.invalidate();
+                _setStatus(tr("Simulation landed"));
+            }
+        } else {
+            _engine.pause();
+            _setStatus(tr("Joystick input lost; simulation hovering."));
+        }
+    } else if (armed && _link->_mavCustomMode == PX4CustomMode::AUTO_TAKEOFF) {
+        _manualInputTime.invalidate();
         _engine.advanceHoldAltitude(_holdAltitude, 0.1);
         _setStatus(tr("Simulation taking off"));
         if (std::abs(_engine.state().position.altitude() - _holdAltitude) < 0.05) {

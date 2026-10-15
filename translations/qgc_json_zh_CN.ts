@@ -8745,6 +8745,38 @@
       <source>Enable additional axis 6</source>
       <translation>启用附加轴 6</translation>
     </message>
+    <message>
+      <source>Enable simulation mode switch</source>
+      <translation>启用模拟飞行模式开关</translation>
+    </message>
+    <message>
+      <source>Simulation mode switch USB axis</source>
+      <translation>模拟飞行模式开关 USB 通道</translation>
+    </message>
+    <message>
+      <source>Simulation switch positions</source>
+      <translation>模拟飞行模式开关档位数</translation>
+    </message>
+    <message>
+      <source>Reverse simulation mode switch</source>
+      <translation>反向模拟飞行模式开关</translation>
+    </message>
+    <message>
+      <source>Simulation low switch mode</source>
+      <translation>模拟飞行开关低档模式</translation>
+    </message>
+    <message>
+      <source>Simulation middle switch mode</source>
+      <translation>模拟飞行开关中档模式</translation>
+    </message>
+    <message>
+      <source>Simulation high switch mode</source>
+      <translation>模拟飞行开关高档模式</translation>
+    </message>
+    <message>
+      <source>Hover,Attitude,Mission,Return,Land</source>
+      <translation>悬停,姿态模式,航线任务,自动返航,降落</translation>
+    </message>
   </context>
   <context>
     <name>JoystickManager.SettingsGroup.json</name>

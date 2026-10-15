@@ -3,6 +3,58 @@
     "fileType": "FactMetaData",
     "QGC.MetaData.Facts": [
         {
+            "name": "simulationModeSwitchEnabled",
+            "shortDesc": "Enable simulation mode switch",
+            "type": "bool",
+            "default": false
+        },
+        {
+            "name": "simulationModeSwitchAxis",
+            "shortDesc": "Simulation mode switch USB axis",
+            "type": "int32",
+            "default": -1,
+            "min": -1,
+            "max": 63
+        },
+        {
+            "name": "simulationModeSwitchPositions",
+            "shortDesc": "Simulation switch positions",
+            "type": "int32",
+            "default": 3,
+            "min": 2,
+            "max": 3
+        },
+        {
+            "name": "simulationModeSwitchReversed",
+            "shortDesc": "Reverse simulation mode switch",
+            "type": "bool",
+            "default": false
+        },
+        {
+            "name": "simulationModeLow",
+            "shortDesc": "Simulation low switch mode",
+            "type": "uint32",
+            "default": 3,
+            "enumStrings": "Hover,Attitude,Mission,Return,Land",
+            "enumValues": "0,1,2,3,4"
+        },
+        {
+            "name": "simulationModeMiddle",
+            "shortDesc": "Simulation middle switch mode",
+            "type": "uint32",
+            "default": 1,
+            "enumStrings": "Hover,Attitude,Mission,Return,Land",
+            "enumValues": "0,1,2,3,4"
+        },
+        {
+            "name": "simulationModeHigh",
+            "shortDesc": "Simulation high switch mode",
+            "type": "uint32",
+            "default": 2,
+            "enumStrings": "Hover,Attitude,Mission,Return,Land",
+            "enumValues": "0,1,2,3,4"
+        },
+        {
             "name": "calibrated",
             "shortDesc": "Joystick calibrated",
             "type": "bool",

@@ -202,6 +202,65 @@ void CaacSimulationEngine::advanceGuidedTarget(const QGeoCoordinate& target, dou
     _move(target, seconds, false);
 }
 
+void CaacSimulationEngine::advanceManual(double forward, double right, double yaw, double throttle, double seconds,
+                                         bool attitudeMode)
+{
+    const double previousNorthSpeed = _state.northSpeed;
+    const double previousEastSpeed = _state.eastSpeed;
+    pause();
+    if (!_home.isValid() || !std::isfinite(seconds) || seconds <= 0 || seconds > 1 || !std::isfinite(forward) ||
+        !std::isfinite(right) || !std::isfinite(yaw) || !std::isfinite(throttle) || std::abs(forward) > 1 ||
+        std::abs(right) > 1 || std::abs(yaw) > 1 || throttle < 0 || throttle > 1) {
+        return;
+    }
+    const auto deadband = [](double value) {
+        constexpr double threshold = 0.05;
+        return std::abs(value) <= threshold ? 0.0
+                                            : std::copysign((std::abs(value) - threshold) / (1 - threshold), value);
+    };
+    forward = deadband(forward);
+    right = deadband(right);
+    yaw = deadband(yaw);
+    const double previousAltitude = _state.position.altitude();
+    const double altitude =
+        std::max(_home.altitude(), previousAltitude + deadband(throttle * 2 - 1) * _options.verticalSpeed * seconds);
+    _state.position.setAltitude(altitude);
+    _state.climbSpeed = (altitude - previousAltitude) / seconds;
+    _state.airborne = altitude > _home.altitude() + 0.01;
+    if (!_state.airborne) {
+        return;
+    }
+    const double heading = (_state.heading + yaw * _options.yawRate * seconds / 2) * M_PI / 180.0;
+    _state.heading = normalized(_state.heading + yaw * _options.yawRate * seconds);
+    const double speedScale = _options.horizontalSpeed / std::max(1.0, std::hypot(forward, right));
+    _state.northSpeed = (forward * std::cos(heading) - right * std::sin(heading)) * speedScale;
+    _state.eastSpeed = (forward * std::sin(heading) + right * std::cos(heading)) * speedScale;
+    if (attitudeMode) {
+        const double forwardAcceleration = 9.80665 * std::tan(forward * 30 * M_PI / 180.0);
+        const double rightAcceleration = 9.80665 * std::tan(right * 35 * M_PI / 180.0);
+        const double windHeading = _options.windBearing * M_PI / 180.0;
+        _state.northSpeed = previousNorthSpeed +
+                            seconds * (forwardAcceleration * std::cos(heading) - rightAcceleration * std::sin(heading) +
+                                       0.15 * (_options.windSpeed * std::cos(windHeading) - previousNorthSpeed));
+        _state.eastSpeed = previousEastSpeed +
+                           seconds * (forwardAcceleration * std::sin(heading) + rightAcceleration * std::cos(heading) +
+                                      0.15 * (_options.windSpeed * std::sin(windHeading) - previousEastSpeed));
+        const double scale = _options.horizontalSpeed /
+                             std::max(_options.horizontalSpeed, std::hypot(_state.northSpeed, _state.eastSpeed));
+        _state.northSpeed *= scale;
+        _state.eastSpeed *= scale;
+    }
+    const double distance = std::hypot(_state.northSpeed, _state.eastSpeed) * seconds;
+    if (distance > 0) {
+        auto position = QGCGeo::geodesicDestination(
+            _state.position, normalized(std::atan2(_state.eastSpeed, _state.northSpeed) * 180.0 / M_PI), distance);
+        position.setAltitude(altitude);
+        _state.position = position;
+    }
+    _state.roll = right * 35;
+    _state.pitch = -forward * 30;
+}
+
 bool CaacSimulationEngine::advanceLanding(double seconds)
 {
     pause();

@@ -19,6 +19,13 @@ JoystickSettings::JoystickSettings(const QString &joystickName, int axisCount, i
 }
 
 DECLARE_SETTINGSFACT(JoystickSettings, calibrated)
+DECLARE_SETTINGSFACT(JoystickSettings, simulationModeSwitchEnabled)
+DECLARE_SETTINGSFACT(JoystickSettings, simulationModeSwitchAxis)
+DECLARE_SETTINGSFACT(JoystickSettings, simulationModeSwitchPositions)
+DECLARE_SETTINGSFACT(JoystickSettings, simulationModeSwitchReversed)
+DECLARE_SETTINGSFACT(JoystickSettings, simulationModeLow)
+DECLARE_SETTINGSFACT(JoystickSettings, simulationModeMiddle)
+DECLARE_SETTINGSFACT(JoystickSettings, simulationModeHigh)
 DECLARE_SETTINGSFACT(JoystickSettings, circleCorrection)
 DECLARE_SETTINGSFACT(JoystickSettings, useDeadband)
 DECLARE_SETTINGSFACT(JoystickSettings, negativeThrust)

@@ -191,7 +191,8 @@ Item {
             ? root.occluders.toolStrip.x + root.occluders.toolStrip.width + root._margin : root._margin
         readonly property real availableWidth: Math.max(0, root.width - sideInset - root._margin)
         readonly property real maximumDiameter: Math.max(0, root.height
-            - 2 * (emergencyControls.height + root._margin) - emergencyValues.implicitHeight - spacing)
+            - 2 * (emergencyControls.height + root._margin) - emergencyValues.implicitHeight
+            - emergencyStatus.implicitHeight - spacing * 2)
         x: sideInset + (availableWidth - width) / 2
         y: Math.max(0, Math.min((root.height - height) / 2, emergencyControls.y - root._margin - height))
         width: availableWidth
@@ -227,6 +228,15 @@ Item {
                         ? modelData.fact.valueString + " " + modelData.fact.units : "—")
                 }
             }
+        }
+        QGCLabel {
+            id: emergencyStatus
+            objectName: "caacEmergencyControlStatus"
+            Layout.fillWidth: true
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.WordWrap
+            font.pointSize: ScreenTools.smallFontPointSize
+            text: root._corePlugin.simulation.status
         }
     }
 

@@ -1402,6 +1402,13 @@ void MockLink::_handleManualControl(const mavlink_message_t &msg)
     mavlink_manual_control_t manualControl{};
     mavlink_msg_manual_control_decode(&msg, &manualControl);
 
+    if (_caacSimulation && manualControl.target == _vehicleSystemId && manualControl.x >= -1000 &&
+        manualControl.x <= 1000 && manualControl.y >= -1000 && manualControl.y <= 1000 && manualControl.r >= -1000 &&
+        manualControl.r <= 1000 && manualControl.z >= 0 && manualControl.z <= 1000) {
+        emit simulationManualControlRequested(manualControl.x / 1000.0, manualControl.y / 1000.0,
+                                              manualControl.r / 1000.0, manualControl.z / 1000.0);
+    }
+
     // INT16_MAX means "axis invalid/not provided" per MAVLink spec
     const auto axisStr = [](int16_t v) -> QString {
         return (v == INT16_MAX) ? QStringLiteral("invalid") : QString::number(v);
