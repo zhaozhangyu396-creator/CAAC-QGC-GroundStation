@@ -173,7 +173,8 @@ void CaacPlanningInteractionUITest::_statisticsPanelInteraction()
     const auto expectedRailY = [&]() {
         const double margin = rail->x();
         const double desired =
-            clear->mapToItem(rail->parentItem(), QPointF(0, clear->property("iconSize").toReal() / 2)).y() - rail->width() / 2;
+            clear->mapToItem(rail->parentItem(), QPointF(0, clear->property("iconSize").toReal() / 2)).y() -
+            rail->width() / 2;
         return qMax(margin, qMin(desired, rail->parentItem()->height() - rail->height() - margin));
     };
     QTRY_VERIFY_WITH_TIMEOUT(std::abs(rail->y() - expectedRailY()) < 1, TestTimeout::mediumMs());

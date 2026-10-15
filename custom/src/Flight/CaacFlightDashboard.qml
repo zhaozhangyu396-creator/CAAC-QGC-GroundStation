@@ -26,7 +26,7 @@ Item {
     height: instrument.height + values.height + margin
     x: Math.max(margin, Math.min((compact ? margin : availableWidth - width - margin)
         + panelOffset.x, parent.width - width - margin))
-    y: Math.max(topInset + margin, Math.min(parent.height - bottomInset - height - margin + panelOffset.y,
+    y: Math.max(margin, Math.min(parent.height - bottomInset - height - margin + panelOffset.y,
         parent.height - height - margin))
 
     function formatted(fact) {
