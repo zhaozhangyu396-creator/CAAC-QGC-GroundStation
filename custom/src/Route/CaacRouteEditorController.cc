@@ -878,7 +878,8 @@ QVariantMap CaacRouteEditorController::snapWaypointDrag(QObject* object, const Q
         return result;
     }
     std::stable_sort(candidates.begin(), candidates.end(), [](const Guide& a, const Guide& b) {
-        return std::abs(a.error - b.error) < 1e-6 ? a.kind > b.kind : a.error < b.error;
+        // Pairwise epsilon equality is not transitive and violates the sort ordering contract.
+        return a.error == b.error ? a.kind > b.kind : a.error < b.error;
     });
     auto snapped = candidates.first().projection;
     QList<Guide> active{candidates.first()};

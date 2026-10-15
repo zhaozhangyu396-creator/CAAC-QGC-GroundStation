@@ -41,7 +41,46 @@ private slots:
     void _synchronizeWaypointDefaults();
     void _displayNumbersAndLoopSelection();
     void _planningPreferences();
+    void _nearlyCoincidentSnapGuides();
 };
+
+void CaacPlanningToolsTest::_nearlyCoincidentSnapGuides()
+{
+    auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
+    QVERIFY(plugin);
+    const auto preferences = plugin->planningPreferences();
+    const auto restore = qScopeGuard([plugin, preferences]() { plugin->updatePlanningPreferences(preferences); });
+    QVERIFY(plugin->updatePlanningPreferences({{"horizontalSnap", true},
+                                               {"verticalSnap", false},
+                                               {"angleSnap", true},
+                                               {"symmetrySnap", false},
+                                               {"midpointSnap", true},
+                                               {"intersectionSnap", false}}));
+    PlanMasterController master;
+    master.start();
+    CaacRouteEditorController editor;
+    editor.setPlanMasterController(&master);
+    const QGeoCoordinate home(0, 0, 20);
+    master.missionController()->setHomePosition(home);
+    const auto raw = QGCGeo::geodesicDestination(home, 90, 300);
+    QVERIFY(editor.addWaypoint(raw));
+    auto* item = master.missionController()->visualItems()->value<SimpleMissionItem*>(1);
+    QVERIFY(item);
+    for (const double offset : {0.25e-6, 0.75e-6, 1.25e-6}) {
+        const auto shifted = QGCGeo::geodesicDestination(home, 0, offset);
+        QVERIFY(editor.addWaypoint(QGCGeo::geodesicDestination(shifted, 90, 40)));
+        QVERIFY(editor.addWaypoint(QGCGeo::geodesicDestination(shifted, 90, 160)));
+    }
+    const auto original = master.saveToJson();
+    for (int i = 0; i < 100; ++i) {
+        const auto result = editor.snapWaypointDrag(item, raw, 2);
+        const auto snapped = result.value("coordinate").value<QGeoCoordinate>();
+        QVERIFY(snapped.isValid());
+        QVERIFY(QGCGeo::geodesicDistance(raw, snapped) < 0.1e-6);
+        QVERIFY(!result.value("guides").toList().isEmpty());
+    }
+    QCOMPARE(master.saveToJson(), original);
+}
 
 void CaacPlanningToolsTest::_planningPreferences()
 {

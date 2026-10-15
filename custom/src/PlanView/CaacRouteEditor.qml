@@ -559,6 +559,7 @@ Column {
             required property int panelIndex
             Layout.fillWidth: true
             Layout.minimumWidth: 0
+            Layout.preferredWidth: Math.max(iconSize, buttonLabel.implicitWidth)
             readonly property real iconSize: Math.min(ScreenTools.defaultFontPixelHeight * 2.5,
                 (root.width - panelNavigation.spacing * 3) / 4)
             readonly property real labelHeight: buttonLabel.implicitHeight

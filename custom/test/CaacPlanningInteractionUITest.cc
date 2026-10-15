@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 #include <utility>
 
@@ -5,6 +6,7 @@
 #include <QtCore/QJsonArray>
 #include <QtCore/QLineF>
 #include <QtCore/QRectF>
+#include <QtCore/QRegularExpression>
 #include <QtCore/QScopeGuard>
 #include <QtGui/QClipboard>
 #include <QtGui/QGuiApplication>
@@ -198,14 +200,20 @@ void CaacPlanningInteractionUITest::_statisticsPanelInteraction()
 void CaacPlanningInteractionUITest::_waypointDragRemainsResponsive_data()
 {
     QTest::addColumn<int>("waypointCount");
-    QTest::newRow("single") << 1;
-    QTest::newRow("multiple") << 16;
-    QTest::newRow("dense") << 96;
+    QTest::addColumn<bool>("simulationConnected");
+    QTest::addColumn<bool>("closed");
+    QTest::newRow("single") << 1 << false << false;
+    QTest::newRow("multiple") << 16 << false << false;
+    QTest::newRow("dense") << 96 << false << false;
+    QTest::newRow("connected-five-waypoints") << 5 << true << false;
+    QTest::newRow("connected-closed-five-waypoints") << 5 << true << true;
 }
 
 void CaacPlanningInteractionUITest::_waypointDragRemainsResponsive()
 {
     QFETCH(int, waypointCount);
+    QFETCH(bool, simulationConnected);
+    QFETCH(bool, closed);
     startUI();
     if (QTest::currentTestFailed()) {
         return;
@@ -217,23 +225,67 @@ void CaacPlanningInteractionUITest::_waypointDragRemainsResponsive()
     auto* master = plan->property("_planMasterController").value<PlanMasterController*>();
     auto* editor = panel->property("routeController").value<CaacRouteEditorController*>();
     QVERIFY(master && editor);
+    QVERIFY(map->setProperty("allowVehicleLocationCenter", false));
+    QVERIFY(map->setProperty("allowGCSLocationCenter", false));
     const QGeoCoordinate home(30, 120, 0);
     master->missionController()->setHomePosition(home);
-    for (int i = 0; i < waypointCount; ++i) {
-        QVERIFY(editor->addWaypoint(QGCGeo::geodesicDestination(home, 360.0 * i / waypointCount, 200)));
+    auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
+    QVERIFY(plugin);
+    const auto preferences = plugin->planningPreferences();
+    const auto restore = qScopeGuard([plugin, preferences]() { plugin->updatePlanningPreferences(preferences); });
+    QVERIFY(plugin->updatePlanningPreferences({{"horizontalSnap", true},
+                                               {"verticalSnap", true},
+                                               {"angleSnap", true},
+                                               {"symmetrySnap", true},
+                                               {"midpointSnap", true},
+                                               {"intersectionSnap", true}}));
+    auto* simulation = plugin->simulation();
+    const auto stop = qScopeGuard([simulation, simulationConnected]() {
+        if (simulationConnected) {
+            simulation->stop();
+        }
+    });
+    if (simulationConnected) {
+        auto point = home;
+        for (const auto& leg : {qMakePair(341.8, 263.0), qMakePair(75.0, 177.2), qMakePair(165.0, 137.8),
+                                qMakePair(75.0, 189.7), qMakePair(180.0, 142.85)}) {
+            point = QGCGeo::geodesicDestination(point, leg.first, leg.second);
+            QVERIFY(editor->addWaypoint(point));
+        }
+        auto options = editor->simulationSettings();
+        options["closed"] = closed;
+        QVERIFY(editor->setSimulationSettings(options));
+        ignoreLogMessage("Utilities.QGCSensors", QtWarningMsg,
+                         QRegularExpression(QStringLiteral("Failed to connect to pressure backend")));
+        ignoreLogMessage("Utilities.QGCSensors", QtWarningMsg,
+                         QRegularExpression(QStringLiteral("Error Initializing Pressure Sensor")));
+        QVERIFY(simulation->start(master));
+        QTRY_VERIFY_WITH_TIMEOUT(simulation->vehicle() && simulation->vehicle()->isInitialConnectComplete(),
+                                 TestTimeout::longMs());
+        QVERIFY(_window->screen());
+        const auto available = _window->screen()->availableGeometry();
+        const auto margins = _window->frameMargins();
+        _window->resize(std::min(1280, available.width() - margins.left() - margins.right()),
+                        std::min(900, available.height() - margins.top() - margins.bottom()));
+        QVERIFY(clickButton(QStringLiteral("caacFlightSettingsButton")));
+    } else {
+        for (int i = 0; i < waypointCount; ++i) {
+            QVERIFY(editor->addWaypoint(QGCGeo::geodesicDestination(home, 360.0 * i / waypointCount, 200)));
+        }
     }
-    auto* waypoint = master->missionController()->visualItems()->value<SimpleMissionItem*>(1);
+    const int draggedIndex = simulationConnected ? waypointCount : 1;
+    auto* waypoint = master->missionController()->visualItems()->value<SimpleMissionItem*>(draggedIndex);
     QVERIFY(waypoint);
     const auto original = master->saveToJson();
     const double altitude = waypoint->coordinate().altitude();
     editor->clearHistory();
     map->setProperty("center", QVariant::fromValue(waypoint->coordinate()));
     map->setProperty("zoomLevel", 17);
-    auto* dragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_1"));
+    auto* dragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_%1").arg(draggedIndex));
     QVERIFY(dragger);
-    const auto center = map->mapToScene(QPointF(map->width() / 2, map->height() / 2));
+    const auto center = [map]() { return map->mapToScene(QPointF(map->width() / 2, map->height() / 2)); };
     QTRY_VERIFY_WITH_TIMEOUT(
-        QLineF(dragger->mapToScene(QPointF(dragger->width() / 2, dragger->height() / 2)), center).length() < 1,
+        QLineF(dragger->mapToScene(QPointF(dragger->width() / 2, dragger->height() / 2)), center()).length() < 1,
         TestTimeout::mediumMs());
     QSignalSpy frames(_window, &QQuickWindow::frameSwapped);
     for (int repetition = 0; repetition < 4; ++repetition) {
@@ -245,6 +297,16 @@ void CaacPlanningInteractionUITest::_waypointDragRemainsResponsive()
             _window->update();
             QTRY_VERIFY_WITH_TIMEOUT(frames.count() > rendered, TestTimeout::mediumMs());
         }
+        QPoint releaseOffset(0, -32);
+        if (simulationConnected) {
+            for (int step = 17; step <= 32; ++step) {
+                releaseOffset = QPoint(step % 7 - 3, -step * 2);
+                QTest::mouseMove(_window, start + releaseOffset, 0);
+            }
+            const auto rendered = frames.count();
+            _window->update();
+            QTRY_VERIFY_WITH_TIMEOUT(frames.count() > rendered, TestTimeout::mediumMs());
+        }
         const auto stationaryCoordinate = waypoint->coordinate();
         for (int frame = 0; frame < 8; ++frame) {
             const auto rendered = frames.count();
@@ -252,7 +314,7 @@ void CaacPlanningInteractionUITest::_waypointDragRemainsResponsive()
             QTRY_VERIFY_WITH_TIMEOUT(frames.count() > rendered, TestTimeout::mediumMs());
         }
         QCOMPARE(waypoint->coordinate(), stationaryCoordinate);
-        QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, start + QPoint(0, -32));
+        QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, start + releaseOffset);
         QVERIFY(master->saveToJson() != original);
         QCOMPARE(master->missionController()->plannedHomePosition(), home);
         QCOMPARE(waypoint->coordinate().altitude(), altitude);
@@ -263,11 +325,11 @@ void CaacPlanningInteractionUITest::_waypointDragRemainsResponsive()
         QCOMPARE(master->saveToJson(), original);
         QVERIFY(!editor->canUndo());
         QTRY_VERIFY_WITH_TIMEOUT(previousDragger.isNull(), TestTimeout::mediumMs());
-        waypoint = master->missionController()->visualItems()->value<SimpleMissionItem*>(1);
-        dragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_1"));
+        waypoint = master->missionController()->visualItems()->value<SimpleMissionItem*>(draggedIndex);
+        dragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_%1").arg(draggedIndex));
         QVERIFY(waypoint && dragger);
         QTRY_VERIFY_WITH_TIMEOUT(
-            QLineF(dragger->mapToScene(QPointF(dragger->width() / 2, dragger->height() / 2)), center).length() < 1,
+            QLineF(dragger->mapToScene(QPointF(dragger->width() / 2, dragger->height() / 2)), center()).length() < 1,
             TestTimeout::mediumMs());
     }
 }

@@ -183,9 +183,19 @@ void CaacSimulationUITest::_usbJoystickModeSwitch()
     settings->simulationModeSwitchPositions()->setRawValue(3);
     QTRY_COMPARE_WITH_TIMEOUT(simulation->modeSwitchPosition(), 1, TestTimeout::mediumMs());
     QVERIFY(input->setAxis(4, Joystick::AxisMin));
+    QTRY_COMPARE_WITH_TIMEOUT(simulation->modeSwitchPosition(), 2, TestTimeout::mediumMs());
     QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->missionFlightMode(), TestTimeout::mediumMs());
     QVERIFY(input->setAxis(4, 0));
     QTRY_VERIFY_WITH_TIMEOUT(simulation->manualControlActive(), TestTimeout::mediumMs());
+    ignoreLogMessage(
+        "Joystick.JoystickSDL", QtWarningMsg,
+        QRegularExpression(QStringLiteral("Joystick disconnected during update:.*CAAC USB training switch")));
+    ignoreLogMessage(
+        "Joystick.Joystick", QtWarningMsg,
+        QRegularExpression(QStringLiteral("Joystick disconnected or update failed:.*CAAC USB training switch")));
+    ignoreLogMessage("Joystick.Joystick", QtWarningMsg,
+                     QRegularExpression(QStringLiteral(
+                         "^Joystick polling thread not running even though _pollingVehicle was set\\.$")));
     input.reset();
     QTRY_VERIFY_WITH_TIMEOUT(!manager->availableJoystickNames().contains(joystickName), TestTimeout::mediumMs());
     QTRY_COMPARE_WITH_TIMEOUT(vehicle->groundSpeed()->rawValue().toDouble(), 0.0, TestTimeout::mediumMs());
