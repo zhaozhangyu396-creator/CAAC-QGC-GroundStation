@@ -13,6 +13,7 @@ Item {
     required property var vehicle
     property bool compact: false
     property real availableWidth: parent.width
+    property real topInset: 0
     property real bottomInset: 0
     property real sizeFactor: 1
     property point panelOffset: Qt.point(0, 0)
@@ -25,7 +26,7 @@ Item {
     height: instrument.height + values.height + margin
     x: Math.max(margin, Math.min((compact ? margin : availableWidth - width - margin)
         + panelOffset.x, parent.width - width - margin))
-    y: Math.max(margin, Math.min(parent.height - bottomInset - height - margin + panelOffset.y,
+    y: Math.max(topInset + margin, Math.min(parent.height - bottomInset - height - margin + panelOffset.y,
         parent.height - height - margin))
 
     function formatted(fact) {
@@ -35,7 +36,7 @@ Item {
         id: instrument
         anchors.horizontalCenter: parent.horizontalCenter
         width: Math.max(0, Math.min(root.width * 0.82, root.parent.height * (root.compact ? 0.2 : 0.35) * root.sizeFactor,
-            root.parent.height - root.bottomInset - values.height - root.margin * 3))
+            root.parent.height - root.topInset - root.bottomInset - values.height - root.margin * 3))
         height: width
         vehicle: root.vehicle
     }

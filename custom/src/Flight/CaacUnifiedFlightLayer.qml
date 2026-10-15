@@ -46,10 +46,14 @@ Item {
         missionController: globals.planMasterControllerFlyView.missionController
     }
     CaacFlightDashboard {
+        id: dashboard
         z: -1
         visible: !root._emergency
         compact: root.planningPaneExpanded
         availableWidth: root.width - (root.planningPaneExpanded ? root.planningPanelWidth : 0)
+        topInset: !root.planningPaneExpanded
+            && dashboard.x + dashboard.width > root.width - root.planningPanelWidth
+            ? root.planningNavigationHeight : 0
         bottomInset: root.telemetryHeight
         vehicle: QGroundControl.multiVehicleManager.activeVehicle
     }

@@ -910,6 +910,15 @@ void CaacSimulationUITest::_uploadAndFlightControls()
                                  TestTimeout::mediumMs());
         QCOMPARE(header->height(), header->property("_statusHeight").toDouble());
         QVERIFY(host->mapToScene(QPointF(host->width(), 0)).x() <= indicators->mapToScene(QPointF(0, 0)).x() + 1);
+        auto* navigation = findVisibleItem(_rootItem, QStringLiteral("caacRouteEditor"));
+        auto* instrument = findVisibleItem(_rootItem, QStringLiteral("caacAttitudeInstrument"));
+        QVERIFY(navigation);
+        QVERIFY(instrument);
+        QTRY_VERIFY_WITH_TIMEOUT(
+            !instrument->mapRectToScene(instrument->boundingRect())
+                 .intersects(navigation->mapRectToScene(
+                     QRectF(0, 0, navigation->width(), navigation->property("navigationHeight").toDouble()))),
+            TestTimeout::mediumMs());
         if (qEnvironmentVariableIsSet("CAAC_SIMULATION_UI_SCREENSHOT")) {
             QSignalSpy frame(_window, &QQuickWindow::frameSwapped);
             _window->update();
