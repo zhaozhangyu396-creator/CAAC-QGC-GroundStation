@@ -1,6 +1,6 @@
 # 模拟与飞行控制
 
-当前安装包版本 `v5.2.0-dev-233-g80691cac5b`，应用源提交 `80691cac5b6e7e8858e3af26c5f878ef8f666c23`。[下载与验证记录](desktop-installer-validation.md)。
+当前安装包版本 `v5.2.0-dev-238-gc6f0b42ad7`，应用源提交 `c6f0b42ad7ad234d611f95ea5791b14ca1c64eec`。[下载与验证记录](desktop-installer-validation.md)。
 
 ## USB 遥控器与模式映射
 
@@ -22,7 +22,7 @@
 
 - 单击航点选择，左键拖动移动，左键双击打开方位角／距离／微调菜单。右键功能菜单保留。Ctrl+Z 撤销，Ctrl+X 重做；文本框中的 Ctrl+X 保持剪切。
 - 新建或移动 H 点后自动应用位置与可用海拔，地形高程返回后同步；手动海拔受保护。此处保存指应用到计划，不会自动写入任务文件或上传。
-- 航线正在执行时上传无效，并提示“当前航点任务正在执行，请先暂停当前任务，再上传新航线。”暂停后可重新上传；不会自动暂停或恢复飞行。
+- 飞行中拖动普通航点后会询问是否上传；确认后自动等待暂停、上传成功、恢复原目标，再继续航线。取消只保留本地编辑，失败不自动续飞。普通“上传航线”入口仍要求先暂停。详细限制见 [飞行中航点更新](planning-controls-live-update.md)。
 - 任务详情显示剩余循环圈数，包含当前圈；暂停时不递减。无限循环显示“无限循环”；重连或遥测缺失导致无法确定时显示未获取数据。
 - 统计数据面板左键拖动，右键选择关闭；真高过低报警也可左键拖动。
 - 定位图标单击居中到计划起飞点，双击居中到无人机；清除航迹只清除已飞轨迹，保留规划任务。
@@ -31,12 +31,12 @@
 
 ## 验证范围
 
-- 应用源提交：`80691cac5b6e7e8858e3af26c5f878ef8f666c23`；界面版本：`v5.2.0-dev-233-g80691cac5b`。
-- Linux Debug 构建、启动检查及修改文件静态检查通过；界面／任务回归 15/15、完整串行 Unit 346/346 通过，CTest 类别无失败或跳过。
-- Qt 内部按后端条件跳过 12 个既有数据用例；本批 CAAC 界面及功能用例全部执行。
-- 中文源审计 7249 条，零错误。
-- Windows x64 RelWithDebInfo 原生界面／任务回归 15/15、Portable 10/10，以及 Release Portable 10/10 通过。
-- Release 验证中文安装脚本、SHA-256、初装、改变安装目录升级、设置保留、中文桌面快捷方式、移除 Qt／GStreamer 构建 SDK 后独立启动与卸载清理。
-- [Windows 功能回归](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38669779819) · [Release 安装与升级验证](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38669678904)。
+- 应用源提交：`c6f0b42ad7ad234d611f95ea5791b14ca1c64eec`；界面版本：`v5.2.0-dev-238-gc6f0b42ad7`。
+- Linux Debug 构建、启动、修改范围静态检查通过；界面／任务回归 15/15、完整串行 Unit 346/346 通过，CTest 测试类无失败或跳过。
+- Qt 内部按后端条件跳过 12 个既有数据用例；本批 CAAC 用例全部执行。
+- 当前源文本中文审计 7345 条，零错误。
+- Windows x64 RelWithDebInfo 原生界面／任务 15/15、Portable 10/10，以及 Release Portable 10/10 通过。
+- Release 的中文安装脚本、SHA-256、初装、改变目录升级、设置保留、中文桌面快捷方式、移除 Qt／GStreamer 构建 SDK 后独立启动、卸载清理均通过。
+- [Windows 功能回归](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38735481164) · [安装与升级验证](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38735430290)。
 
-SDL 虚拟 USB 设备回归验证手动输入、档位切换、反向、两段／三段、重连及掉线悬停。尚未验收实体遥控器，也未在用户现场复现本次 Windows 卡死；自动化和模拟结果不替代现场复测及实机验证。
+SDL 虚拟设备回归不代替实体遥控器验收；用户现场 Windows 卡死、实际飞行仍需复测。
