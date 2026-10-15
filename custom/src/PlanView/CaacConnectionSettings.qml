@@ -66,102 +66,112 @@ Item {
         function onCommPortStringsChanged() { root.refreshPorts(false) }
     }
 
-    ColumnLayout {
+    QGCFlickable {
+        id: connectionScroller
+        objectName: "caacConnectionScroller"
         anchors.fill: parent
-        spacing: ScreenTools.defaultFontPixelHeight
         visible: !root.advanced
-        RowLayout {
-            Layout.fillWidth: true
-            Rectangle {
-                Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 0.4
-                Layout.preferredHeight: ScreenTools.defaultFontPixelHeight
-                color: palette.settingsAccent
-                radius: width / 2
-            }
-            QGCLabel { text: qsTr("连接设置"); font.bold: true; Layout.fillWidth: true }
-        }
-        SettingsFormRow {
-            Layout.fillWidth: true
-            spacing: ScreenTools.defaultFontPixelWidth
-            QGCComboBox {
-                id: serialPort
-                objectName: "caacConnectionSerialPort"
+        contentHeight: connectionColumn.implicitHeight
+        clip: true
+
+        ColumnLayout {
+            id: connectionColumn
+            width: connectionScroller.width
+            height: Math.max(implicitHeight, connectionScroller.height)
+            spacing: ScreenTools.defaultFontPixelHeight
+            RowLayout {
                 Layout.fillWidth: true
-                Layout.minimumWidth: 0
-                textRole: "label"
-                model: []
-                enabled: ScreenTools.isSerialAvailable && !root.connected && count > 1
+                Rectangle {
+                    Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 0.4
+                    Layout.preferredHeight: ScreenTools.defaultFontPixelHeight
+                    color: palette.settingsAccent
+                    radius: width / 2
+                }
+                QGCLabel { text: qsTr("连接设置"); font.bold: true; Layout.fillWidth: true }
             }
-            QGCComboBox {
-                id: baud
-                objectName: "caacConnectionBaudRate"
-                Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 12
-                model: ScreenTools.isSerialAvailable ? root.manager.serialBaudRates : []
-                currentIndex: Math.max(0, model.indexOf(root.configuration ? root.configuration.baud.toString() : "115200"))
-                enabled: ScreenTools.isSerialAvailable && !root.connected
-            }
-        }
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: ScreenTools.defaultFontPixelWidth
-            QGCButton {
-                objectName: "caacSerialConnectButton"
+            SettingsFormRow {
                 Layout.fillWidth: true
-                Layout.minimumWidth: 0
-                Layout.preferredHeight: ScreenTools.defaultFontPixelHeight * 2.8
-                text: root.connected ? qsTr("断开") : qsTr("连接")
-                pointSize: ScreenTools.defaultFontPointSize * 1.15
-                fontWeight: Font.Bold
-                backgroundColor: Qt.lighter(palette.settingsAccent, 1.3)
-                backRadius: ScreenTools.defaultFontPixelHeight * 0.45
-                showBorder: false
-                enabled: root.port !== "" || root.connected
-                onClicked: {
-                    if (root.connected) {
-                        root.manager.disconnectLinkConfiguration(root.configuration)
-                    } else {
-                        const configuration = root.saveConfiguration(automatic.checked)
-                        if (configuration) { root.manager.createConnectedLink(configuration) }
-                    }
+                spacing: ScreenTools.defaultFontPixelWidth
+                QGCComboBox {
+                    id: serialPort
+                    objectName: "caacConnectionSerialPort"
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: 0
+                    textRole: "label"
+                    model: []
+                    enabled: ScreenTools.isSerialAvailable && !root.connected && count > 1
+                }
+                QGCComboBox {
+                    id: baud
+                    objectName: "caacConnectionBaudRate"
+                    Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 12
+                    model: ScreenTools.isSerialAvailable ? root.manager.serialBaudRates : []
+                    currentIndex: Math.max(0, model.indexOf(root.configuration ? root.configuration.baud.toString() : "115200"))
+                    enabled: ScreenTools.isSerialAvailable && !root.connected
                 }
             }
-            QGCButton {
-                objectName: "caacSerialRefreshButton"
-                Layout.preferredWidth: ScreenTools.defaultFontPixelHeight * 3
-                Layout.preferredHeight: ScreenTools.defaultFontPixelHeight * 2.8
-                iconSource: "/InstrumentValueIcons/reload.svg"
-                backgroundColor: "transparent"
-                showBorder: false
-                enabled: !root.connected
-                Accessible.name: qsTr("刷新串口")
-                onClicked: root.refreshPorts()
-            }
-        }
-        SettingsFormRow {
-            QGCCheckBoxSlider {
-                id: automatic
-                objectName: "caacSerialAutoConnect"
+            RowLayout {
                 Layout.fillWidth: true
-                text: qsTr("自动连接")
-                enabled: root.port !== "" && !root.connected
-                Binding on checked { value: !!root.configuration && root.configuration.autoConnect }
-                onClicked: root.saveConfiguration(checked)
+                spacing: ScreenTools.defaultFontPixelWidth
+                QGCButton {
+                    objectName: "caacSerialConnectButton"
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: 0
+                    Layout.preferredHeight: ScreenTools.defaultFontPixelHeight * 2.8
+                    text: root.connected ? qsTr("断开") : qsTr("连接")
+                    pointSize: ScreenTools.defaultFontPointSize * 1.15
+                    fontWeight: Font.Bold
+                    backgroundColor: Qt.lighter(palette.settingsAccent, 1.3)
+                    backRadius: ScreenTools.defaultFontPixelHeight * 0.45
+                    showBorder: false
+                    enabled: root.port !== "" || root.connected
+                    onClicked: {
+                        if (root.connected) {
+                            root.manager.disconnectLinkConfiguration(root.configuration)
+                        } else {
+                            const configuration = root.saveConfiguration(automatic.checked)
+                            if (configuration) { root.manager.createConnectedLink(configuration) }
+                        }
+                    }
+                }
+                QGCButton {
+                    objectName: "caacSerialRefreshButton"
+                    Layout.preferredWidth: ScreenTools.defaultFontPixelHeight * 3
+                    Layout.preferredHeight: ScreenTools.defaultFontPixelHeight * 2.8
+                    iconSource: "/InstrumentValueIcons/reload.svg"
+                    backgroundColor: "transparent"
+                    showBorder: false
+                    enabled: !root.connected
+                    Accessible.name: qsTr("刷新串口")
+                    onClicked: root.refreshPorts()
+                }
             }
+            SettingsFormRow {
+                QGCCheckBoxSlider {
+                    id: automatic
+                    objectName: "caacSerialAutoConnect"
+                    Layout.fillWidth: true
+                    text: qsTr("自动连接")
+                    enabled: root.port !== "" && !root.connected
+                    Binding on checked { value: !!root.configuration && root.configuration.autoConnect }
+                    onClicked: root.saveConfiguration(checked)
+                }
+            }
+            QGCLabel {
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                visible: serialPort.count <= 1
+                text: qsTr("未检测到串口，请连接设备后刷新。")
+                color: palette.text
+            }
+            QGCButton {
+                objectName: "caacMoreConnectionSettings"
+                text: qsTr("更多连接设置")
+                Layout.fillWidth: true
+                onClicked: root.advanced = true
+            }
+            Item { Layout.fillHeight: true }
         }
-        QGCLabel {
-            Layout.fillWidth: true
-            wrapMode: Text.WordWrap
-            visible: serialPort.count <= 1
-            text: qsTr("未检测到串口，请连接设备后刷新。")
-            color: palette.text
-        }
-        QGCButton {
-            objectName: "caacMoreConnectionSettings"
-            text: qsTr("更多连接设置")
-            Layout.fillWidth: true
-            onClicked: root.advanced = true
-        }
-        Item { Layout.fillHeight: true }
     }
     ColumnLayout {
         anchors.fill: parent

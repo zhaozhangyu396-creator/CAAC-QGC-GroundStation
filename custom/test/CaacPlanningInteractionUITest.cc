@@ -744,7 +744,8 @@ void CaacPlanningInteractionUITest::_calculatorUI()
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacSettingsMenu"))->width() < expandedWidth);
     QVERIFY(clickButton(QStringLiteral("toolbar_connections")));
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacConnectionSerialPort")));
-    QVERIFY(clickButton(QStringLiteral("caacMoreConnectionSettings")));
+    QVERIFY(
+        clickButtonScrolled(QStringLiteral("caacMoreConnectionSettings"), QStringLiteral("caacConnectionScroller")));
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("settingsPage_CommLinks")));
     QVERIFY(clickButton(QStringLiteral("caacConnectionBack")));
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("mainView_plan")));
