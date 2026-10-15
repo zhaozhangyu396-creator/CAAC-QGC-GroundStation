@@ -1,6 +1,6 @@
 # 设置与规划交互更新
 
-本次改动在 `phase3/caac-route-geometry` 分支实现，面向 PX4。安装包与最终验证记录以本文件后续记录的提交及构件为准，旧版安装包不包含本次尚未打包的源码修改。
+本次改动在 `phase3/caac-route-geometry` 分支实现，面向 PX4。安装包与最终验证记录见文末，本文件所列行为已包含在该安装包中。
 
 ## 设置与显示
 
@@ -42,4 +42,12 @@
 
 ## 验证记录
 
-正在执行最终本地与 Windows 构建验证。本节待实际完成后填写，不将未执行项目列为通过。
+- 应用源提交：`80691cac5b6e7e8858e3af26c5f878ef8f666c23`；界面版本：`v5.2.0-dev-233-g80691cac5b`。
+- Linux Debug 构建、启动检查及修改文件静态检查通过；界面／任务回归 15/15、完整串行 Unit 346/346 通过，CTest 类别无失败或跳过。
+- Qt 内部按后端条件跳过 12 个既有数据用例；本批 CAAC 界面及功能用例全部执行。
+- 中文源审计 7249 条，零错误。
+- Windows x64 RelWithDebInfo 原生界面／任务回归 15/15、Portable 10/10，以及 Release Portable 10/10 通过。
+- Release 验证中文安装脚本、SHA-256、初装、改变安装目录升级、设置保留、中文桌面快捷方式、移除 Qt／GStreamer 构建 SDK 后独立启动与卸载清理。
+- [Windows 功能回归](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38669779819) · [Release 安装与升级验证](https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation/actions/runs/38669678904)。
+
+[下载安装包及校验和](desktop-installer-validation.md)。用户现场的 Windows 卡死与实体遥控器使用仍需复测。
