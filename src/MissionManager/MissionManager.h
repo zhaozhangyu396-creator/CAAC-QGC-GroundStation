@@ -21,6 +21,8 @@ public:
     /// Last current mission item reported while in Mission flight mode
     int lastCurrentIndex(void) const { return _lastCurrentIndex; }
 
+    int remainingLoops() const { return _remainingLoops; }
+
     /// Writes the specified set mission items to the vehicle as an ArduPilot guided mode mission item.
     ///     @param gotoCoord Coordinate to move to
     ///     @param altChangeOnly true: only altitude change, false: lat/lon/alt change
@@ -29,6 +31,9 @@ public:
     /// Generates a new mission which starts from the specified index. It will include all the CMD_DO items
     /// from mission start to resumeIndex in the generate mission.
     void generateResumeMission(int resumeIndex);
+
+signals:
+    void remainingLoopsChanged();
 
 private slots:
     void _mavlinkMessageReceived(const mavlink_message_t& message);
@@ -39,6 +44,14 @@ private:
     void _handleMissionCurrent(const mavlink_message_t& message);
     void _updateMissionIndex(int index);
     void _handleHeartbeat(const mavlink_message_t& message);
+    void _configureLoopProgress(bool uploaded);
+    void _trackLoopProgress(int index, int state);
+    void _setRemainingLoops(int remaining);
 
     int _cachedLastCurrentIndex;
+    int _loopStart = -1;
+    int _loopEnd = -1;
+    int _loopTotal = -2;
+    int _loopPrevious = -1;
+    int _remainingLoops = -2;  ///< -2: unknown/not a loop, -1: infinite; includes the current lap.
 };

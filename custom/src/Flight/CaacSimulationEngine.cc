@@ -142,6 +142,27 @@ bool CaacSimulationEngine::jump(int sequence)
     return true;
 }
 
+int CaacSimulationEngine::remainingLoops() const
+{
+    int remaining = -2;
+    for (const auto& item : _items) {
+        if (item.command != MAV_CMD_DO_JUMP || item.param1 >= item.seq) {
+            continue;
+        }
+        if (remaining != -2) {
+            return -2;
+        }
+        if (_state.finished || _state.sequence > item.seq) {
+            remaining = 0;
+        } else if (item.param2 == -1) {
+            remaining = -1;
+        } else {
+            remaining = std::max(1, static_cast<int>(item.param2) + 1 - _jumpCounts.value(item.seq));
+        }
+    }
+    return remaining;
+}
+
 void CaacSimulationEngine::pause()
 {
     _state.roll = 0;

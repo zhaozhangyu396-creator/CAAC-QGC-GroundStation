@@ -28,6 +28,7 @@ class CaacSimulationController : public QObject
     Q_PROPERTY(QString status READ status NOTIFY statusChanged)
     Q_PROPERTY(Vehicle* vehicle READ vehicle NOTIFY statusChanged)
     Q_PROPERTY(int waypointNumberRevision READ waypointNumberRevision NOTIFY waypointNumbersChanged)
+    Q_PROPERTY(int remainingLoops READ remainingLoops NOTIFY statusChanged)
 
 public:
     explicit CaacSimulationController(QObject* parent = nullptr);
@@ -49,6 +50,8 @@ public:
     bool ownsVehicle(const Vehicle* vehicle) const;
 
     int waypointNumberRevision() const { return _waypointNumberRevision; }
+
+    int remainingLoops() const { return _missionReady ? _engine.remainingLoops() : -2; }
 
     Q_INVOKABLE int waypointNumber(int sequence, const QGeoCoordinate& coordinate) const;
     Q_INVOKABLE bool start(PlanMasterController* plan);

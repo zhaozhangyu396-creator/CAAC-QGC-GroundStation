@@ -261,25 +261,30 @@ void CaacSimulationEngineTest::_loopsAndReturn()
     CaacSimulationEngine engine;
     const CaacSimulationEngine::Options options{.horizontalSpeed = 10, .verticalSpeed = 10, .turnMode = 3};
     QVERIFY(engine.load({{0, first}, {1, second}, {2, jump}, {3, returning}}, home, options, error));
+    QCOMPARE(engine.remainingLoops(), 2);
     int passes = 0;
     int previous = -1;
     for (int tick = 0; tick < 300 && !engine.state().finished; ++tick) {
         engine.advance(0.1);
         if (engine.state().sequence == 1 && previous != 1) {
             ++passes;
+            QCOMPARE(engine.remainingLoops(), 3 - passes);
         }
         previous = engine.state().sequence;
     }
     QCOMPARE(passes, 2);
+    QCOMPARE(engine.remainingLoops(), 0);
     QVERIFY(engine.state().finished && !engine.state().airborne);
     QVERIFY(QGCGeo::geodesicDistance(engine.state().position, home) < 0.01);
     QCOMPARE(engine.state().position.altitude(), home.altitude());
     jump.param2 = -1;
     QVERIFY(engine.load({{0, first}, {1, second}, {2, jump}}, home, options, error));
+    QCOMPARE(engine.remainingLoops(), -1);
     for (int tick = 0; tick < 500; ++tick) {
         engine.advance(0.1);
     }
     QVERIFY(!engine.state().finished);
+    QCOMPARE(engine.remainingLoops(), -1);
     const auto position = engine.state().position;
     engine.pause();
     QCOMPARE(engine.state().position, position);

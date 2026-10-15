@@ -1,12 +1,16 @@
 #include "MissionManagerTest.h"
 
-#include <QtCore/QRegularExpression>
-#include <QtTest/QSignalSpy>
 #include <iterator>
 
+#include <QtCore/QRegularExpression>
+#include <QtTest/QSignalSpy>
+
 #include "MissionManager.h"
-#include "UnitTestCoords.h"
 #include "MultiSignalSpy.h"
+#include "MultiVehicleManager.h"
+#include "UnitTestCoords.h"
+#include "Vehicle.h"
+#include "VehicleLinkManager.h"
 const MissionManagerTest::TestCase_t MissionManagerTest::_rgTestCases[] = {
     {"0\t0\t3\t16\t10\t20\t30\t40\t-10\t-20\t-30\t1\r\n",
      {0, QGeoCoordinate(-10.0, -20.0, -30.0), MAV_CMD_NAV_WAYPOINT, 10.0, 20.0, 30.0, 40.0, true, false,
@@ -28,6 +32,68 @@ const MissionManagerTest::TestCase_t MissionManagerTest::_rgTestCases[] = {
       MAV_FRAME_MISSION}},
 };
 const size_t MissionManagerTest::_cTestCases = sizeof(_rgTestCases) / sizeof(_rgTestCases[0]);
+
+void MissionManagerTest::_testRemainingLoops_data()
+{
+    QTest::addColumn<int>("repeats");
+    QTest::newRow("three-laps") << 2;
+    QTest::newRow("infinite") << -1;
+}
+
+void MissionManagerTest::_testRemainingLoops()
+{
+    QFETCH(int, repeats);
+    _initForFirmwareType(MAV_AUTOPILOT_PX4);
+    auto* vehicle = MultiVehicleManager::instance()->activeVehicle();
+    QVERIFY(vehicle);
+    QList<MissionItem*> items;
+    for (int i = 0; i < 6; ++i) {
+        auto* item = new MissionItem(this);
+        item->setSequenceNumber(i);
+        item->setCommand(i == 4 ? MAV_CMD_DO_JUMP : MAV_CMD_NAV_WAYPOINT);
+        item->setFrame(MAV_FRAME_GLOBAL_RELATIVE_ALT);
+        item->setParam5(30.0 + i * 0.001);
+        item->setParam6(120);
+        item->setParam7(30);
+        if (i == 4) {
+            item->setParam1(1);
+            item->setParam2(repeats);
+        }
+        items.append(item);
+    }
+    QSignalSpy sent(_missionManager, &MissionManager::sendComplete);
+    _missionManager->writeMissionItems(items);
+    QTRY_VERIFY_WITH_TIMEOUT(!sent.isEmpty(), TestTimeout::mediumMs());
+    QCOMPARE(sent.last().first().toBool(), false);
+    QCOMPARE(_missionManager->remainingLoops(), repeats == -1 ? -1 : 3);
+    QSignalSpy read(_missionManager, &MissionManager::newMissionItemsAvailable);
+    _missionManager->loadFromVehicle();
+    QTRY_VERIFY_WITH_TIMEOUT(!read.isEmpty(), TestTimeout::mediumMs());
+    vehicle->setArmed(true, true);
+    QTRY_VERIFY_WITH_TIMEOUT(vehicle->armed(), TestTimeout::mediumMs());
+    vehicle->setFlightMode(vehicle->missionFlightMode());
+    QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->missionFlightMode(), TestTimeout::mediumMs());
+    const auto report = [&](int index, int state = MISSION_STATE_ACTIVE) {
+        mavlink_message_t message{};
+        mavlink_msg_mission_current_pack(vehicle->id(), vehicle->defaultComponentId(), &message, index, 5, state, 1, 0,
+                                         0, 0);
+        return QMetaObject::invokeMethod(_missionManager, "_mavlinkMessageReceived", Qt::DirectConnection,
+                                         Q_ARG(mavlink_message_t, message));
+    };
+    QVERIFY(report(0));
+    QVERIFY(report(2));
+    QVERIFY(report(0));
+    QCOMPARE(_missionManager->remainingLoops(), repeats == -1 ? -1 : 2);
+    QVERIFY(report(0));
+    QCOMPARE(_missionManager->remainingLoops(), repeats == -1 ? -1 : 2);
+    QVERIFY(QMetaObject::invokeMethod(vehicle->vehicleLinkManager(), "communicationLostChanged", Qt::DirectConnection,
+                                      Q_ARG(bool, true)));
+    QCOMPARE(_missionManager->remainingLoops(), -2);
+    QVERIFY(report(0));
+    QCOMPARE(_missionManager->remainingLoops(), repeats == -1 ? -1 : -2);
+    QVERIFY(report(4, MISSION_STATE_COMPLETE));
+    QCOMPARE(_missionManager->remainingLoops(), 0);
+}
 
 void MissionManagerTest::init()
 {

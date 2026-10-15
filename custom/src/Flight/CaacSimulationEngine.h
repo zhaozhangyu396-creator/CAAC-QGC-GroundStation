@@ -62,6 +62,8 @@ public:
 
     bool loaded() const { return !_items.isEmpty(); }
 
+    int remainingLoops() const;
+
 private:
     QGeoCoordinate _target(const mavlink_mission_item_int_t& item) const;
     void _next();

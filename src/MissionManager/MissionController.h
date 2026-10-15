@@ -66,6 +66,7 @@ public:
     Q_PROPERTY(FlightPathSegment*   splitSegment                    MEMBER _splitSegment                NOTIFY splitSegmentChanged)             ///< Segment which show show + split ui element
     Q_PROPERTY(double               progressPct                     READ progressPct                    NOTIFY progressPctChanged)
     Q_PROPERTY(int                  currentMissionIndex             READ currentMissionIndex            NOTIFY currentMissionIndexChanged)
+    Q_PROPERTY(int remainingMissionLoops READ remainingMissionLoops NOTIFY remainingMissionLoopsChanged)
     Q_PROPERTY(int                  resumeMissionIndex              READ resumeMissionIndex             NOTIFY resumeMissionIndexChanged)       ///< Returns the item index two which a mission should be resumed. -1 indicates resume mission not available.
     Q_PROPERTY(int                  currentPlanViewSeqNum           READ currentPlanViewSeqNum          NOTIFY planViewStateChanged)
     Q_PROPERTY(int                  currentPlanViewVIIndex          READ currentPlanViewVIIndex         NOTIFY planViewStateChanged)
@@ -282,6 +283,7 @@ public:
     double              maxAMSLAltitude             (void) const { return _maxAMSLAltitude; }
 
     int currentMissionIndex         (void) const;
+    int remainingMissionLoops() const;
     int resumeMissionIndex          (void) const;
     int currentPlanViewSeqNum       (void) const { return _currentPlanViewSeqNum; }
     int currentPlanViewVIIndex      (void) const { return _currentPlanViewVIIndex; }
@@ -336,6 +338,7 @@ signals:
     void homePositionSetChanged              (void);
     void progressPctChanged                 (double progressPct);
     void currentMissionIndexChanged         (int currentMissionIndex);
+    void remainingMissionLoopsChanged();
     void planViewStateChanged               (void);  ///< All plan-view properties are recomputed together in setCurrentPlanViewSeqNum, so one signal covers them all
     void takeoffMissionItemChanged          (void);
     void missionBoundingCubeChanged         (void);

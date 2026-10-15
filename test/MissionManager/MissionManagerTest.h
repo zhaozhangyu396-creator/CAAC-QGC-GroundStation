@@ -13,6 +13,8 @@ private slots:
     void _testReadFailureHandlingPX4();
     void _testReadFailureHandlingAPM();
     void _testErrorAckFailureStrings();
+    void _testRemainingLoops_data();
+    void _testRemainingLoops();
 
 private:
     void _roundTripItems(MockLinkMissionItemHandler::FailureMode_t failureMode, MAV_MISSION_RESULT failureAckResult,

@@ -41,6 +41,12 @@ Rectangle {
         return speed
     }
     readonly property string _unavailable: qsTr("Unavailable")
+    readonly property int _remainingLoops: {
+        if (!vehicle || !missionController) { return -2 }
+        const simulation = QGroundControl.corePlugin.simulation
+        return simulation.active && simulation.vehicle === vehicle
+            ? simulation.remainingLoops : missionController.remainingMissionLoops
+    }
     readonly property string _targetNumber: {
         if (!targetItem) { return _unavailable }
         const simulation = QGroundControl.corePlugin.simulation
@@ -85,7 +91,7 @@ Rectangle {
                     { key: "Speed", label: qsTr("Waypoint speed"), value: isFinite(root._speed) ? root._speed.toFixed(1) + " m/s" : root._unavailable },
                     { key: "Altitude", label: qsTr("Target altitude"), value: root.targetItem && root.targetItem.isSimpleItem && root.targetItem.specifiesAltitude ? root.targetItem.altitude.rawValue.toFixed(1) + " m" : root._unavailable },
                     { key: "Heading", label: qsTr("Route heading"), value: root.targetItem && isFinite(root.targetItem.missionVehicleYaw) ? root.targetItem.missionVehicleYaw.toFixed(1) + "°" : root._unavailable },
-                    { key: "StayHeading", label: qsTr("Stay heading"), value: root._unavailable },
+                    { key: "RemainingLoops", label: qsTr("剩余圈数"), value: root._remainingLoops === -1 ? qsTr("无限循环") : root._remainingLoops >= 0 ? root._remainingLoops.toString() : root._unavailable },
                     { key: "Climb", label: qsTr("Climb mode"), value: root._unavailable }
                 ]
                 ColumnLayout {

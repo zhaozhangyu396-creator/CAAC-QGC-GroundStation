@@ -1,5 +1,7 @@
 #include "MissionManager.h"
 
+#include <cmath>
+
 #include "AppMessages.h"
 #include "FirmwarePlugin.h"
 #include "MAVLinkLib.h"
@@ -16,7 +18,107 @@ MissionManager::MissionManager(Vehicle* vehicle)
     : PlanManager               (vehicle, MAV_MISSION_TYPE_MISSION)
     , _cachedLastCurrentIndex   (-1)
 {
+    if (!_vehicle) {
+        return;
+    }
     connect(_vehicle, &Vehicle::mavlinkMessageReceived, this, &MissionManager::_mavlinkMessageReceived);
+    connect(this, &PlanManager::newMissionItemsAvailable, this, [this]() { _configureLoopProgress(false); });
+    connect(this, &PlanManager::sendComplete, this, [this](bool error) {
+        if (!error) {
+            _configureLoopProgress(true);
+        }
+    });
+    connect(this, &PlanManager::removeAllComplete, this, [this](bool error) {
+        if (!error) {
+            _configureLoopProgress(true);
+        }
+    });
+    connect(_vehicle, &Vehicle::armedChanged, this, [this](bool armed) {
+        if (_vehicle && armed && _vehicle->isInitialConnectComplete() && _currentMissionIndex <= _loopStart) {
+            _loopPrevious = -1;
+            _setRemainingLoops(_loopTotal);
+        }
+    });
+    // Vehicle creates its link manager after its mission manager.
+    QTimer::singleShot(0, this, [this]() {
+        if (!_vehicle || !_vehicle->vehicleLinkManager()) {
+            return;
+        }
+        connect(_vehicle->vehicleLinkManager(), &VehicleLinkManager::communicationLostChanged, this, [this](bool lost) {
+            if (lost) {
+                _setRemainingLoops(-2);
+                _loopPrevious = -1;
+            }
+        });
+    });
+}
+
+void MissionManager::_setRemainingLoops(int remaining)
+{
+    if (_remainingLoops != remaining) {
+        _remainingLoops = remaining;
+        emit remainingLoopsChanged();
+    }
+}
+
+void MissionManager::_configureLoopProgress(bool uploaded)
+{
+    int start = -1;
+    int end = -1;
+    int total = -2;
+    for (const auto* item : missionItems()) {
+        if (item->command() != MAV_CMD_DO_JUMP) {
+            continue;
+        }
+        const double target =
+            item->param1() -
+            (!uploaded && _vehicle && !_vehicle->firmwarePlugin()->sendHomePositionToVehicle() ? 1 : 0);
+        const double repeats = item->param2();
+        if (end >= 0 || !std::isfinite(target) || target != std::floor(target) || target < 0 ||
+            target >= item->sequenceNumber() - 1 || !std::isfinite(repeats) || repeats != std::floor(repeats) ||
+            repeats < -1 || repeats > 32767) {
+            end = -1;
+            break;
+        }
+        start = static_cast<int>(target);
+        end = item->sequenceNumber();
+        total = repeats == -1 ? -1 : static_cast<int>(repeats) + 1;
+    }
+    if (!uploaded && start == _loopStart && end == _loopEnd && total == _loopTotal) {
+        return;
+    }
+    _loopStart = start;
+    _loopEnd = end;
+    _loopTotal = end >= 0 ? total : -2;
+    _loopPrevious = -1;
+    _setRemainingLoops(_loopTotal == -1 || uploaded || (_vehicle && !_vehicle->armed()) ? _loopTotal : -2);
+}
+
+void MissionManager::_trackLoopProgress(int index, int state)
+{
+    if (!_vehicle || _loopEnd < 0) {
+        return;
+    }
+    if (state == MISSION_STATE_COMPLETE) {
+        _setRemainingLoops(0);
+    } else if (_vehicle->armed() && _vehicle->flightMode() == _vehicle->missionFlightMode()) {
+        if (_loopTotal == -1) {
+            _setRemainingLoops(index > _loopEnd ? 0 : -1);
+        } else if (_remainingLoops >= 0) {
+            if (index > _loopEnd) {
+                _setRemainingLoops(0);
+            } else if (index < _loopPrevious) {
+                if (index == _loopStart && _loopPrevious >= _loopEnd - 1 && _loopPrevious <= _loopEnd) {
+                    _setRemainingLoops(qMax(1, _remainingLoops - 1));
+                } else {
+                    _setRemainingLoops(-2);
+                }
+            }
+        }
+    } else if (_loopPrevious >= 0 && index != _loopPrevious && _vehicle->armed()) {
+        _setRemainingLoops(-2);
+    }
+    _loopPrevious = index;
 }
 
 MissionManager::~MissionManager()
@@ -270,6 +372,9 @@ void MissionManager::_handleMissionCurrent(const mavlink_message_t& message)
 {
     mavlink_mission_current_t missionCurrent;
     mavlink_msg_mission_current_decode(&message, &missionCurrent);
+    if (_vehicle && message.compid == _vehicle->defaultComponentId()) {
+        _trackLoopProgress(missionCurrent.seq, missionCurrent.mission_state);
+    }
     _updateMissionIndex(missionCurrent.seq);
 }
 

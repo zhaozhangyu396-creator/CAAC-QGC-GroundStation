@@ -109,6 +109,7 @@ void CaacSimulationUITest::_fourLoopsFromUnsavedSettings()
     QVERIFY(clickButton(QStringLiteral("caacUploadWaypoints")));
     QTRY_VERIFY_WITH_TIMEOUT(!upload.isEmpty(), TestTimeout::longMs());
     std::fprintf(stderr, "CAAC four-loop step: settings uploaded\n");
+    QCOMPARE(simulation->remainingLoops(), 4);
     QCOMPARE(editor->simulationSettings().value("loopCount").toInt(), 4);
     QVERIFY(editor->simulationSettings().value("closed").toBool());
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacSimulationPreview_closure")));
@@ -152,6 +153,7 @@ void CaacSimulationUITest::_fourLoopsFromUnsavedSettings()
                               60000);
     QTRY_COMPARE_WITH_TIMEOUT(arrivals, QList<int>({5, 4, 4, 5}), TestTimeout::mediumMs());
     std::fprintf(stderr, "CAAC four-loop step: all four loops completed\n");
+    QCOMPARE(simulation->remainingLoops(), 0);
     QVERIFY(QGCGeo::geodesicDistance(vehicle->coordinate(), points[3]) < 0.2);
     QVERIFY(vehicle->airborne());
 }
@@ -815,6 +817,7 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     const auto originalAircraftItems = manager->missionItems();
     expectAppMessage(QRegularExpression(QStringLiteral("当前航点任务正在执行，请先暂停当前任务，再上传新航线。")));
     QVERIFY(!simulation->upload(master));
+    verifyExpectedLogMessage();
     QVERIFY(waitForDialog(QStringLiteral("上传航线")));
     QVERIFY(acceptDialog());
     QVERIFY(QMetaObject::invokeMethod(master, "upload"));

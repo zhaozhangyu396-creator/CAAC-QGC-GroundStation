@@ -542,7 +542,7 @@ Column {
                 }
             }
             RailButton { objectName: "caacUndo"; text: qsTr("Undo"); toolKind: "undo"; enabled: editorController.canUndo; onClicked: editorController.undo() }
-            RailButton { objectName: "caacRedo"; text: qsTr("Redo"); toolKind: "redo"; enabled: editorController.canRedo; onClicked: editorController.redo() }
+            RailButton { objectName: "caacRedo"; text: qsTr("重做（Ctrl+X）"); toolKind: "redo"; enabled: editorController.canRedo; onClicked: editorController.redo() }
             RailButton { objectName: "caacMapZoomIn"; text: qsTr("Zoom in"); toolKind: "zoomIn"; enabled: root.editorMap.zoomLevel < root.editorMap.maximumZoomLevel; onClicked: root.editorMap.zoomLevel = Math.min(root.editorMap.maximumZoomLevel, root.editorMap.zoomLevel + 1) }
             RailButton { objectName: "caacMapZoomOut"; text: qsTr("Zoom out"); toolKind: "zoomOut"; enabled: root.editorMap.zoomLevel > root.editorMap.minimumZoomLevel; onClicked: root.editorMap.zoomLevel = Math.max(root.editorMap.minimumZoomLevel, root.editorMap.zoomLevel - 1) }
         }
@@ -1041,6 +1041,19 @@ Column {
             waypointPopup.fineTuning = false
             waypointPopup.close()
             editorController.undo()
+        }
+    }
+
+    Shortcut {
+        objectName: "caacRouteRedoShortcut"
+        sequence: "Ctrl+X"
+        context: Qt.ApplicationShortcut
+        enabled: root.visible && root.enabled && editorController.canRedo
+            && (!mainWindow.activeFocusItem || typeof mainWindow.activeFocusItem.cut !== "function")
+        onActivated: {
+            waypointPopup.fineTuning = false
+            waypointPopup.close()
+            editorController.redo()
         }
     }
 

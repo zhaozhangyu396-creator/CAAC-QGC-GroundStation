@@ -1706,6 +1706,8 @@ void MissionController::_managerVehicleChanged(Vehicle* managerVehicle)
     connect(_missionManager, &MissionManager::inProgressChanged,        this, &MissionController::_inProgressChanged);
     connect(_missionManager, &MissionManager::progressPctChanged,       this, &MissionController::_progressPctChanged);
     connect(_missionManager, &MissionManager::currentIndexChanged,      this, &MissionController::_currentMissionIndexChanged);
+    connect(_missionManager, &MissionManager::remainingLoopsChanged, this,
+            &MissionController::remainingMissionLoopsChanged);
     connect(_missionManager, &MissionManager::lastCurrentIndexChanged,  this, &MissionController::resumeMissionIndexChanged);
     connect(_missionManager, &MissionManager::resumeMissionReady,       this, &MissionController::resumeMissionReady);
     connect(_missionManager, &MissionManager::resumeMissionUploadFail,  this, &MissionController::resumeMissionUploadFail);
@@ -1715,6 +1717,12 @@ void MissionController::_managerVehicleChanged(Vehicle* managerVehicle)
 
     emit complexMissionItemsChanged();
     emit resumeMissionIndexChanged();
+    emit remainingMissionLoopsChanged();
+}
+
+int MissionController::remainingMissionLoops() const
+{
+    return _missionManager ? _missionManager->remainingLoops() : -2;
 }
 
 void MissionController::_inProgressChanged(bool inProgress)

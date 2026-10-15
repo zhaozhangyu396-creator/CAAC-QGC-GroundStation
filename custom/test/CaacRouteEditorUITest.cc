@@ -890,6 +890,10 @@ void CaacRouteEditorUITest::_homeCenterWindowFocus()
     }
     QTest::keyClick(_window, Qt::Key_Z, Qt::ControlModifier);
     QTRY_COMPARE_WITH_TIMEOUT(master->saveToJson(), beforeCenter, TestTimeout::mediumMs());
+    QTest::keyClick(_window, Qt::Key_X, Qt::ControlModifier);
+    QTRY_COMPARE_WITH_TIMEOUT(master->saveToJson(), centeredPlan, TestTimeout::mediumMs());
+    QTest::keyClick(_window, Qt::Key_Z, Qt::ControlModifier);
+    QTRY_COMPARE_WITH_TIMEOUT(master->saveToJson(), beforeCenter, TestTimeout::mediumMs());
     QTest::mouseDClick(_window, Qt::LeftButton, Qt::NoModifier,
                        map->mapToScene(QPointF(map->width() * 0.45, map->height() * 0.35)).toPoint());
     QTRY_COMPARE_WITH_TIMEOUT(mission->visualItems()->count(), 4, TestTimeout::mediumMs());
