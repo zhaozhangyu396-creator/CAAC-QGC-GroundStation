@@ -2210,7 +2210,12 @@ void MockLink::_handleCommandLong(const mavlink_message_t &msg)
             }
             break;
         case MAV_CMD_DO_REPOSITION:
-            if (_caacSimulation) {
+            if (!_caacSimulation && _firmwareType == MAV_AUTOPILOT_PX4 &&
+                request.param2 == static_cast<float>(MAV_DO_REPOSITION_FLAGS_CHANGE_MODE) &&
+                std::isnan(request.param5) && std::isnan(request.param6) && std::isnan(request.param7)) {
+                _mavCustomMode = PX4CustomMode::AUTO_LOITER;
+                commandResult = MAV_RESULT_ACCEPTED;
+            } else if (_caacSimulation) {
                 const QGeoCoordinate target(request.param5, request.param6, request.param7);
                 const bool hold = std::isnan(request.param5) && std::isnan(request.param6);
                 if (hold || (target.isValid() && std::isfinite(target.altitude()))) {

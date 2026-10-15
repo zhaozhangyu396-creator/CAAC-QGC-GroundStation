@@ -62,7 +62,7 @@ ColumnLayout {
 
     Card {
         title: qsTr("Drag entire route")
-        Switch {
+        QGCCheckBoxSlider {
             objectName: "caacRouteDragToggle"
             checked: root.editor.routeDragMode
             onClicked: root.editor.routeDragMode = checked

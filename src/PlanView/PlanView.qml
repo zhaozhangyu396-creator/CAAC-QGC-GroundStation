@@ -294,7 +294,7 @@ Item {
             objectName: "planView_map"
             visible: !_root._simulationEmergency
             property var planMasterController: _root._planMasterController
-            readonly property real mapToolsCenterY: unifiedFlightLayer.clearTrajectoryCenterY
+            readonly property var mapToolsContainer: _root.unifiedFlightPlan ? unifiedFlightLayer.mapToolsContainer : null
             anchors.fill: parent
             mapName: "MissionEditor"
             allowGCSLocationCenter: true

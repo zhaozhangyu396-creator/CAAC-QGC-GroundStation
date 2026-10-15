@@ -84,6 +84,7 @@ void QGCPalette::_buildMap()
     DECLARE_QGC_NONTHEMED_COLOR(videoCaptureButtonColor,    "#f89a9e", "#f32836")
 
     // Colors not affecting by theming or enable/disable
+    DECLARE_QGC_SINGLE_COLOR(settingsAccent,               "#1d242a")
     DECLARE_QGC_SINGLE_COLOR(mapWidgetBorderLight,          "#ffffff")
     DECLARE_QGC_SINGLE_COLOR(mapWidgetBorderDark,           "#000000")
     DECLARE_QGC_SINGLE_COLOR(mapMissionTrajectory,          "#ffa000")

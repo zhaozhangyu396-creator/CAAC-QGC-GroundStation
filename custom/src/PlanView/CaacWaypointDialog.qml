@@ -68,6 +68,20 @@ QGCPopupDialog {
         }
     }
 
+    component GroupDivider: ColumnLayout {
+        required property string title
+        Layout.columnSpan: waypointFields.columns
+        Layout.fillWidth: true
+        Layout.topMargin: ScreenTools.defaultFontPixelHeight * 0.5
+        Layout.bottomMargin: ScreenTools.defaultFontPixelHeight * 0.25
+        Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: 1
+            color: QGroundControl.globalPalette.groupBorder
+        }
+        QGCLabel { text: parent.title; font.bold: true; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+    }
+
     ColumnLayout {
         width: Math.min(root.maxContentAvailableWidth, ScreenTools.defaultFontPixelWidth * 80)
         spacing: ScreenTools.defaultFontPixelHeight * 0.5
@@ -83,7 +97,7 @@ QGCPopupDialog {
             columns: width < ScreenTools.defaultFontPixelWidth * 68 ? 1 : 2
             columnSpacing: ScreenTools.defaultFontPixelWidth
 
-            QGCLabel { text: qsTr("Position editing") }
+            QGCLabel { text: qsTr("Position editing"); font.bold: true }
             QGCComboBox {
                 id: positionMode
                 objectName: "caacWaypointPositionMode"
@@ -91,9 +105,10 @@ QGCPopupDialog {
                 model: [qsTr("Coordinates"), qsTr("Relative to previous waypoint"), qsTr("Current vertex angle")]
                 enabled: root._leg.distance !== undefined
             }
-            QGCLabel { text: qsTr("Latitude (degrees)"); visible: positionMode.currentIndex === 0 }
+            QGCLabel { text: qsTr("Latitude (degrees)"); visible: positionMode.currentIndex === 0; Layout.columnSpan: latitude.displayDms ? waypointFields.columns : 1 }
             CaacCoordinateField {
                 id: latitude
+                Layout.columnSpan: displayDms ? waypointFields.columns : 1
                 fieldName: "caacWaypointLatitude"
                 maximumDegrees: 90
                 compact: true
@@ -101,9 +116,10 @@ QGCPopupDialog {
                 value: root.waypoint ? root.waypoint.coordinate.latitude : NaN
                 visible: positionMode.currentIndex === 0
             }
-            QGCLabel { text: qsTr("Longitude (degrees)"); visible: positionMode.currentIndex === 0 }
+            QGCLabel { text: qsTr("Longitude (degrees)"); visible: positionMode.currentIndex === 0; Layout.columnSpan: longitude.displayDms ? waypointFields.columns : 1 }
             CaacCoordinateField {
                 id: longitude
+                Layout.columnSpan: displayDms ? waypointFields.columns : 1
                 fieldName: "caacWaypointLongitude"
                 maximumDegrees: 180
                 compact: true
@@ -120,6 +136,7 @@ QGCPopupDialog {
                 model: root._leg.angle !== undefined ? [qsTr("Bearing"), qsTr("Interior angle")] : [qsTr("Bearing")]
                 currentIndex: root._leg.angle !== undefined ? 1 : 0
             }
+            GroupDivider { title: qsTr("Leg parameters") }
             QGCLabel { text: qsTr("Bearing (degrees)") }
             QGCTextField {
                 objectName: "caacWaypointBearing"
@@ -185,6 +202,7 @@ QGCPopupDialog {
                     : root._leg.bearing !== undefined ? root._leg.bearing.toFixed(6) : "0"
                 validator: DoubleValidator { locale: "C" }
             }
+            GroupDivider { title: qsTr("Altitude and speed") }
             QGCLabel { text: qsTr("Altitude (m)") }
             QGCTextField {
                 id: altitude
@@ -210,7 +228,7 @@ QGCPopupDialog {
                 text: root._speedSection ? root._speedSection.flightSpeed.rawValue.toString() : ""
                 validator: DoubleValidator { bottom: 0; locale: "C" }
             }
-            QGCLabel { text: qsTr("Advanced settings"); font.bold: true; visible: root._advanced.supported === true; Layout.columnSpan: waypointFields.columns }
+            GroupDivider { title: qsTr("Advanced settings"); visible: root._advanced.supported === true }
             QGCLabel { text: qsTr("Vertical speed (m/s)"); visible: root._advanced.supported === true }
             QGCTextField {
                 id: verticalSpeed

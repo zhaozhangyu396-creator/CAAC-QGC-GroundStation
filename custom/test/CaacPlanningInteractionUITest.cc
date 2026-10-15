@@ -20,7 +20,6 @@
 #include <QtTest/QTest>
 
 #include "AppSettings.h"
-#include "CaacAccessController.h"
 #include "CaacCorePlugin.h"
 #include "CaacRouteEditorController.h"
 #include "CaacSimulationController.h"
@@ -55,10 +54,11 @@ private slots:
     void _synchronizeBasicsUI();
     void _calculatorUI();
     void _preferencesUI();
-    void _newSettingsPagesAndAccess();
+    void _newSettingsPages();
     void _waypointDragRemainsResponsive_data();
     void _waypointDragRemainsResponsive();
     void _statisticsPanelInteraction();
+    void _mapContextClear();
     void _homeAltitudeAutoSave();
     void _batteryAndFenceSettings();
 };
@@ -160,6 +160,33 @@ void CaacPlanningInteractionUITest::_homeAltitudeAutoSave()
     QCOMPARE(altitude->property("text").toString().toDouble(), 2070.0);
 }
 
+void CaacPlanningInteractionUITest::_mapContextClear()
+{
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    auto* panel = findVisibleItem(_rootItem, QStringLiteral("caacRouteEditor"));
+    QVERIFY(panel);
+    auto* editor = panel->property("routeController").value<CaacRouteEditorController*>();
+    auto* master = panel->property("planMasterController").value<PlanMasterController*>();
+    auto* map = qobject_cast<QQuickItem*>(panel->property("editorMap").value<QObject*>());
+    QVERIFY(editor && master && map);
+    master->missionController()->setHomePosition(QGeoCoordinate(30, 120, 20));
+    QVERIFY(editor->addWaypoint(QGeoCoordinate(30.001, 120)));
+    const auto before = master->saveToJson();
+    const auto home = master->missionController()->plannedHomePosition();
+    QTest::mouseClick(_window, Qt::RightButton, Qt::NoModifier,
+                      map->mapToScene(QPointF(map->width() * 0.5, map->height() * 0.4)).toPoint());
+    QVERIFY(clickButton(QStringLiteral("caacMapClearWaypoints")));
+    QVERIFY(waitForDialog(QCoreApplication::translate("CaacRouteEditor", "Clear waypoints")));
+    QVERIFY(acceptDialog());
+    QCOMPARE(master->missionController()->visualItems()->count(), 1);
+    QCOMPARE(master->missionController()->plannedHomePosition(), home);
+    QVERIFY(editor->undo());
+    QCOMPARE(master->saveToJson(), before);
+}
+
 void CaacPlanningInteractionUITest::_statisticsPanelInteraction()
 {
     startUI();
@@ -167,17 +194,14 @@ void CaacPlanningInteractionUITest::_statisticsPanelInteraction()
         return;
     }
     auto* clear = findVisibleItem(_rootItem, QStringLiteral("caacClearTrajectoryButton"));
-    auto* center = findVisibleItem(_rootItem, QStringLiteral("caacHomeCenterButton"));
+    auto* center =
+        findVisibleItemScrolled(QStringLiteral("caacHomeCenterButton"), QStringLiteral("caacMainToolsScroller"));
     auto* rail = findVisibleItem(_rootItem, QStringLiteral("caacMapEditTools"));
     QVERIFY(clear && center && rail);
-    const auto expectedRailY = [&]() {
-        const double margin = rail->x();
-        const double desired =
-            clear->mapToItem(rail->parentItem(), QPointF(0, clear->property("iconSize").toReal() / 2)).y() -
-            rail->width() / 2;
-        return qMax(margin, qMin(desired, rail->parentItem()->height() - rail->height() - margin));
-    };
-    QTRY_VERIFY_WITH_TIMEOUT(std::abs(rail->y() - expectedRailY()) < 1, TestTimeout::mediumMs());
+    QCOMPARE(rail->parentItem(), clear->parentItem());
+    QTRY_VERIFY_WITH_TIMEOUT(rail->y() >= clear->y() + clear->height(), TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(std::abs(rail->x() + rail->width() / 2 - clear->x() - clear->width() / 2) < 1,
+                             TestTimeout::mediumMs());
     QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_planningStats")));
     auto* statistics = findVisibleItem(_rootItem, QStringLiteral("planView_statistics"));
     QVERIFY(statistics);
@@ -335,7 +359,7 @@ void CaacPlanningInteractionUITest::_waypointDragRemainsResponsive()
     }
 }
 
-void CaacPlanningInteractionUITest::_newSettingsPagesAndAccess()
+void CaacPlanningInteractionUITest::_newSettingsPages()
 {
     startUI();
     if (QTest::currentTestFailed()) {
@@ -473,15 +497,7 @@ void CaacPlanningInteractionUITest::_newSettingsPagesAndAccess()
         QQmlExpression open(qmlContext(plan), plan, QStringLiteral("mainWindow.%1()").arg(QLatin1String(function)));
         open.evaluate();
         QVERIFY(!open.hasError());
-        auto* password = findVisibleItem(_rootItem, QStringLiteral("caacAccessPassword"));
-        QVERIFY(password);
-        QCOMPARE(password->property("echoMode").toInt(), 2);
-        QVERIFY(password->setProperty("text", QStringLiteral("wrong")));
-        QVERIFY(clickButton(QStringLiteral("popupDialog_acceptButton")));
-        QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacAccessPassword")));
-        QVERIFY(!drawer->isVisible());
-        QVERIFY(password->setProperty("text", QStringLiteral("333")));
-        QVERIFY(acceptDialog());
+        QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacAccessDialog"), 0));
         if (function == QLatin1String("showVehicleConfig")) {
             auto* config = findVisibleItem(_rootItem, QStringLiteral("vehicleConfig_root"));
             QVERIFY(config);
@@ -525,12 +541,10 @@ void CaacPlanningInteractionUITest::_newSettingsPagesAndAccess()
         QVERIFY(!returnToPlan.hasError());
         open.evaluate();
         QVERIFY(!open.hasError());
-        password = findVisibleItem(_rootItem, QStringLiteral("caacAccessPassword"));
-        QVERIFY(password);
-        QVERIFY(password->property("text").toString().isEmpty());
+        QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacAccessDialog"), 0));
         QVERIFY(!drawer->isVisible());
-        QVERIFY(rejectDialog());
-        QVERIFY(!drawer->isVisible());
+        returnToPlan.evaluate();
+        QVERIFY(!returnToPlan.hasError());
     }
     auto* master = plan->property("_planMasterController").value<PlanMasterController*>();
     QVERIFY(master);
@@ -972,7 +986,7 @@ void CaacPlanningInteractionUITest::_dragSnappingAndRelations()
     QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, target);
     QTRY_VERIFY_WITH_TIMEOUT(!findVisibleItem(_rootItem, QStringLiteral("caacWaypointSnapGuides"), 0),
                              TestTimeout::mediumMs());
-    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
     QCOMPARE(master->saveToJson(), original);
     auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
     QVERIFY(plugin);
@@ -1026,7 +1040,7 @@ void CaacPlanningInteractionUITest::_dragSnappingAndRelations()
     QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, target);
     QTRY_VERIFY_WITH_TIMEOUT(!findVisibleItem(_rootItem, QStringLiteral("caacWaypointSnapGuides"), 0),
                              TestTimeout::mediumMs());
-    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
     QCOMPARE(master->saveToJson(), original);
     QVERIFY(clickButton(QStringLiteral("caacWaypointListButton")));
     auto* files = findVisibleItem(_rootItem, QStringLiteral("caacWaypointFileActions"));
@@ -1072,7 +1086,7 @@ void CaacPlanningInteractionUITest::_dragSnappingAndRelations()
     QVERIFY(undoButton && undoButton->isEnabled());
     QSignalSpy undoClick(undoButton, SIGNAL(clicked()));
     QVERIFY(undoClick.isValid());
-    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
     QCOMPARE(undoClick.count(), 1);
     QCOMPARE(master->saveToJson(), original);
 }
@@ -1212,7 +1226,7 @@ void CaacPlanningInteractionUITest::_homeRelativeEditing()
                                      QGCGeo::geodesicDestination(reference, 238, 28.1)) < 0.01);
     QCOMPARE(mission->plannedHomePosition().altitude(), 20.0);
     QCOMPARE(mission->visualItems()->value<SimpleMissionItem*>(1)->coordinate().latitude(), reference.latitude());
-    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
     QCOMPARE(master->saveToJson(), original);
     map->setProperty("center", QVariant::fromValue(reference));
     auto* firstDragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_1"));
@@ -1431,7 +1445,7 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     QVERIFY(undoButton && undoButton->isEnabled());
     QSignalSpy undoClick(undoButton, SIGNAL(clicked()));
     QVERIFY(undoClick.isValid());
-    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
     QCOMPARE(undoClick.count(), 1);
     QCOMPARE(master->saveToJson(), beforeHomeDrag);
     mission->setCurrentPlanViewSeqNum(1, true);
@@ -1595,13 +1609,13 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     QVERIFY(clickButton(QStringLiteral("caacDeleteSelectedWaypoints")));
     QCOMPARE(mission->visualItems()->count(), 2);
     QCOMPARE(mission->plannedHomePosition(), home);
-    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
     QCOMPARE(master->saveToJson(), beforeBatchDelete);
     QCOMPARE(panel->property("selectedWaypointCount").toInt(), 0);
     QVERIFY(clickButton(QStringLiteral("caacSelectAllWaypoints")));
     QVERIFY(clickButton(QStringLiteral("caacDeleteSelectedWaypoints")));
     QCOMPARE(mission->visualItems()->count(), 1);
-    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
     QCOMPARE(master->saveToJson(), beforeBatchDelete);
     QVERIFY(clickButton(QStringLiteral("caacRelativeEditorButton")));
     auto* relativeTarget = findVisibleItem(_rootItem, QStringLiteral("caacRelativeTarget"));
@@ -1640,8 +1654,8 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     const auto secondRelative = mission->visualItems()->value<SimpleMissionItem*>(2)->coordinate();
     QVERIFY(std::abs(QGCGeo::geodesicDistance(firstRelative, secondRelative) - 30) < 0.01);
     QVERIFY(std::abs(std::remainder(QGCGeo::geodesicAzimuth(firstRelative, secondRelative), 360)) < 0.02);
-    QVERIFY(clickButton(QStringLiteral("caacUndo")));
-    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
     QCOMPARE(master->saveToJson(), beforeRelativeChain);
     const auto beforeEndpoint = master->saveToJson();
     for (int targetIndex : {1, 2}) {
@@ -1663,7 +1677,7 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
         const auto reference = mission->visualItems()->value<SimpleMissionItem*>(1)->coordinate();
         QVERIFY(std::abs(QGCGeo::geodesicDistance(reference, endpoint) - 25) < 0.01);
         QVERIFY(std::abs(std::remainder(QGCGeo::geodesicAzimuth(reference, endpoint), 360)) < 0.02);
-        QVERIFY(clickButton(QStringLiteral("caacUndo")));
+        QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
         QCOMPARE(master->saveToJson(), beforeEndpoint);
     }
     QVERIFY(clickButton(QStringLiteral("caacTemplateEditorButton")));
@@ -1693,7 +1707,7 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     QVERIFY(clickButtonScrolled(QStringLiteral("caacConfirmOrientation"), QStringLiteral("caacTemplateScroller")));
     QCOMPARE(editor->routeOrientation(), 90.0);
     QVERIFY(!editor->rotationPreviewActive());
-    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
     QCOMPARE(master->saveToJson(), original);
     QVERIFY(clickButton(QStringLiteral("caacGlobalSettingsButton")));
     for (const auto* name : {"caacHomeSection", "caacBasicSection", "caacSimTurnSection", "caacSimClimbSection",
@@ -1730,7 +1744,7 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     QVERIFY(minutes->setProperty("text", QStringLiteral("60")));
     QVERIFY(clickButtonScrolled(QStringLiteral("caacApplyHome"), QStringLiteral("caacGlobalSettingsScroller")));
     QCOMPARE(master->saveToJson(), validDmsHome);
-    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
     QCOMPARE(master->saveToJson(), beforeHomeCoordinates);
     QVERIFY(!findItem(_rootItem, QStringLiteral("caacSimFlightSection")));
     QVERIFY(!findItem(_rootItem, QStringLiteral("caacSimActionsSection")));

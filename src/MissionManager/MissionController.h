@@ -235,6 +235,8 @@ public:
 
     /// Sends the mission items to the specified vehicle
     static void sendItemsToVehicle(Vehicle* vehicle, QmlObjectListModel* visualMissionItems);
+    /// Caller owns the returned items until transferring them to PlanManager.
+    static QList<MissionItem*> createMissionItems(QmlObjectListModel* visualMissionItems, QObject* parent);
 
     bool loadTextFile(QFile& file, QString& errorString);
 

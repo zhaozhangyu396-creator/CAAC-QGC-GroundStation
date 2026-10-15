@@ -25,6 +25,7 @@ Map {
     property bool   planView:                       false   ///< true: map being using for Plan view, items should be draggable
     property bool   directMissionItemEditing:       false
     property var    missionItemDragEditor: null
+    property bool   missionItemDragBlocked: false
     property bool   pinchZoomDisabledByVirtualJoysticks: false ///< true: disable pinch-to-zoom while virtual joystick thumbs are down
 
     property var    _activeVehicle:             QGroundControl.multiVehicleManager.activeVehicle

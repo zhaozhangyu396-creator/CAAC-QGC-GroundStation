@@ -30,6 +30,7 @@ class CaacSimulationController : public QObject
     Q_PROPERTY(Vehicle* vehicle READ vehicle NOTIFY statusChanged)
     Q_PROPERTY(int waypointNumberRevision READ waypointNumberRevision NOTIFY waypointNumbersChanged)
     Q_PROPERTY(int remainingLoops READ remainingLoops NOTIFY statusChanged)
+    Q_PROPERTY(QVariantMap currentMissionDetails READ currentMissionDetails NOTIFY missionDetailsChanged)
     Q_PROPERTY(bool manualControlActive READ manualControlActive NOTIFY statusChanged)
     Q_PROPERTY(QVariantList joystickChannels READ joystickChannels NOTIFY joystickChannelsChanged)
     Q_PROPERTY(int modeSwitchPosition READ modeSwitchPosition NOTIFY joystickChannelsChanged)
@@ -58,6 +59,7 @@ public:
     int remainingLoops() const { return _missionReady ? _engine.remainingLoops() : -2; }
 
     bool manualControlActive() const;
+    QVariantMap currentMissionDetails() const;
 
     QVariantList joystickChannels() const { return _joystickChannels; }
 
@@ -65,7 +67,7 @@ public:
 
     Q_INVOKABLE int waypointNumber(int sequence, const QGeoCoordinate& coordinate) const;
     Q_INVOKABLE bool start(PlanMasterController* plan);
-    Q_INVOKABLE bool upload(PlanMasterController* plan);
+    Q_INVOKABLE bool upload(PlanMasterController* plan, bool preserveProgress = false);
     Q_INVOKABLE bool restart();
     Q_INVOKABLE bool beginManualControl();
     Q_INVOKABLE void endManualControl();
@@ -77,6 +79,8 @@ public:
 signals:
     void statusChanged();
     void missionUploaded();
+    void missionUploadFailed();
+    void missionDetailsChanged();
     void emergencyModeChanged();
     void waypointNumbersChanged();
     void joystickChannelsChanged();
@@ -108,6 +112,7 @@ private:
     QGeoCoordinate _guidedTarget;
     QJsonObject _sourceMission;
     QVariantMap _settings;
+    QVariantMap _publishedMissionDetails;
     QTimer _timer;
     QElapsedTimer _elapsed;
     QElapsedTimer _manualInputTime;
@@ -118,6 +123,7 @@ private:
     QString _status;
     bool _emergencyMode = false;
     bool _uploadSent = false;
+    bool _preserveUploadProgress = false;
     bool _missionReady = false;
     bool _settingsExplicit = false;
 

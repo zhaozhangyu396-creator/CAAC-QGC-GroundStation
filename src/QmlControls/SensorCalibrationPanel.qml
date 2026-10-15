@@ -255,9 +255,7 @@ Item {
         Rectangle {
             width: ScreenTools.defaultFontPixelWidth * 0.35
             height: ScreenTools.defaultFontPixelHeight
-            color: QGroundControl.corePlugin.directMissionItemEditing ? calPalette.window : calPalette.colorGreen
-            border.color: calPalette.windowShadeLight
-            border.width: QGroundControl.corePlugin.directMissionItemEditing ? 1 : 0
+            color: calPalette.settingsAccent
             radius: width * 0.5
         }
         QGCLabel { text: parent.title; Layout.fillWidth: true }

@@ -110,6 +110,8 @@ class GroupDef:
     showWhen: str = ""
     enableWhen: str = ""
     headingDescription: str = ""
+    showTopDivider: bool = False
+    showDividers: bool = True
     component: str = ""
     properties: dict[str, str] = field(default_factory=dict)
     sectionName: str = ""
@@ -162,6 +164,8 @@ _ALLOWED_GROUP_KEYS = frozenset(
         "showWhen",
         "enableWhen",
         "headingDescription",
+        "showTopDivider",
+        "showDividers",
         "component",
         "properties",
         "sectionName",
@@ -201,10 +205,15 @@ def load_page_def(json_path: Path) -> PageDef:
     )
     for grp_data in require_list(data.get("groups", []), "'groups'", json_path):
         reject_unknown_keys(grp_data, _ALLOWED_GROUP_KEYS, "group", json_path)
+        for key in ("showTopDivider", "showDividers"):
+            if key in grp_data and not isinstance(grp_data[key], bool):
+                raise ValueError(f"{json_path}: group {key} must be a boolean")
         grp = GroupDef(
             heading=require_qml_safe_string(
                 grp_data.get("heading", ""), "group heading", json_path
             ),
+            showTopDivider=grp_data.get("showTopDivider", False),
+            showDividers=grp_data.get("showDividers", True),
             showWhen=grp_data.get("showWhen", ""),
             enableWhen=grp_data.get("enableWhen", ""),
             # headingDescription is a QML expression (e.g. qsTr(...)), emitted raw

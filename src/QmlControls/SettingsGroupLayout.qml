@@ -22,6 +22,7 @@ ColumnLayout {
 
     property string heading
     property string headingDescription
+    property bool   showTopDivider:     false
     property bool   showDividers:       true
     property bool   showBorder:         !settingsMenuStyle
     readonly property bool vehicleSetupStyle: ScreenTools.isVehicleSetupItem(control)
@@ -38,6 +39,15 @@ ColumnLayout {
         return arr
     }
 
+    Rectangle {
+        objectName: "settingsGroupTopDivider"
+        Layout.fillWidth: true
+        Layout.bottomMargin: control._margins
+        implicitHeight: 1
+        color: QGroundControl.globalPalette.groupBorder
+        visible: control.showTopDivider
+    }
+
     ColumnLayout {
         Layout.leftMargin:  _margins
         Layout.fillWidth:   true
@@ -50,9 +60,7 @@ ColumnLayout {
             Rectangle {
                 width: ScreenTools.defaultFontPixelWidth * 0.35
                 height: ScreenTools.defaultFontPixelHeight
-                color: QGroundControl.globalPalette.window
-                border.color: QGroundControl.globalPalette.windowShadeLight
-                border.width: 1
+                color: QGroundControl.globalPalette.settingsAccent
                 radius: width / 2
                 visible: control.vehicleSetupStyle || control.settingsMenuStyle
             }

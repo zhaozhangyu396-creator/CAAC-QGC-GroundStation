@@ -7,11 +7,13 @@
 
 #include "AppMessages.h"
 #include "CaacCorePlugin.h"
+#include "FirmwarePlugin.h"
 #include "Joystick.h"
 #include "JoystickManager.h"
 #include "JoystickSettings.h"
 #include "LinkManager.h"
 #include "MissionController.h"
+#include "MissionItem.h"
 #include "MissionManager.h"
 #include "MissionSettingsItem.h"
 #include "MockConfiguration.h"
@@ -39,6 +41,17 @@ CaacSimulationController::CaacSimulationController(QObject* parent)
 CaacSimulationController::~CaacSimulationController()
 {
     stop();
+}
+
+QVariantMap CaacSimulationController::currentMissionDetails() const
+{
+    if (!_vehicle || !_missionReady || !_engine.loaded()) {
+        return {};
+    }
+    const int offset = _vehicle->firmwarePlugin()->sendHomePositionToVehicle() ? 0 : 1;
+    return {{QStringLiteral("sequence"), _engine.state().sequence + offset},
+            {QStringLiteral("speed"), _engine.horizontalSpeed()},
+            {QStringLiteral("climbMode"), _engine.currentClimbMode()}};
 }
 
 QVariantMap CaacSimulationController::defaults()
@@ -384,12 +397,18 @@ bool CaacSimulationController::start(PlanMasterController* plan)
             const auto before = _engine.state();
             const bool wasLoaded = _engine.loaded();
             QString error;
-            if (!_engine.load(_link->_missionItemHandler->uploadedMission(), _home, _options, error,
-                              _waypointOptions)) {
-                _fail(error);
+            const bool preserve = _preserveUploadProgress;
+            _preserveUploadProgress = false;
+            const auto mission = _link->_missionItemHandler->uploadedMission();
+            const bool loaded = preserve ? _engine.updateMission(mission, _home, _options, error, _waypointOptions)
+                                         : _engine.load(mission, _home, _options, error, _waypointOptions);
+            if (!loaded) {
+                _uploadSent = false;
+                _setStatus(error);
+                emit missionUploadFailed();
                 return;
             }
-            if (wasLoaded || before.airborne) {
+            if (!preserve && (wasLoaded || before.airborne)) {
                 _engine.restoreState(before);
             }
             _missionReady = true;
@@ -409,7 +428,7 @@ bool CaacSimulationController::start(PlanMasterController* plan)
     return true;
 }
 
-bool CaacSimulationController::upload(PlanMasterController* plan)
+bool CaacSimulationController::upload(PlanMasterController* plan, bool preserveProgress)
 {
     if ((_vehicle && _vehicle->armed() && _vehicle->flightMode() == _vehicle->missionFlightMode()) ||
         (_link && (_link->_mavBaseMode & MAV_MODE_FLAG_SAFETY_ARMED) &&
@@ -462,6 +481,35 @@ bool CaacSimulationController::upload(PlanMasterController* plan)
     if (!_prepareFlightPlan()) {
         return false;
     }
+    if (preserveProgress) {
+        const auto items = MissionController::createMissionItems(_uploadPlan->missionController()->visualItems(), this);
+        QMap<uint16_t, mavlink_mission_item_int_t> wireMission;
+        const int offset = _vehicle->firmwarePlugin()->sendHomePositionToVehicle() ? 0 : 1;
+        for (int i = offset; i < items.size(); ++i) {
+            const auto* item = items[i];
+            mavlink_mission_item_int_t wire{};
+            wire.seq = static_cast<uint16_t>(i - offset);
+            wire.command = item->command();
+            wire.frame = item->frame();
+            wire.autocontinue = item->autoContinue();
+            wire.param1 = item->param1() - (item->command() == MAV_CMD_DO_JUMP ? offset : 0);
+            wire.param2 = item->param2();
+            wire.param3 = item->param3();
+            wire.param4 = item->param4();
+            wire.x = static_cast<int32_t>(qRound64(item->param5() * 1e7));
+            wire.y = static_cast<int32_t>(qRound64(item->param6() * 1e7));
+            wire.z = item->param7();
+            wireMission.insert(wire.seq, wire);
+        }
+        qDeleteAll(items);
+        auto probe = _engine;
+        QString error;
+        if (!probe.updateMission(wireMission, _home, _options, error, _waypointOptions)) {
+            _setStatus(error);
+            return false;
+        }
+    }
+    _preserveUploadProgress = preserveProgress;
     _uploadSent = true;
     _missionReady = false;
     _elapsed.restart();
@@ -475,6 +523,7 @@ bool CaacSimulationController::upload(PlanMasterController* plan)
             if (error) {
                 _uploadSent = false;
                 _setStatus(tr("Simulation mission upload failed."));
+                emit missionUploadFailed();
             } else {
                 _waypointNumbers = _pendingWaypointNumbers;
                 ++_waypointNumberRevision;
@@ -688,6 +737,11 @@ void CaacSimulationController::_publish()
     if (!_link || !_link->mavlinkChannelIsSet()) {
         return;
     }
+    const auto details = currentMissionDetails();
+    if (details != _publishedMissionDetails) {
+        _publishedMissionDetails = details;
+        emit missionDetailsChanged();
+    }
     const auto state = _engine.state();
     const auto system = static_cast<uint8_t>(_link->vehicleId());
     const auto component = static_cast<uint8_t>(MAV_COMP_ID_AUTOPILOT1);
@@ -810,17 +864,19 @@ bool CaacSimulationController::_prepareFlightPlan()
     const auto captureNumbers = [this, &waypointOrigins, existingFlow]() {
         _pendingWaypointNumbers.clear();
         const auto previousOptions = _waypointOptions;
+        const int offset = _vehicle && !_vehicle->firmwarePlugin()->sendHomePositionToVehicle() ? 1 : 0;
         _waypointOptions.clear();
         for (auto it = waypointOrigins.cbegin(); it != waypointOrigins.cend(); ++it) {
             _pendingWaypointNumbers.insert(it.key()->sequenceNumber(), {it.value(), it.key()->coordinate()});
             const auto settings = it.key()->caacFlightSettings();
             if (!settings.isEmpty() && it.key()->command() == MAV_CMD_NAV_WAYPOINT) {
-                _waypointOptions.insert(it.key()->sequenceNumber(),
+                _waypointOptions.insert(it.key()->sequenceNumber() - offset,
                                         {settings.value("verticalSpeed").toDouble(), settings.value("turnMode").toInt(),
                                          settings.value("climbMode").toInt()});
             } else if (existingFlow && it.key()->command() == MAV_CMD_NAV_WAYPOINT &&
-                       previousOptions.contains(it.key()->sequenceNumber())) {
-                _waypointOptions.insert(it.key()->sequenceNumber(), previousOptions.value(it.key()->sequenceNumber()));
+                       previousOptions.contains(it.key()->sequenceNumber() - offset)) {
+                _waypointOptions.insert(it.key()->sequenceNumber() - offset,
+                                        previousOptions.value(it.key()->sequenceNumber() - offset));
             }
         }
     };
@@ -833,10 +889,15 @@ bool CaacSimulationController::_prepareFlightPlan()
     }
     bool nativeEnd = false;
     auto* last = items->value<SimpleMissionItem*>(items->count() - 1);
+    const bool plannedLanding = last && last->command() == MAV_CMD_NAV_LAND;
+    const auto landingCoordinate = plannedLanding ? last->coordinate() : QGeoCoordinate();
+    const auto landingFrame = plannedLanding ? last->altitudeFrame() : QGroundControlQmlGlobal::AltitudeFrameRelative;
+    const double landingAltitude = plannedLanding ? last->editableAlt() : 0;
+    const double landingYaw = plannedLanding ? last->missionItem().param4() : qQNaN();
     if (last && (last->command() == MAV_CMD_NAV_LAND || last->command() == MAV_CMD_NAV_RETURN_TO_LAUNCH ||
                  last->command() == MAV_CMD_NAV_LOITER_UNLIM)) {
         nativeEnd = true;
-        if (_settingsExplicit) {
+        if (_settingsExplicit || plannedLanding) {
             mission->removeVisualItem(items->count() - 1);
             nativeEnd = false;
         }
@@ -939,7 +1000,18 @@ bool CaacSimulationController::_prepareFlightPlan()
         jump->missionItem().setParam1(selectedStart->sequenceNumber() + (closed ? 1 : 0));
         jump->missionItem().setParam2(loopMode == 2 ? -1 : _settings.value("loopCount").toInt() - 1);
     }
-    if (!nativeEnd) {
+    if (plannedLanding) {
+        auto* landing = qobject_cast<SimpleMissionItem*>(
+            mission->insertSimpleMissionItem(landingCoordinate, items->count(), false));
+        if (!landing) {
+            _fail(tr("Unable to create the landing point."));
+            return false;
+        }
+        landing->setCommand(MAV_CMD_NAV_LAND);
+        landing->setAltitudeFrame(landingFrame);
+        landing->altitude()->setRawValue(landingAltitude);
+        landing->missionItem().setParam4(landingYaw);
+    } else if (!nativeEnd) {
         if (_settings.value("endBehavior").toInt() == 1 && !selectedReturn) {
             if (!append(MAV_CMD_NAV_RETURN_TO_LAUNCH, nullptr)) {
                 _fail(tr("Unable to prepare the simulation return."));

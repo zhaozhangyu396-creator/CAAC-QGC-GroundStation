@@ -34,9 +34,7 @@ Item {
             Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 0.4
             Layout.preferredHeight: ScreenTools.defaultFontPixelHeight * 1.1
             radius: width / 2
-            color: palette.window
-            border.color: palette.windowShadeLight
-            border.width: 1
+            color: palette.settingsAccent
         }
         QGCLabel { text: heading.title; font.bold: true; Layout.fillWidth: true; wrapMode: Text.WordWrap }
     }

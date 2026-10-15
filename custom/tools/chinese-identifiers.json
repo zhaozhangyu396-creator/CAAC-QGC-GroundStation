@@ -153,5 +153,15 @@
     "context": "CaacRouteLegLabels",
     "source": "%1 m  %2°",
     "reason": "数值占位符与标准米和角度单位"
+  },
+  {
+    "context": "QGCCheckBoxSlider",
+    "source": "ON",
+    "reason": "用户指定开关内统一显示 ON / OFF 状态标志"
+  },
+  {
+    "context": "QGCCheckBoxSlider",
+    "source": "OFF",
+    "reason": "用户指定开关内统一显示 ON / OFF 状态标志"
   }
 ]

@@ -43,6 +43,7 @@ Item {
         property bool available: false
         property real percent: 0
         property string valueText: "--"
+        Layout.minimumWidth: implicitWidth
         spacing: ScreenTools.defaultFontPixelWidth * 0.55
         Accessible.name: label + ": " + valueText
         QGCColoredImage {
@@ -54,6 +55,8 @@ Item {
         }
         SignalStrength {
             size: control._iconExtent
+            Layout.preferredWidth: size
+            Layout.preferredHeight: size
             percent: indicator.available ? indicator.percent : 0
             opacity: indicator.available ? 1 : 0.5
         }
@@ -106,7 +109,7 @@ Item {
                             Layout.fillHeight:  true
                             icon.source:        "/res/gear-white.svg"
                             logo:               false
-                            iconExtent:         control._compactToolbar ? control._iconExtent : Math.min(ScreenTools.defaultFontPixelHeight * 2, height * 0.75)
+                            iconExtent:         control._compactToolbar ? control._iconExtent * 1.2 : Math.min(ScreenTools.defaultFontPixelHeight * 2, height * 0.75)
                             _horizontalMargin:  ScreenTools.defaultFontPixelWidth * (control._compactToolbar ? 0.6 : 1)
                             onClicked:          mainWindow.showToolSelectDialog()
                         }
@@ -175,7 +178,7 @@ Item {
                     anchors.right: parent.right
                     scale: Math.min(1, rightPanel.width / Math.max(1, implicitWidth))
                     transformOrigin: Item.Right
-                    spacing: ScreenTools.defaultFontPixelWidth * (control._compactToolbar ? 1.25 : 1)
+                    spacing: ScreenTools.defaultFontPixelWidth * (control._compactToolbar ? 1.5 : 1)
                     RowLayout {
                         spacing: ScreenTools.defaultFontPixelWidth * 0.7
                         QGCColoredImage {
@@ -201,15 +204,17 @@ Item {
                         heightFactor: 0.25
                         _horizontalPadding: ScreenTools.defaultFontPixelWidth * (control._compactToolbar ? 0.6 : 2)
                         implicitWidth: contentItem.implicitWidth + leftPadding + rightPadding
+                        Layout.minimumWidth: implicitWidth
                         backgroundColor: qgcPal.window
                         text: connected ? qsTr("Connected") : qsTr("Not connected")
                         ToolTip.visible: hovered
                         ToolTip.text: qsTr("Open connection settings")
-                        contentItem: RowLayout {
+                        contentItem: Row {
                             spacing: ScreenTools.defaultFontPixelWidth * 0.7
                             Item {
-                                Layout.preferredWidth: control._iconExtent
-                                Layout.preferredHeight: Layout.preferredWidth
+                                width: control._iconExtent
+                                height: width
+                                anchors.verticalCenter: parent.verticalCenter
                                 QGCColoredImage {
                                     anchors.fill: parent
                                     source: "/InstrumentValueIcons/link.svg"
@@ -238,7 +243,13 @@ Item {
                                     }
                                 }
                             }
-                            QGCLabel { text: connectionButton.text; color: qgcPal.text; font.pointSize: control._fontPointSize }
+                            QGCLabel {
+                                objectName: "caacConnectionStatusLabel"
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: connectionButton.text
+                                color: qgcPal.text
+                                font.pointSize: control._fontPointSize
+                            }
                         }
                         onClicked: {
                             if (mainWindow.allowViewSwitch()) {
@@ -299,7 +310,7 @@ Item {
             QGCButton {
                 id: flightSettingsButton
                 objectName: "caacFlightSettingsButton"
-                text: qsTr("Flight settings")
+                text: qsTr("Route flight")
                 checked: control.flightSettingsExpanded
                 checkable: true
                 heightFactor: 0.25

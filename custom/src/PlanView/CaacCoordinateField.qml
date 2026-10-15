@@ -21,7 +21,7 @@ GridLayout {
     readonly property real coordinate: !_dirty ? _canonicalValue : displayDms
         ? QGroundControl.corePlugin.coordinateFromDms(number(degrees.text), number(minutes.text), number(seconds.text), hemisphere.currentIndex === 1, maximumDegrees)
         : number(decimal.text)
-    columns: displayDms ? (_compactDms ? 2 : 5) : 2
+    columns: displayDms ? (_compactDms ? 3 : 5) : 2
     columnSpacing: ScreenTools.defaultFontPixelWidth * 0.5
     rowSpacing: ScreenTools.defaultFontPixelHeight * 0.5
 
@@ -78,6 +78,7 @@ GridLayout {
         id: degrees
         objectName: root.fieldName + "Degrees"
         Layout.fillWidth: true
+        Layout.preferredWidth: root._compactDms ? root.width * 0.23 : -1
         Layout.minimumWidth: root._compactDms ? 0 : ScreenTools.defaultFontPixelWidth * 7
         visible: root.displayDms
         showUnits: true
@@ -89,6 +90,7 @@ GridLayout {
         id: minutes
         objectName: root.fieldName + "Minutes"
         Layout.fillWidth: true
+        Layout.preferredWidth: root._compactDms ? root.width * 0.18 : -1
         Layout.minimumWidth: root._compactDms ? 0 : ScreenTools.defaultFontPixelWidth * 6
         visible: root.displayDms
         showUnits: true
@@ -100,8 +102,8 @@ GridLayout {
         id: seconds
         objectName: root.fieldName + "Seconds"
         Layout.fillWidth: true
+        Layout.preferredWidth: root._compactDms ? root.width * 0.55 : -1
         Layout.minimumWidth: root._compactDms ? 0 : ScreenTools.defaultFontPixelWidth * 16
-        Layout.columnSpan: root._compactDms ? 2 : 1
         visible: root.displayDms
         showUnits: true
         unitsLabel: "″"
@@ -118,6 +120,8 @@ GridLayout {
         onCurrentIndexChanged: root.markEdited()
     }
     QGCButton {
+        Layout.columnSpan: root._compactDms ? 2 : 1
+        Layout.fillWidth: root._compactDms
         objectName: root.fieldName + "FormatToggle"
         text: root.displayDms ? qsTr("Decimal degrees") : qsTr("DMS")
         Accessible.name: qsTr("Switch coordinate format")

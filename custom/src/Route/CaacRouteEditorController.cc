@@ -428,7 +428,7 @@ bool CaacRouteEditorController::_canEdit(bool allowRotationPreview)
         _missionController()->visualItems()->count() < 1) {
         return _fail(tr("No plan is available."));
     }
-    if (_masterController->syncInProgress()) {
+    if (_masterController->syncInProgress() || _masterController->property("caacMissionUpdateActive").toBool()) {
         return _fail(tr("Wait for the vehicle transfer to finish before editing."));
     }
     if (_rotationPreviewActive && !allowRotationPreview) {
@@ -1217,6 +1217,42 @@ bool CaacRouteEditorController::useWaypointAsHome(QObject* object)
         return false;
     }
     mission->removeVisualItem(mission->visualItemIndexForObject(item));
+    return true;
+}
+
+bool CaacRouteEditorController::useWaypointAsLanding(QObject* object)
+{
+    if (!_canChangeOrder()) {
+        return false;
+    }
+    auto* point = qobject_cast<SimpleMissionItem*>(object);
+    auto* mission = _missionController();
+    auto* model = mission->visualItems();
+    if (!point || mission->visualItemIndexForObject(point) < 1 || point->command() != MAV_CMD_NAV_WAYPOINT) {
+        return _fail(tr("Select an ordinary waypoint as the landing point."));
+    }
+    for (int i = 1; i < model->count(); ++i) {
+        if (!model->value<SimpleMissionItem*>(i)) {
+            return _fail(tr("Set the landing point in the original editor for complex missions."));
+        }
+    }
+    const auto coordinate = point->coordinate();
+    beginEdit();
+    const auto finish = qScopeGuard([this]() { endEdit(); });
+    for (int i = model->count() - 1; i > 0; --i) {
+        const auto* item = model->value<SimpleMissionItem*>(i);
+        if (item->isLandCommand() || item->command() == MAV_CMD_NAV_RETURN_TO_LAUNCH) {
+            mission->removeVisualItem(i);
+        }
+    }
+    auto* landing =
+        qobject_cast<SimpleMissionItem*>(mission->insertSimpleMissionItem(coordinate, model->count(), true));
+    if (!landing) {
+        return _fail(tr("Unable to create the landing point."));
+    }
+    landing->setCommand(MAV_CMD_NAV_LAND);
+    landing->setAltitudeFrame(QGroundControlQmlGlobal::AltitudeFrameRelative);
+    landing->altitude()->setRawValue(0);
     return true;
 }
 

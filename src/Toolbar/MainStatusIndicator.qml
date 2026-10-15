@@ -21,7 +21,7 @@ RowLayout {
 
     function dropStatusSection(section, anchor) {
         _drawerSection = section
-        mainWindow.showIndicatorDrawer(_activeVehicle ? overallStatusIndicatorPage : overallStatusOfflineIndicatorPage, anchor)
+        mainWindow.showIndicatorDrawer(_activeVehicle ? (section === 3 ? sensorStatusIndicatorPage : overallStatusIndicatorPage) : overallStatusOfflineIndicatorPage, anchor)
     }
 
     function dropMainStatusIndicator() {
@@ -201,6 +201,82 @@ RowLayout {
         MainStatusIndicatorOfflinePage {
             Component.onCompleted:   mainWindow.suppressCriticalVehicleMessages = true
             Component.onDestruction: mainWindow.suppressCriticalVehicleMessages = false
+        }
+    }
+
+    Component {
+        id: sensorStatusIndicatorPage
+        ToolIndicatorPage {
+            waitForParameters: false
+            fillWindow: false
+            contentComponent: Component {
+                ColumnLayout {
+                    id: sensorContent
+                    objectName: "mainStatusSensorSection"
+                    readonly property var sensorRows: {
+                        if (!control._activeVehicle) { return [] }
+                        const names = control._activeVehicle.sysStatusSensorInfo.sensorNames
+                        const statuses = control._activeVehicle.sysStatusSensorInfo.sensorStatus
+                        const wanted = [qsTranslate("MAVLink SYS_STATUS_SENSOR value", "Magnetometer"),
+                            qsTranslate("MAVLink SYS_STATUS_SENSOR value", "Magnetometer 2"),
+                            qsTranslate("MAVLink SYS_STATUS_SENSOR value", "Gyro"),
+                            qsTranslate("MAVLink SYS_STATUS_SENSOR value", "Gyro 2"),
+                            qsTranslate("MAVLink SYS_STATUS_SENSOR value", "Accelerometer"),
+                            qsTranslate("MAVLink SYS_STATUS_SENSOR value", "Accelerometer 2")]
+                        return wanted.filter(name => names.indexOf(name) >= 0)
+                            .map(name => ({name: name, status: statuses[names.indexOf(name)] || "--"}))
+                    }
+                    width: Math.min(mainWindow.width - ScreenTools.defaultFontPixelWidth * 6,
+                                    ScreenTools.defaultFontPixelWidth * 40)
+                    spacing: ScreenTools.defaultFontPixelHeight * 0.5
+                    Rectangle {
+                        Layout.fillWidth: true
+                        implicitHeight: ScreenTools.defaultFontPixelHeight * 2.5
+                        color: qgcPal.windowShade
+                        border.color: qgcPal.buttonBorder
+                        border.width: 1
+                        radius: ScreenTools.defaultBorderRadius
+                        QGCLabel { anchors.centerIn: parent; text: qsTr("Sensors") }
+                        Rectangle {
+                            anchors.right: parent.right
+                            anchors.rightMargin: ScreenTools.defaultFontPixelWidth
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: ScreenTools.defaultFontPixelHeight * 0.6
+                            height: width
+                            radius: width / 2
+                            color: sensorContent.sensorRows.length === 0 ? qgcPal.text
+                                : sensorContent.sensorRows.every(row => row.status === qsTranslate("SysStatusSensorInfo", "Normal"))
+                                    ? qgcPal.colorGreen : qgcPal.colorRed
+                        }
+                    }
+                    Repeater {
+                        model: sensorContent.sensorRows
+                        ColumnLayout {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            RowLayout {
+                                Layout.fillWidth: true
+                                QGCLabel { text: modelData.name; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+                                QGCLabel {
+                                    text: modelData.status
+                                }
+                            }
+                            Rectangle {
+                                Layout.fillWidth: true
+                                implicitHeight: 1
+                                color: qgcPal.groupBorder
+                                opacity: 0.4
+                            }
+                        }
+                    }
+                    QGCLabel {
+                        visible: sensorContent.sensorRows.length === 0
+                        text: qsTr("No sensor data available")
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                    }
+                }
+            }
         }
     }
 

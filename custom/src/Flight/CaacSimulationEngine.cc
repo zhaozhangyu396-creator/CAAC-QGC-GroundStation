@@ -26,6 +26,7 @@ void CaacSimulationEngine::initialize(const QGeoCoordinate& home, const Options&
     _items.clear();
     _home = home;
     _options = options;
+    _missionOptions = options;
     _state = {};
     _state.position = home;
     _jumpCounts.clear();
@@ -121,12 +122,47 @@ bool CaacSimulationEngine::load(const QMap<uint16_t, mavlink_mission_item_int_t>
     _items = mission;
     _home = home;
     _options = options;
+    _missionOptions = options;
     _state = {};
     _state.position = home;
     _jumpCounts.clear();
     _wait = -1;
     _returnLanding = false;
     error.clear();
+    return true;
+}
+
+bool CaacSimulationEngine::updateMission(const QMap<uint16_t, mavlink_mission_item_int_t>& mission,
+                                         const QGeoCoordinate& home, const Options& options, QString& error,
+                                         const QMap<int, WaypointOptions>& waypointOptions)
+{
+    const auto equal = [](float left, float right) { return left == right || (std::isnan(left) && std::isnan(right)); };
+    bool same = mission.size() == _items.size() && home == _home && options == _missionOptions &&
+                waypointOptions == _waypointOptions;
+    for (auto it = mission.cbegin(); same && it != mission.cend(); ++it) {
+        const auto old = _items.constFind(it.key());
+        same = old != _items.cend() && old->command == it->command && old->frame == it->frame &&
+               old->autocontinue == it->autocontinue && equal(old->param1, it->param1) &&
+               equal(old->param2, it->param2) && equal(old->param3, it->param3) && equal(old->param4, it->param4) &&
+               equal(old->z, it->z);
+    }
+    if (!same) {
+        error = QCoreApplication::translate(
+            "CaacSimulationEngine",
+            "Only waypoint positions can be updated during flight. Pause and upload other mission changes manually.");
+        return false;
+    }
+    auto updated = *this;
+    if (!updated.load(mission, home, options, error, waypointOptions)) {
+        return false;
+    }
+    updated._options = _options;
+    updated._state = _state;
+    updated._jumpCounts = _jumpCounts;
+    updated._wait = _wait;
+    updated._returnLanding = _returnLanding;
+    updated.pause();
+    *this = updated;
     return true;
 }
 

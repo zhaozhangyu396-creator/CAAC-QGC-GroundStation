@@ -219,19 +219,19 @@ void CaacFlightDataUITest::_liveFlightData()
     QVERIFY(verifyText(QStringLiteral("caacTopFlightTime"), QStringLiteral("00:00:00"), QStringLiteral("no aircraft")));
     QVERIFY(verifyText(QStringLiteral("caacConnectionStatusButton"), QStringLiteral("未连接"),
                        QStringLiteral("no aircraft")));
-    QVERIFY(clickButton(QStringLiteral("caacMissionDetailsButton")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacMissionDetailsButton"), QStringLiteral("caacMainToolsScroller")));
     QVERIFY(verifyVisibility(QStringLiteral("caacMissionDetailsPanel"), true, QStringLiteral("mission panel")));
     QVERIFY(verifyText(QStringLiteral("caacMissionTarget"),
                        QCoreApplication::translate("CaacMissionDetails", "Unavailable"),
                        QStringLiteral("no target without aircraft")));
-    QVERIFY(clickButton(QStringLiteral("caacFlightDataButton")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacFlightDataButton"), QStringLiteral("caacMainToolsScroller")));
     QVERIFY(verifyVisibility(QStringLiteral("caacMissionDetailsPanel"), false, QStringLiteral("mission panel closed")));
     QVERIFY(verifyVisibility(QStringLiteral("caacFlyDataPanel"), true, QStringLiteral("data panel opened")));
-    QVERIFY(clickButton(QStringLiteral("caacMissionDetailsButton")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacMissionDetailsButton"), QStringLiteral("caacMainToolsScroller")));
     QVERIFY(verifyVisibility(QStringLiteral("caacFlyDataPanel"), false, QStringLiteral("data panel closed")));
-    QVERIFY(clickButton(QStringLiteral("caacMissionDetailsButton")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacMissionDetailsButton"), QStringLiteral("caacMainToolsScroller")));
     QVERIFY(verifyVisibility(QStringLiteral("caacMissionDetailsPanel"), false, QStringLiteral("toggle current panel")));
-    QVERIFY(clickButton(QStringLiteral("caacMapSettingsButton")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacMapSettingsButton"), QStringLiteral("caacMainToolsScroller")));
     QVERIFY(verifyVisibility(QStringLiteral("caacMissionDetailsPanel"), false, QStringLiteral("only map panel")));
     QVERIFY(verifyVisibility(QStringLiteral("caacFlyDataPanel"), false, QStringLiteral("only map panel")));
     auto* mapSettings = findVisibleItem(_rootItem, QStringLiteral("caacMapSettingsPanel"));
@@ -272,8 +272,8 @@ void CaacFlightDataUITest::_liveFlightData()
     const auto restorePreferences = qScopeGuard([preferences]() { preferences->setDoubleClickAddWaypoint(true); });
     QTRY_VERIFY_WITH_TIMEOUT(!preferences->doubleClickAddWaypoint(), TestTimeout::mediumMs());
     preferences->setDoubleClickAddWaypoint(true);
-    QVERIFY(clickButton(QStringLiteral("caacMapSettingsButton")));
-    QVERIFY(clickButton(QStringLiteral("caacFlightDataButton")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacMapSettingsButton"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacFlightDataButton"), QStringLiteral("caacMainToolsScroller")));
     auto* panel = findVisibleItem(_rootItem, QStringLiteral("caacFlyDataPanel"));
     QVERIFY(panel);
     auto* handle = findVisibleItem(_rootItem, QStringLiteral("caacFlightDataDragHandle"));
@@ -388,7 +388,8 @@ void CaacFlightDataUITest::_liveFlightData()
     QVERIFY(QMetaObject::invokeMethod(map, "mapPanStart"));
     QVERIFY(map->setProperty("center", QVariant::fromValue(QGeoCoordinate(-30, -120))));
     QVERIFY(QMetaObject::invokeMethod(map, "mapPanStop"));
-    auto* center = findVisibleItem(_rootItem, QStringLiteral("caacHomeCenterButton"));
+    auto* center =
+        findVisibleItemScrolled(QStringLiteral("caacHomeCenterButton"), QStringLiteral("caacMainToolsScroller"));
     QVERIFY(center && center->isEnabled());
     auto* master = map->property("planMasterController").value<PlanMasterController*>();
     QVERIFY(master);
@@ -396,7 +397,7 @@ void CaacFlightDataUITest::_liveFlightData()
     const auto homeBefore = master->missionController()->plannedHomePosition();
     const auto missionBefore = master->saveToJson();
     QVERIFY(homeBefore.isValid());
-    QVERIFY(clickButton(QStringLiteral("caacHomeCenterButton")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacHomeCenterButton"), QStringLiteral("caacMainToolsScroller")));
     QTRY_VERIFY_WITH_TIMEOUT(
         QGCGeo::geodesicDistance(map->property("center").value<QGeoCoordinate>(), homeBefore) < 0.01,
         TestTimeout::mediumMs());

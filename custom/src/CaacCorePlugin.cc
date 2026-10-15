@@ -14,7 +14,6 @@
 
 #include "AppMessages.h"
 #include "AppSettings.h"
-#include "CaacAccessController.h"
 #include "CaacFlightDistance.h"
 #include "CaacSimulationController.h"
 #include "FactMetaData.h"
@@ -68,8 +67,6 @@ CaacCorePlugin::CaacCorePlugin(QObject* parent)
     : QGCCorePlugin(parent)
 {
     _simulation = new CaacSimulationController(this);
-    _accessController = new CaacAccessController(this);
-    _accessController->ensureDefaultPassword();
     const QSettings settings;
     _doubleClickAddWaypoint = settings.value(QStringLiteral("CAAC/Map/DoubleClickAddWaypoint"), true).toBool();
     _dragWaypoints = settings.value(QStringLiteral("CAAC/Map/DragWaypoints"), true).toBool();

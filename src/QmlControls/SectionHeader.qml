@@ -44,9 +44,7 @@ CheckBox {
                 anchors.verticalCenter: parent.verticalCenter
                 width: ScreenTools.defaultFontPixelWidth * 0.35
                 height: parent.height
-                color: qgcPal.window
-                border.color: qgcPal.windowShadeLight
-                border.width: 1
+                color: qgcPal.settingsAccent
                 radius: width / 2
                 visible: control.vehicleSetupStyle
             }

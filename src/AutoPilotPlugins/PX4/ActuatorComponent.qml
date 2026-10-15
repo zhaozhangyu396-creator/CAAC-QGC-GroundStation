@@ -206,7 +206,7 @@ SetupPage {
                             spacing: ScreenTools.defaultFontPixelWidth
                             visible: actuators.actuatorTest.actuators.count > 0
 
-                            Switch {
+                            QGCCheckBoxSlider {
                                 id:      safetySwitch
                                 enabled: !actuators.motorAssignmentActive &&  !actuators.actuatorTest.hadFailure
                                 Connections {

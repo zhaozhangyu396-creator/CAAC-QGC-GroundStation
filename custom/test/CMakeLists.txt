@@ -1,7 +1,7 @@
 target_sources(
     ${CMAKE_PROJECT_NAME}
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/CaacRouteEditorTest.cc
-            ${CMAKE_CURRENT_SOURCE_DIR}/CaacAccessControllerTest.cc
+            ${CMAKE_CURRENT_SOURCE_DIR}/CaacMissionUpdateControllerTest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacRouteEditorUITest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacFlightDistanceTest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacFlightDataUITest.cc
@@ -22,8 +22,8 @@ if(WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
     endif()
     add_dependencies(${CMAKE_PROJECT_NAME} CaacFocusTestWindow)
 endif()
+add_qgc_test(CaacMissionUpdateControllerTest LABELS Unit MissionManager)
 add_qgc_test(CaacFlightDistanceTest LABELS Unit Vehicle)
-add_qgc_test(CaacAccessControllerTest LABELS Unit)
 add_qgc_test(CaacRouteEditorTest LABELS Unit MissionManager)
 add_qgc_test(CaacPlanningToolsTest LABELS Unit MissionManager)
 add_qgc_test(CaacRouteTemplateGeometryTest LABELS Unit MissionManager)

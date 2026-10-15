@@ -3,6 +3,12 @@
         objectName: "{{ object_name }}"
 {% endif %}
         Layout.fillWidth: true
+{% if show_top_divider %}
+        showTopDivider: true
+{% endif %}
+{% if not show_dividers %}
+        showDividers: false
+{% endif %}
 {% if heading %}
         heading: {{ heading }}
 {% endif %}

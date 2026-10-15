@@ -25,7 +25,14 @@ Rectangle {
         }
         return null
     }
+    readonly property var _simulationDetails: {
+        const simulation = QGroundControl.corePlugin.simulation
+        if (!vehicle || !simulation.active || simulation.vehicle !== vehicle) { return ({}) }
+        const details = simulation.currentMissionDetails
+        return details.sequence === root._sequence ? details : ({})
+    }
     readonly property real _speed: {
+        if (isFinite(_simulationDetails.speed)) { return _simulationDetails.speed }
         let speed = NaN
         if (_items && targetItem) {
             for (let i = 0; i < _items.count; ++i) {
@@ -92,7 +99,8 @@ Rectangle {
                     { key: "Altitude", label: qsTr("Target altitude"), value: root.targetItem && root.targetItem.isSimpleItem && root.targetItem.specifiesAltitude ? root.targetItem.altitude.rawValue.toFixed(1) + " m" : root._unavailable },
                     { key: "Heading", label: qsTr("Route heading"), value: root.targetItem && isFinite(root.targetItem.missionVehicleYaw) ? root.targetItem.missionVehicleYaw.toFixed(1) + "°" : root._unavailable },
                     { key: "RemainingLoops", label: qsTr("剩余圈数"), value: root._remainingLoops === -1 ? qsTr("无限循环") : root._remainingLoops >= 0 ? root._remainingLoops.toString() : root._unavailable },
-                    { key: "Climb", label: qsTr("Climb mode"), value: root._unavailable }
+                    { key: "Climb", label: qsTr("Climb mode"), value: root._simulationDetails.climbMode === 0 ? qsTr("Change altitude before the leg")
+                        : root._simulationDetails.climbMode === 1 ? qsTr("Change altitude along the leg") : root._unavailable }
                 ]
                 ColumnLayout {
                     required property var modelData
@@ -119,7 +127,7 @@ Rectangle {
             Layout.fillWidth: true
             Layout.leftMargin: ScreenTools.defaultFontPixelWidth
             Layout.rightMargin: ScreenTools.defaultFontPixelWidth
-            text: qsTr("Downloaded mission parameters; altitude uses its mission frame. Unreported fields are unavailable.")
+            text: qsTr("Mission parameters; simulation speed and climb mode use the uploaded configuration. Altitude uses its mission frame. Unreported aircraft fields are unavailable.")
             font.pointSize: ScreenTools.smallFontPointSize
             wrapMode: Text.WordWrap
         }

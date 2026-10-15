@@ -87,7 +87,7 @@ Item {
                         width: ScreenTools.defaultFontPixelWidth * 0.35
                         height: ScreenTools.defaultFontPixelHeight * 1.2
                         radius: width / 2
-                        color: qgcPal.colorGreen
+                        color: qgcPal.settingsAccent
                     }
                     QGCLabel {
                         objectName: "vehicleSetup_title"

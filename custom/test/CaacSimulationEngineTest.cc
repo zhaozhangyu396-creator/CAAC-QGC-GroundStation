@@ -38,6 +38,7 @@ private slots:
     void _levelFlightPitch();
     void _turnModes();
     void _loopsAndReturn();
+    void _positionUpdatePreservesProgress();
     void _windComponents();
     void _rejectInvalidMissionAtomically();
     void _settingsHistoryAndFile();
@@ -313,6 +314,43 @@ void CaacSimulationEngineTest::_turnModes()
         const double expectedHeading = turnMode == 3 ? 0 : turnMode == 2 ? 1 : 6;
         QVERIFY(std::abs(engine.state().heading - expectedHeading) < 0.01);
     }
+}
+
+void CaacSimulationEngineTest::_positionUpdatePreservesProgress()
+{
+    const QGeoCoordinate home(30, 120, 20);
+    auto jump = waypoint(2, home, 0);
+    jump.command = MAV_CMD_DO_JUMP;
+    jump.param1 = 0;
+    jump.param2 = 2;
+    QMap<uint16_t, mavlink_mission_item_int_t> mission{
+        {0, waypoint(0, home, 2)}, {1, waypoint(1, QGCGeo::geodesicDestination(home, 0, 5), 2)}, {2, jump}};
+    CaacSimulationEngine engine;
+    QString error;
+    const CaacSimulationEngine::Options options{.horizontalSpeed = 10, .verticalSpeed = 10, .turnMode = 3};
+    QVERIFY(engine.load(mission, home, options, error));
+    for (int tick = 0; tick < 100 && engine.remainingLoops() == 3; ++tick) {
+        engine.advance(0.1);
+    }
+    QCOMPARE(engine.remainingLoops(), 2);
+    QVERIFY(engine.setHorizontalSpeed(7));
+    const auto before = engine.state();
+    mission[1].x += 1000;
+    QVERIFY(engine.updateMission(mission, home, options, error, {}));
+    QCOMPARE(engine.state().position, before.position);
+    QCOMPARE(engine.state().sequence, before.sequence);
+    QCOMPARE(engine.remainingLoops(), 2);
+    QCOMPARE(engine.horizontalSpeed(), 7.0);
+    auto changedFlow = mission;
+    changedFlow[2].param2 = 10;
+    QVERIFY(!engine.updateMission(changedFlow, home, options, error, {}));
+    QCOMPARE(engine.remainingLoops(), 2);
+    QCOMPARE(engine.state().position, before.position);
+    for (int tick = 0; tick < 300 && !engine.state().finished; ++tick) {
+        engine.advance(0.1);
+    }
+    QVERIFY(engine.state().finished);
+    QCOMPARE(engine.remainingLoops(), 0);
 }
 
 void CaacSimulationEngineTest::_loopsAndReturn()

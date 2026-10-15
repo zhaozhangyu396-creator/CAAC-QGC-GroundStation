@@ -24,7 +24,13 @@ Rectangle {
     onEmbeddedChanged: if (embedded) { showNavigation() }
 
     function showNavigation() {
-        if (mainWindow.allowViewSwitch()) { _embeddedPageOpened = false }
+        if (mainWindow.allowViewSwitch()) {
+            _embeddedPageOpened = false
+            if (embedded) {
+                _loadPage("")
+                _currentPage = null
+            }
+        }
     }
     // Destroy the in-panel page item while panelContainer is still alive, before the
     // loader clears the source and tears down this component.
@@ -37,7 +43,7 @@ Rectangle {
             // mainWindow creates and owns the item (QObject parent = mainWindow) so it
             // survives AnalyzeView being unloaded in the popped-out case.
             // anchors.fill: parent in AnalyzePage.qml automatically fills panelContainer.
-            _currentItem = mainWindow.createAnalyzePage(source)
+            _currentItem = mainWindow.createAnalyzePage(source, panelContainer)
             if (_currentItem) {
                 _currentItem.parent = panelContainer
             }
@@ -103,7 +109,7 @@ Rectangle {
                 model:  QGroundControl.corePlugin ? QGroundControl.corePlugin.analyzePages : []
 
                 Component.onCompleted: {
-                    if (count > 0) {
+                    if (count > 0 && !_root.embedded && !QGroundControl.corePlugin.directMissionItemEditing) {
                         _currentPage = QGroundControl.corePlugin.analyzePages[0]
                         panelContainer.title = _currentPage.title
                         _updatePanelSource()

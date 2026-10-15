@@ -41,28 +41,9 @@ Item {
         required property string label
         Layout.fillWidth: true
         QGCLabel { text: row.label; Layout.fillWidth: true; wrapMode: Text.WordWrap }
-        Switch {
-            id: snapToggle
+        QGCCheckBoxSlider {
             objectName: "caacPreference_" + row.settingKey
             checked: root.settings[row.settingKey]
-            indicator: Rectangle {
-                implicitWidth: ScreenTools.defaultFontPixelHeight * 2.5
-                implicitHeight: ScreenTools.defaultFontPixelHeight * 1.25
-                x: snapToggle.leftPadding
-                y: (snapToggle.height - height) / 2
-                radius: height / 2
-                color: snapToggle.checked ? palette.window : palette.windowShade
-                border.color: palette.text
-                border.width: 1
-                Rectangle {
-                    width: parent.height * 0.8
-                    height: width
-                    y: (parent.height - height) / 2
-                    x: snapToggle.checked ? parent.width - width - y : y
-                    radius: width / 2
-                    color: "white"
-                }
-            }
             onClicked: {
                 const change = ({})
                 change[row.settingKey] = checked
@@ -171,29 +152,45 @@ Item {
                     visible: tabs.currentIndex === 0
                     Layout.fillWidth: true
                     spacing: ScreenTools.defaultFontPixelHeight * 0.6
-                    QGCLabel { text: qsTr("Drawing"); font.bold: true }
-                    SnapSwitch { settingKey: "horizontalSnap"; label: qsTr("Horizontal alignment") }
-                    SnapSwitch { settingKey: "verticalSnap"; label: qsTr("Vertical alignment") }
-                    SnapSwitch { settingKey: "angleSnap"; label: qsTr("Angle snapping") }
-                    RowLayout {
+                    Rectangle {
+                        objectName: "caacDrawingSettingsFrame"
                         Layout.fillWidth: true
-                        QGCLabel { text: qsTr("Snap angle (degrees)"); Layout.fillWidth: true }
-                        QGCTextField {
-                            objectName: "caacPreferenceSnapAngle"
-                            Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 10
-                            validator: DoubleValidator { bottom: 1; top: 90; locale: "C" }
-                            text: root.settings.snapAngle.toString()
-                            onEditingFinished: root.plugin.updatePlanningPreferences({snapAngle: Number(text)})
+                        implicitHeight: drawingSettings.implicitHeight + ScreenTools.defaultFontPixelHeight
+                        color: palette.window
+                        border.color: palette.groupBorder
+                        border.width: 1
+                        radius: ScreenTools.defaultBorderRadius
+                        ColumnLayout {
+                            id: drawingSettings
+                            x: ScreenTools.defaultFontPixelWidth
+                            y: ScreenTools.defaultFontPixelHeight * 0.5
+                            width: parent.width - x * 2
+                            spacing: ScreenTools.defaultFontPixelHeight * 0.6
+                            QGCLabel { text: qsTr("Drawing"); font.bold: true }
+                            SnapSwitch { settingKey: "horizontalSnap"; label: qsTr("Horizontal alignment") }
+                            SnapSwitch { settingKey: "verticalSnap"; label: qsTr("Vertical alignment") }
+                            SnapSwitch { settingKey: "angleSnap"; label: qsTr("Angle snapping") }
+                            RowLayout {
+                                Layout.fillWidth: true
+                                QGCLabel { text: qsTr("Snap angle (degrees)"); Layout.fillWidth: true }
+                                QGCTextField {
+                                    objectName: "caacPreferenceSnapAngle"
+                                    Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 10
+                                    validator: DoubleValidator { bottom: 1; top: 90; locale: "C" }
+                                    text: root.settings.snapAngle.toString()
+                                    onEditingFinished: root.plugin.updatePlanningPreferences({snapAngle: Number(text)})
+                                }
+                            }
+                            SnapSwitch { settingKey: "symmetrySnap"; label: qsTr("Perpendicular bisector snapping") }
+                            SnapSwitch { settingKey: "midpointSnap"; label: qsTr("Edge midpoint snapping") }
+                            SnapSwitch { settingKey: "intersectionSnap"; label: qsTr("Route intersection snapping") }
+                            QGCLabel {
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                text: qsTr("Alignment uses nearby waypoints. Angle snapping includes perpendicular guides and multiples of the selected angle.")
+                                font.pointSize: ScreenTools.smallFontPointSize
+                            }
                         }
-                    }
-                    SnapSwitch { settingKey: "symmetrySnap"; label: qsTr("Perpendicular bisector snapping") }
-                    SnapSwitch { settingKey: "midpointSnap"; label: qsTr("Edge midpoint snapping") }
-                    SnapSwitch { settingKey: "intersectionSnap"; label: qsTr("Route intersection snapping") }
-                    QGCLabel {
-                        Layout.fillWidth: true
-                        wrapMode: Text.WordWrap
-                        text: qsTr("Alignment uses nearby waypoints. Angle snapping includes perpendicular guides and multiples of the selected angle.")
-                        font.pointSize: ScreenTools.smallFontPointSize
                     }
                     QGCLabel { text: qsTr("Tools"); font.bold: true }
                     QGCButton {
@@ -224,12 +221,7 @@ Item {
                             onClicked: QGroundControl.settingsManager.appSettings.indoorPalette.rawValue = 0
                         }
                     }
-                    QGCButton {
-                        objectName: "caacChangeAccessPassword"
-                        text: qsTr("Change access password")
-                        Layout.fillWidth: true
-                        onClicked: mainWindow.changeAccessPassword()
-                    }
+
                 }
                 ColumnLayout {
                     objectName: "caacPreferenceFlightParameters"

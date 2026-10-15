@@ -52,6 +52,7 @@
         },
         {
             "heading": "Vehicle Preferences",
+            "showTopDivider": true,
             "keywords": ["firmware", "ardupilot", "px4", "vehicle", "multirotor", "fixed wing", "vtol", "rover", "sub"],
             "controls": [
                 {
@@ -66,6 +67,8 @@
         },
         {
             "heading": "Units",
+            "showTopDivider": true,
+            "showDividers": false,
             "keywords": ["units", "metric", "imperial", "distance", "speed", "area", "temperature", "feet", "meters"],
             "showWhen": "QGroundControl.settingsManager.unitsSettings.userVisible",
             "controls": [

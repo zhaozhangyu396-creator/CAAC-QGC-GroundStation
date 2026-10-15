@@ -185,6 +185,11 @@ void MissionController::loadFromVehicle(void)
 
 void MissionController::sendToVehicle(void)
 {
+    if (_masterController->property("caacMissionUpdateActive").toBool()) {
+        QGC::showAppMessage(
+            QCoreApplication::translate("CaacMissionUpdateController", "A waypoint update is already in progress."));
+        return;
+    }
     if (_masterController->property("caacRotationPreviewActive").toBool()) {
         QGC::showAppMessage(QCoreApplication::translate(
             "PlanMasterController", "Confirm or cancel the orientation preview before saving or uploading."));
@@ -250,12 +255,17 @@ void MissionController::addMissionToKML(KMLPlanDomDocument& planKML)
     deleteParent->deleteLater();
 }
 
+QList<MissionItem*> MissionController::createMissionItems(QmlObjectListModel* visualMissionItems, QObject* parent)
+{
+    QList<MissionItem*> items;
+    _convertToMissionItems(visualMissionItems, items, parent);
+    return items;
+}
+
 void MissionController::sendItemsToVehicle(Vehicle* vehicle, QmlObjectListModel* visualMissionItems)
 {
     if (vehicle) {
-        QList<MissionItem*> rgMissionItems;
-
-        _convertToMissionItems(visualMissionItems, rgMissionItems, vehicle);
+        const auto rgMissionItems = createMissionItems(visualMissionItems, vehicle);
 
         // PlanManager takes control of MissionItems so no need to delete
         vehicle->missionManager()->writeMissionItems(rgMissionItems);

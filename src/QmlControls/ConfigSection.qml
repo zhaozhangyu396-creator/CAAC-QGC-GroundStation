@@ -25,7 +25,7 @@ ColumnLayout {
         Rectangle {
             width: ScreenTools.defaultFontPixelWidth * 0.35
             height: ScreenTools.defaultFontPixelHeight
-            color: qgcPal.colorGreen
+            color: qgcPal.settingsAccent
             radius: width / 2
             visible: control.vehicleSetupStyle
         }

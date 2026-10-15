@@ -140,6 +140,13 @@ Menu {
             onTriggered: root.controller.useWaypointAsHome(root.waypoint)
         }
     }
+    MenuItem {
+        objectName: "caacContextWaypointLanding"
+        text: qsTr("Set landing point")
+        visible: root.waypoint && !root.waypoint.homePosition
+        enabled: root.waypoint && root.waypoint.command === 16
+        onTriggered: root.controller.useWaypointAsLanding(root.waypoint)
+    }
     MenuSeparator { }
     MenuItem {
         objectName: "caacContextGoto"

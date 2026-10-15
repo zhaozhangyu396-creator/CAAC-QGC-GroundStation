@@ -102,7 +102,7 @@ Column {
         selectedWaypointItems = items
     }
     readonly property var _managerVehicle: planMasterController ? planMasterController.managerVehicle : null
-    readonly property bool _canTransfer: planMasterController && !planMasterController.offline
+    readonly property bool _canTransfer: !missionUpdate.busy && planMasterController && !planMasterController.offline
         && _managerVehicle && _managerVehicle === QGroundControl.multiVehicleManager.activeVehicle
         && _managerVehicle.initialConnectComplete && !planMasterController.syncInProgress
         && !editorController.rotationPreviewActive
@@ -112,7 +112,7 @@ Column {
     property bool _pickingHome: false
     property int measurePick: 0
     readonly property bool routeInsertionEnabled: visible && enabled && !_pickingCenter && !_pickingHome
-        && measurePick === 0 && !routeDragMode
+        && measurePick === 0 && !routeDragMode && !missionUpdate.busy
     property var measureA: QtPositioning.coordinate()
     property var measureB: QtPositioning.coordinate()
     onVisibleChanged: {
@@ -122,6 +122,7 @@ Column {
     onEnabledChanged: { if (!enabled) { measurePick = 0; _pickingHome = false } }
     property int _pendingOperation: 0
     property var _draggedWaypoint: null
+    property var _dragStartCoordinate: QtPositioning.coordinate()
     property var _dragGuides: []
     function snapDraggedWaypoint(item, coordinate) {
         const point = editorMap.fromCoordinate(coordinate, false)
@@ -135,6 +136,11 @@ Column {
         target: root.editorMap
         property: "missionItemDragEditor"
         value: root.routeInsertionEnabled ? root : null
+    }
+    Binding {
+        target: root.editorMap
+        property: "missionItemDragBlocked"
+        value: missionUpdate.busy
     }
     readonly property var _dragLeg: _draggedWaypoint && editorController.coordinateItems.length > 0
         ? editorController.waypointLeg(_draggedWaypoint) : ({})
@@ -363,7 +369,7 @@ Column {
         objectName: "caacMapMouseArea"
         parent: root.editorMap
         anchors.fill: parent
-        enabled: root.enabled && root.visible && root.editorMap && root.editorMap.directMissionItemEditing
+        enabled: root.enabled && root.visible && root.editorMap && root.editorMap.directMissionItemEditing && !missionUpdate.busy
         acceptedButtons: Qt.LeftButton
         z: root.routeDragMode || root.measurePick > 0 ? QGroundControl.zOrderMapItems + 3 : 0
 
@@ -444,18 +450,37 @@ Column {
         }
     }
 
+    Menu {
+        id: mapContextMenu
+        objectName: "caacMapContextMenu"
+        parent: root.editorMap
+        font.pointSize: ScreenTools.menuFontPointSize
+        palette.window: dragPalette.windowShadeDark
+        palette.windowText: dragPalette.text
+        palette.text: dragPalette.text
+        palette.base: dragPalette.windowShadeDark
+        palette.highlight: dragPalette.buttonHighlight
+        palette.highlightedText: dragPalette.buttonHighlightText
+        MenuItem {
+            objectName: "caacMapClearWaypoints"
+            text: qsTr("Clear waypoints")
+            enabled: !missionUpdate.busy && root.planMasterController
+                && !root.planMasterController.syncInProgress && root.planMasterController.missionController.visualItems.count > 1
+            onTriggered: root.confirmClearWaypoints()
+        }
+    }
     Rectangle {
         objectName: "caacMapEditTools"
-        parent: root.editorMap ? root.editorMap.parent : null
+        parent: root.editorMap && root.editorMap.mapToolsContainer ? root.editorMap.mapToolsContainer
+            : root.editorMap ? root.editorMap.parent : null
         visible: root.enabled && root.visible
         z: QGroundControl.zOrderWidgets + 4
-        anchors.left: parent.left
-        anchors.margins: ScreenTools.defaultFontPixelWidth * 0.75
-        y: Math.max(ScreenTools.defaultFontPixelWidth * 0.75,
-            Math.min((root.editorMap ? root.editorMap.mapToolsCenterY : 0) - width / 2,
-                (parent ? parent.height : 0) - height - ScreenTools.defaultFontPixelWidth * 0.75))
-        width: ScreenTools.defaultFontPixelHeight * 1.25
-        height: rail.implicitHeight
+        Layout.alignment: Qt.AlignHCenter
+        Layout.topMargin: ScreenTools.defaultFontPixelHeight * 0.4
+        implicitWidth: ScreenTools.defaultFontPixelHeight * 1.25
+        implicitHeight: rail.implicitHeight
+        width: implicitWidth
+        height: implicitHeight
         color: "#bb202326"
         radius: ScreenTools.defaultFontPixelWidth
         Column {
@@ -949,6 +974,44 @@ Column {
             }
         }
     }
+    CaacMissionUpdateController {
+        id: missionUpdate
+        objectName: "caacMissionUpdateController"
+        onFinished: (success, message) => {
+            if (!success) { QGroundControl.showMessageDialog(mainWindow, qsTr("Update waypoints"), message) }
+        }
+    }
+    QGCPopupDialogFactory {
+        id: updateWaypointsFactory
+        dialogComponent: Component {
+            QGCPopupDialog {
+                id: updateDialog
+                objectName: "caacUpdateWaypointsDialog"
+                title: qsTr("Update waypoints")
+                buttons: Dialog.Yes | Dialog.Cancel
+                property var vehicleAtOpen: null
+                property var masterAtOpen: null
+                Component.onCompleted: { vehicleAtOpen = root._managerVehicle; masterAtOpen = root.planMasterController }
+                QGCLabel {
+                    width: Math.min(updateDialog.maxContentAvailableWidth, ScreenTools.defaultFontPixelWidth * 42)
+                    wrapMode: Text.WordWrap
+                    text: qsTr("Upload the new waypoint positions? The aircraft will pause, upload, and continue from its previous target waypoint. Cancelling keeps the edits locally.")
+                }
+                onAccepted: {
+                    if (root._managerVehicle === vehicleAtOpen && root.planMasterController === masterAtOpen
+                        && root.prepareUpload()) {
+                        missionUpdate.update(masterAtOpen, QGroundControl.corePlugin.simulation)
+                    }
+                }
+                Connections {
+                    target: QGroundControl.multiVehicleManager
+                    function onActiveVehicleChanged() {
+                        if (updateDialog.vehicleAtOpen !== root._managerVehicle) { updateDialog.close() }
+                    }
+                }
+            }
+        }
+    }
     QGCPopupDialogFactory {
         id: readWaypointsFactory
         dialogComponent: Component {
@@ -1116,9 +1179,19 @@ Column {
                 }
             }
         }
+        function onMapRightClicked(position) {
+            if (root.enabled && root.visible && root.editorMap.directMissionItemEditing && !missionUpdate.busy) {
+                waypointPopup.close()
+                mapContextMenu.x = Math.max(0, Math.min(position.x, root.editorMap.width - mapContextMenu.width))
+                mapContextMenu.y = Math.max(0, Math.min(position.y, root.editorMap.height - mapContextMenu.implicitHeight))
+                mapContextMenu.open()
+            }
+        }
         function onMissionItemDragStarted(item) {
             waypointPopup.close()
             editorController.cancelRouteOrientation()
+            root._dragStartCoordinate = item ? QtPositioning.coordinate(item.coordinate.latitude, item.coordinate.longitude, item.coordinate.altitude)
+                : QtPositioning.coordinate()
             root._draggedWaypoint = item
             root._dragGuides = []
             editorController.beginEdit()
@@ -1132,6 +1205,12 @@ Column {
             root._dragGuides = []
             if (item && item.sequenceNumber === 0) { globalSettings.saveHomeAutomatically() }
             editorController.endEdit()
+            const vehicle = root._managerVehicle
+            if (item && item.command === 16 && root._dragStartCoordinate.isValid
+                && root._dragStartCoordinate.distanceTo(item.coordinate) > 0.01 && vehicle && vehicle.armed
+                && vehicle.flightMode === vehicle.missionFlightMode && !missionUpdate.busy) {
+                updateWaypointsFactory.open()
+            }
         }
         function onMissionItemEditRequested(item) {
             if (root.enabled && root.visible && root.editorMap.directMissionItemEditing) {

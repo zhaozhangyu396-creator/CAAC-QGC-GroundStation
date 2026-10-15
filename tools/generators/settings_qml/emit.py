@@ -278,6 +278,8 @@ def generate_page_qml(
                 object_name=group_object_name,
                 heading=_tr(grp.heading) if grp.heading else None,
                 heading_description=grp.headingDescription,
+                show_top_divider=grp.showTopDivider,
+                show_dividers=grp.showDividers,
                 visible=visible_expr,
                 enable_when=grp.enableWhen,
                 blocks=blocks,

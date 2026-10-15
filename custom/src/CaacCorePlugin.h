@@ -8,7 +8,6 @@
 #include "QGCCorePlugin.h"
 
 class CaacFlightDistance;
-class CaacAccessController;
 class CaacSimulationController;
 class QQmlAbstractUrlInterceptor;
 class QTimer;
@@ -18,12 +17,10 @@ class CaacCorePlugin : public QGCCorePlugin
 {
     Q_OBJECT
     Q_MOC_INCLUDE("CaacFlightDistance.h")
-    Q_MOC_INCLUDE("CaacAccessController.h")
     Q_MOC_INCLUDE("Vehicle.h")
     Q_MOC_INCLUDE("PlanMasterController.h")
     Q_MOC_INCLUDE("CaacSimulationController.h")
     Q_PROPERTY(CaacSimulationController* simulation READ simulation CONSTANT)
-    Q_PROPERTY(CaacAccessController* accessController READ accessController CONSTANT)
     Q_PROPERTY(CaacFlightDistance* flightDistance READ flightDistance NOTIFY flightDistanceChanged)
     Q_PROPERTY(bool doubleClickAddWaypoint READ doubleClickAddWaypoint WRITE setDoubleClickAddWaypoint NOTIFY
                    mapPreferencesChanged)
@@ -43,7 +40,6 @@ public:
 
     CaacSimulationController* simulation() const { return _simulation; }
 
-    CaacAccessController* accessController() const { return _accessController; }
 
     Q_INVOKABLE QString refreshFlightMission(PlanMasterController* controller);
     Q_INVOKABLE void resetFlightDistanceForSimulationRestart(Vehicle* vehicle);
@@ -97,6 +93,5 @@ private:
     bool _dragWaypoints = true;
     QVariantMap _planningPreferences;
     CaacSimulationController* _simulation = nullptr;
-    CaacAccessController* _accessController = nullptr;
     QPointer<QTimer> _flightAltitudeUpdateTimer;
 };

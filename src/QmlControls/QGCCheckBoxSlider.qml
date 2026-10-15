@@ -35,7 +35,7 @@ AbstractButton   {
             anchors.right:          parent.right
             anchors.verticalCenter: parent.verticalCenter
             height:                 ScreenTools.defaultFontPixelHeight * (control.settingsMenuStyle ? 1.25 : 1)
-            width:                  height * 2
+            width:                  height * 2.6
             radius:                 height / 2
             color:                  control.settingsMenuStyle ? (checked ? qgcPal.window : qgcPal.windowShade)
                                         : checked ? qgcPal.buttonHighlight : qgcPal.button
@@ -50,12 +50,24 @@ AbstractButton   {
             }
 
             Rectangle {
+                id: thumb
                 anchors.verticalCenter: parent.verticalCenter
                 x:                      checked ? indicator.width - width - _sliderInset : _sliderInset
                 height:                 parent.height - (_sliderInset * 2)
                 width:                  height
                 radius:                 height / 2
                 color:                  qgcPal.buttonText
+            }
+            QGCLabel {
+                objectName: control.objectName + "_state"
+                anchors.verticalCenter: parent.verticalCenter
+                x: control.checked ? control._sliderInset : thumb.width + control._sliderInset * 2
+                width: indicator.width - thumb.width - control._sliderInset * 3
+                text: control.checked ? qsTr("ON") : qsTr("OFF")
+                color: control.checked && !control.settingsMenuStyle ? qgcPal.buttonHighlightText : qgcPal.buttonText
+                font.pointSize: ScreenTools.smallFontPointSize
+                font.bold: true
+                horizontalAlignment: Text.AlignHCenter
             }
         }
     }

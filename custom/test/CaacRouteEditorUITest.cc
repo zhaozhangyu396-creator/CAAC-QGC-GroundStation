@@ -528,9 +528,9 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QVERIFY(std::abs(std::remainder(QGCGeo::geodesicAzimuth(homeBeforeRotation, firstAfterRotation) -
                                         QGCGeo::geodesicAzimuth(homeBeforeRotation, firstBeforeRotation) - 90,
                                     360)) < 1e-5);
-    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
     QCOMPARE(master->saveToJson(), beforeRotation);
-    QVERIFY(clickButton(QStringLiteral("caacRedo")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacRedo"), QStringLiteral("caacMainToolsScroller")));
     QVERIFY(master->saveToJson() != beforeRotation);
 
     step("relative point through native controls");
@@ -551,7 +551,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     const int beforeInsert = mission->visualItems()->count();
     QVERIFY(clickButton(QStringLiteral("caacRelativeAdd")));
     QCOMPARE(mission->visualItems()->count(), beforeInsert + 1);
-    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
     QCOMPARE(mission->visualItems()->count(), beforeInsert);
     relativeDistance->setProperty("focus", false);
     _window->requestActivate();
@@ -559,7 +559,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     _rootItem->forceActiveFocus();
     QTest::keyClick(_window, Qt::Key_Space);
     QTRY_COMPARE_WITH_TIMEOUT(mission->visualItems()->count(), beforeInsert + 1, TestTimeout::mediumMs());
-    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
     QCOMPARE(mission->visualItems()->count(), beforeInsert);
     const QString relativeScreenshot = qEnvironmentVariable("CAAC_RELATIVE_UI_SCREENSHOT");
     if (!relativeScreenshot.isEmpty() && chinese) {
@@ -605,7 +605,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QCOMPARE(target->altitudeFrame(), targetFrame);
     QCOMPARE(target->command(), targetCommand);
     QCOMPARE(reference->coordinate(), referenceCoordinate);
-    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
     QCOMPARE(master->saveToJson(), beforeRelativeEdit);
     if (chinese) {
         const auto* rotateButton = findVisibleItem(_rootItem, QStringLiteral("caacGlobalSettingsButton"));
@@ -681,7 +681,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QCOMPARE(dmsPoint->coordinate().latitude(), -0.5);
     QCOMPARE(dmsPoint->missionItem().param1(), 2.5);
     QCOMPARE(dmsPoint->missionItem().param4(), -90);
-    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
     QCOMPARE(master->saveToJson(), beforeDms);
 
     step("generate template through native controls");
@@ -691,7 +691,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacTemplateSize")));
     QVERIFY(clickButton(QStringLiteral("caacTemplateAdd")));
     QCOMPARE(mission->visualItems()->count(), beforeTemplateCount + 10);
-    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
     QCOMPARE(master->saveToJson(), beforeTemplate);
 
     step("precise translation through native controls");
@@ -710,7 +710,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QVERIFY(std::abs(std::remainder(QGCGeo::geodesicAzimuth(beforeTranslationHome, mission->plannedHomePosition()) - 45,
                                     360)) < 0.001);
     QVERIFY(master->saveToJson() != beforeTranslation);
-    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
     QCOMPARE(master->saveToJson(), beforeTranslation);
 
     step("drag entire route in one undo step");
@@ -729,7 +729,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, routePress + QPoint(50, 20));
     QTRY_VERIFY_WITH_TIMEOUT(master->saveToJson() != beforeRouteDrag, TestTimeout::mediumMs());
     QCOMPARE(map->property("center").value<QGeoCoordinate>(), mapCenterBeforeDrag);
-    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
     QCOMPARE(master->saveToJson(), beforeRouteDrag);
     QVERIFY(scrollIntoView(dragToggle, QStringLiteral("caacGlobalSettingsScroller")));
     QVERIFY(clickButton(QStringLiteral("caacRouteDragToggle")));
@@ -968,6 +968,29 @@ void CaacRouteEditorUITest::_planningUtilities()
         result->property("text").toString(),
         QCoreApplication::translate("CaacUnitConverter", "Enter a finite value and select valid units."),
         TestTimeout::mediumMs());
+    quantity->setProperty("currentIndex", 3);
+    auto* longitude = findVisibleItem(_rootItem, QStringLiteral("caacConvertLongitude"));
+    auto* latitude = findVisibleItem(_rootItem, QStringLiteral("caacConvertLatitude"));
+    auto* coordinates = findVisibleItem(_rootItem, QStringLiteral("caacConvertCoordinateResult"));
+    QVERIFY(longitude && latitude && coordinates);
+    longitude->setProperty("text", QStringLiteral("-102.5"));
+    latitude->setProperty("text", QStringLiteral("25.25"));
+    QTRY_VERIFY_WITH_TIMEOUT(coordinates->property("text").toString().contains(QStringLiteral("-102.500000000")),
+                             TestTimeout::mediumMs());
+    QVERIFY(clickButton(QStringLiteral("caacConvertLongitudeFormatToggle")));
+    auto* degrees = findVisibleItem(_rootItem, QStringLiteral("caacConvertLongitudeDegrees"));
+    auto* minutes = findVisibleItem(_rootItem, QStringLiteral("caacConvertLongitudeMinutes"));
+    auto* seconds = findVisibleItem(_rootItem, QStringLiteral("caacConvertLongitudeSeconds"));
+    QVERIFY(degrees && minutes && seconds);
+    QTRY_VERIFY_WITH_TIMEOUT(std::abs(degrees->mapToScene(QPointF()).y() - seconds->mapToScene(QPointF()).y()) < 1,
+                             TestTimeout::mediumMs());
+    QCOMPARE(degrees->property("text").toString(), QStringLiteral("102"));
+    QCOMPARE(minutes->property("text").toString(), QStringLiteral("30"));
+    seconds->setProperty("text", QStringLiteral("30"));
+    QTRY_VERIFY_WITH_TIMEOUT(coordinates->property("text").toString().contains(QStringLiteral("-102.508333333")),
+                             TestTimeout::mediumMs());
+    latitude->setProperty("text", QStringLiteral("91"));
+    QTRY_VERIFY_WITH_TIMEOUT(!coordinates->property("valid").toBool(), TestTimeout::mediumMs());
     QVERIFY(rejectDialog());
     QVERIFY(clickButton(QStringLiteral("caacMeasureTool")));
     QTRY_COMPARE_WITH_TIMEOUT(panel->property("measurePick").toInt(), 1, TestTimeout::mediumMs());
@@ -1075,7 +1098,7 @@ void CaacRouteEditorUITest::_planningUtilities()
     QVERIFY(scrollIntoView(apply, QStringLiteral("caacGlobalSettingsScroller")));
     QVERIFY(clickButton(QStringLiteral("caacApplyMissionSpeed")));
     QVERIFY(master->saveToJson() != before);
-    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
     QCOMPARE(master->saveToJson(), before);
     master->removeAll();
 }

@@ -43,7 +43,37 @@ private slots:
     void _testRelativeUpdate_data();
     void _testRelativeUpdate();
     void _testCenterFileRoundtrip();
+    void _testWaypointLanding();
 };
+
+void CaacRouteEditorTest::_testWaypointLanding()
+{
+    CaacRouteEditorController editor;
+    editor.setPlanMasterController(planController());
+    missionController()->setHomePosition(QGeoCoordinate(30, 120, 20));
+    QVERIFY(editor.addWaypoint(QGeoCoordinate(30.001, 120)));
+    auto* first = editor.currentItem();
+    QVERIFY(editor.addWaypoint(QGeoCoordinate(30.002, 120)));
+    auto* second = editor.currentItem();
+    const auto original = planController()->saveToJson();
+    QVERIFY(editor.useWaypointAsLanding(first));
+    auto* model = missionController()->visualItems();
+    QCOMPARE(model->count(), 4);
+    auto* landing = model->value<SimpleMissionItem*>(3);
+    QVERIFY(landing && landing->isLandCommand());
+    QVERIFY(landing->coordinate().distanceTo(first->coordinate()) < 0.01);
+    QCOMPARE(landing->altitude()->rawValue().toDouble(), 0.0);
+    const auto firstLanding = planController()->saveToJson();
+    QVERIFY(editor.useWaypointAsLanding(second));
+    QCOMPARE(model->count(), 4);
+    landing = model->value<SimpleMissionItem*>(3);
+    QVERIFY(landing && landing->isLandCommand());
+    QVERIFY(landing->coordinate().distanceTo(second->coordinate()) < 0.01);
+    QVERIFY(editor.undo());
+    QCOMPARE(planController()->saveToJson(), firstLanding);
+    QVERIFY(editor.undo());
+    QCOMPARE(planController()->saveToJson(), original);
+}
 
 void CaacRouteEditorTest::_testWaypointLabelsFollowSpeedCommands()
 {

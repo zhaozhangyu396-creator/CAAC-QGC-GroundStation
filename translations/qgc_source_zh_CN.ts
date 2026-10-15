@@ -3844,6 +3844,10 @@ Please place your vehicle in water, click the button, and wait. Note that the th
       <source>Requires a connected vehicle</source>
       <translation>需要联网无人机</translation>
     </message>
+    <message>
+      <source>返回分析</source>
+      <translation>返回分析</translation>
+    </message>
   </context>
   <context>
     <name>AppLogging</name>
@@ -4109,6 +4113,10 @@ Please place your vehicle in water, click the button, and wait. Note that the th
       <location filename="../src/Settings/AppSettings.cc" line="58"/>
       <source>Türk (Turkish)</source>
       <translation>土耳其语</translation>
+    </message>
+    <message>
+      <source>返回应用设置</source>
+      <translation>返回应用设置</translation>
     </message>
   </context>
   <context>
@@ -5804,6 +5812,18 @@ Click Ok to start the auto-tuning process.
         <source>Zoom out</source>
         <translation>缩小地图</translation>
     </message>
+    <message>
+      <source>重做（Ctrl+X）</source>
+      <translation>重做（Ctrl+X）</translation>
+    </message>
+    <message>
+      <source>Update waypoints</source>
+      <translation>更新航点</translation>
+    </message>
+    <message>
+      <source>Upload the new waypoint positions? The aircraft will pause, upload, and continue from its previous target waypoint. Cancelling keeps the edits locally.</source>
+      <translation>是否上传新的航点位置？确认后将自动暂停、上传，并从原目标航点继续飞行。取消后仅保留本地编辑。</translation>
+    </message>
 </context>
   <context>
     <name>CaacRouteEditorController</name>
@@ -6014,6 +6034,14 @@ Click Ok to start the auto-tuning process.
         <source>When H is fixed, select two waypoints or use H as the rotation center.</source>
         <translation>固定 H 点时，请选择两个航点，或以 H 点为旋转中心。</translation>
     </message>
+    <message>
+      <source>Select an ordinary waypoint as the landing point.</source>
+      <translation>请选择普通航点作为降落点。</translation>
+    </message>
+    <message>
+      <source>Set the landing point in the original editor for complex missions.</source>
+      <translation>复杂任务请在原任务编辑器中设置降落点。</translation>
+    </message>
 </context>
   <context>
     <name>CaacWaypointDialog</name>
@@ -6204,6 +6232,14 @@ Click Ok to start the auto-tuning process.
     <message>
         <source>The current vertex angle matches the map. Editing it moves this point along the previous leg extension. Vertical speed, climb and turn modes apply to the built-in simulation.</source>
         <translation>此点夹角与地图标注一致，修改时沿上一航段延长线移动此点。垂直速度、变高方式与转弯方式用于内置模拟。</translation>
+    </message>
+    <message>
+      <source>Leg parameters</source>
+      <translation>航段参数</translation>
+    </message>
+    <message>
+      <source>Altitude and speed</source>
+      <translation>高度与速度</translation>
     </message>
 </context>
   <context>
@@ -8774,6 +8810,10 @@ VTOL</source>
     <message>
       <source>Disarmed</source>
       <translation>上锁</translation>
+    </message>
+    <message>
+      <source>Route flight</source>
+      <translation>航线飞行</translation>
     </message>
   </context>
   <context>
@@ -13916,6 +13956,14 @@ VTOL</source>
       <source>Acknowledge and Hide</source>
       <translation>确认并隐藏</translation>
     </message>
+    <message>
+      <source>Sensors</source>
+      <translation>传感器</translation>
+    </message>
+    <message>
+      <source>No sensor data available</source>
+      <translation>尚未获取传感器数据</translation>
+    </message>
   </context>
   <context>
     <name>MainStatusIndicatorOfflinePage</name>
@@ -18696,6 +18744,14 @@ Note that this will also completely reset everything, including UAVCAN nodes, al
         <source>Confirm or cancel the orientation preview before saving or uploading.</source>
         <translation>请先确认或取消朝向预览，再保存或上传。</translation>
     </message>
+    <message>
+      <source>当前航点任务正在执行，请先暂停当前任务，再上传新航线。</source>
+      <translation>当前航点任务正在执行，请先暂停当前任务，再上传新航线。</translation>
+    </message>
+    <message>
+      <source>上传航线</source>
+      <translation>上传航线</translation>
+    </message>
 </context>
   <context>
     <name>PlanToolBarIndicators</name>
@@ -18991,6 +19047,18 @@ Click 'Ok' to upload the Plan anyway.</source>
     <message>
         <source>Cancel simulation</source>
         <translation>取消模拟</translation>
+    </message>
+    <message>
+      <source>上传航线</source>
+      <translation>上传航线</translation>
+    </message>
+    <message>
+      <source>当前航点任务正在执行，请先暂停当前任务，再上传新航线。</source>
+      <translation>当前航点任务正在执行，请先暂停当前任务，再上传新航线。</translation>
+    </message>
+    <message>
+      <source>关闭</source>
+      <translation>关闭</translation>
     </message>
 </context>
   <context>
@@ -25147,7 +25215,27 @@ If a vehicle still has this key configured, you will no longer be able to commun
       <source>Downloaded mission parameters; altitude uses its mission frame. Unreported fields are unavailable.</source>
       <translation>显示已下载任务的参数，高度沿用任务高度基准。未提供的字段显示为未获取数据。</translation>
     </message>
-  </context>
+    <message>
+      <source>剩余圈数</source>
+      <translation>剩余圈数</translation>
+    </message>
+    <message>
+      <source>无限循环</source>
+      <translation>无限循环</translation>
+    </message>
+      <message>
+      <source>Change altitude before the leg</source>
+      <translation>定点爬升</translation>
+    </message>
+    <message>
+      <source>Change altitude along the leg</source>
+      <translation>协调爬升</translation>
+    </message>
+    <message>
+      <source>Mission parameters; simulation speed and climb mode use the uploaded configuration. Altitude uses its mission frame. Unreported aircraft fields are unavailable.</source>
+      <translation>任务参数；模拟速度和爬升方式使用已上传的配置，高度沿用任务高度基准。实机未提供的字段显示为未获取数据。</translation>
+    </message>
+</context>
   <context>
     <name>CaacMapSettings</name>
     <message>
@@ -25972,6 +26060,10 @@ altitude</source>
         <source>Simulation connected; edit and upload a route.</source>
         <translation>模拟已连接，请编辑并上传航线。</translation>
     </message>
+    <message>
+      <source>Unable to create the landing point.</source>
+      <translation>无法创建降落点。</translation>
+    </message>
 </context>
 <context>
     <name>CaacSimulationDialog</name>
@@ -26284,6 +26376,10 @@ altitude</source>
         <source>H point and waypoint relations</source>
         <translation>H 点与航点关系</translation>
     </message>
+    <message>
+      <source>Set landing point</source>
+      <translation>设置降落点</translation>
+    </message>
 </context>
 <context>
     <name>CaacWaypointOverlap</name>
@@ -26363,6 +26459,14 @@ altitude</source>
       <message>
       <source>Simulation emergency</source>
       <translation>模拟应急</translation>
+    </message>
+    <message>
+      <source>End manual control and hover</source>
+      <translation>结束手动接管并悬停</translation>
+    </message>
+    <message>
+      <source>Attitude mode / joystick takeover</source>
+      <translation>姿态模式／遥控器接管</translation>
     </message>
 </context>
   <context>
@@ -27270,6 +27374,14 @@ altitude</source>
       <source>Horizontal limit</source>
       <translation>水平距离限制</translation>
     </message>
+    <message>
+      <source>更多围栏参数</source>
+      <translation>更多围栏参数</translation>
+    </message>
+    <message>
+      <source>围栏范围设置</source>
+      <translation>围栏范围设置</translation>
+    </message>
   </context>
   <context>
     <name>CaacSettingsMenu</name>
@@ -27411,6 +27523,22 @@ altitude</source>
     <message>
       <source>Last upload: none</source>
       <translation>上次上传：无</translation>
+    </message>
+    <message>
+      <source>首次使用前进行实名登记和激活</source>
+      <translation>首次使用前进行实名登记和激活</translation>
+    </message>
+    <message>
+      <source>&lt;h3&gt;&lt;font color='#ffdf75'&gt;重要提示&lt;/font&gt;&lt;/h3&gt;&lt;p&gt;&lt;b&gt;&lt;font color='#ffc36b'&gt;首次使用前须进行实名登记和激活。&lt;/font&gt;&lt;/b&gt;请在民用无人机外包装及民用无人机系统显著位置知悉该要求，并认真阅读以下说明。&lt;/p&gt;&lt;p&gt;&lt;b&gt;&lt;font color='#ffc36b'&gt;a）法律法规条款及内容&lt;/font&gt;&lt;/b&gt;&lt;br&gt;国家关于民用无人机实名登记的主要规定包括但不限于：&lt;br&gt;1）《无人驾驶航空器飞行管理暂行条例》第二章第十条：&lt;b&gt;&lt;font color='#ffc36b'&gt;民用无人驾驶航空器所有者应当依法进行实名登记&lt;/font&gt;&lt;/b&gt;，具体办法由国务院民用航空主管部门会同有关部门制定。&lt;br&gt;2）《民用无人驾驶航空器运行安全管理规则》第92.205条：所有人应当按照规定在&lt;b&gt;&lt;font color='#ffc36b'&gt;民用无人驾驶航空器综合管理平台（UOM）&lt;/font&gt;&lt;/b&gt;进行实名登记，&lt;b&gt;&lt;font color='#ffc36b'&gt;取得登记标志后方可激活使用&lt;/font&gt;&lt;/b&gt;民用无人驾驶航空器。&lt;/p&gt;&lt;p&gt;&lt;b&gt;&lt;font color='#ffc36b'&gt;b）法律责任与风险&lt;/font&gt;&lt;/b&gt;&lt;br&gt;违反实名登记规定可能承担相应法律责任。依据《无人驾驶航空器飞行管理暂行条例》第四十七条：民用无人驾驶航空器&lt;b&gt;&lt;font color='#ff8178'&gt;未经实名登记实施飞行活动&lt;/font&gt;&lt;/b&gt;的，由公安机关责令改正，可以处&lt;b&gt;&lt;font color='#ff8178'&gt;200元以下&lt;/font&gt;&lt;/b&gt;的罚款；情节严重的，处&lt;b&gt;&lt;font color='#ff8178'&gt;2000元以上2万元以下&lt;/font&gt;&lt;/b&gt;的罚款。请务必先完成实名登记并激活后再开展飞行活动。&lt;/p&gt;&lt;p&gt;&lt;b&gt;&lt;font color='#ffc36b'&gt;c）实名登记指导流程&lt;/font&gt;&lt;/b&gt;&lt;br&gt;建议按以下步骤完成登记：&lt;br&gt;1）打开 UOM 官网（&lt;a href='https://uom.caac.gov.cn/'&gt;https://uom.caac.gov.cn/&lt;/a&gt;）或 UOM App；&lt;br&gt;2）注册账号并登录；&lt;br&gt;3）进入实名登记，按要求填写所有者身份与联系信息、航空器信息及使用用途；&lt;br&gt;4）提交并取得登记标志后，返回本软件查询状态并完成激活。&lt;/p&gt;&lt;p&gt;&lt;b&gt;&lt;font color='#ffc36b'&gt;d）取消激活与所有者变更提示&lt;/font&gt;&lt;/b&gt;&lt;br&gt;在完成民用无人机&lt;b&gt;&lt;font color='#ffc36b'&gt;取消激活&lt;/font&gt;&lt;/b&gt;操作前，所有者&lt;b&gt;&lt;font color='#ff8178'&gt;不应进行转卖、转让、赠与等涉及所有者变更的行为&lt;/font&gt;&lt;/b&gt;。所有权变更、报废、失事或退出使用时，原所有者应及时办理注销登记，新所有者须重新实名登记。&lt;br&gt;&lt;b&gt;&lt;font color='#ff8178'&gt;如果原所有者未按规定取消激活，可能面临侵权责任、合同纠纷等民事法律风险。在情节严重的情况下，原所有者还可能因民用无人机被他人用于非法活动而承担相应的刑事责任。&lt;/font&gt;&lt;/b&gt;&lt;/p&gt;</source>
+      <translation>&lt;h3&gt;&lt;font color='#ffdf75'&gt;重要提示&lt;/font&gt;&lt;/h3&gt;&lt;p&gt;&lt;b&gt;&lt;font color='#ffc36b'&gt;首次使用前须进行实名登记和激活。&lt;/font&gt;&lt;/b&gt;请在民用无人机外包装及民用无人机系统显著位置知悉该要求，并认真阅读以下说明。&lt;/p&gt;&lt;p&gt;&lt;b&gt;&lt;font color='#ffc36b'&gt;a）法律法规条款及内容&lt;/font&gt;&lt;/b&gt;&lt;br&gt;国家关于民用无人机实名登记的主要规定包括但不限于：&lt;br&gt;1）《无人驾驶航空器飞行管理暂行条例》第二章第十条：&lt;b&gt;&lt;font color='#ffc36b'&gt;民用无人驾驶航空器所有者应当依法进行实名登记&lt;/font&gt;&lt;/b&gt;，具体办法由国务院民用航空主管部门会同有关部门制定。&lt;br&gt;2）《民用无人驾驶航空器运行安全管理规则》第92.205条：所有人应当按照规定在&lt;b&gt;&lt;font color='#ffc36b'&gt;民用无人驾驶航空器综合管理平台（UOM）&lt;/font&gt;&lt;/b&gt;进行实名登记，&lt;b&gt;&lt;font color='#ffc36b'&gt;取得登记标志后方可激活使用&lt;/font&gt;&lt;/b&gt;民用无人驾驶航空器。&lt;/p&gt;&lt;p&gt;&lt;b&gt;&lt;font color='#ffc36b'&gt;b）法律责任与风险&lt;/font&gt;&lt;/b&gt;&lt;br&gt;违反实名登记规定可能承担相应法律责任。依据《无人驾驶航空器飞行管理暂行条例》第四十七条：民用无人驾驶航空器&lt;b&gt;&lt;font color='#ff8178'&gt;未经实名登记实施飞行活动&lt;/font&gt;&lt;/b&gt;的，由公安机关责令改正，可以处&lt;b&gt;&lt;font color='#ff8178'&gt;200元以下&lt;/font&gt;&lt;/b&gt;的罚款；情节严重的，处&lt;b&gt;&lt;font color='#ff8178'&gt;2000元以上2万元以下&lt;/font&gt;&lt;/b&gt;的罚款。请务必先完成实名登记并激活后再开展飞行活动。&lt;/p&gt;&lt;p&gt;&lt;b&gt;&lt;font color='#ffc36b'&gt;c）实名登记指导流程&lt;/font&gt;&lt;/b&gt;&lt;br&gt;建议按以下步骤完成登记：&lt;br&gt;1）打开 UOM 官网（&lt;a href='https://uom.caac.gov.cn/'&gt;https://uom.caac.gov.cn/&lt;/a&gt;）或 UOM App；&lt;br&gt;2）注册账号并登录；&lt;br&gt;3）进入实名登记，按要求填写所有者身份与联系信息、航空器信息及使用用途；&lt;br&gt;4）提交并取得登记标志后，返回本软件查询状态并完成激活。&lt;/p&gt;&lt;p&gt;&lt;b&gt;&lt;font color='#ffc36b'&gt;d）取消激活与所有者变更提示&lt;/font&gt;&lt;/b&gt;&lt;br&gt;在完成民用无人机&lt;b&gt;&lt;font color='#ffc36b'&gt;取消激活&lt;/font&gt;&lt;/b&gt;操作前，所有者&lt;b&gt;&lt;font color='#ff8178'&gt;不应进行转卖、转让、赠与等涉及所有者变更的行为&lt;/font&gt;&lt;/b&gt;。所有权变更、报废、失事或退出使用时，原所有者应及时办理注销登记，新所有者须重新实名登记。&lt;br&gt;&lt;b&gt;&lt;font color='#ff8178'&gt;如果原所有者未按规定取消激活，可能面临侵权责任、合同纠纷等民事法律风险。在情节严重的情况下，原所有者还可能因民用无人机被他人用于非法活动而承担相应的刑事责任。&lt;/font&gt;&lt;/b&gt;&lt;/p&gt;</translation>
+    </message>
+    <message>
+      <source>收起实名登记提示</source>
+      <translation>收起实名登记提示</translation>
+    </message>
+    <message>
+      <source>展开实名登记提示</source>
+      <translation>展开实名登记提示</translation>
     </message>
   </context>
   <context>
@@ -27604,6 +27732,14 @@ altitude</source>
       <source>Joystick input lost; simulation hovering.</source>
       <translation>遥控器输入中断，模拟飞机已悬停。</translation>
     </message>
+    <message>
+      <source>当前航点任务正在执行，请先暂停当前任务，再上传新航线。</source>
+      <translation>当前航点任务正在执行，请先暂停当前任务，再上传新航线。</translation>
+    </message>
+    <message>
+      <source>上传航线</source>
+      <translation>上传航线</translation>
+    </message>
   </context>
   <context>
     <name>CaacSimulationJoystickSettings</name>
@@ -27698,6 +27834,275 @@ altitude</source>
     <message>
       <source>Current position: %1</source>
       <translation>当前档位：%1</translation>
+    </message>
+  </context>
+  <context>
+    <name>CaacBatteryProtection</name>
+    <message>
+      <source>悬停</source>
+      <translation>悬停</translation>
+    </message>
+    <message>
+      <source>返航</source>
+      <translation>返航</translation>
+    </message>
+    <message>
+      <source>降落</source>
+      <translation>降落</translation>
+    </message>
+    <message>
+      <source>警告</source>
+      <translation>警告</translation>
+    </message>
+    <message>
+      <source>请输入飞控允许范围内的电压门限。</source>
+      <translation>请输入飞控允许范围内的电压门限。</translation>
+    </message>
+    <message>
+      <source>飞行器严重低电量时</source>
+      <translation>飞行器严重低电量时</translation>
+    </message>
+    <message>
+      <source>飞行器低电量时</source>
+      <translation>飞行器低电量时</translation>
+    </message>
+    <message>
+      <source>PX4 不支持单独配置此动作。</source>
+      <translation>PX4 不支持单独配置此动作。</translation>
+    </message>
+    <message>
+      <source>电压门限</source>
+      <translation>电压门限</translation>
+    </message>
+    <message>
+      <source>电池设置</source>
+      <translation>电池设置</translation>
+    </message>
+    <message>
+      <source>读取参数</source>
+      <translation>读取参数</translation>
+    </message>
+    <message>
+      <source>电压按电池节数及满／空电压换算；PX4 仍按剩余电量比例触发保护。低电量阶段固定警告，不支持的动作禁用。</source>
+      <translation>电压按电池节数及满／空电压换算；PX4 仍按剩余电量比例触发保护。低电量阶段固定警告，不支持的动作禁用。</translation>
+    </message>
+    <message>
+      <source>连接飞控，并在电源设置中配置电池节数及满／空电压后，可使用 V 设置门限。</source>
+      <translation>连接飞控，并在电源设置中配置电池节数及满／空电压后，可使用 V 设置门限。</translation>
+    </message>
+    <message>
+      <source>当前严重低电量动作：%1</source>
+      <translation>当前严重低电量动作：%1</translation>
+    </message>
+    <message>
+      <source>保护动作参数不可用</source>
+      <translation>保护动作参数不可用</translation>
+    </message>
+    <message>
+      <source>确认电池设置</source>
+      <translation>确认电池设置</translation>
+    </message>
+    <message>
+      <source>低电量电压门限必须高于严重低电量门限。</source>
+      <translation>低电量电压门限必须高于严重低电量门限。</translation>
+    </message>
+  </context>
+  <context>
+    <name>CaacConnectionSettings</name>
+    <message>
+      <source>选择串口</source>
+      <translation>选择串口</translation>
+    </message>
+    <message>
+      <source>串口 %1</source>
+      <translation>串口 %1</translation>
+    </message>
+    <message>
+      <source>连接设置</source>
+      <translation>连接设置</translation>
+    </message>
+    <message>
+      <source>断开</source>
+      <translation>断开</translation>
+    </message>
+    <message>
+      <source>连接</source>
+      <translation>连接</translation>
+    </message>
+    <message>
+      <source>刷新串口</source>
+      <translation>刷新串口</translation>
+    </message>
+    <message>
+      <source>自动连接</source>
+      <translation>自动连接</translation>
+    </message>
+    <message>
+      <source>未检测到串口，请连接设备后刷新。</source>
+      <translation>未检测到串口，请连接设备后刷新。</translation>
+    </message>
+    <message>
+      <source>更多连接设置</source>
+      <translation>更多连接设置</translation>
+    </message>
+    <message>
+      <source>返回连接设置</source>
+      <translation>返回连接设置</translation>
+    </message>
+  </context>
+  <context>
+    <name>CaacGeoFenceSettings</name>
+    <message>
+      <source>电子围栏</source>
+      <translation>电子围栏</translation>
+    </message>
+    <message>
+      <source>围栏开关</source>
+      <translation>围栏开关</translation>
+    </message>
+    <message>
+      <source>显示在地图上</source>
+      <translation>显示在地图上</translation>
+    </message>
+    <message>
+      <source>绘制电子围栏</source>
+      <translation>绘制电子围栏</translation>
+    </message>
+    <message>
+      <source>读取</source>
+      <translation>读取</translation>
+    </message>
+    <message>
+      <source>写入</source>
+      <translation>写入</translation>
+    </message>
+    <message>
+      <source>围栏预览（尚未写入飞控）</source>
+      <translation>围栏预览（尚未写入飞控）</translation>
+    </message>
+    <message>
+      <source>已保存围栏预览（地图）</source>
+      <translation>已保存围栏预览（地图）</translation>
+    </message>
+    <message>
+      <source>主地图定位到此位置</source>
+      <translation>主地图定位到此位置</translation>
+    </message>
+    <message>
+      <source>绘制或读取围栏后将在此显示地图预览</source>
+      <translation>绘制或读取围栏后将在此显示地图预览</translation>
+    </message>
+    <message>
+      <source>拖动顶点调整围栏；点击边中点可加点。完成后点击写入，将围栏发送到已连接的飞控。</source>
+      <translation>拖动顶点调整围栏；点击边中点可加点。完成后点击写入，将围栏发送到已连接的飞控。</translation>
+    </message>
+  </context>
+  <context>
+    <name>CaacMissionUpdateController</name>
+    <message>
+      <source>The mission or connection changed. No waypoint update was sent.</source>
+      <translation>任务或连接状态已变化，未发送航点更新。</translation>
+    </message>
+    <message>
+      <source>Connection or aircraft state changed. Automatic resume was cancelled.</source>
+      <translation>连接或飞行器状态已变化，已取消自动续飞。</translation>
+    </message>
+    <message>
+      <source>Waypoint update timed out. The mission has not been automatically resumed.</source>
+      <translation>航点更新超时，未自动恢复任务，请检查飞行器状态。</translation>
+    </message>
+    <message>
+      <source>Flight mode changed. The waypoint update was cancelled.</source>
+      <translation>飞行模式已变化，已取消航点更新。</translation>
+    </message>
+    <message>
+      <source>The plan changed while pausing. The mission remains paused.</source>
+      <translation>暂停期间航线发生变化，任务保持暂停。</translation>
+    </message>
+    <message>
+      <source>Only waypoint positions can be updated during flight. Pause and upload other mission changes manually.</source>
+      <translation>飞行中仅支持更新航点位置。其他任务变更请暂停后手动上传。</translation>
+    </message>
+    <message>
+      <source>Waypoint upload failed. The mission remains paused.</source>
+      <translation>航点上传失败，任务保持暂停。</translation>
+    </message>
+    <message>
+      <source>Flight mode changed during upload. Automatic resume was cancelled.</source>
+      <translation>上传期间飞行模式已变化，已取消自动续飞。</translation>
+    </message>
+    <message>
+      <source>Waypoints updated. Continuing from the previous target waypoint.</source>
+      <translation>航点已更新，正在从原目标航点继续飞行。</translation>
+    </message>
+    <message>
+      <source>Flight mode changed. Automatic resume was cancelled.</source>
+      <translation>飞行模式已变化，已取消自动续飞。</translation>
+    </message>
+      <message>
+      <source>A waypoint update is already in progress.</source>
+      <translation>正在更新航点，请稍候。</translation>
+    </message>
+</context>
+  <context>
+    <name>CaacSimulationEngine</name>
+    <message>
+      <source>Only waypoint positions can be updated during flight. Pause and upload other mission changes manually.</source>
+      <translation>飞行中仅支持更新航点位置。其他任务变更请暂停后手动上传。</translation>
+    </message>
+  </context>
+  <context>
+    <name>CaacUnitConverter</name>
+    <message>
+      <source>Latitude / longitude</source>
+      <translation>经纬度</translation>
+    </message>
+    <message>
+      <source>Longitude</source>
+      <translation>经度</translation>
+    </message>
+    <message>
+      <source>Latitude</source>
+      <translation>纬度</translation>
+    </message>
+    <message>
+      <source>South</source>
+      <translation>南纬</translation>
+    </message>
+    <message>
+      <source>North</source>
+      <translation>北纬</translation>
+    </message>
+    <message>
+      <source>West</source>
+      <translation>西经</translation>
+    </message>
+    <message>
+      <source>East</source>
+      <translation>东经</translation>
+    </message>
+    <message>
+      <source>Decimal degrees</source>
+      <translation>十进制度</translation>
+    </message>
+    <message>
+      <source>DMS</source>
+      <translation>度分秒</translation>
+    </message>
+    <message>
+      <source>Enter a valid longitude (−180° to 180°) and latitude (−90° to 90°).</source>
+      <translation>请输入有效经度（−180° 至 180°）和纬度（−90° 至 90°）。</translation>
+    </message>
+  </context>
+  <context>
+    <name>QGCCheckBoxSlider</name>
+    <message>
+      <source>ON</source>
+      <translation>ON</translation>
+    </message>
+    <message>
+      <source>OFF</source>
+      <translation>OFF</translation>
     </message>
   </context>
 </TS>

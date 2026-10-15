@@ -19,6 +19,7 @@ public:
         double windBearing = 0;
         int turnMode = 1;
         int climbMode = 1;
+        bool operator==(const Options&) const = default;
     };
 
     struct State
@@ -40,11 +41,14 @@ public:
         double verticalSpeed = 2;
         int turnMode = 1;
         int climbMode = 1;
+        bool operator==(const WaypointOptions&) const = default;
     };
 
     void initialize(const QGeoCoordinate& home, const Options& options);
     bool load(const QMap<uint16_t, mavlink_mission_item_int_t>& mission, const QGeoCoordinate& home,
               const Options& options, QString& error, const QMap<int, WaypointOptions>& waypointOptions = {});
+    bool updateMission(const QMap<uint16_t, mavlink_mission_item_int_t>& mission, const QGeoCoordinate& home,
+                       const Options& options, QString& error, const QMap<int, WaypointOptions>& waypointOptions);
     bool jump(int sequence);
     void advance(double seconds);
     void pause();
@@ -66,6 +70,14 @@ public:
 
     int remainingLoops() const;
 
+    double horizontalSpeed() const { return _options.horizontalSpeed; }
+
+    int currentClimbMode() const
+    {
+        return _waypointOptions.contains(_state.sequence) ? _waypointOptions.value(_state.sequence).climbMode
+                                                          : _options.climbMode;
+    }
+
 private:
     QGeoCoordinate _target(const mavlink_mission_item_int_t& item) const;
     void _next();
@@ -76,6 +88,7 @@ private:
     QMap<int, WaypointOptions> _waypointOptions;
     QGeoCoordinate _home;
     Options _options;
+    Options _missionOptions;
     State _state;
     double _wait = -1;
     bool _returnLanding = false;

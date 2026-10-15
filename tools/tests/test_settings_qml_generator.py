@@ -57,6 +57,24 @@ class TestLoadPageDef:
         assert page.groups[0].heading == "General"
         assert page.groups[1].heading == "Advanced"
 
+    def test_group_divider_options(self, tmp_path: Path):
+        page = load_page_def(
+            _make_page_json(
+                tmp_path,
+                {"groups": [{"heading": "Units", "showTopDivider": True, "showDividers": False}]},
+            )
+        )
+        qml = generate_page_qml(page, (), "Test")
+        assert "showTopDivider: true" in qml
+        assert "showDividers: false" in qml
+
+    @pytest.mark.parametrize("value", ["false", 0, None])
+    def test_invalid_group_divider_option(self, tmp_path: Path, value):
+        with pytest.raises(ValueError, match="must be a boolean"):
+            load_page_def(
+                _make_page_json(tmp_path, {"groups": [{"heading": "Units", "showDividers": value}]})
+            )
+
     def test_loads_controls(self, tmp_path: Path):
         data = {
             "version": 1,

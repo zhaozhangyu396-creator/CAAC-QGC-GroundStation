@@ -119,7 +119,7 @@ SetupPage {
                 Row {
                     spacing: ScreenTools.defaultFontPixelWidth
 
-                    Switch {
+                    QGCCheckBoxSlider {
                         id: safetySwitch
                         onClicked: {
                             if (!checked) {

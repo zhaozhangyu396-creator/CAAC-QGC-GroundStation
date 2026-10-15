@@ -154,7 +154,7 @@ SetupPage {
 
             Row {
                 spacing: ScreenTools.defaultFontPixelWidth
-                Switch {
+                QGCCheckBoxSlider {
                     id: safetySwitch
                     onToggled: {
                         if (controller.vehicle.armed) {

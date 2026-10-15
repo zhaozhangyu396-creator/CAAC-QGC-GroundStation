@@ -165,50 +165,34 @@ ApplicationWindow {
     }
 
     function showAnalyzeTool() {
-        showProtectedTool(function() {
-            if (QGroundControl.corePlugin.directMissionItemEditing) {
-                if (caacSettingsMenu) {
-                    caacSettingsMenu.showAnalyzeNavigation()
-                } else {
-                    showToolSelectDialog("Analyze")
-                }
+        if (QGroundControl.corePlugin.directMissionItemEditing) {
+            if (caacSettingsMenu) {
+                caacSettingsMenu.showAnalyzeNavigation()
             } else {
-                showTool(qsTr("Analyze Tools"), "qrc:/qml/QGroundControl/AnalyzeView/AnalyzeView.qml", "/qmlimages/Analyze.svg")
+                showToolSelectDialog("Analyze")
             }
-        })
+        } else {
+            showTool(qsTr("Analyze Tools"), "qrc:/qml/QGroundControl/AnalyzeView/AnalyzeView.qml", "/qmlimages/Analyze.svg")
+        }
     }
 
-    Component { id: accessDialogComponent; CaacAccessDialog { } }
-    function showProtectedTool(action) {
-        if (!QGroundControl.corePlugin.directMissionItemEditing) { action(); return }
-        QGroundControl.corePlugin.accessController.ensureDefaultPassword()
-        const dialog = accessDialogComponent.createObject(mainWindow)
-        if (dialog) { dialog.accessGranted.connect(action); dialog.open() }
-    }
-    function changeAccessPassword() {
-        QGroundControl.corePlugin.accessController.ensureDefaultPassword()
-        const dialog = accessDialogComponent.createObject(mainWindow, {changePassword: true})
-        if (dialog) { dialog.open() }
-    }
     function showVehicleConfig(afterOpen = null) {
-        showProtectedTool(function() {
-            if (QGroundControl.corePlugin.directMissionItemEditing) {
-                caacVehicleConfigAfterOpen = afterOpen
-                if (caacSettingsMenu) {
-                    caacSettingsMenu.submenuExpanded = true
-                    caacSettingsPage = "VehicleSetup"
-                    if (caacVehicleConfigView) {
-                        caacVehicleConfigView.showNavigation()
-                        vehicleConfigReady(caacVehicleConfigView)
-                    }
-                } else {
-                    showToolSelectDialog("VehicleSetup")
+        if (QGroundControl.corePlugin.directMissionItemEditing) {
+            caacVehicleConfigAfterOpen = afterOpen
+            if (caacSettingsMenu) {
+                caacSettingsMenu.submenuExpanded = true
+                caacSettingsPage = "VehicleSetup"
+                if (caacVehicleConfigView) {
+                    caacVehicleConfigView.showNavigation()
+                    vehicleConfigReady(caacVehicleConfigView)
                 }
             } else {
-                showTool(qsTr("Vehicle Configuration"), "qrc:/qml/QGroundControl/VehicleSetup/VehicleConfigView.qml", "/qmlimages/Gears.svg")
-                if (afterOpen) { afterOpen(toolDrawerLoader.item) }
+                showToolSelectDialog("VehicleSetup")
             }
-        })
+        } else {
+            showTool(qsTr("Vehicle Configuration"), "qrc:/qml/QGroundControl/VehicleSetup/VehicleConfigView.qml", "/qmlimages/Gears.svg")
+            if (afterOpen) { afterOpen(toolDrawerLoader.item) }
+        }
     }
 
     property var caacSettingsMenu: null
@@ -819,8 +803,8 @@ ApplicationWindow {
     }
 
     // Called by AnalyzeView to create an analyze page item owned by mainWindow.
-    // The caller sets the visual parent to panelContainer after creation.
-    function createAnalyzePage(source) {
+    // Set the initial visual parent before child charts complete, retaining mainWindow ownership.
+    function createAnalyzePage(source, visualParent = null) {
         if (_inPanelAnalyzePage) {
             _inPanelAnalyzePage.destroy()
             _inPanelAnalyzePage = null
@@ -830,7 +814,7 @@ ApplicationWindow {
             console.warn("createAnalyzePage failed source:", source, "errorString:", component.errorString())
             return null
         }
-        _inPanelAnalyzePage = component.createObject(mainWindow)
+        _inPanelAnalyzePage = component.createObject(mainWindow, {parent: visualParent || mainWindow.contentItem})
         return _inPanelAnalyzePage
     }
 

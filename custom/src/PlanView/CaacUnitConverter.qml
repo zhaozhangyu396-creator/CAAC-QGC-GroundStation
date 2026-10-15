@@ -12,6 +12,7 @@ QGCPopupDialog {
     objectName: "caacUnitConverterDialog"
     title: qsTr("Unit conversion")
     buttons: Dialog.Close
+    readonly property bool coordinates: quantity.currentIndex === 3
     readonly property var _units: quantity.currentIndex === 0
         ? [{name: "m", scale: 1}, {name: "km", scale: 1000}, {name: "ft", scale: 0.3048}, {name: "NM", scale: 1852}]
         : quantity.currentIndex === 1
@@ -29,28 +30,74 @@ QGCPopupDialog {
             id: quantity
             objectName: "caacConvertQuantity"
             Layout.fillWidth: true
-            model: [qsTr("Length"), qsTr("Speed"), qsTr("Angle")]
+            model: [qsTr("Length"), qsTr("Speed"), qsTr("Angle"), qsTr("Latitude / longitude")]
         }
-        QGCLabel { text: qsTr("Input value") }
+        ColumnLayout {
+            Layout.fillWidth: true
+            visible: root.coordinates
+            spacing: ScreenTools.defaultFontPixelHeight * 0.5
+            QGCLabel { text: qsTr("Longitude") }
+            CaacCoordinateField {
+                id: longitude
+                Layout.fillWidth: true
+                maximumDegrees: 180
+                fieldName: "caacConvertLongitude"
+                compact: true
+                value: 0
+            }
+            QGCLabel { text: qsTr("Latitude") }
+            CaacCoordinateField {
+                id: latitude
+                Layout.fillWidth: true
+                maximumDegrees: 90
+                fieldName: "caacConvertLatitude"
+                compact: true
+                value: 0
+            }
+            QGCLabel {
+                objectName: "caacConvertCoordinateResult"
+                Layout.fillWidth: true
+                wrapMode: Text.WrapAnywhere
+                font.bold: true
+                readonly property bool valid: isFinite(longitude.coordinate) && Math.abs(longitude.coordinate) <= 180
+                    && isFinite(latitude.coordinate) && Math.abs(latitude.coordinate) <= 90
+                function formatted(value, limit) {
+                    const dms = QGroundControl.corePlugin.coordinateToDms(value, limit)
+                    if (dms.degrees === undefined) { return "" }
+                    const direction = limit === 90 ? (dms.negative ? qsTr("South") : qsTr("North"))
+                        : (dms.negative ? qsTr("West") : qsTr("East"))
+                    return dms.degrees + "° " + dms.minutes + "′ " + Number(dms.seconds.toFixed(6)) + "″ " + direction
+                }
+                text: valid ? qsTr("Decimal degrees") + "\n" + qsTr("Longitude") + ": " + longitude.coordinate.toFixed(9)
+                    + "°\n" + qsTr("Latitude") + ": " + latitude.coordinate.toFixed(9) + "°\n\n"
+                    + qsTr("DMS") + "\n" + qsTr("Longitude") + ": " + formatted(longitude.coordinate, 180)
+                    + "\n" + qsTr("Latitude") + ": " + formatted(latitude.coordinate, 90)
+                    : qsTr("Enter a valid longitude (−180° to 180°) and latitude (−90° to 90°).")
+            }
+        }
+        QGCLabel { text: qsTr("Input value"); visible: !root.coordinates }
         QGCTextField {
             id: value
+            visible: !root.coordinates
             objectName: "caacConvertValue"
             Layout.fillWidth: true
             text: "100"
             validator: DoubleValidator { locale: "C" }
         }
-        QGCLabel { text: qsTr("From unit") }
+        QGCLabel { text: qsTr("From unit"); visible: !root.coordinates }
         QGCComboBox {
             id: from
+            visible: !root.coordinates
             objectName: "caacConvertFrom"
             Layout.fillWidth: true
             model: root._units
             textRole: "name"
             onModelChanged: currentIndex = 0
         }
-        QGCLabel { text: qsTr("To unit") }
+        QGCLabel { text: qsTr("To unit"); visible: !root.coordinates }
         QGCComboBox {
             id: to
+            visible: !root.coordinates
             objectName: "caacConvertTo"
             Layout.fillWidth: true
             model: root._units
@@ -59,6 +106,7 @@ QGCPopupDialog {
         }
         QGCLabel {
             objectName: "caacConvertResult"
+            visible: !root.coordinates
             Layout.fillWidth: true
             font.bold: true
             font.pointSize: ScreenTools.largeFontPointSize

@@ -98,7 +98,8 @@ Item {
                 objectName: "caacHomeSection"
                 title: qsTr("Planned home")
                 GridLayout {
-                    columns: root.width < ScreenTools.defaultFontPixelWidth * 35 ? 1 : 2
+                    columns: root.width < ScreenTools.defaultFontPixelWidth * 35
+                        || homeLongitude.displayDms || homeLatitude.displayDms ? 1 : 2
                     Layout.fillWidth: true
                     rowSpacing: ScreenTools.defaultFontPixelHeight * 0.5
                     QGCLabel { text: qsTr("Longitude (°)") }

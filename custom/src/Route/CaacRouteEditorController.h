@@ -77,6 +77,7 @@ public:
     Q_INVOKABLE bool clearWaypoints();
     Q_INVOKABLE bool reverseWaypoints();
     Q_INVOKABLE bool useWaypointAsHome(QObject* item);
+    Q_INVOKABLE bool useWaypointAsLanding(QObject* item);
     Q_INVOKABLE bool centerHomeOnRoute();
     Q_INVOKABLE bool updateRelativeWaypoint(QObject* item, double angle, double distance, bool interiorAngle,
                                             double altitude, bool specifySpeed, double speed);

@@ -19,8 +19,7 @@ Item {
     property real reservedBottomHeight: 0
     property var missionControllerOverride: null
     property var customOccluders: tools.visible ? [Qt.rect(tools.x, tools.y, tools.width, tools.height)] : []
-    readonly property real clearTrajectoryCenterY: tools.y + toolbarScroller.y + toolbar.y
-        + clearTrajectoryButton.y + clearTrajectoryButton.iconSize / 2 - toolbarScroller.contentY
+    property alias mapToolsContainer: toolbar
 
     readonly property bool _simulationEmergency: _corePlugin.simulation.emergencyMode
     property Component _emergencyDialog: Component { CaacSimulationEmergencyDialog { } }

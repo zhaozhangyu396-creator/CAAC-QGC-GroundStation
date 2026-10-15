@@ -39,7 +39,6 @@ qgc_set_qt_resource_alias(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacBatteryProtection.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacGeoFenceSettings.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacUOMSettings.qml
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacAccessDialog.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacAttitudeInstrument.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacSimulationEmergencyDialog.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacSimulationJoystickSettings.qml
@@ -89,7 +88,6 @@ qt_add_qml_module(
               src/PlanView/CaacBatteryProtection.qml
               src/PlanView/CaacGeoFenceSettings.qml
               src/PlanView/CaacUOMSettings.qml
-              src/PlanView/CaacAccessDialog.qml
               src/Flight/CaacAttitudeInstrument.qml
               src/Flight/CaacSimulationEmergencyDialog.qml
               src/Flight/CaacSimulationJoystickSettings.qml
@@ -118,8 +116,6 @@ qt_add_resources(
 
 set(CUSTOM_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CaacCorePlugin.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/CaacAccessController.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/CaacAccessController.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CaacCorePlugin.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Route/CaacRouteEditorController.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Route/CaacRouteEditorController.cc
@@ -133,6 +129,8 @@ set(CUSTOM_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacFlightDistance.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacSimulationEngine.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacSimulationEngine.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacMissionUpdateController.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacMissionUpdateController.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacSimulationController.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacSimulationController.cc
     PARENT_SCOPE
