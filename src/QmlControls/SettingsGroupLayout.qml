@@ -9,6 +9,7 @@ ColumnLayout {
     spacing:            _margins / 2
     implicitWidth:      _contentLayout.implicitWidth + (_margins * 2)
     implicitHeight:     _contentLayout.implicitHeight + (_margins * 2)
+    Layout.minimumWidth: settingsMenuStyle ? 0 : -1
 
     default property alias contentItem: _contentLayout.data
 
@@ -85,8 +86,9 @@ ColumnLayout {
     Rectangle {
         id:                 outerRect
         Layout.fillWidth:   true
-        implicitWidth:      _contentLayout.implicitWidth + (showBorder ? _margins * 2 : 0)
-        implicitHeight:     _contentLayout.implicitHeight + (showBorder ? _margins * 2: 0)
+        Layout.minimumWidth: control.settingsMenuStyle ? 0 : -1
+        implicitWidth:      _contentLayout.implicitWidth + (control.settingsMenuStyle ? ScreenTools.defaultFontPixelWidth * 2 : showBorder ? _margins * 2 : 0)
+        implicitHeight:     _contentLayout.implicitHeight + (control.settingsMenuStyle || showBorder ? _margins * 2 : 0)
         color:              control.settingsMenuStyle ? QGroundControl.globalPalette.window
                                 : control.vehicleSetupStyle ? QGroundControl.globalPalette.windowShade : "transparent"
         border.color:       outerBorderColor
@@ -94,7 +96,7 @@ ColumnLayout {
         radius:             ScreenTools.defaultFontPixelHeight / 2
 
         Repeater {
-            model: showDividers ? _ySortedChildren.length : 0
+            model: showDividers && !control.settingsMenuStyle ? _ySortedChildren.length : 0
 
             Rectangle {
                 x:          showBorder ? _margins : 0
@@ -128,12 +130,30 @@ ColumnLayout {
             }
         }
 
+        Repeater {
+            model: control.settingsMenuStyle ? _contentLayout.children : []
+
+            Rectangle {
+                required property var modelData
+                objectName: "settingsFormRowFrame"
+                x: 0
+                y: _contentLayout.y + modelData.y - control._margins
+                width: outerRect.width
+                height: modelData.height + control._margins * 2
+                visible: modelData.visible && modelData.height > 0
+                color: "transparent"
+                border.color: QGroundControl.globalPalette.groupBorder
+                border.width: 1
+                radius: ScreenTools.defaultBorderRadius
+            }
+        }
+
         ColumnLayout {
             id:                 _contentLayout
-            x:                  showBorder ? _margins : 0
-            y:                  showBorder ? _margins : 0
-            width:              parent.width - (showBorder ? _margins * 2 : 0)
-            spacing:            _margins * (showDividers ? 2 : 1)
+            x:                  control.settingsMenuStyle ? ScreenTools.defaultFontPixelWidth : showBorder ? _margins : 0
+            y:                  control.settingsMenuStyle || showBorder ? _margins : 0
+            width:              parent.width - x * 2
+            spacing:            _margins * (control.settingsMenuStyle ? 3.2 : showDividers ? 2 : 1)
         }
     }
 }

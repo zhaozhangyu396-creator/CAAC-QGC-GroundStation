@@ -80,7 +80,7 @@ Item {
             }
             QGCLabel { text: qsTr("连接设置"); font.bold: true; Layout.fillWidth: true }
         }
-        RowLayout {
+        SettingsFormRow {
             Layout.fillWidth: true
             spacing: ScreenTools.defaultFontPixelWidth
             QGCComboBox {
@@ -103,10 +103,18 @@ Item {
         }
         RowLayout {
             Layout.fillWidth: true
+            spacing: ScreenTools.defaultFontPixelWidth
             QGCButton {
                 objectName: "caacSerialConnectButton"
-                text: root.connected ? qsTr("断开") : qsTr("连接")
                 Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                Layout.preferredHeight: ScreenTools.defaultFontPixelHeight * 2.8
+                text: root.connected ? qsTr("断开") : qsTr("连接")
+                pointSize: ScreenTools.defaultFontPointSize * 1.15
+                fontWeight: Font.Bold
+                backgroundColor: Qt.lighter(palette.settingsAccent, 1.3)
+                backRadius: ScreenTools.defaultFontPixelHeight * 0.45
+                showBorder: false
                 enabled: root.port !== "" || root.connected
                 onClicked: {
                     if (root.connected) {
@@ -119,20 +127,26 @@ Item {
             }
             QGCButton {
                 objectName: "caacSerialRefreshButton"
-                iconSource: "/InstrumentValueIcons/refresh.svg"
+                Layout.preferredWidth: ScreenTools.defaultFontPixelHeight * 3
+                Layout.preferredHeight: ScreenTools.defaultFontPixelHeight * 2.8
+                iconSource: "/InstrumentValueIcons/reload.svg"
+                backgroundColor: "transparent"
+                showBorder: false
                 enabled: !root.connected
                 Accessible.name: qsTr("刷新串口")
                 onClicked: root.refreshPorts()
             }
         }
-        QGCCheckBoxSlider {
-            id: automatic
-            objectName: "caacSerialAutoConnect"
-            Layout.fillWidth: true
-            text: qsTr("自动连接")
-            enabled: root.port !== "" && !root.connected
-            Binding on checked { value: !!root.configuration && root.configuration.autoConnect }
-            onClicked: root.saveConfiguration(checked)
+        SettingsFormRow {
+            QGCCheckBoxSlider {
+                id: automatic
+                objectName: "caacSerialAutoConnect"
+                Layout.fillWidth: true
+                text: qsTr("自动连接")
+                enabled: root.port !== "" && !root.connected
+                Binding on checked { value: !!root.configuration && root.configuration.autoConnect }
+                onClicked: root.saveConfiguration(checked)
+            }
         }
         QGCLabel {
             Layout.fillWidth: true

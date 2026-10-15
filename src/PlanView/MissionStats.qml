@@ -34,7 +34,7 @@ Rectangle {
     property real _mediumValueWidth: ScreenTools.defaultFontPixelWidth * 4
     property real _smallValueWidth: ScreenTools.defaultFontPixelWidth * 3
     property real _labelToValueSpacing: ScreenTools.defaultFontPixelWidth
-    property real _rowSpacing: ScreenTools.isMobile ? 1 : 0
+    property real _rowSpacing: ScreenTools.defaultFontPixelHeight * 0.3
     property real _distance: _currentMissionItemValid ? _currentMissionItem.distance : NaN
     property real _altDifference: _currentMissionItemValid ? _currentMissionItem.altDifference : NaN
     property real _azimuth: _currentMissionItemValid ? _currentMissionItem.azimuth : NaN
@@ -87,6 +87,22 @@ Rectangle {
         return hoursText + ":" + minutesText + ":" + secondsText
     }
 
+    component StatField: SettingsFormRow {
+        id: field
+        required property string label
+        required property string value
+        required property real valueWidth
+
+        QGCLabel { text: field.label; font.pointSize: missionStats._dataFontSize }
+        QGCLabel {
+            text: field.value
+            font.pointSize: missionStats._dataFontSize
+            Layout.minimumWidth: field.valueWidth
+            Layout.fillWidth: true
+            horizontalAlignment: Text.AlignRight
+        }
+    }
+
     QGCFlickable {
         anchors.margins: _margins
         anchors.fill: parent
@@ -98,91 +114,43 @@ Rectangle {
             spacing: ScreenTools.defaultFontPixelWidth * 2
 
             GridLayout {
-                columns: 8
+                columns: 3
                 rowSpacing: _rowSpacing
                 columnSpacing: _labelToValueSpacing
 
                 QGCLabel {
                     text: qsTr("Selected Waypoint")
-                    Layout.columnSpan: 8
+                    Layout.columnSpan: 3
                     font.pointSize: ScreenTools.smallFontPointSize
                 }
 
-                QGCLabel { text: qsTr("Alt diff:"); font.pointSize: _dataFontSize; }
-                QGCLabel {
-                    text: _altDifferenceText
-                    font.pointSize: _dataFontSize
-                    Layout.minimumWidth: _mediumValueWidth
-                }
+                StatField { label: qsTr("Alt diff:"); value: _altDifferenceText; valueWidth: _mediumValueWidth }
 
-                Item { width: 1; height: 1 }
+                StatField { label: qsTr("Azimuth:"); value: _azimuthText; valueWidth: _smallValueWidth }
 
-                QGCLabel { text: qsTr("Azimuth:"); font.pointSize: _dataFontSize; }
-                QGCLabel {
-                    text: _azimuthText
-                    font.pointSize: _dataFontSize
-                    Layout.minimumWidth: _smallValueWidth
-                }
+                StatField { label: qsTr("Dist prev WP:"); value: _distanceText; valueWidth: _largeValueWidth }
 
-                Item { width: 1; height: 1 }
+                StatField { label: qsTr("Gradient:"); value: _gradientText; valueWidth: _mediumValueWidth }
 
-                QGCLabel { text: qsTr("Dist prev WP:"); font.pointSize: _dataFontSize; }
-                QGCLabel {
-                    text: _distanceText
-                    font.pointSize: _dataFontSize
-                    Layout.minimumWidth: _largeValueWidth
-                }
-
-                QGCLabel { text: qsTr("Gradient:"); font.pointSize: _dataFontSize; }
-                QGCLabel {
-                    text: _gradientText
-                    font.pointSize: _dataFontSize
-                    Layout.minimumWidth: _mediumValueWidth
-                }
-
-                Item { width: 1; height: 1 }
-
-                QGCLabel { text: qsTr("Heading:"); font.pointSize: _dataFontSize; }
-                QGCLabel {
-                    text: _headingText
-                    font.pointSize: _dataFontSize
-                    Layout.minimumWidth: _smallValueWidth
-                }
+                StatField { label: qsTr("Heading:"); value: _headingText; valueWidth: _smallValueWidth }
             }
 
             GridLayout {
-                columns: 5
+                columns: 2
                 rowSpacing: _rowSpacing
                 columnSpacing: _labelToValueSpacing
 
                 QGCLabel {
                     text: qsTr("Total Mission")
-                    Layout.columnSpan: 5
+                    Layout.columnSpan: 2
                     font.pointSize: ScreenTools.smallFontPointSize
                 }
 
-                QGCLabel { text: qsTr("Distance:"); font.pointSize: _dataFontSize; }
-                QGCLabel {
-                    text: _missionPlannedDistanceText
-                    font.pointSize: _dataFontSize
-                    Layout.minimumWidth: _largeValueWidth
-                }
+                StatField { label: qsTr("Distance:"); value: _missionPlannedDistanceText; valueWidth: _largeValueWidth }
 
-                Item { width: 1; height: 1 }
+                StatField { label: qsTr("Max telem dist:"); value: _missionMaxTelemetryText; valueWidth: _largeValueWidth }
 
-                QGCLabel { text: qsTr("Max telem dist:"); font.pointSize: _dataFontSize; }
-                QGCLabel {
-                    text: _missionMaxTelemetryText
-                    font.pointSize: _dataFontSize
-                    Layout.minimumWidth: _largeValueWidth
-                }
-
-                QGCLabel { text: qsTr("Time:"); font.pointSize: _dataFontSize; }
-                QGCLabel {
-                    text: getMissionTime()
-                    font.pointSize: _dataFontSize
-                    Layout.minimumWidth: _largeValueWidth
-                }
+                StatField { label: qsTr("Time:"); value: getMissionTime(); valueWidth: _largeValueWidth }
             }
 
             GridLayout {
@@ -197,12 +165,7 @@ Rectangle {
                     font.pointSize: ScreenTools.smallFontPointSize
                 }
 
-                QGCLabel { text: qsTr("Batteries required:"); font.pointSize: _dataFontSize; }
-                QGCLabel {
-                    text: _batteriesRequiredText
-                    font.pointSize: _dataFontSize
-                    Layout.minimumWidth: _mediumValueWidth
-                }
+                StatField { label: qsTr("Batteries required:"); value: _batteriesRequiredText; valueWidth: _mediumValueWidth }
             }
         }
     }

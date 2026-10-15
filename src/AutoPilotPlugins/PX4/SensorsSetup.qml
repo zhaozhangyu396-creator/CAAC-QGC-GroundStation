@@ -386,8 +386,7 @@ Item {
         additionalControls: Component {
             ColumnLayout {
                 spacing: ScreenTools.defaultFontPixelHeight / 2
-                QGCButton {
-                    Layout.fillWidth: true
+                SettingsActionButton {
                     text: qsTr("Calibrate Gyroscope")
                     visible: _root.sectionVisible("Gyroscope")
                     onClicked: {
@@ -395,14 +394,12 @@ Item {
                         _startCalibration("gyro", gyroHelp, qsTr("Calibrate Gyro"))
                     }
                 }
-                QGCButton {
-                    Layout.fillWidth: true
+                SettingsActionButton {
                     text: qsTr("Calibrate Airspeed")
                     visible: _root.sectionVisible("Airspeed")
                     onClicked: _startCalibration("airspeed", airspeedHelp, qsTr("Calibrate Airspeed"))
                 }
-                QGCButton {
-                    Layout.fillWidth: true
+                SettingsActionButton {
                     text: qsTr("Set Orientations")
                     visible: _root.orientationsButtonVisible()
                     onClicked: {
@@ -410,8 +407,7 @@ Item {
                         setOrientationsDialogFactory.open({ title: qsTr("Set Orientations"), showRebootMessage: false })
                     }
                 }
-                QGCButton {
-                    Layout.fillWidth: true
+                SettingsActionButton {
                     text: qsTr("Factory Reset")
                     visible: _root.orientationsButtonVisible()
                     onClicked: controller.resetFactoryParameters()

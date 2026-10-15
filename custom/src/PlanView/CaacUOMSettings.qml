@@ -67,19 +67,22 @@ Item {
         return factText(names[key])
     }
     component Heading: QGCLabel { Layout.fillWidth: true; font.bold: true; wrapMode: Text.WordWrap }
-    component Identifier: ColumnLayout {
+    component Identifier: SettingsFormRow {
         id: entry
         required property string label
         required property string value
         Layout.fillWidth: true
-        QGCLabel { text: entry.label; Layout.fillWidth: true; wrapMode: Text.WordWrap }
-        RowLayout {
+        ColumnLayout {
             Layout.fillWidth: true
-            QGCTextField { text: entry.value; readOnly: true; placeholderText: qsTr("No data"); Layout.fillWidth: true; Layout.minimumWidth: 0 }
-            QGCButton {
-                iconSource: "/InstrumentValueIcons/copy.svg"
-                enabled: entry.value.length > 0
-                onClicked: QGroundControl.copyToClipboard(entry.value)
+            QGCLabel { text: entry.label; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+            RowLayout {
+                Layout.fillWidth: true
+                QGCTextField { text: entry.value; readOnly: true; placeholderText: qsTr("No data"); Layout.fillWidth: true; Layout.minimumWidth: 0 }
+                QGCButton {
+                    iconSource: "/InstrumentValueIcons/copy.svg"
+                    enabled: entry.value.length > 0
+                    onClicked: QGroundControl.copyToClipboard(entry.value)
+                }
             }
         }
     }
@@ -173,16 +176,20 @@ Item {
                         }
                     }
                     Identifier { label: qsTr("Airframe code (unique product identifier)"); value: root.serial }
-                    QGCLabel { text: qsTr("UAS code"); Layout.fillWidth: true }
-                    FactTextField { objectName: "caacUOMUASCode"; fact: root.rid.basicID; Layout.fillWidth: true }
+                    SettingsFormRow {
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            QGCLabel { text: qsTr("UAS code"); Layout.fillWidth: true }
+                            FactTextField { objectName: "caacUOMUASCode"; fact: root.rid.basicID; Layout.fillWidth: true }
+                        }
+                    }
                     QGCLabel {
                         Layout.fillWidth: true
                         wrapMode: Text.WordWrap
                         text: qsTr("Complete registration and add the aircraft on the official UOM platform, then enter the UAS code from your aircraft record.")
                     }
-                    QGCButton {
+                    SettingsActionButton {
                         text: qsTr("Open official UOM platform")
-                        Layout.fillWidth: true
                         backgroundColor: palette.window
                         showBorder: true
                         onClicked: Qt.openUrlExternally("https://uom.caac.gov.cn/")
@@ -235,19 +242,23 @@ Item {
                                 {key: "longitude", label: qsTr("Longitude")},
                                 {key: "latitude", label: qsTr("Latitude")}
                             ]
-                            ColumnLayout {
+                            SettingsFormRow {
                                 id: datum
                                 required property var modelData
                                 Layout.fillWidth: true
-                                QGCLabel { objectName: "caacUOMTelemetry_" + datum.modelData.key; text: root.telemetryValue(datum.modelData.key); color: palette.text; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; wrapMode: Text.WordWrap }
-                                QGCLabel { text: datum.modelData.label; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; wrapMode: Text.WordWrap; font.pointSize: ScreenTools.smallFontPointSize }
+                                Layout.fillHeight: true
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    QGCLabel { objectName: "caacUOMTelemetry_" + datum.modelData.key; text: root.telemetryValue(datum.modelData.key); color: palette.text; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; wrapMode: Text.WordWrap }
+                                    QGCLabel { text: datum.modelData.label; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; wrapMode: Text.WordWrap; font.pointSize: ScreenTools.smallFontPointSize }
+                                }
                             }
                         }
                     }
                     Heading { text: qsTr("Data statistics") }
-                    QGCLabel { text: qsTr("Communication status: reporting service is not connected"); Layout.fillWidth: true; wrapMode: Text.WordWrap }
-                    QGCLabel { text: qsTr("Uploaded packets: 0") }
-                    QGCLabel { text: qsTr("Last upload: none") }
+                    SettingsFormRow { QGCLabel { text: qsTr("Communication status: reporting service is not connected"); Layout.fillWidth: true; wrapMode: Text.WordWrap } }
+                    SettingsFormRow { QGCLabel { text: qsTr("Uploaded packets: 0"); Layout.fillWidth: true } }
+                    SettingsFormRow { QGCLabel { text: qsTr("Last upload: none"); Layout.fillWidth: true } }
                 }
             }
         }

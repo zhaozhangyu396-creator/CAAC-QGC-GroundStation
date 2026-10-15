@@ -45,7 +45,7 @@ Item {
         Layout.topMargin: ScreenTools.defaultFontPixelHeight
         Layout.bottomMargin: Layout.topMargin
     }
-    component Choice: RowLayout {
+    component Choice: SettingsFormRow {
         id: row
         required property string label
         required property Fact setting
@@ -58,7 +58,7 @@ Item {
             Layout.minimumWidth: 0
         }
     }
-    component Entry: RowLayout {
+    component Entry: SettingsFormRow {
         id: row
         required property string label
         required property Fact setting
@@ -92,7 +92,7 @@ Item {
                     .arg(qsTr("Unique product identifier"))
             }
             QGCLabel { text: qsTr("Airframe code (unique product identifier)"); Layout.fillWidth: true; wrapMode: Text.WordWrap }
-            RowLayout {
+            SettingsFormRow {
                 Layout.fillWidth: true
                 QGCTextField {
                     objectName: "caacRIDAircraftSerial"
@@ -124,7 +124,12 @@ Item {
             }
             Choice { label: qsTr("UAS code type"); setting: root.settings.basicIDType }
             Entry { id: uas; objectName: "caacRIDUASCode"; label: qsTr("UAS code (required)"); setting: root.settings.basicID }
-            FactCheckBox { text: qsTr("Broadcast UAS code"); fact: root.settings.sendBasicID }
+            SettingsFormRow {
+                Layout.fillWidth: false
+                Layout.alignment: Qt.AlignHCenter
+                verticalPadding: ScreenTools.defaultFontPixelHeight * 0.25
+                FactCheckBox { text: qsTr("Broadcast UAS code"); fact: root.settings.sendBasicID; Layout.fillWidth: true }
+            }
             Divider { }
             SectionTitle { title: qsTr("Ground station position") }
             Choice {
@@ -142,12 +147,13 @@ Item {
                     {label: qsTr("Longitude"), value: root.position.isValid ? root.position.longitude.toFixed(7) : "—"},
                     {label: qsTr("Altitude"), value: root.position.isValid && isFinite(root.position.altitude) ? root.position.altitude.toFixed(1) : "—"}
                 ]
-                RowLayout {
+                SettingsFormRow {
+                    id: positionRow
                     required property var modelData
                     visible: root.settings.locationType.rawValue !== 2
                     Layout.fillWidth: true
-                    QGCLabel { text: parent.modelData.label; Layout.preferredWidth: root.width * 0.34 }
-                    QGCTextField { text: parent.modelData.value; readOnly: true; Layout.fillWidth: true; Layout.minimumWidth: 0 }
+                    QGCLabel { text: positionRow.modelData.label; Layout.preferredWidth: root.width * 0.34 }
+                    QGCTextField { text: positionRow.modelData.value; readOnly: true; Layout.fillWidth: true; Layout.minimumWidth: 0 }
                 }
             }
             Divider { }
@@ -170,7 +176,9 @@ Item {
             SectionTitle { title: qsTr("Flight declaration (optional)") }
             Choice { label: qsTr("Declaration type"); setting: root.settings.selfIDType }
             Entry { objectName: "caacRIDDeclaration"; label: qsTr("Declaration text"); setting: root.declaration }
-            FactCheckBox { text: qsTr("Broadcast flight declaration"); fact: root.settings.sendSelfID }
+            SettingsFormRow {
+                FactCheckBox { text: qsTr("Broadcast flight declaration"); fact: root.settings.sendSelfID; Layout.fillWidth: true }
+            }
             Divider { visible: !root.china }
             SectionTitle { title: qsTr("Operator ID"); visible: !root.china }
             Entry {
@@ -178,7 +186,10 @@ Item {
                 setting: root.eu ? root.settings.operatorIDEU : root.settings.operatorIDFAA
                 visible: !root.china
             }
-            FactCheckBox { text: qsTr("Broadcast operator ID"); fact: root.settings.sendOperatorID; visible: !root.china }
+            SettingsFormRow {
+                visible: !root.china
+                FactCheckBox { text: qsTr("Broadcast operator ID"); fact: root.settings.sendOperatorID; Layout.fillWidth: true }
+            }
         }
     }
 }

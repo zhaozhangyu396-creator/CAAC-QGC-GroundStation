@@ -64,30 +64,34 @@ ColumnLayout {
         }
         QGCLabel { text: qsTr("电子围栏"); font.bold: true; Layout.fillWidth: true }
     }
-    QGCCheckBoxSlider {
-        objectName: "caacFenceEnabled"
-        Layout.fillWidth: true
-        text: qsTr("围栏开关")
-        enabled: !!root.actionFact && !!root.vehicle && !root.vehicle.armed
-        Binding on checked { value: !!root.actionFact && Number(root.actionFact.rawValue) !== 0 }
-        onClicked: {
-            if (!root.actionFact) { return }
-            if (checked) {
-                const values = root.actionFact.enumValues.map(value => Number(value))
-                const desired = values.indexOf(root.previousAction) >= 0 ? root.previousAction : values.find(value => value > 0)
-                if (desired !== undefined) { root.actionFact.rawValue = desired }
-            } else {
-                root.previousAction = Number(root.actionFact.rawValue)
-                root.actionFact.rawValue = 0
+    SettingsFormRow {
+        QGCCheckBoxSlider {
+            objectName: "caacFenceEnabled"
+            Layout.fillWidth: true
+            text: qsTr("围栏开关")
+            enabled: !!root.actionFact && !!root.vehicle && !root.vehicle.armed
+            Binding on checked { value: !!root.actionFact && Number(root.actionFact.rawValue) !== 0 }
+            onClicked: {
+                if (!root.actionFact) { return }
+                if (checked) {
+                    const values = root.actionFact.enumValues.map(value => Number(value))
+                    const desired = values.indexOf(root.previousAction) >= 0 ? root.previousAction : values.find(value => value > 0)
+                    if (desired !== undefined) { root.actionFact.rawValue = desired }
+                } else {
+                    root.previousAction = Number(root.actionFact.rawValue)
+                    root.actionFact.rawValue = 0
+                }
             }
         }
     }
-    QGCCheckBoxSlider {
-        objectName: "caacFenceShowOnMap"
-        Layout.fillWidth: true
-        text: qsTr("显示在地图上")
-        Binding on checked { value: mainWindow.caacFenceVisible }
-        onClicked: mainWindow.caacFenceVisible = checked
+    SettingsFormRow {
+        QGCCheckBoxSlider {
+            objectName: "caacFenceShowOnMap"
+            Layout.fillWidth: true
+            text: qsTr("显示在地图上")
+            Binding on checked { value: mainWindow.caacFenceVisible }
+            onClicked: mainWindow.caacFenceVisible = checked
+        }
     }
     RowLayout {
         Layout.fillWidth: true
@@ -132,6 +136,8 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.preferredHeight: ScreenTools.defaultFontPixelHeight * 16
         color: palette.windowShadeDark
+        border.color: palette.groupBorder
+        border.width: 1
         radius: ScreenTools.defaultBorderRadius
         clip: true
         Loader {

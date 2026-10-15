@@ -59,8 +59,8 @@ ColumnLayout {
         Layout.fillWidth: true
         implicitHeight: fields.implicitHeight + ScreenTools.defaultFontPixelHeight
         radius: ScreenTools.defaultBorderRadius
-        color: batteryPalette.windowShadeDark
-        border.color: batteryPalette.windowShadeLight
+        color: "transparent"
+        border.color: batteryPalette.groupBorder
         border.width: 1
         function refreshValue() {
             if (voltageField && !edited) {
@@ -139,7 +139,7 @@ ColumnLayout {
                     }
                 }
             }
-            RowLayout {
+            SettingsFormRow {
                 Layout.fillWidth: true
                 QGCLabel { text: qsTr("电压门限"); Layout.fillWidth: true }
                 QGCButton {

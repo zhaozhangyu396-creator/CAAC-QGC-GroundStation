@@ -35,7 +35,7 @@ Item {
         }
         return null
     }
-    component SnapSwitch: RowLayout {
+    component SnapSwitch: SettingsFormRow {
         id: row
         required property string settingKey
         required property string label
@@ -74,50 +74,53 @@ Item {
             }
         }
     }
-    component ParameterField: ColumnLayout {
+    component ParameterField: SettingsFormRow {
         id: row
         required property string label
         required property var names
         readonly property var fact: root.parameter(names)
         property bool edited: false
         Layout.fillWidth: true
-        QGCLabel { text: row.label; font.bold: true }
-        QGCLabel {
-            text: row.fact ? row.fact.name + " · " + row.fact.units : qsTr("This parameter is unavailable on the connected aircraft.")
+        ColumnLayout {
             Layout.fillWidth: true
-            wrapMode: Text.WordWrap
-            font.pointSize: ScreenTools.smallFontPointSize
-        }
-        RowLayout {
-            Layout.fillWidth: true
-            QGCTextField {
-                id: value
+            QGCLabel { text: row.label; font.bold: true; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+            QGCLabel {
+                text: row.fact ? row.fact.name + " · " + row.fact.units : qsTr("This parameter is unavailable on the connected aircraft.")
                 Layout.fillWidth: true
-                Layout.minimumWidth: 0
-                enabled: !!row.fact
-                text: row.fact ? row.fact.valueString : ""
-                onTextEdited: row.edited = true
+                wrapMode: Text.WordWrap
+                font.pointSize: ScreenTools.smallFontPointSize
             }
-            QGCButton {
-                text: qsTr("Read")
-                enabled: !!row.fact
-                heightFactor: 0.15
-                onClicked: {
-                    row.edited = false
-                    value.text = row.fact.valueString
-                    root.plugin.refreshFlightPreferenceParameter(row.fact.name)
+            RowLayout {
+                Layout.fillWidth: true
+                QGCTextField {
+                    id: value
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: 0
+                    enabled: !!row.fact
+                    text: row.fact ? row.fact.valueString : ""
+                    onTextEdited: row.edited = true
                 }
-            }
-            QGCButton {
-                text: qsTr("Write")
-                enabled: !!row.fact && row.edited
-                heightFactor: 0.15
-                onClicked: {
-                    const error = row.fact.validate(value.text, false)
-                    if (error.length) { value.showValidationError(error); return }
-                    value.clearValidationError()
-                    row.fact.value = value.text
-                    row.edited = false
+                QGCButton {
+                    text: qsTr("Read")
+                    enabled: !!row.fact
+                    heightFactor: 0.15
+                    onClicked: {
+                        row.edited = false
+                        value.text = row.fact.valueString
+                        root.plugin.refreshFlightPreferenceParameter(row.fact.name)
+                    }
+                }
+                QGCButton {
+                    text: qsTr("Write")
+                    enabled: !!row.fact && row.edited
+                    heightFactor: 0.15
+                    onClicked: {
+                        const error = row.fact.validate(value.text, false)
+                        if (error.length) { value.showValidationError(error); return }
+                        value.clearValidationError()
+                        row.fact.value = value.text
+                        row.edited = false
+                    }
                 }
             }
         }
@@ -170,8 +173,7 @@ Item {
                             SnapSwitch { settingKey: "horizontalSnap"; label: qsTr("Horizontal alignment") }
                             SnapSwitch { settingKey: "verticalSnap"; label: qsTr("Vertical alignment") }
                             SnapSwitch { settingKey: "angleSnap"; label: qsTr("Angle snapping") }
-                            RowLayout {
-                                Layout.fillWidth: true
+                            SettingsFormRow {
                                 QGCLabel { text: qsTr("Snap angle (degrees)"); Layout.fillWidth: true }
                                 QGCTextField {
                                     objectName: "caacPreferenceSnapAngle"
@@ -203,7 +205,7 @@ Item {
                     visible: tabs.currentIndex === 1
                     Layout.fillWidth: true
                     QGCLabel { text: qsTr("Theme"); font.bold: true }
-                    RowLayout {
+                    SettingsFormRow {
                         QGCButton {
                             objectName: "caacPreferenceThemeDark"
                             text: qsTr("Dark")

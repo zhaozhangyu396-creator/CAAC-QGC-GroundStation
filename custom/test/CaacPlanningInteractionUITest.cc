@@ -493,9 +493,14 @@ void CaacPlanningInteractionUITest::_newSettingsPages()
         const auto bounds = languageCombo->mapRectToItem(generalSettings, languageCombo->boundingRect());
         return bounds.width() > 0 && bounds.left() >= 0 && bounds.right() <= generalSettings->width() + 1;
     };
-    QTRY_VERIFY_WITH_TIMEOUT(comboFitsPage(), TestTimeout::mediumMs());
-    QVERIFY(plan->isVisible() && !drawer->isVisible());
     QVERIFY(capture(QStringLiteral("caacApplicationSettingsInline")));
+    QTRY_VERIFY2_WITH_TIMEOUT(comboFitsPage(),
+                              qPrintable(QStringLiteral("General page width %1; language bounds %2, width %3")
+                                             .arg(generalSettings->width())
+                                             .arg(languageCombo->mapToItem(generalSettings, QPointF()).x())
+                                             .arg(languageCombo->width())),
+                              TestTimeout::mediumMs());
+    QVERIFY(plan->isVisible() && !drawer->isVisible());
     QVERIFY(clickButton(QStringLiteral("settings_backToMenu")));
     QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("settings_rightPanel"), 0));
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("settingsButton_General")));
@@ -589,7 +594,7 @@ void CaacPlanningInteractionUITest::_preferencesUI()
     QVERIFY(clickButton(QStringLiteral("caacPreference_horizontalSnap")));
     QTRY_COMPARE_WITH_TIMEOUT(plugin->planningPreferences().value("horizontalSnap").toBool(), !before,
                               TestTimeout::mediumMs());
-    QVERIFY(clickButton(QStringLiteral("caacPreferenceSnapAngle")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacPreferenceSnapAngle"), QStringLiteral("caacPreferencesScroller")));
     QTest::keyClick(_window, Qt::Key_A, Qt::ControlModifier);
     QTest::keyClick(_window, Qt::Key_3);
     QTest::keyClick(_window, Qt::Key_0);

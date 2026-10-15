@@ -174,6 +174,8 @@ qt_add_qml_module(
               RCChannelMonitor.qml
               RCToParamDialog.qml
               SectionHeader.qml
+              SettingsActionButton.qml
+              SettingsFormRow.qml
               SelectableControl.qml
               SensorCalibrationPreview.qml
               SensorCalibrationPanel.qml

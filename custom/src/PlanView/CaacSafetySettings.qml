@@ -33,7 +33,7 @@ Item {
     Component { id: controllerComponent; FactPanelController { } }
     Loader { id: controllerLoader }
 
-    component ParameterRow: RowLayout {
+    component ParameterRow: SettingsFormRow {
         id: row
         required property var definition
         readonly property var fact: root.parameter(definition.names)

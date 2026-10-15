@@ -70,6 +70,18 @@ Item {
 
     QGCPalette { id: calPalette }
 
+    component CalibrationButton: IndicatorButton {
+        Layout.fillWidth: false
+        Layout.alignment: Qt.AlignHCenter
+        implicitWidth: contentItem.implicitWidth + leftPadding + rightPadding
+        implicitHeight: contentItem.implicitHeight + topPadding + bottomPadding
+        _horizontalPadding: ScreenTools.defaultFontPixelWidth
+        rightPadding: _horizontalPadding + (enabled && !indicatorGreen
+            ? ScreenTools.defaultFontPixelHeight * 0.75 + ScreenTools.defaultFontPixelWidth / 3 : 0)
+        heightFactor: 0.3
+        fontWeight: Font.Bold
+    }
+
     ColumnLayout {
         anchors.fill: parent
         spacing: root.margins
@@ -83,14 +95,14 @@ Item {
                 Layout.fillWidth: true
                 value: root.progress
             }
-            QGCButton {
+            SettingsActionButton {
                 objectName: "sensorsSetup_nextButton"
                 text: qsTr("确认当前姿态")
                 visible: root.nextEnabled || root.persistentActions
                 enabled: root.nextEnabled
                 onClicked: root.next()
             }
-            QGCButton {
+            SettingsActionButton {
                 objectName: root.cancelObjectName
                 text: qsTr("取消校准")
                 enabled: root.cancelEnabled
@@ -140,10 +152,9 @@ Item {
                         sideVisible: root.currentType === "accel" && root.calibrationActive ? root.sideVisible : root.allSides
                         sideRotating: root.currentType === "accel" ? root.sideRotating : root.stillSides
                     }
-                    IndicatorButton {
+                    CalibrationButton {
                         objectName: "sensorsSetup_calibrateAccel"
                         indicatorGreen: root.accelComplete
-                        Layout.fillWidth: true
                         text: qsTr("Start Calibration")
                         enabled: root.calibrationEnabled && !root.calibrationActive && !motorTest.motorsEnabled
                         onClicked: { root.currentType = "accel"; root.startAccel() }
@@ -162,9 +173,8 @@ Item {
                         text: qsTr("将无人机水平放置于平坦表面后点击校准。")
                         wrapMode: Text.WordWrap
                     }
-                    QGCButton {
+                    SettingsActionButton {
                         objectName: "sensorsSetup_calibrateLevel"
-                        Layout.fillWidth: true
                         text: qsTr("校准水平")
                         enabled: root.levelEnabled && root.calibrationEnabled && !root.calibrationActive && !motorTest.motorsEnabled
                         onClicked: { root.currentType = "level"; root.startLevel() }
@@ -193,10 +203,9 @@ Item {
                         sideVisible: root.currentType === "compass" && root.calibrationActive ? root.sideVisible : root.allSides
                         sideRotating: root.currentType === "compass" ? root.sideRotating : root.stillSides
                     }
-                    IndicatorButton {
+                    CalibrationButton {
                         objectName: "sensorsSetup_calibrateCompass"
                         indicatorGreen: root.compassComplete
-                        Layout.fillWidth: true
                         text: qsTr("Start Calibration")
                         enabled: root.calibrationEnabled && !root.calibrationActive && !motorTest.motorsEnabled
                         onClicked: { root.currentType = "compass"; root.startCompass() }

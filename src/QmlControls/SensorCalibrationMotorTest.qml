@@ -138,8 +138,7 @@ ColumnLayout {
             }
         }
     }
-    QGCButton {
-        Layout.fillWidth: true
+    SettingsActionButton {
         text: qsTr("停止所有电机")
         enabled: root.motorsEnabled
         onClicked: { root.runMotor(-1, 0); root.resetSliders() }
