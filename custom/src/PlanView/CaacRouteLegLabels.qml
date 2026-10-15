@@ -22,18 +22,34 @@ Item {
         return false
     }
     Rectangle {
+        id: clearanceWarning
         objectName: "caacTerrainClearanceWarning"
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.horizontalCenterOffset: -parent.width / 6
-        y: Math.max(root.warningTopInset, ScreenTools.defaultFontPixelHeight * 6)
-        width: Math.min(parent.width - ScreenTools.defaultFontPixelWidth * 2,
+        parent: root.mapControl && root.mapControl.parent && root.mapControl.parent.parent
+            ? root.mapControl.parent.parent : root
+        readonly property real margin: ScreenTools.defaultFontPixelWidth
+        readonly property real availableWidth: parent ? parent.width : 0
+        readonly property real availableHeight: parent ? parent.height : 0
+        property point dragOffset: Qt.point(0, 0)
+        x: Math.max(margin, Math.min(availableWidth / 3 - width / 2 + dragOffset.x, availableWidth - width - margin))
+        y: Math.max(margin, Math.min(Math.max(root.warningTopInset, ScreenTools.defaultFontPixelHeight * 6)
+            + dragOffset.y, availableHeight - height - margin))
+        width: Math.min(Math.max(0, availableWidth - margin * 2),
             warning.implicitWidth + ScreenTools.defaultFontPixelWidth * 2)
         height: warning.implicitHeight + ScreenTools.defaultFontPixelHeight
-        visible: root.terrainCollision
+        visible: root.visible && root.terrainCollision
         z: QGroundControl.zOrderTopMost
         color: QGroundControl.globalPalette.windowShadeDark
         border.color: QGroundControl.globalPalette.warningText
         radius: ScreenTools.defaultBorderRadius
+        DragHandler {
+            target: null
+            acceptedButtons: Qt.LeftButton
+            property point startOffset
+            onActiveChanged: if (active) { startOffset = clearanceWarning.dragOffset }
+            onActiveTranslationChanged: if (active) {
+                clearanceWarning.dragOffset = Qt.point(startOffset.x + activeTranslation.x, startOffset.y + activeTranslation.y)
+            }
+        }
         QGCLabel {
             id: warning
             anchors.centerIn: parent

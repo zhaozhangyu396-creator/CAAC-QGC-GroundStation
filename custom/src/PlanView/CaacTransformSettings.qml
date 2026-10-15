@@ -48,12 +48,6 @@ ColumnLayout {
             y: ScreenTools.defaultFontPixelHeight * 0.5
             width: card.width - x * 2
             RowLayout {
-                Rectangle {
-                    width: ScreenTools.defaultFontPixelWidth * 0.3
-                    height: heading.implicitHeight
-                    radius: width / 2
-                    color: palette.colorGreen
-                }
                 QGCLabel {
                     id: heading
                     Layout.fillWidth: true

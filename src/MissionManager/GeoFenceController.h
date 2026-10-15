@@ -61,8 +61,8 @@ public:
     void start                      (bool flyView) final;
     void save                       (QJsonObject& json) final;
     bool load                       (const QJsonObject& json, QString& errorString) final;
-    void loadFromVehicle            (void) final;
-    void sendToVehicle              (void) final;
+    Q_INVOKABLE void loadFromVehicle(void) final;
+    Q_INVOKABLE void sendToVehicle(void) final;
     void removeAll                  (void) final;
     void removeAllFromVehicle       (void) final;
     bool syncInProgress             (void) const final;

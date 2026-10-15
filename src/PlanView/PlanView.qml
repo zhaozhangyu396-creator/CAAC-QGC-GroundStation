@@ -38,6 +38,10 @@ Item {
     function collapsePlanningPanels() { rightPanel.collapsePanels() }
     function togglePlanningSimulation() { editorMap.simulationRequested() }
     property bool unifiedStatisticsVisible: false
+    property bool safetyFenceVisible: true
+    function centerMap(coordinate, zoom) {
+        if (coordinate && coordinate.isValid) { editorMap.center = coordinate; editorMap.zoomLevel = zoom }
+    }
     function togglePlanningStatistics() {
         if (unifiedFlightPlan) { unifiedStatisticsVisible = !unifiedStatisticsVisible }
         else { _planViewSettings.showMissionItemStatus.rawValue = !_planViewSettings.showMissionItemStatus.rawValue }
@@ -119,6 +123,10 @@ Item {
         }
 
         function upload() {
+            if (_missionController.sendToVehiclePreCheck() === MissionController.SendToVehiclePreCheckStateActiveMission) {
+                QGroundControl.showMessageDialog(_root, qsTr("上传航线"), qsTr("当前航点任务正在执行，请先暂停当前任务，再上传新航线。"))
+                return
+            }
             if (!rightPanel.prepareUpload()) { return }
             if (!checkReadyForSaveUpload(false /* save */)) {
                 return
@@ -286,6 +294,7 @@ Item {
             objectName: "planView_map"
             visible: !_root._simulationEmergency
             property var planMasterController: _root._planMasterController
+            readonly property real mapToolsCenterY: unifiedFlightLayer.clearTrajectoryCenterY
             anchors.fill: parent
             mapName: "MissionEditor"
             allowGCSLocationCenter: true
@@ -577,6 +586,7 @@ Item {
 
             GeoFenceMapVisuals {
                 objectName: "planView_geoFenceMapVisuals"
+                visible: !_root.unifiedFlightPlan || _root.safetyFenceVisible || _editingLayer === _layerFence
                 map: editorMap
                 myGeoFenceController: _geoFenceController
                 interactive: _editingLayer == _layerFence
@@ -866,10 +876,17 @@ Item {
         RowLayout {
             id: missionStatus
             objectName: "planView_statistics"
+            z: QGroundControl.zOrderWidgets + 4
             anchors.margins: _toolsMargin
-            anchors.left: _calcLeftAnchor()
-            anchors.right: rightPanel.left
-            anchors.bottom: parent.bottom
+            anchors.left: _root.unifiedFlightPlan ? undefined : _calcLeftAnchor()
+            anchors.right: _root.unifiedFlightPlan ? undefined : rightPanel.left
+            anchors.bottom: _root.unifiedFlightPlan ? undefined : parent.bottom
+            width: _root.unifiedFlightPlan ? Math.max(0, rightPanel.x - _toolsMargin * 2) : implicitWidth
+            x: Math.max(-width + ScreenTools.defaultFontPixelWidth * 8,
+                Math.min(_toolsMargin + _dragOffset.x, parent.width - ScreenTools.defaultFontPixelWidth * 8))
+            y: Math.max(_toolsMargin, Math.min(parent.height - unifiedFlightLayer.telemetryHeight - height - _toolsMargin + _dragOffset.y,
+                parent.height - height - _toolsMargin))
+            property point _dragOffset: Qt.point(0, 0)
             spacing: 0
             anchors.bottomMargin: _root.unifiedFlightPlan ? unifiedFlightLayer.telemetryHeight + _toolsMargin : _toolsMargin
             visible: !_root._simulationEmergency && !hidden && _editingLayer == _layerMission && QGroundControl.corePlugin.options.showMissionStatus
@@ -892,6 +909,31 @@ Item {
 
             function _toggleMissionStatusVisibility() {
                 _root.togglePlanningStatistics()
+            }
+
+            DragHandler {
+                objectName: "caacStatisticsDragHandler"
+                enabled: _root.unifiedFlightPlan
+                target: null
+                acceptedButtons: Qt.LeftButton
+                property point _startOffset
+                onActiveChanged: if (active) { _startOffset = missionStatus._dragOffset }
+                onActiveTranslationChanged: if (active) {
+                    missionStatus._dragOffset = Qt.point(_startOffset.x + activeTranslation.x, _startOffset.y + activeTranslation.y)
+                }
+            }
+            TapHandler {
+                enabled: _root.unifiedFlightPlan
+                acceptedButtons: Qt.RightButton
+                onTapped: (eventPoint) => statisticsMenu.popup(eventPoint.position.x, eventPoint.position.y)
+            }
+            Menu {
+                id: statisticsMenu
+                MenuItem {
+                    objectName: "caacStatisticsClose"
+                    text: qsTr("关闭")
+                    onTriggered: _root.unifiedStatisticsVisible = false
+                }
             }
 
             ColumnLayout {

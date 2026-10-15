@@ -13,6 +13,7 @@ Item {
     objectName: "caacSafetySettings"
     readonly property var vehicle: QGroundControl.multiVehicleManager.activeVehicle
     readonly property bool ready: QGroundControl.multiVehicleManager.parameterReadyVehicleAvailable
+    property bool advancedFence: false
     QGCPalette { id: palette }
     function resetController() {
         controllerLoader.sourceComponent = null
@@ -86,7 +87,7 @@ Item {
         Layout.bottomMargin: ScreenTools.defaultFontPixelHeight
         RowLayout {
             Layout.fillWidth: true
-            Rectangle { Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 0.4; Layout.preferredHeight: ScreenTools.defaultFontPixelHeight; color: palette.colorGreen; radius: width / 2 }
+            Rectangle { Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 0.4; Layout.preferredHeight: ScreenTools.defaultFontPixelHeight; color: palette.window; border.color: palette.windowShadeLight; border.width: 1; radius: width / 2 }
             QGCLabel { text: section.title; font.bold: true; Layout.fillWidth: true; wrapMode: Text.WordWrap }
             QGCButton {
                 text: qsTr("Read parameters")
@@ -112,7 +113,8 @@ Item {
             objectName: "caacSafetyConfirm_" + section.definitions[0].names[0]
             Layout.fillWidth: true
             text: qsTr("Confirm")
-            backgroundColor: palette.colorGreen
+            backgroundColor: palette.window
+            showBorder: true
             enabled: root.vehicle && root.ready
             onClicked: {
                 if (!controllerLoader.item || controllerLoader.item.vehicle !== root.vehicle) { return }
@@ -172,17 +174,24 @@ Item {
                     {label: qsTr("Trigger time"), names: ["COM_DL_LOSS_T", "FS_GCS_TIMEOUT"]}
                 ]
             }
-            SafetySection {
-                title: qsTr("Battery settings")
-                definitions: [
-                    {label: qsTr("Low battery threshold"), names: ["BATT_LOW_VOLT", "BAT_LOW_THR"]},
-                    {label: qsTr("Critical battery threshold"), names: ["BATT_CRT_VOLT", "BAT_CRIT_THR"]},
-                    {label: qsTr("Low battery action"), names: ["BATT_FS_LOW_ACT", "COM_LOW_BAT_ACT"]},
-                    {label: qsTr("Critical battery action"), names: ["BATT_FS_CRT_ACT"]}
-                ]
+            CaacBatteryProtection {
+                lowThreshold: root.parameter(["BAT_LOW_THR"])
+                criticalThreshold: root.parameter(["BAT_CRIT_THR"])
+                actionFact: root.parameter(["COM_LOW_BAT_ACT"])
+                cellsFact: root.parameter(["BAT1_N_CELLS", "BAT_N_CELLS"])
+                emptyVoltageFact: root.parameter(["BAT1_V_EMPTY", "BAT_V_EMPTY"])
+                chargedVoltageFact: root.parameter(["BAT1_V_CHARGED", "BAT_V_CHARGED"])
+                ready: root.ready && !!root.vehicle && !root.vehicle.armed
+            }
+            CaacGeoFenceSettings { actionFact: root.parameter(["GF_ACTION"]) }
+            QGCButton {
+                text: qsTr("更多围栏参数")
+                Layout.fillWidth: true
+                onClicked: root.advancedFence = !root.advancedFence
             }
             SafetySection {
-                title: qsTr("Geofence")
+                visible: root.advancedFence
+                title: qsTr("围栏范围设置")
                 definitions: [
                     {label: qsTr("Fence action"), names: ["GF_ACTION", "FENCE_ACTION"]},
                     {label: qsTr("Horizontal limit"), names: ["GF_MAX_HOR_DIST", "FENCE_RADIUS"]},

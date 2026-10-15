@@ -1670,6 +1670,7 @@ bool CaacRouteEditorController::updatePlannedHome(double latitude, double longit
     const auto finish = qScopeGuard([this]() { endEdit(); });
     _missionController()->setHomePosition(coordinate);
     home->plannedHomePositionAltitude()->setRawValue(amslAltitude);
+    home->setDirty(true);
     return true;
 }
 

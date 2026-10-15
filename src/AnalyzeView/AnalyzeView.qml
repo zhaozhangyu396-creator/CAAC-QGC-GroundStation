@@ -6,6 +6,7 @@ import QGroundControl.Controls
 
 Rectangle {
     id:     _root
+    objectName: "analyzeView_root"
     color:  qgcPal.window
     z:      QGroundControl.zOrderTopMost
 
@@ -17,6 +18,14 @@ Rectangle {
     property var  _activeVehicle: QGroundControl.multiVehicleManager.activeVehicle
     property var  _currentPage:   null
     property var  _currentItem:   null
+    property bool embedded: false
+    property bool _embeddedPageOpened: false
+    readonly property real navigationWidth: Math.max(ScreenTools.defaultFontPixelWidth * 22, buttonColumn._maxButtonWidth) + _horizontalMargin * 2
+    onEmbeddedChanged: if (embedded) { showNavigation() }
+
+    function showNavigation() {
+        if (mainWindow.allowViewSwitch()) { _embeddedPageOpened = false }
+    }
     // Destroy the in-panel page item while panelContainer is still alive, before the
     // loader clears the source and tears down this component.
     Component.onDestruction: mainWindow.destroyInPanelAnalyzePage()
@@ -63,6 +72,8 @@ Rectangle {
 
     QGCFlickable {
         id:                 buttonScroll
+        objectName:         "analyze_buttonList"
+        visible:            !embedded || !_embeddedPageOpened
         width:              buttonColumn.width
         anchors.topMargin:  _defaultTextHeight / 2
         anchors.top:        parent.top
@@ -75,7 +86,7 @@ Rectangle {
 
         Column {
             id:         buttonColumn
-            width:      _maxButtonWidth
+            width:      _root.embedded ? _root.width - _horizontalMargin * 2 : _maxButtonWidth
             spacing:    _defaultTextHeight / 2
 
             property real _maxButtonWidth: {
@@ -103,7 +114,7 @@ Rectangle {
                     objectName:         "analyzeButton_" + modelData.title
                     imageResource:      modelData.icon
                     text:               modelData.title
-                    width:              buttonColumn._maxButtonWidth
+                    width:              buttonColumn.width
                     checked:            _currentPage === modelData
 
                     onClicked: {
@@ -111,6 +122,7 @@ Rectangle {
                             return
                         }
                         _currentPage        = modelData
+                        _embeddedPageOpened = true
                         panelContainer.title = modelData.title
                         _updatePanelSource()
                     }
@@ -121,6 +133,7 @@ Rectangle {
 
     Rectangle {
         id:                     divider
+        visible:                !embedded
         anchors.topMargin:      _verticalMargin
         anchors.bottomMargin:   _verticalMargin
         anchors.leftMargin:     _horizontalMargin
@@ -131,15 +144,29 @@ Rectangle {
         color:                  qgcPal.windowShade
     }
 
+    QGCButton {
+        id: embeddedBackButton
+        objectName: "analyze_backToMenu"
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.margins: _horizontalMargin
+        visible: embedded && _embeddedPageOpened
+        text: qsTr("返回分析")
+        onClicked: _root.showNavigation()
+    }
+
     Item {
         id:                     panelContainer
+        objectName:             "analyze_panel"
+        visible:                !embedded || _embeddedPageOpened
         anchors.topMargin:      _verticalMargin
         anchors.bottomMargin:   _verticalMargin
         anchors.leftMargin:     _horizontalMargin
         anchors.rightMargin:    _horizontalMargin
-        anchors.left:           divider.right
+        anchors.left:           embedded ? parent.left : divider.right
         anchors.right:          parent.right
-        anchors.top:            parent.top
+        anchors.top:            embeddedBackButton.visible ? embeddedBackButton.bottom : parent.top
         anchors.bottom:         parent.bottom
 
         property string title
@@ -169,6 +196,6 @@ Rectangle {
     QGCLabel {
         anchors.centerIn:   panelContainer
         text:               qsTr("Requires a connected vehicle")
-        visible:            _currentPage && _currentPage.requiresVehicle && !_activeVehicle
+        visible:            panelContainer.visible && _currentPage && _currentPage.requiresVehicle && !_activeVehicle
     }
 }

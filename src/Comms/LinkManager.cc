@@ -843,6 +843,14 @@ bool LinkManager::isLinkUSBDirect([[maybe_unused]] const LinkInterface *link)
     return false;
 }
 
+void LinkManager::refreshSerialPorts()
+{
+#ifndef QGC_NO_SERIAL_LINK
+    SerialPortManager::instance()->rescan();
+    _updateSerialPorts();
+#endif
+}
+
 #ifndef QGC_NO_SERIAL_LINK // Serial Only Functions
 
 void LinkManager::_updateSerialPorts()

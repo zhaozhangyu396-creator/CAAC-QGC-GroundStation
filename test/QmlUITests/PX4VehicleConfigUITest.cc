@@ -2,6 +2,7 @@
 
 #include <QtCore/QPointer>
 #include <QtCore/QScopeGuard>
+#include <QtGui/QScreen>
 #include <QtQuick/QQuickItem>
 #include <QtQuick/QQuickWindow>
 #include <QtTest/QTest>
@@ -154,7 +155,8 @@ void PX4VehicleConfigUITest::_testDisconnectWithPIDTuningOpen()
     if (QGCCorePlugin::instance()->directMissionItemEditing()) {
         const int savedWidth = _window->width();
         const auto restoreWidth = qScopeGuard([this, savedWidth] { _window->setWidth(savedWidth); });
-        _window->setWidth(1500);
+        const int availableWidth = _window->screen() ? _window->screen()->availableGeometry().width() : savedWidth;
+        _window->setWidth(qMin(1500, qMax(savedWidth, availableWidth - 40)));
         const auto* config = findVisibleItem(_rootItem, QStringLiteral("vehicleConfig_root"));
         QVERIFY(config);
         if (config->property("embedded").toBool()) {

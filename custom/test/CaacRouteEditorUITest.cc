@@ -258,7 +258,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
         reportInvalidGeometry(_rootItem, remaining);
     }
     step("navigate to plan");
-    QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewFlightPlan")));
+    QVERIFY(QMetaObject::invokeMethod(_window, "showPlanView"));
     auto* plan = findVisibleItem(_rootItem, QStringLiteral("mainView_plan"), TestTimeout::mediumMs());
     QVERIFY(plan);
     auto* master = plan->property("_planMasterController").value<PlanMasterController*>();
@@ -374,6 +374,8 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacContextDeleteWaypoint")));
     QTest::keyClick(_window, Qt::Key_Escape);
     QTest::mouseClick(_window, Qt::LeftButton, Qt::NoModifier, marker);
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickBearing"), 0));
+    QTest::mouseDClick(_window, Qt::LeftButton, Qt::NoModifier, marker);
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickBearing")));
     QTest::keyClick(_window, Qt::Key_Escape);
     QVERIFY(clickButton(QStringLiteral("caacEditWaypoint_1")));
@@ -774,7 +776,7 @@ void CaacRouteEditorUITest::_homeCenterWindowFocus()
     if (QTest::currentTestFailed()) {
         return;
     }
-    QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewFlightPlan")));
+    QVERIFY(QMetaObject::invokeMethod(_window, "showPlanView"));
     auto* plan = findVisibleItem(_rootItem, QStringLiteral("mainView_plan"), TestTimeout::mediumMs());
     QVERIFY(plan);
     auto* master = plan->property("_planMasterController").value<PlanMasterController*>();
@@ -906,7 +908,7 @@ void CaacRouteEditorUITest::_planningUtilities()
     if (QTest::currentTestFailed()) {
         return;
     }
-    QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewFlightPlan")));
+    QVERIFY(QMetaObject::invokeMethod(_window, "showPlanView"));
     auto* plan = findVisibleItem(_rootItem, QStringLiteral("mainView_plan"));
     QVERIFY(plan);
     auto* master = plan->property("_planMasterController").value<PlanMasterController*>();
@@ -922,6 +924,8 @@ void CaacRouteEditorUITest::_planningUtilities()
     map->setProperty("center", QVariant::fromValue(QGeoCoordinate(30, 120)));
     map->setProperty("zoomLevel", 16.0);
     QTRY_VERIFY_WITH_TIMEOUT(map->property("mapReady").toBool(), TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(master->missionController()->plannedHomePosition().altitude(), 0.0,
+                              TestTimeout::mediumMs());
     const auto before = master->saveToJson();
     QVERIFY(clickButton(QStringLiteral("caacGlobalSettingsButton")));
     QVERIFY(clickButton(QStringLiteral("caacUnitConverter")));

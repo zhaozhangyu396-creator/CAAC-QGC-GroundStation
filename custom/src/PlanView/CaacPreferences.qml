@@ -51,9 +51,9 @@ Item {
                 x: snapToggle.leftPadding
                 y: (snapToggle.height - height) / 2
                 radius: height / 2
-                color: snapToggle.checked ? palette.colorGreen : palette.windowShade
+                color: snapToggle.checked ? palette.window : palette.windowShade
                 border.color: palette.text
-                border.width: snapToggle.checked ? 0 : 1
+                border.width: 1
                 Rectangle {
                     width: parent.height * 0.8
                     height: width
@@ -81,12 +81,14 @@ Item {
         }
         background: Rectangle {
             color: button.checked ? palette.windowShadeDark : palette.windowShade
+            border.color: button.checked ? palette.text : "transparent"
+            border.width: button.checked ? 1 : 0
             Rectangle {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 height: 3
-                color: "#25b86d"
+                color: palette.window
                 visible: button.checked
             }
         }
@@ -209,14 +211,16 @@ Item {
                             objectName: "caacPreferenceThemeDark"
                             text: qsTr("Dark")
                             checked: QGroundControl.settingsManager.appSettings.indoorPalette.rawValue === 1
-                            backgroundColor: checked ? "#25b86d" : QGroundControl.globalPalette.button
+                            backgroundColor: checked ? palette.window : palette.button
+                            showBorder: checked
                             onClicked: QGroundControl.settingsManager.appSettings.indoorPalette.rawValue = 1
                         }
                         QGCButton {
                             objectName: "caacPreferenceThemeLight"
                             text: qsTr("Light")
                             checked: QGroundControl.settingsManager.appSettings.indoorPalette.rawValue === 0
-                            backgroundColor: checked ? "#25b86d" : QGroundControl.globalPalette.button
+                            backgroundColor: checked ? palette.window : palette.button
+                            showBorder: checked
                             onClicked: QGroundControl.settingsManager.appSettings.indoorPalette.rawValue = 0
                         }
                     }

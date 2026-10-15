@@ -8,6 +8,7 @@ import QGroundControl.AppSettings
 
 Rectangle {
     id:     settingsView
+    objectName: "appSettings_root"
     color:  qgcPal.window
     z:      QGroundControl.zOrderTopMost
 
@@ -17,6 +18,19 @@ Rectangle {
     readonly property real _verticalMargin:     _defaultTextHeight / 2
 
     property bool _first: true
+    property bool embedded: false
+    property bool _embeddedPageOpened: false
+    readonly property real navigationWidth: Math.max(ScreenTools.defaultFontPixelWidth * 22, buttonColumn.implicitWidth) + _horizontalMargin * 2
+    onEmbeddedChanged: if (embedded) {
+        showNavigation()
+        if (rightPanel.item && typeof rightPanel.item.fillAvailableWidth !== "undefined") {
+            rightPanel.item.fillAvailableWidth = true
+        }
+    }
+
+    function showNavigation() {
+        if (mainWindow.allowViewSwitch()) { _embeddedPageOpened = false }
+    }
     property bool _commingFromRIDSettings: false
     property int  _selectedPageIndex: -1
     property int  _selectedSectionIndex: -1
@@ -121,6 +135,7 @@ Rectangle {
         if (!_sectionAvailable(_pageSections(entry), sectionIndex)) return
 
         var url = entry.url
+        _embeddedPageOpened = true
         _selectedSectionIndex = sectionIndex
 
         if (_selectedPageIndex !== pageIndex) {
@@ -182,6 +197,9 @@ Rectangle {
             if (rightPanel.item && typeof rightPanel.item.sectionFilter !== "undefined") {
                 rightPanel.item.sectionFilter = _selectedSectionIndex
             }
+            if (rightPanel.item && typeof rightPanel.item.fillAvailableWidth !== "undefined") {
+                rightPanel.item.fillAvailableWidth = settingsView.embedded
+            }
         }
     }
 
@@ -189,7 +207,9 @@ Rectangle {
 
     ColumnLayout {
         id:                 leftPanel
-        width:              Math.max(buttonColumn.implicitWidth + _horizontalMargin, ScreenTools.menuFontPixelWidth * 22)
+        width:              embedded ? parent.width - _horizontalMargin * 2
+                                : Math.max(buttonColumn.implicitWidth + _horizontalMargin, ScreenTools.menuFontPixelWidth * 22)
+        visible:            !embedded || !_embeddedPageOpened
         anchors.topMargin:  _verticalMargin
         anchors.top:        parent.top
         anchors.bottom:     parent.bottom
@@ -365,6 +385,7 @@ Rectangle {
 
     Rectangle {
         id:                     divider
+        visible:                !embedded
         anchors.topMargin:      _verticalMargin
         anchors.bottomMargin:   _verticalMargin
         anchors.leftMargin:     _horizontalMargin
@@ -375,17 +396,30 @@ Rectangle {
         color:                  qgcPal.windowShade
     }
 
+    QGCButton {
+        id: embeddedBackButton
+        objectName: "settings_backToMenu"
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.margins: _horizontalMargin
+        visible: embedded && _embeddedPageOpened
+        text: qsTr("返回应用设置")
+        onClicked: settingsView.showNavigation()
+    }
+
     //-- Panel Contents
     Loader {
         id:                     rightPanel
         objectName:             "settings_rightPanel"
+        visible:                !embedded || _embeddedPageOpened
         anchors.leftMargin:     _horizontalMargin
         anchors.rightMargin:    _horizontalMargin
         anchors.topMargin:      _verticalMargin
         anchors.bottomMargin:   _verticalMargin
-        anchors.left:           divider.right
+        anchors.left:           embedded ? parent.left : divider.right
         anchors.right:          parent.right
-        anchors.top:            parent.top
+        anchors.top:            embeddedBackButton.visible ? embeddedBackButton.bottom : parent.top
         anchors.bottom:         parent.bottom
     }
 }

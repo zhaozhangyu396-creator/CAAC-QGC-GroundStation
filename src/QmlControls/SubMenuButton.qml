@@ -19,6 +19,7 @@ Button {
     property string imageResource:  "/qmlimages/subMenuButtonImage.png"     ///< Button image
     property bool   largeSize:      false
     property bool   showHighlight:  control.pressed | control.checked
+    readonly property bool settingsMenuStyle: ScreenTools.isSettingsMenuItem(control)
 
     property size   sourceSize:     Qt.size(ScreenTools.defaultFontPixelHeight * 2, ScreenTools.defaultFontPixelHeight * 2)
 
@@ -44,7 +45,9 @@ Button {
 
         Rectangle {
             anchors.fill:   parent
-            color:          qgcPal.buttonHighlight
+            color:          control.settingsMenuStyle ? qgcPal.windowShadeDark : qgcPal.buttonHighlight
+            border.color: control.settingsMenuStyle && control.showHighlight ? qgcPal.text : "transparent"
+            border.width: control.settingsMenuStyle && control.showHighlight ? 1 : 0
             opacity:        showHighlight ? 1 : control.enabled && control.hovered ? .2 : 0
         }
 

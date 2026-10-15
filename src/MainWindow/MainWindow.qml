@@ -166,7 +166,15 @@ ApplicationWindow {
 
     function showAnalyzeTool() {
         showProtectedTool(function() {
-            showTool(qsTr("Analyze Tools"), "qrc:/qml/QGroundControl/AnalyzeView/AnalyzeView.qml", "/qmlimages/Analyze.svg")
+            if (QGroundControl.corePlugin.directMissionItemEditing) {
+                if (caacSettingsMenu) {
+                    caacSettingsMenu.showAnalyzeNavigation()
+                } else {
+                    showToolSelectDialog("Analyze")
+                }
+            } else {
+                showTool(qsTr("Analyze Tools"), "qrc:/qml/QGroundControl/AnalyzeView/AnalyzeView.qml", "/qmlimages/Analyze.svg")
+            }
         })
     }
 
@@ -187,6 +195,7 @@ ApplicationWindow {
             if (QGroundControl.corePlugin.directMissionItemEditing) {
                 caacVehicleConfigAfterOpen = afterOpen
                 if (caacSettingsMenu) {
+                    caacSettingsMenu.submenuExpanded = true
                     caacSettingsPage = "VehicleSetup"
                     if (caacVehicleConfigView) {
                         caacVehicleConfigView.showNavigation()
@@ -227,6 +236,16 @@ ApplicationWindow {
     }
 
     function showSettingsTool(settingsPage = "") {
+        if (QGroundControl.corePlugin.directMissionItemEditing) {
+            if (!allowViewSwitch()) { return }
+            caacApplicationSettingsPage = settingsPage
+            if (caacSettingsMenu) {
+                caacSettingsMenu.showApplicationSettings()
+            } else {
+                showToolSelectDialog("ApplicationSettings")
+            }
+            return
+        }
         showTool(qsTr("Application Settings"), "qrc:/qml/QGroundControl/Controls/AppSettings.qml", "/res/gear-white.svg")
         if (settingsPage !== "") {
             toolDrawerLoader.item.showSettingsPage(settingsPage)
@@ -418,6 +437,9 @@ ApplicationWindow {
     }
 
     property string caacSettingsPage: "Preferences"
+    property alias caacFenceVisible: planView.safetyFenceVisible
+    function centerPlanMap(coordinate, zoom) { planView.centerMap(coordinate, zoom) }
+    property string caacApplicationSettingsPage: ""
 
     function showToolSelectDialog(settingsPage = "Preferences") {
         if (mainWindow.allowViewSwitch()) {

@@ -43,8 +43,25 @@ Item {
             homeAltitude.text = isFinite(_availableHomeAltitude) ? _availableHomeAltitude.toString() : ""
         }
     }
-    on_AvailableHomeAltitudeChanged: fillHomeAltitude()
-    on_HomePositionKeyChanged: { if (homeAltitude) { homeAltitude.manuallyEdited = false }; fillHomeAltitude() }
+    property bool _savingHome: false
+    function saveHomeAutomatically() {
+        fillHomeAltitude()
+        if (_savingHome || !_home.isValid || !homeAltitude || homeAltitude.manuallyEdited
+            || !isFinite(_availableHomeAltitude) || (editor._draggedWaypoint && editor._draggedWaypoint.sequenceNumber === 0)) { return }
+        if (_homeItem && _homeItem.dirty && Math.abs(_home.altitude - _availableHomeAltitude) < 0.001) { return }
+        _savingHome = true
+        try {
+            routeController.updatePlannedHome(_home.latitude, _home.longitude, _availableHomeAltitude)
+        } finally {
+            _savingHome = false
+        }
+    }
+    on_AvailableHomeAltitudeChanged: { fillHomeAltitude(); Qt.callLater(saveHomeAutomatically) }
+    on_HomePositionKeyChanged: {
+        if (homeAltitude) { homeAltitude.manuallyEdited = false }
+        fillHomeAltitude()
+        Qt.callLater(saveHomeAutomatically)
+    }
     function number(value) { return value.trim().length ? Number(value) : NaN }
     component NumberField: QGCTextField {
         Layout.fillWidth: true

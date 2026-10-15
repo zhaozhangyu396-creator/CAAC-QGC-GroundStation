@@ -222,7 +222,7 @@ void CaacSimulationUITest::_defaultStartPosition()
     if (QTest::currentTestFailed()) {
         return;
     }
-    QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewFlightPlan")));
+    QVERIFY(QMetaObject::invokeMethod(_window, "showPlanView"));
     auto* plan = findVisibleItem(_rootItem, QStringLiteral("mainView_plan"));
     QVERIFY(plan);
     auto* master = plan->property("_planMasterController").value<PlanMasterController*>();
@@ -287,7 +287,7 @@ void CaacSimulationUITest::_closedRouteAndSimulationToggle()
     if (QTest::currentTestFailed()) {
         return;
     }
-    QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewFlightPlan")));
+    QVERIFY(QMetaObject::invokeMethod(_window, "showPlanView"));
     step("plan opened");
     auto* plan = findVisibleItem(_rootItem, QStringLiteral("mainView_plan"));
     QVERIFY(plan);
@@ -338,7 +338,7 @@ void CaacSimulationUITest::_closedRouteAndSimulationToggle()
     QVERIFY(verifyText(QStringLiteral("toolbar_simulation"),
                        QCoreApplication::translate("SelectViewDropdown", "Cancel simulation"),
                        QStringLiteral("active simulation")));
-    QVERIFY(clickButton(QStringLiteral("toolbar_viewFlightPlan")));
+    QVERIFY(QMetaObject::invokeMethod(_window, "showPlanView"));
     QVERIFY(clickSimulation());
     step("cancel requested");
     QTRY_VERIFY_WITH_TIMEOUT(!simulation->active() && !MultiVehicleManager::instance()->activeVehicle(),
@@ -347,7 +347,7 @@ void CaacSimulationUITest::_closedRouteAndSimulationToggle()
     QVERIFY(verifyText(QStringLiteral("toolbar_simulation"),
                        QCoreApplication::translate("SelectViewDropdown", "Simulation"),
                        QStringLiteral("simulation disconnected")));
-    QVERIFY(clickButton(QStringLiteral("toolbar_viewFlightPlan")));
+    QVERIFY(QMetaObject::invokeMethod(_window, "showPlanView"));
     QVERIFY(clickSimulation());
     step("reconnection requested");
     QVERIFY2(simulation->active(), qPrintable(simulation->status()));
@@ -597,7 +597,7 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     auto* initialAttitude = findVisibleItem(_rootItem, QStringLiteral("caacAttitudeInstrument"));
     QVERIFY(initialAttitude);
     QVERIFY(!initialAttitude->property("attitudeAvailable").toBool());
-    QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewFlightPlan")));
+    QVERIFY(QMetaObject::invokeMethod(_window, "showPlanView"));
     step("plan opened");
     auto* plan = findVisibleItem(_rootItem, QStringLiteral("mainView_plan"));
     QVERIFY(plan);
@@ -810,6 +810,20 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->missionFlightMode(), TestTimeout::mediumMs());
     auto* manager = vehicle->missionManager();
     QVERIFY(!manager->inProgress());
+    step("reject upload while mission is running");
+    QSignalSpy blockedTransfer(manager, &MissionManager::sendComplete);
+    const auto originalAircraftItems = manager->missionItems();
+    expectAppMessage(QRegularExpression(QStringLiteral("当前航点任务正在执行，请先暂停当前任务，再上传新航线。")));
+    QVERIFY(!simulation->upload(master));
+    QVERIFY(waitForDialog(QStringLiteral("上传航线")));
+    QVERIFY(acceptDialog());
+    QVERIFY(QMetaObject::invokeMethod(master, "upload"));
+    QVERIFY(waitForDialog(QStringLiteral("上传航线")));
+    QVERIFY(acceptDialog());
+    QCOMPARE(manager->missionItems(), originalAircraftItems);
+    QCOMPARE(blockedTransfer.count(), 0);
+    QVERIFY(!manager->inProgress());
+    QCOMPARE(vehicle->flightMode(), vehicle->missionFlightMode());
     int takeoffs = 0;
     int jumps = 0;
     int firstWaypointSequence = -1;
@@ -1111,7 +1125,7 @@ void CaacSimulationUITest::_uploadAndFlightControls()
         QCOMPARE(battery->chargeState()->rawValue().toInt(), static_cast<int>(MAV_BATTERY_CHARGE_STATE_OK));
     }
     step("right-click guided point");
-    QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewFlightPlan")));
+    QVERIFY(QMetaObject::invokeMethod(_window, "showPlanView"));
     auto* planMap = findVisibleItem(_rootItem, QStringLiteral("planView_map"));
     QVERIFY(planMap);
     auto* localWaypoint = mission->visualItems()->value<SimpleMissionItem*>(1);
@@ -1153,7 +1167,7 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->pauseFlightMode(), TestTimeout::mediumMs());
 
     step("waypoint list read and upload");
-    QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewFlightPlan")));
+    QVERIFY(QMetaObject::invokeMethod(_window, "showPlanView"));
     QVERIFY(clickButton(QStringLiteral("caacWaypointListButton")));
     auto* readButton = findVisibleItem(_rootItem, QStringLiteral("caacReadWaypoints"));
     auto* uploadButton = findVisibleItem(_rootItem, QStringLiteral("caacUploadWaypoints"));
@@ -1169,20 +1183,20 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     QVERIFY(acceptDialog());
     QTRY_VERIFY_WITH_TIMEOUT(!master->syncInProgress() && mission->visualItems()->count() > 3, TestTimeout::mediumMs());
     QTRY_VERIFY_WITH_TIMEOUT(uploadButton->isEnabled(), TestTimeout::mediumMs());
-    QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewFlightPlan")));
+    QVERIFY(QMetaObject::invokeMethod(_window, "showPlanView"));
     if (vehicle->flightMode() != vehicle->pauseFlightMode()) {
         QVERIFY(doubleClickAction(QStringLiteral("caacPauseMission")));
         QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("guidedActionConfirmButton"), 0));
         QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->pauseFlightMode(), TestTimeout::mediumMs());
     }
-    QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewFlightPlan")));
+    QVERIFY(QMetaObject::invokeMethod(_window, "showPlanView"));
     QSignalSpy listUpload(manager, &MissionManager::sendComplete);
     QVERIFY(listUpload.isValid());
     QVERIFY(clickButton(QStringLiteral("caacUploadWaypoints")));
     QTRY_VERIFY_WITH_TIMEOUT(!listUpload.isEmpty(), TestTimeout::mediumMs());
     QCOMPARE(listUpload.last().first().toBool(), false);
     QTRY_VERIFY_WITH_TIMEOUT(!master->syncInProgress(), TestTimeout::mediumMs());
-    QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewFlightPlan")));
+    QVERIFY(QMetaObject::invokeMethod(_window, "showPlanView"));
     step("manual return home");
     QVERIFY(doubleClickAction(QStringLiteral("caacReturnHome")));
     QTRY_VERIFY_WITH_TIMEOUT(!vehicle->airborne() && !vehicle->armed(), TestTimeout::longMs());

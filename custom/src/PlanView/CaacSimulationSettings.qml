@@ -67,6 +67,22 @@ ColumnLayout {
     }
     spacing: ScreenTools.defaultFontPixelHeight * 0.5
     CaacSettingsSection {
+        objectName: "caacSimClimbSection"
+        title: qsTr("Climb settings")
+        GridLayout {
+            columns: root.width < ScreenTools.defaultFontPixelWidth * 35 ? 1 : 2
+            Layout.fillWidth: true
+            QGCLabel { text: qsTr("Vertical speed (m/s)") }
+            NumberField { id: vertical; objectName: "caacSimVerticalSpeed"; text: root._settings.verticalSpeed.toString() }
+            QGCLabel { text: qsTr("Climb mode") }
+            QGCComboBox {
+                id: climb; objectName: "caacSimClimbMode"; Layout.fillWidth: true
+                model: [qsTr("Point climb"), qsTr("Coordinated climb")]
+                currentIndex: root._settings.climbMode; onActivated: root.draftDirty = true
+            }
+        }
+    }
+    CaacSettingsSection {
         objectName: "caacSimTurnSection"
         title: qsTr("Turn and heading")
         GridLayout {
@@ -99,22 +115,6 @@ ColumnLayout {
             }
             QGCLabel { text: qsTr("Yaw rate (degrees/s)") }
             NumberField { id: yawRate; objectName: "caacSimYawRate"; text: root._settings.yawRate.toString() }
-        }
-    }
-    CaacSettingsSection {
-        objectName: "caacSimClimbSection"
-        title: qsTr("Climb settings")
-        GridLayout {
-            columns: root.width < ScreenTools.defaultFontPixelWidth * 35 ? 1 : 2
-            Layout.fillWidth: true
-            QGCLabel { text: qsTr("Vertical speed (m/s)") }
-            NumberField { id: vertical; objectName: "caacSimVerticalSpeed"; text: root._settings.verticalSpeed.toString() }
-            QGCLabel { text: qsTr("Climb mode") }
-            QGCComboBox {
-                id: climb; objectName: "caacSimClimbMode"; Layout.fillWidth: true
-                model: [qsTr("Point climb"), qsTr("Coordinated climb")]
-                currentIndex: root._settings.climbMode; onActivated: root.draftDirty = true
-            }
         }
     }
     CaacSettingsSection {

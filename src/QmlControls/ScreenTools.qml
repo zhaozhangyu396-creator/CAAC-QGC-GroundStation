@@ -34,6 +34,13 @@ Item {
         return false
     }
 
+    function isSettingsMenuItem(item) {
+        for (let ancestor = item; ancestor; ancestor = ancestor.parent) {
+            if (ancestor.objectName === "caacSettingsMenu") { return true }
+        }
+        return false
+    }
+
     function vehicleComponentName(component) {
         if (!component) { return "" }
         return qsTranslate(component.toString().split("(")[0], component.name)
@@ -181,7 +188,7 @@ Item {
             // If using physical sizing takes up too much of the vertical real estate fall back to font based sizing
             minTouchPixels      = defaultFontPixelHeight * 3
         }
-        toolbarHeight           = defaultFontPixelHeight * (QGroundControl.corePlugin.directMissionItemEditing ? 2.2 : 3)
+        toolbarHeight           = defaultFontPixelHeight * (QGroundControl.corePlugin.directMissionItemEditing ? 2.2 * 1.15 : 3)
         toolbarHeight           = toolbarHeight * QGroundControl.corePlugin.options.toolbarHeightMultiplier
     }
 

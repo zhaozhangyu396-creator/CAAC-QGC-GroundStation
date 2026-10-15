@@ -34,7 +34,9 @@ Item {
             Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 0.4
             Layout.preferredHeight: ScreenTools.defaultFontPixelHeight * 1.1
             radius: width / 2
-            color: palette.colorGreen
+            color: palette.window
+            border.color: palette.windowShadeLight
+            border.width: 1
         }
         QGCLabel { text: heading.title; font.bold: true; Layout.fillWidth: true; wrapMode: Text.WordWrap }
     }
@@ -115,9 +117,11 @@ Item {
                 Layout.fillWidth: true
                 SectionTitle { title: qsTr("UAS code") }
                 QGCButton {
+                    objectName: "caacRIDEnterUASCode"
                     text: qsTr("Enter code")
-                    backgroundColor: palette.colorGreen
-                    onClicked: { uas.field.forceActiveFocus(); uas.field.selectAll() }
+                    backgroundColor: palette.window
+                    showBorder: true
+                    onClicked: mainWindow.caacSettingsPage = "UOM"
                 }
             }
             Choice { label: qsTr("UAS code type"); setting: root.settings.basicIDType }

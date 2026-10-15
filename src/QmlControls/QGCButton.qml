@@ -10,7 +10,8 @@ import QGroundControl.Controls
 ///     If icon only, icon will be centered
 Button {
     property bool primary: false
-    property bool showBorder: qgcPal.globalTheme === QGCPalette.Light
+    readonly property bool settingsMenuStyle: ScreenTools.isSettingsMenuItem(control)
+    property bool showBorder: settingsMenuStyle || qgcPal.globalTheme === QGCPalette.Light
     property real backRadius: ScreenTools.defaultBorderRadius
     property real heightFactor: 0.5
     property string iconSource: ""
@@ -46,11 +47,11 @@ Button {
         implicitHeight: ScreenTools.implicitButtonHeight
         border.width: showBorder ? 1 : 0
         border.color: qgcPal.buttonBorder
-        color: primary ? qgcPal.primaryButton : qgcPal.button
+        color: control.settingsMenuStyle ? qgcPal.window : primary ? qgcPal.primaryButton : qgcPal.button
 
         Rectangle {
             anchors.fill: parent
-            color: qgcPal.buttonHighlight
+            color: control.settingsMenuStyle ? qgcPal.windowShade : qgcPal.buttonHighlight
             opacity: _showHighlight ? 1 : control.enabled && control.hovered ? .2 : 0
             radius: parent.radius
         }

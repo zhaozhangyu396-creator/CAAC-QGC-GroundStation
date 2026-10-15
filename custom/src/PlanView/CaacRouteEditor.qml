@@ -450,8 +450,10 @@ Column {
         visible: root.enabled && root.visible
         z: QGroundControl.zOrderWidgets + 4
         anchors.left: parent.left
-        anchors.bottom: parent.bottom
         anchors.margins: ScreenTools.defaultFontPixelWidth * 0.75
+        y: Math.max(ScreenTools.defaultFontPixelWidth * 0.75,
+            Math.min((root.editorMap ? root.editorMap.mapToolsCenterY : 0) - width / 2,
+                (parent ? parent.height : 0) - height - ScreenTools.defaultFontPixelWidth * 0.75))
         width: ScreenTools.defaultFontPixelHeight * 1.25
         height: rail.implicitHeight
         color: "#bb202326"
@@ -1102,6 +1104,7 @@ Column {
             }
             root._draggedWaypoint = null
             root._dragGuides = []
+            if (item && item.sequenceNumber === 0) { globalSettings.saveHomeAutomatically() }
             editorController.endEdit()
         }
         function onMissionItemEditRequested(item) {

@@ -10,6 +10,7 @@ Item {
     id:                     control
     Layout.preferredWidth:  toolbarButtonStyle ? toolbarModeButton.implicitWidth : mainLayout.width
     property bool toolbarButtonStyle: false
+    property real toolbarScale: 1
 
     property bool   showIndicator:          true
     property bool   waitForParameters:      false
@@ -74,9 +75,9 @@ Item {
         enabled: !!control.activeVehicle
         text: control.activeVehicle ? control.activeVehicle.flightMode : qsTr("Flight mode")
         heightFactor: 0.25
-        pointSize: ScreenTools.smallFontPointSize
+        pointSize: ScreenTools.smallFontPointSize * control.toolbarScale
         _horizontalPadding: ScreenTools.defaultFontPixelWidth * 0.6
-        _iconHeight: ScreenTools.defaultFontPixelHeight * 0.85
+        _iconHeight: ScreenTools.defaultFontPixelHeight * 0.85 * control.toolbarScale
         implicitWidth: contentItem.implicitWidth + leftPadding + rightPadding
         backgroundColor: qgcPal.window
         textColor: qgcPal.text

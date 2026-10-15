@@ -28,6 +28,7 @@ Rectangle {
 
     signal clicked
     signal rightClicked
+    signal doubleClicked
     signal dragStart
     signal dragStop
 
@@ -44,22 +45,27 @@ Rectangle {
     property real _touchMarginVertical:     _mobile ? (_touchHeight - _itemIndicatorHeight) / 2 : 0
     property bool _dragStartSignalled:      false
 
-    onXChanged: liveDrag()
-    onYChanged: liveDrag()
+    onXChanged: if (!editOnRightClick) { liveDrag() }
+    onYChanged: if (!editOnRightClick) { liveDrag() }
 
-    function liveDrag() {
+    function liveDrag(pointerPoint = null) {
         if (!itemDragger._preventCoordinateBindingLoop &&
                 ((itemDrag.drag.active && gestureTarget === itemDragger) || _externalDragActive)) {
-            var point = Qt.point(itemDragger.x + _touchMarginHorizontal + itemIndicator.anchorPoint.x, itemDragger.y + _touchMarginVertical + itemIndicator.anchorPoint.y)
-            var coordinate = mapControl.toCoordinate(point, false /* clipToViewPort */)
-            if (typeof coordinateFilter === "function") {
-                coordinate = coordinateFilter(coordinate)
-            }
-            if (!coordinate || !coordinate.isValid) { return }
+            if (!mapControl || !itemIndicator || !itemCoordinate) { return }
             itemDragger._preventCoordinateBindingLoop = true
-            coordinate.altitude = itemCoordinate.altitude
-            itemCoordinate = coordinate
-            itemDragger._preventCoordinateBindingLoop = false
+            try {
+                const point = pointerPoint || Qt.point(itemDragger.x + _touchMarginHorizontal + itemIndicator.anchorPoint.x,
+                    itemDragger.y + _touchMarginVertical + itemIndicator.anchorPoint.y)
+                let coordinate = mapControl.toCoordinate(point, false /* clipToViewPort */)
+                if (typeof coordinateFilter === "function") {
+                    coordinate = coordinateFilter(coordinate)
+                }
+                if (!coordinate || !coordinate.isValid) { return }
+                coordinate.altitude = itemCoordinate.altitude
+                if (coordinate !== itemCoordinate) { itemCoordinate = coordinate }
+            } finally {
+                itemDragger._preventCoordinateBindingLoop = false
+            }
         }
     }
 
@@ -77,6 +83,23 @@ Rectangle {
         preventStealing:    true
         enabled:            itemDragger.visible
         cursorShape:        drag.active ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+        property point _anchorOffset: Qt.point(0, 0)
+        property point _lastPointerPosition: Qt.point(-1, -1)
+
+        function updatePointerCoordinate(position) {
+            const target = itemDragger.gestureTarget
+            if (!itemDragger.editOnRightClick || !target || !target.mapControl || !target.itemIndicator) { return }
+            const point = mapToItem(target.mapControl, position)
+            if (Math.hypot(point.x - _lastPointerPosition.x, point.y - _lastPointerPosition.y) < 0.01) { return }
+            _lastPointerPosition = point
+            target.liveDrag(Qt.point(point.x - _anchorOffset.x, point.y - _anchorOffset.y))
+        }
+
+        onPositionChanged: (mouse) => {
+            if (drag.active && (pressedButtons & Qt.LeftButton)) {
+                updatePointerCoordinate(Qt.point(mouse.x, mouse.y))
+            }
+        }
 
         onPressed: (mouse) => {
             itemDragger.gestureTarget = itemDragger
@@ -100,6 +123,12 @@ Rectangle {
                     itemDragger.gestureTarget = other
                 }
             }
+            const target = itemDragger.gestureTarget
+            if (target && target.itemCoordinate && target.itemCoordinate.isValid) {
+                const center = target.mapControl.fromCoordinate(target.itemCoordinate, false)
+                _anchorOffset = Qt.point(point.x - center.x, point.y - center.y)
+            }
+            _lastPointerPosition = point
         }
 
         onClicked: (mouse) => {
@@ -108,6 +137,12 @@ Rectangle {
                 if (itemDragger.gestureTarget) { itemDragger.gestureTarget.rightClicked() }
             } else {
                 if (itemDragger.gestureTarget) { itemDragger.gestureTarget.clicked() }
+            }
+        }
+
+        onDoubleClicked: (mouse) => {
+            if (mouse.button === Qt.LeftButton && itemDragger.editOnRightClick && itemDragger.gestureTarget) {
+                itemDragger.gestureTarget.doubleClicked()
             }
         }
 
@@ -122,6 +157,8 @@ Rectangle {
                     _dragStartSignalled = true
                     target.dragStart()
                 }
+                _lastPointerPosition = Qt.point(-1, -1)
+                updatePointerCoordinate(Qt.point(mouseX, mouseY))
             } else {
                 _dragStartSignalled = false
                 target.dragStop()

@@ -23,8 +23,9 @@ ColumnLayout {
     property string heading
     property string headingDescription
     property bool   showDividers:       true
-    property bool   showBorder:         true
+    property bool   showBorder:         !settingsMenuStyle
     readonly property bool vehicleSetupStyle: ScreenTools.isVehicleSetupItem(control)
+    readonly property bool settingsMenuStyle: ScreenTools.isSettingsMenuItem(control)
 
     property real _margins: ScreenTools.defaultFontPixelHeight / 2
 
@@ -49,9 +50,11 @@ ColumnLayout {
             Rectangle {
                 width: ScreenTools.defaultFontPixelWidth * 0.35
                 height: ScreenTools.defaultFontPixelHeight
-                color: QGroundControl.globalPalette.colorGreen
+                color: QGroundControl.globalPalette.window
+                border.color: QGroundControl.globalPalette.windowShadeLight
+                border.width: 1
                 radius: width / 2
-                visible: control.vehicleSetupStyle
+                visible: control.vehicleSetupStyle || control.settingsMenuStyle
             }
             QGCLabel {
                 Layout.fillWidth: true
@@ -76,7 +79,8 @@ ColumnLayout {
         Layout.fillWidth:   true
         implicitWidth:      _contentLayout.implicitWidth + (showBorder ? _margins * 2 : 0)
         implicitHeight:     _contentLayout.implicitHeight + (showBorder ? _margins * 2: 0)
-        color:              control.vehicleSetupStyle ? QGroundControl.globalPalette.windowShade : "transparent"
+        color:              control.settingsMenuStyle ? QGroundControl.globalPalette.window
+                                : control.vehicleSetupStyle ? QGroundControl.globalPalette.windowShade : "transparent"
         border.color:       outerBorderColor
         border.width:       showBorder && !control.vehicleSetupStyle ? 1 : 0
         radius:             ScreenTools.defaultFontPixelHeight / 2

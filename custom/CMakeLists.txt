@@ -33,8 +33,11 @@ qgc_set_qt_resource_alias(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacCalculatorMath.js
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacPreferences.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacSettingsMenu.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacConnectionSettings.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacRIDSettings.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacSafetySettings.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacBatteryProtection.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacGeoFenceSettings.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacUOMSettings.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacAccessDialog.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Flight/CaacAttitudeInstrument.qml
@@ -79,8 +82,11 @@ qt_add_qml_module(
               src/PlanView/CaacCalculatorMath.js
               src/PlanView/CaacPreferences.qml
               src/PlanView/CaacSettingsMenu.qml
+              src/PlanView/CaacConnectionSettings.qml
               src/PlanView/CaacRIDSettings.qml
               src/PlanView/CaacSafetySettings.qml
+              src/PlanView/CaacBatteryProtection.qml
+              src/PlanView/CaacGeoFenceSettings.qml
               src/PlanView/CaacUOMSettings.qml
               src/PlanView/CaacAccessDialog.qml
               src/Flight/CaacAttitudeInstrument.qml

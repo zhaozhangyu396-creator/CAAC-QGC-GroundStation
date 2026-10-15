@@ -60,6 +60,7 @@ public:
     Q_INVOKABLE void disconnectLink(LinkInterface *link);
     /// Stop a link and suppress auto-reconnect, working whether or not a live link currently exists.
     Q_INVOKABLE void disconnectLinkConfiguration(LinkConfiguration *config);
+    Q_INVOKABLE void refreshSerialPorts();
     Q_INVOKABLE void createMavlinkForwardingSupportLink();
     /// Called to signal app shutdown. Disconnects all links while turning off auto-connect.
     Q_INVOKABLE void shutdown();

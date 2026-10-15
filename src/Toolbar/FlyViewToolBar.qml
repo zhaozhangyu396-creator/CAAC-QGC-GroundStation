@@ -16,8 +16,9 @@ Item {
 
     readonly property real _statusHeight: ScreenTools.toolbarHeight
     readonly property bool _compactToolbar: QGroundControl.corePlugin.directMissionItemEditing
-    readonly property real _iconExtent: ScreenTools.defaultFontPixelHeight * (_compactToolbar ? 0.85 : 1)
-    readonly property real _fontPointSize: _compactToolbar ? ScreenTools.smallFontPointSize : ScreenTools.defaultFontPointSize
+    readonly property real _toolbarScale: _compactToolbar ? 1.15 : 1
+    readonly property real _iconExtent: ScreenTools.defaultFontPixelHeight * (_compactToolbar ? 0.85 : 1) * _toolbarScale
+    readonly property real _fontPointSize: (_compactToolbar ? ScreenTools.smallFontPointSize : ScreenTools.defaultFontPointSize) * _toolbarScale
     property alias flightToolStrip: flightActions
     property bool flightSettingsExpanded: false
     signal displayPreFlightChecklist
@@ -42,7 +43,7 @@ Item {
         property bool available: false
         property real percent: 0
         property string valueText: "--"
-        spacing: ScreenTools.defaultFontPixelWidth * 0.35
+        spacing: ScreenTools.defaultFontPixelWidth * 0.55
         Accessible.name: label + ": " + valueText
         QGCColoredImage {
             source: indicator.iconSource
@@ -59,7 +60,7 @@ Item {
         QGCLabel {
             objectName: indicator.objectName + "Value"
             text: indicator.valueText
-            font.pointSize: ScreenTools.smallFontPointSize
+            font.pointSize: control._fontPointSize
         }
     }
 
@@ -130,6 +131,7 @@ Item {
                         objectName:         "toolbar_flightModeIndicator"
                         Layout.fillHeight:  true
                         toolbarButtonStyle: QGroundControl.corePlugin.directMissionItemEditing
+                        toolbarScale: control._toolbarScale
                         visible: QGroundControl.corePlugin.directMissionItemEditing || !!_activeVehicle
                     }
                 }
@@ -173,9 +175,9 @@ Item {
                     anchors.right: parent.right
                     scale: Math.min(1, rightPanel.width / Math.max(1, implicitWidth))
                     transformOrigin: Item.Right
-                    spacing: ScreenTools.defaultFontPixelWidth * (control._compactToolbar ? 0.65 : 1)
+                    spacing: ScreenTools.defaultFontPixelWidth * (control._compactToolbar ? 1.25 : 1)
                     RowLayout {
-                        spacing: ScreenTools.defaultFontPixelWidth * 0.5
+                        spacing: ScreenTools.defaultFontPixelWidth * 0.7
                         QGCColoredImage {
                             source: "/InstrumentValueIcons/timer.svg"
                             color: qgcPal.text
@@ -204,7 +206,7 @@ Item {
                         ToolTip.visible: hovered
                         ToolTip.text: qsTr("Open connection settings")
                         contentItem: RowLayout {
-                            spacing: ScreenTools.defaultFontPixelWidth * 0.5
+                            spacing: ScreenTools.defaultFontPixelWidth * 0.7
                             Item {
                                 Layout.preferredWidth: control._iconExtent
                                 Layout.preferredHeight: Layout.preferredWidth
@@ -315,7 +317,8 @@ Item {
                 QGCColoredImage {
                     visible: !!control._activeVehicle
                     source: control._activeVehicle && control._activeVehicle.armed ? "/qmlimages/Armed.svg" : "/qmlimages/Disarmed.svg"
-                    color: qgcPal.text
+                    objectName: "caacArmStatusIcon"
+                    color: !control._activeVehicle ? qgcPal.text : control._activeVehicle.armed ? qgcPal.colorGreen : qgcPal.colorRed
                     Layout.preferredWidth: control._iconExtent
                     Layout.preferredHeight: Layout.preferredWidth
                     fillMode: Image.PreserveAspectFit

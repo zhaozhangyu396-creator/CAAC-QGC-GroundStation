@@ -154,7 +154,7 @@ Item {
             }
             onClicked: {
                 if (control.map.directMissionItemEditing) {
-                    control.map.missionItemPropertiesRequested(control._missionItem)
+                    control.clicked(control._missionItem.sequenceNumber)
                     return
                 }
                 const indicator = itemVisualLoader.item
@@ -162,6 +162,11 @@ Item {
                     indicator.activate()
                 } else {
                     control.clicked(control._missionItem.sequenceNumber)
+                }
+            }
+            onDoubleClicked: {
+                if (control.map.directMissionItemEditing) {
+                    control.map.missionItemPropertiesRequested(control._missionItem)
                 }
             }
             onItemCoordinateChanged: {

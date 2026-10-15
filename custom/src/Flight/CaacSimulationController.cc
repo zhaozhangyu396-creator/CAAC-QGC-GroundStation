@@ -4,6 +4,7 @@
 
 #include <QtCore/QCoreApplication>
 
+#include "AppMessages.h"
 #include "CaacCorePlugin.h"
 #include "LinkManager.h"
 #include "MissionController.h"
@@ -225,9 +226,14 @@ bool CaacSimulationController::start(PlanMasterController* plan)
 
 bool CaacSimulationController::upload(PlanMasterController* plan)
 {
+    if (_vehicle && _vehicle->armed() && _vehicle->flightMode() == _vehicle->missionFlightMode()) {
+        const auto message = tr("当前航点任务正在执行，请先暂停当前任务，再上传新航线。");
+        _setStatus(message);
+        QGC::showAppMessage(message, tr("上传航线"));
+        return false;
+    }
     if (!_link || !_vehicle || !_vehicle->isInitialConnectComplete() || !plan || plan->syncInProgress() ||
-        _vehicle->missionManager()->inProgress() || _uploadSent ||
-        (_vehicle->armed() && _vehicle->flightMode() == _vehicle->missionFlightMode())) {
+        _vehicle->missionManager()->inProgress() || _uploadSent) {
         _setStatus(tr("Connect the simulation aircraft and pause the mission before uploading."));
         return false;
     }

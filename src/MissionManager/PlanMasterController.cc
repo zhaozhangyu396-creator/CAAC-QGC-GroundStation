@@ -320,6 +320,10 @@ void PlanMasterController::_sendRallyPointsComplete(void)
 
 void PlanMasterController::sendToVehicle(void)
 {
+    if (_missionController.sendToVehiclePreCheck() == MissionController::SendToVehiclePreCheckStateActiveMission) {
+        QGC::showAppMessage(tr("当前航点任务正在执行，请先暂停当前任务，再上传新航线。"), tr("上传航线"));
+        return;
+    }
     if (this->property("caacRotationPreviewActive").toBool()) {
         QGC::showAppMessage(QCoreApplication::translate(
             "PlanMasterController", "Confirm or cancel the orientation preview before saving or uploading."));

@@ -24,9 +24,14 @@
 #include "CaacSimulationController.h"
 #include "Fact.h"
 #include "FlightPathSegment.h"
+#include "GeoFenceController.h"
+#include "GeoFenceManager.h"
 #include "MissionController.h"
 #include "MissionSettingsItem.h"
+#include "MockLink.h"
+#include "ParameterManager.h"
 #include "PlanMasterController.h"
+#include "QGCFencePolygon.h"
 #include "QGCGeo.h"
 #include "QGroundControlQmlGlobal.h"
 #include "QmlUITestBase.h"
@@ -34,6 +39,7 @@
 #include "SettingsManager.h"
 #include "SimpleMissionItem.h"
 #include "SpeedSection.h"
+#include "Vehicle.h"
 
 class CaacPlanningInteractionUITest : public QmlUITestBase
 {
@@ -48,7 +54,223 @@ private slots:
     void _calculatorUI();
     void _preferencesUI();
     void _newSettingsPagesAndAccess();
+    void _waypointDragRemainsResponsive_data();
+    void _waypointDragRemainsResponsive();
+    void _statisticsPanelInteraction();
+    void _homeAltitudeAutoSave();
+    void _batteryAndFenceSettings();
 };
+
+void CaacPlanningInteractionUITest::_batteryAndFenceSettings()
+{
+    runWithMockLink([] { return MockLink::startPX4MockLink(); },
+                    [&](QPointer<MockLink>, Vehicle* vehicle) {
+                        auto* parameters = vehicle->parameterManager();
+                        const auto fact = [parameters](const char* name) {
+                            return parameters->getParameter(-1, QLatin1String(name));
+                        };
+                        fact("BAT1_N_CELLS")->setRawValue(12);
+                        fact("BAT1_V_EMPTY")->setRawValue(3.6);
+                        fact("BAT1_V_CHARGED")->setRawValue(4.05);
+                        fact("BAT_LOW_THR")->setRawValue(0.15);
+                        fact("BAT_CRIT_THR")->setRawValue(0.07);
+                        QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_safety")));
+                        const auto scroller = QStringLiteral("caacSafetyScroller");
+                        auto* low = findVisibleItemScrolled(QStringLiteral("caacLowBatteryVoltage"), scroller);
+                        auto* critical =
+                            findVisibleItemScrolled(QStringLiteral("caacCriticalBatteryVoltage"), scroller);
+                        QVERIFY(low && critical);
+                        QTRY_VERIFY_WITH_TIMEOUT(std::abs(low->property("text").toDouble() - 44.01) < 0.01,
+                                                 TestTimeout::mediumMs());
+                        QVERIFY(std::abs(critical->property("text").toDouble() - 43.58) < 0.01);
+                        QVERIFY(!findItem(_rootItem, QStringLiteral("caacCriticalBatteryAction_0"))->isEnabled());
+                        QVERIFY(low->setProperty("text", QStringLiteral("44.28")));
+                        QVERIFY(QMetaObject::invokeMethod(low, "textEdited"));
+                        QVERIFY(critical->setProperty("text", QStringLiteral("43.47")));
+                        QVERIFY(QMetaObject::invokeMethod(critical, "textEdited"));
+                        QVERIFY(clickButtonScrolled(QStringLiteral("caacConfirmBatteryProtection"), scroller));
+                        QTRY_VERIFY_WITH_TIMEOUT(std::abs(fact("BAT_LOW_THR")->rawValue().toDouble() - 0.2) < 0.0001,
+                                                 TestTimeout::mediumMs());
+                        QVERIFY(std::abs(fact("BAT_CRIT_THR")->rawValue().toDouble() - 0.05) < 0.0001);
+                        auto* fenceWidget = findItem(_rootItem, QStringLiteral("caacGeoFenceSettings"));
+                        QVERIFY(fenceWidget);
+                        auto* fence = fenceWidget->property("controller").value<GeoFenceController*>();
+                        QVERIFY(fence && fence->supported());
+                        auto* draw = findVisibleItemScrolled(QStringLiteral("caacFenceDraw"), scroller);
+                        QVERIFY(draw);
+                        QTRY_VERIFY_WITH_TIMEOUT(draw->isEnabled(), TestTimeout::mediumMs());
+                        QVERIFY(clickButtonScrolled(QStringLiteral("caacFenceDraw"), scroller));
+                        QTRY_COMPARE_WITH_TIMEOUT(fence->polygons()->count(), 1, TestTimeout::mediumMs());
+                        QVERIFY(findVisibleItemScrolled(QStringLiteral("caacFencePreviewMap"), scroller));
+                        const auto savedFence = fence->polygons()->value<QGCFencePolygon*>(0)->coordinateList();
+                        QSignalSpy sent(vehicle->geoFenceManager(), &GeoFenceManager::sendComplete);
+                        QVERIFY(clickButtonScrolled(QStringLiteral("caacFenceWrite"), scroller));
+                        QTRY_VERIFY_WITH_TIMEOUT(!sent.isEmpty(), TestTimeout::longMs());
+                        QCOMPARE(sent.last().first().toBool(), false);
+                        fence->removeAll();
+                        QSignalSpy loaded(fence, &GeoFenceController::loadComplete);
+                        QVERIFY(clickButtonScrolled(QStringLiteral("caacFenceRead"), scroller));
+                        QTRY_VERIFY_WITH_TIMEOUT(!loaded.isEmpty(), TestTimeout::longMs());
+                        QCOMPARE(fence->polygons()->count(), 1);
+                        auto* restoredPolygon = fence->polygons()->value<QGCFencePolygon*>(0);
+                        QVERIFY(restoredPolygon->inclusion());
+                        const auto restoredFence = restoredPolygon->coordinateList();
+                        QCOMPARE(restoredFence.size(), savedFence.size());
+                        for (int i = 0; i < savedFence.size(); ++i) {
+                            QVERIFY(QGCGeo::geodesicDistance(restoredFence[i], savedFence[i]) < 0.02);
+                        }
+                    });
+}
+
+void CaacPlanningInteractionUITest::_homeAltitudeAutoSave()
+{
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    auto* plan = findVisibleItem(_rootItem, QStringLiteral("mainView_plan"));
+    QVERIFY(plan);
+    auto* master = plan->property("_planMasterController").value<PlanMasterController*>();
+    QVERIFY(master);
+    auto* mission = master->missionController();
+    mission->setHomePosition(QGeoCoordinate(30, 120, 0));
+    auto* home = mission->visualItems()->value<MissionSettingsItem*>(0);
+    QVERIFY(home);
+    QTRY_VERIFY_WITH_TIMEOUT(home->dirty(), TestTimeout::mediumMs());
+    const QList<double> firstAltitude{2061};
+    QVERIFY(QMetaObject::invokeMethod(home, "_terrainDataReceived", Qt::DirectConnection, Q_ARG(bool, true),
+                                      Q_ARG(QList<double>, firstAltitude)));
+    QTRY_COMPARE_WITH_TIMEOUT(mission->plannedHomePosition().altitude(), 2061.0, TestTimeout::mediumMs());
+    QCOMPARE(home->plannedHomePositionAltitude()->rawValue().toDouble(), 2061.0);
+    mission->setHomePosition(QGeoCoordinate(30.0001, 120, 2061));
+    home->setDirty(false);
+    const QList<double> secondAltitude{2070};
+    QVERIFY(QMetaObject::invokeMethod(home, "_terrainDataReceived", Qt::DirectConnection, Q_ARG(bool, true),
+                                      Q_ARG(QList<double>, secondAltitude)));
+    QTRY_COMPARE_WITH_TIMEOUT(mission->plannedHomePosition().altitude(), 2070.0, TestTimeout::mediumMs());
+    QCOMPARE(home->plannedHomePositionAltitude()->rawValue().toDouble(), 2070.0);
+    QCOMPARE(mission->plannedHomePosition().latitude(), 30.0001);
+    QVERIFY(home->dirty());
+    QVERIFY(clickButton(QStringLiteral("caacGlobalSettingsButton")));
+    auto* altitude =
+        findVisibleItemScrolled(QStringLiteral("caacHomeAltitude"), QStringLiteral("caacGlobalSettingsScroller"));
+    QVERIFY(altitude);
+    QCOMPARE(altitude->property("text").toString().toDouble(), 2070.0);
+}
+
+void CaacPlanningInteractionUITest::_statisticsPanelInteraction()
+{
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    auto* clear = findVisibleItem(_rootItem, QStringLiteral("caacClearTrajectoryButton"));
+    auto* center = findVisibleItem(_rootItem, QStringLiteral("caacHomeCenterButton"));
+    auto* rail = findVisibleItem(_rootItem, QStringLiteral("caacMapEditTools"));
+    QVERIFY(clear && center && rail);
+    const auto expectedRailY = [&]() {
+        const double margin = rail->x();
+        const double desired =
+            clear->mapToItem(rail->parentItem(), QPointF(0, clear->width() / 2)).y() - rail->width() / 2;
+        return qMax(margin, qMin(desired, rail->parentItem()->height() - rail->height() - margin));
+    };
+    QTRY_VERIFY_WITH_TIMEOUT(std::abs(rail->y() - expectedRailY()) < 1, TestTimeout::mediumMs());
+    QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_planningStats")));
+    auto* statistics = findVisibleItem(_rootItem, QStringLiteral("planView_statistics"));
+    QVERIFY(statistics);
+    const auto original = statistics->mapToScene(QPointF());
+    auto point = statistics->mapToScene(QPointF(statistics->width() * 0.5, statistics->height() * 0.3)).toPoint();
+    QTest::mousePress(_window, Qt::LeftButton, Qt::NoModifier, point);
+    QTest::mouseMove(_window, point + QPoint(15, -15));
+    QTest::mouseMove(_window, point + QPoint(40, -80));
+    QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, point + QPoint(40, -80));
+    QTRY_VERIFY_WITH_TIMEOUT(statistics->mapToScene(QPointF()).x() > original.x() + 20 &&
+                                 statistics->mapToScene(QPointF()).y() < original.y() - 30,
+                             TestTimeout::mediumMs());
+    point = statistics->mapToScene(QPointF(statistics->width() * 0.5, statistics->height() * 0.3)).toPoint();
+    QTest::mouseClick(_window, Qt::RightButton, Qt::NoModifier, point);
+    QVERIFY(clickButton(QStringLiteral("caacStatisticsClose")));
+    QTRY_VERIFY_WITH_TIMEOUT(!statistics->isVisible(), TestTimeout::mediumMs());
+    QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_planningStats")));
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("planView_statistics")));
+}
+
+void CaacPlanningInteractionUITest::_waypointDragRemainsResponsive_data()
+{
+    QTest::addColumn<int>("waypointCount");
+    QTest::newRow("single") << 1;
+    QTest::newRow("multiple") << 16;
+    QTest::newRow("dense") << 96;
+}
+
+void CaacPlanningInteractionUITest::_waypointDragRemainsResponsive()
+{
+    QFETCH(int, waypointCount);
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    auto* plan = findVisibleItem(_rootItem, QStringLiteral("mainView_plan"));
+    auto* map = findVisibleItem(_rootItem, QStringLiteral("planView_map"));
+    auto* panel = findVisibleItem(_rootItem, QStringLiteral("caacRouteEditor"));
+    QVERIFY(plan && map && panel);
+    auto* master = plan->property("_planMasterController").value<PlanMasterController*>();
+    auto* editor = panel->property("routeController").value<CaacRouteEditorController*>();
+    QVERIFY(master && editor);
+    const QGeoCoordinate home(30, 120, 0);
+    master->missionController()->setHomePosition(home);
+    for (int i = 0; i < waypointCount; ++i) {
+        QVERIFY(editor->addWaypoint(QGCGeo::geodesicDestination(home, 360.0 * i / waypointCount, 200)));
+    }
+    auto* waypoint = master->missionController()->visualItems()->value<SimpleMissionItem*>(1);
+    QVERIFY(waypoint);
+    const auto original = master->saveToJson();
+    const double altitude = waypoint->coordinate().altitude();
+    editor->clearHistory();
+    map->setProperty("center", QVariant::fromValue(waypoint->coordinate()));
+    map->setProperty("zoomLevel", 17);
+    auto* dragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_1"));
+    QVERIFY(dragger);
+    const auto center = map->mapToScene(QPointF(map->width() / 2, map->height() / 2));
+    QTRY_VERIFY_WITH_TIMEOUT(
+        QLineF(dragger->mapToScene(QPointF(dragger->width() / 2, dragger->height() / 2)), center).length() < 1,
+        TestTimeout::mediumMs());
+    QSignalSpy frames(_window, &QQuickWindow::frameSwapped);
+    for (int repetition = 0; repetition < 4; ++repetition) {
+        const auto start = dragger->mapToScene(QPointF(dragger->width() / 2, dragger->height() / 2)).toPoint();
+        QTest::mousePress(_window, Qt::LeftButton, Qt::NoModifier, start);
+        for (int step = 1; step <= 16; ++step) {
+            QTest::mouseMove(_window, start + QPoint(step % 5 - 2, -step * 2));
+            const auto rendered = frames.count();
+            _window->update();
+            QTRY_VERIFY_WITH_TIMEOUT(frames.count() > rendered, TestTimeout::mediumMs());
+        }
+        const auto stationaryCoordinate = waypoint->coordinate();
+        for (int frame = 0; frame < 8; ++frame) {
+            const auto rendered = frames.count();
+            _window->update();
+            QTRY_VERIFY_WITH_TIMEOUT(frames.count() > rendered, TestTimeout::mediumMs());
+        }
+        QCOMPARE(waypoint->coordinate(), stationaryCoordinate);
+        QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, start + QPoint(0, -32));
+        QVERIFY(master->saveToJson() != original);
+        QCOMPARE(master->missionController()->plannedHomePosition(), home);
+        QCOMPARE(waypoint->coordinate().altitude(), altitude);
+        QCOMPARE(master->missionController()->visualItems()->count(), waypointCount + 1);
+        QVERIFY(editor->canUndo());
+        const QPointer<QQuickItem> previousDragger(dragger);
+        QVERIFY(editor->undo());
+        QCOMPARE(master->saveToJson(), original);
+        QVERIFY(!editor->canUndo());
+        QTRY_VERIFY_WITH_TIMEOUT(previousDragger.isNull(), TestTimeout::mediumMs());
+        waypoint = master->missionController()->visualItems()->value<SimpleMissionItem*>(1);
+        dragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_1"));
+        QVERIFY(waypoint && dragger);
+        QTRY_VERIFY_WITH_TIMEOUT(
+            QLineF(dragger->mapToScene(QPointF(dragger->width() / 2, dragger->height() / 2)), center).length() < 1,
+            TestTimeout::mediumMs());
+    }
+}
 
 void CaacPlanningInteractionUITest::_newSettingsPagesAndAccess()
 {
@@ -133,20 +355,56 @@ void CaacPlanningInteractionUITest::_newSettingsPagesAndAccess()
             QCOMPARE(classification->property("fact").value<Fact*>(), settings->classChina());
             QCOMPARE(classification->property("currentText").toString(), settings->classChina()->enumStringValue());
             QVERIFY(capture(QStringLiteral("caacRIDClassification")));
+            QVERIFY(clickButtonScrolled(QStringLiteral("caacRIDEnterUASCode"), QStringLiteral("caacRIDScroller")));
+            QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacUOMSettings")));
+            QVERIFY(verifyChecked(QStringLiteral("caacUOMRegistrationTab"), true,
+                                  QStringLiteral("RID to UOM registration")));
+            auto* registrationCode =
+                findVisibleItemScrolled(QStringLiteral("caacUOMUASCode"), QStringLiteral("caacUOMScroller"));
+            QVERIFY(registrationCode);
+            QCOMPARE(registrationCode->property("fact").value<Fact*>(), settings->basicID());
         }
     }
-    auto* uas = findVisibleItem(_rootItem, QStringLiteral("caacUOMUASCode"));
+    auto* uas = findVisibleItemScrolled(QStringLiteral("caacUOMUASCode"), QStringLiteral("caacUOMScroller"));
     QVERIFY(uas);
     QCOMPARE(uas->property("fact").value<Fact*>(), settings->basicID());
+    auto* uomPage = findVisibleItem(_rootItem, QStringLiteral("caacUOMSettings"));
+    QVERIFY(uomPage && !uomPage->property("registrationNoticeExpanded").toBool());
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacUOMRegistrationNoticeToggle"), QStringLiteral("caacUOMScroller")));
+    QVERIFY(uomPage->property("registrationNoticeExpanded").toBool());
+    QVERIFY(capture(QStringLiteral("caacUOMRegistrationNoticeExpanded")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacUOMRegistrationNoticeToggle"), QStringLiteral("caacUOMScroller")));
+    QVERIFY(!uomPage->property("registrationNoticeExpanded").toBool());
+    QVERIFY(capture(QStringLiteral("caacUOMRegistrationNoticePreview")));
     QVERIFY(clickButton(QStringLiteral("caacUOMSerialTab")));
     QVERIFY(capture(QStringLiteral("caacUOMSerial")));
     QVERIFY(clickButton(QStringLiteral("caacUOMTelemetryTab")));
     QVERIFY(findVisibleItemScrolled(QStringLiteral("caacUOMTelemetry_mode"), QStringLiteral("caacUOMScroller")));
     QVERIFY(capture(QStringLiteral("caacUOMTelemetry")));
+    auto* drawer = findItem(_rootItem, QStringLiteral("mainView_toolDrawer"));
+    QVERIFY(drawer && !drawer->isVisible());
+    QVERIFY(
+        clickButtonScrolled(QStringLiteral("toolbar_viewSettings"), QStringLiteral("caacSettingsNavigationScroller")));
+    auto* applicationSettings = findVisibleItem(_rootItem, QStringLiteral("appSettings_root"));
+    QVERIFY(applicationSettings && applicationSettings->property("embedded").toBool());
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("settings_rightPanel"), 0));
+    QVERIFY(plan->isVisible() && !drawer->isVisible());
+    QVERIFY(capture(QStringLiteral("caacApplicationSettingsMenu")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("settingsButton_General"), QStringLiteral("settings_buttonList")));
+    auto* generalSettings = findVisibleItem(_rootItem, QStringLiteral("settingsPage_General"));
+    QVERIFY(generalSettings && generalSettings->property("fillAvailableWidth").toBool());
+    QVERIFY(plan->isVisible() && !drawer->isVisible());
+    QVERIFY(capture(QStringLiteral("caacApplicationSettingsInline")));
+    QVERIFY(clickButton(QStringLiteral("settings_backToMenu")));
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("settings_rightPanel"), 0));
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("settingsButton_General")));
+    QVERIFY(
+        clickButtonScrolled(QStringLiteral("toolbar_preferences"), QStringLiteral("caacSettingsNavigationScroller")));
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacPreferences")));
+    QVERIFY(capture(QStringLiteral("caacPreferencesNeutral")));
     QQmlExpression close(qmlContext(plan), plan, QStringLiteral("mainWindow.closeIndicatorDrawer()"));
     close.evaluate();
     QVERIFY(!close.hasError());
-    auto* drawer = findItem(_rootItem, QStringLiteral("mainView_toolDrawer"));
     QVERIFY(drawer && !drawer->isVisible());
     for (const auto* function : {"showVehicleConfig", "showAnalyzeTool"}) {
         QQmlExpression open(qmlContext(plan), plan, QStringLiteral("mainWindow.%1()").arg(QLatin1String(function)));
@@ -185,8 +443,19 @@ void CaacPlanningInteractionUITest::_newSettingsPagesAndAccess()
             QVERIFY(clickButton(QStringLiteral("vehicleConfig_backToMenu")));
             QVERIFY(findVisibleItem(_rootItem, QStringLiteral("vehicleConfig_summary")));
         } else {
-            QTRY_VERIFY_WITH_TIMEOUT(drawer->isVisible(), TestTimeout::mediumMs());
-            QVERIFY(drawer->property("toolSource").toUrl().toString().contains(QLatin1String("AnalyzeView.qml")));
+            auto* analysis = findVisibleItem(_rootItem, QStringLiteral("analyzeView_root"));
+            QVERIFY(analysis && analysis->property("embedded").toBool());
+            QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacSettingsMenu")));
+            QVERIFY(plan->isVisible() && !drawer->isVisible());
+            QVERIFY(capture(QStringLiteral("caacAnalyzeMenu")));
+            const auto onboardLogs =
+                QStringLiteral("analyzeButton_") + QCoreApplication::translate("QGCCorePlugin", "Onboard Logs");
+            QVERIFY(clickButtonScrolled(onboardLogs, QStringLiteral("analyze_buttonList")));
+            QVERIFY(findVisibleItem(_rootItem, QStringLiteral("analyze_panel")));
+            QVERIFY(plan->isVisible() && !drawer->isVisible());
+            QVERIFY(capture(QStringLiteral("caacAnalyzeInline")));
+            QVERIFY(clickButton(QStringLiteral("analyze_backToMenu")));
+            QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("analyze_panel"), 0));
         }
         QQmlExpression returnToPlan(qmlContext(plan), plan, QStringLiteral("mainWindow.showPlanView()"));
         returnToPlan.evaluate();
@@ -366,10 +635,22 @@ void CaacPlanningInteractionUITest::_calculatorUI()
     QTRY_VERIFY_WITH_TIMEOUT(connectionPage->property("checked").toBool(), TestTimeout::mediumMs());
     auto* connectionContents = findVisibleItem(_rootItem, QStringLiteral("caacSettingsSubmenu"));
     QVERIFY(connectionContents);
-    QTRY_VERIFY_WITH_TIMEOUT(
-        connectionContents->property("source").toUrl().toString().contains(QStringLiteral("CommLinksSettings.qml")),
-        TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(connectionContents->property("source").toUrl().toString().contains(
+                                 QStringLiteral("CaacConnectionSettings.qml")),
+                             TestTimeout::mediumMs());
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacConnectionSettings")));
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacConnectionSerialPort")));
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacConnectionBaudRate")));
+    QVERIFY(!findItem(_rootItem, QStringLiteral("toolbar_viewFlightPlan")));
+    const auto expandedWidth = findVisibleItem(_rootItem, QStringLiteral("caacSettingsMenu"))->width();
+    QVERIFY(clickButton(QStringLiteral("toolbar_connections")));
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacConnectionSerialPort"), 0));
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacSettingsMenu"))->width() < expandedWidth);
+    QVERIFY(clickButton(QStringLiteral("toolbar_connections")));
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacConnectionSerialPort")));
+    QVERIFY(clickButton(QStringLiteral("caacMoreConnectionSettings")));
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("settingsPage_CommLinks")));
+    QVERIFY(clickButton(QStringLiteral("caacConnectionBack")));
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("mainView_plan")));
     QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("settings_rightPanel"), 0));
     QVERIFY(clickButtonScrolled(QStringLiteral("toolbar_rtk"), QStringLiteral("caacSettingsNavigationScroller")));
@@ -543,7 +824,7 @@ void CaacPlanningInteractionUITest::_dragSnappingAndRelations()
     if (QTest::currentTestFailed()) {
         return;
     }
-    QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewFlightPlan")));
+    QVERIFY(QMetaObject::invokeMethod(_window, "showPlanView"));
     auto* plan = findVisibleItem(_rootItem, QStringLiteral("mainView_plan"));
     auto* map = findVisibleItem(_rootItem, QStringLiteral("planView_map"));
     auto* panel = findVisibleItem(_rootItem, QStringLiteral("caacRouteEditor"));
@@ -739,7 +1020,7 @@ void CaacPlanningInteractionUITest::_homeRelativeEditing()
     if (QTest::currentTestFailed()) {
         return;
     }
-    QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewFlightPlan")));
+    QVERIFY(QMetaObject::invokeMethod(_window, "showPlanView"));
     auto* plan = findVisibleItem(_rootItem, QStringLiteral("mainView_plan"));
     auto* map = findVisibleItem(_rootItem, QStringLiteral("planView_map"));
     auto* panel = findVisibleItem(_rootItem, QStringLiteral("caacRouteEditor"));
@@ -803,7 +1084,7 @@ void CaacPlanningInteractionUITest::_homeRelativeEditing()
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacContextReverse")));
     QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacContextDeleteWaypoint"), 0));
     QTest::keyClick(_window, Qt::Key_Escape);
-    QTest::mouseClick(_window, Qt::LeftButton, Qt::NoModifier, position().toPoint());
+    QTest::mouseDClick(_window, Qt::LeftButton, Qt::NoModifier, position().toPoint());
     auto* combo = findVisibleItem(_rootItem, QStringLiteral("caacHomeRelativeReference"));
     auto* bearing = findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickBearing"));
     auto* distance = findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickDistance"));
@@ -852,7 +1133,7 @@ void CaacPlanningInteractionUITest::_homeRelativeEditing()
                 .length() < 1,
         TestTimeout::mediumMs());
     QVERIFY(!_window->grabWindow().isNull());
-    QTest::mouseClick(
+    QTest::mouseDClick(
         _window, Qt::LeftButton, Qt::NoModifier,
         restoredHome->mapToScene(QPointF(restoredHome->width() / 2, restoredHome->height() / 2)).toPoint());
     bearing = findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickBearing"));
@@ -898,7 +1179,7 @@ void CaacPlanningInteractionUITest::_liveRoutePreview()
     if (QTest::currentTestFailed()) {
         return;
     }
-    QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewFlightPlan")));
+    QVERIFY(QMetaObject::invokeMethod(_window, "showPlanView"));
     auto* plan = findVisibleItem(_rootItem, QStringLiteral("mainView_plan"));
     auto* panel = findVisibleItem(_rootItem, QStringLiteral("caacRouteEditor"));
     QVERIFY(plan && panel);
@@ -989,7 +1270,7 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     if (QTest::currentTestFailed()) {
         return;
     }
-    QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewFlightPlan")));
+    QVERIFY(QMetaObject::invokeMethod(_window, "showPlanView"));
     auto* plan = findVisibleItem(_rootItem, QStringLiteral("mainView_plan"));
     auto* map = findVisibleItem(_rootItem, QStringLiteral("planView_map"));
     auto* panel = findVisibleItem(_rootItem, QStringLiteral("caacRouteEditor"));
@@ -1014,7 +1295,18 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     QVERIFY(QGCGeo::geodesicDistance(firstLeg->coordinate1(), home) < 0.01);
     QVERIFY(QGCGeo::geodesicDistance(firstLeg->coordinate2(), a) < 0.01);
     QVERIFY(firstLeg->setProperty("terrainCollision", true));
-    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacTerrainClearanceWarning")));
+    auto* clearanceWarning = findVisibleItem(_rootItem, QStringLiteral("caacTerrainClearanceWarning"));
+    QVERIFY(clearanceWarning);
+    const auto originalWarningPosition = clearanceWarning->mapToScene(QPointF());
+    const auto warningPoint =
+        clearanceWarning->mapToScene(QPointF(clearanceWarning->width() / 2, clearanceWarning->height() / 2)).toPoint();
+    QTest::mousePress(_window, Qt::LeftButton, Qt::NoModifier, warningPoint);
+    QTest::mouseMove(_window, warningPoint + QPoint(15, 15));
+    QTest::mouseMove(_window, warningPoint + QPoint(70, 60));
+    QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, warningPoint + QPoint(70, 60));
+    QTRY_VERIFY_WITH_TIMEOUT(clearanceWarning->mapToScene(QPointF()).x() > originalWarningPosition.x() + 30 &&
+                                 clearanceWarning->mapToScene(QPointF()).y() > originalWarningPosition.y() + 30,
+                             TestTimeout::mediumMs());
     QVERIFY(firstLeg->setProperty("terrainCollision", false));
     QTRY_VERIFY_WITH_TIMEOUT(!findVisibleItem(_rootItem, QStringLiteral("caacTerrainClearanceWarning"), 0),
                              TestTimeout::mediumMs());
@@ -1107,6 +1399,8 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     QVERIFY(waypointGrabber);
     QCOMPARE(waypointGrabber->parentItem()->property("gestureTarget").value<QObject*>(), dragger);
     QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, markerPosition().toPoint());
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickBearing"), 0));
+    QTest::mouseDClick(_window, Qt::LeftButton, Qt::NoModifier, markerPosition().toPoint());
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickBearing")));
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickDistance")));
     auto* popup = findVisibleItem(_rootItem, QStringLiteral("caacWaypointPopupContent"));

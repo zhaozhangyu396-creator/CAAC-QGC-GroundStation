@@ -10,19 +10,22 @@ AbstractButton   {
     checkable:  true
     padding:    0
 
-    property bool _showBorder:      qgcPal.globalTheme === QGCPalette.Light
+    readonly property bool settingsMenuStyle: ScreenTools.isSettingsMenuItem(control)
+    property bool _showBorder:      settingsMenuStyle || qgcPal.globalTheme === QGCPalette.Light
     property int  _sliderInset:     2
     property bool _showHighlight:   enabled && (pressed || checked)
 
     QGCPalette { id: qgcPal; colorGroupEnabled: control.enabled }
 
     contentItem: Item {
-        implicitWidth:  (label.visible ? label.contentWidth + ScreenTools.defaultFontPixelWidth : 0) + indicator.width
-        implicitHeight: label.contentHeight
+        implicitWidth:  (label.visible ? label.implicitWidth + ScreenTools.defaultFontPixelWidth : 0) + indicator.width
+        implicitHeight: Math.max(label.contentHeight, indicator.height)
 
         QGCLabel {
             id:             label
             anchors.left:   parent.left
+            width: control.settingsMenuStyle ? Math.max(0, parent.width - indicator.width - ScreenTools.defaultFontPixelWidth) : implicitWidth
+            wrapMode: control.settingsMenuStyle ? Text.WordWrap : Text.NoWrap
             text:           visible ? control.text : "X"
             visible:        control.text !== ""
         }
@@ -31,16 +34,17 @@ AbstractButton   {
             id:                     indicator
             anchors.right:          parent.right
             anchors.verticalCenter: parent.verticalCenter
-            height:                 ScreenTools.defaultFontPixelHeight
+            height:                 ScreenTools.defaultFontPixelHeight * (control.settingsMenuStyle ? 1.25 : 1)
             width:                  height * 2
             radius:                 height / 2
-            color:                  checked ? qgcPal.buttonHighlight : qgcPal.button
+            color:                  control.settingsMenuStyle ? (checked ? qgcPal.window : qgcPal.windowShade)
+                                        : checked ? qgcPal.buttonHighlight : qgcPal.button
             border.width:           _showBorder ? 1 : 0
             border.color:           qgcPal.buttonBorder
 
             Rectangle {
                 anchors.fill:   parent
-                color:          qgcPal.buttonHighlight
+                color:          control.settingsMenuStyle ? qgcPal.window : qgcPal.buttonHighlight
                 opacity:        _showHighlight ? 1 : control.enabled && control.hovered ? .2 : 0
                 radius:         parent.radius
             }

@@ -17,9 +17,11 @@ Item {
     readonly property real _toolsMargin: ScreenTools.defaultFontPixelWidth * 0.75
     readonly property bool _emergency: QGroundControl.corePlugin.simulation.emergencyMode
     readonly property real telemetryHeight: footer.height + root._toolsMargin * 2
+    readonly property real clearTrajectoryCenterY: customLayer.item ? customLayer.item.clearTrajectoryCenterY : root._toolsMargin
     QGCPalette { id: qgcPal; colorGroupEnabled: true }
 
     Loader {
+        id: customLayer
         anchors.fill: parent
         source: "qrc:/Custom/qml/QGroundControl/FlyView/FlyViewCustomLayer.qml"
         onLoaded: {

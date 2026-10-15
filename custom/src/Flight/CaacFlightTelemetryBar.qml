@@ -13,6 +13,8 @@ Rectangle {
     required property var vehicle
     required property var missionController
     readonly property real margin: ScreenTools.defaultFontPixelWidth
+    readonly property real telemetryPointSize: ScreenTools.smallFontPointSize * 1.1
+        * Math.max(0.7, Math.min(1, width / (ScreenTools.defaultFontPixelWidth * 85)))
     readonly property var battery: vehicle && vehicle.batteries.count ? vehicle.batteries.get(0) : null
     readonly property real headingAngle: vehicle && isFinite(Number(vehicle.heading.rawValue))
         ? (Number(vehicle.heading.rawValue) % 360 + 360) % 360 : NaN
@@ -63,7 +65,10 @@ Rectangle {
                         Layout.alignment: Qt.AlignVCenter
                         horizontalAlignment: Text.AlignHCenter
                         color: "white"
-                        font.pointSize: ScreenTools.smallFontPointSize * Math.max(0.7, Math.min(1, root.width / (ScreenTools.defaultFontPixelWidth * 85)))
+                        font.pointSize: root.telemetryPointSize
+                        font.weight: Font.DemiBold
+                        fontSizeMode: Text.HorizontalFit
+                        minimumPointSize: ScreenTools.smallFontPointSize * 0.7
                         text: cell.modelData.key === "Battery" ? (root.battery
                             ? root.formatted(root.battery.voltage) + " · " + root.formatted(root.battery.percentRemaining) : "— · —")
                             : cell.modelData.key === "TargetDistance" ? (root.targetMetrics.distance !== undefined
@@ -76,7 +81,8 @@ Rectangle {
                         horizontalAlignment: Text.AlignHCenter
                         color: "#c8c8c8"
                         text: cell.modelData.label
-                        font.pointSize: ScreenTools.smallFontPointSize * Math.max(0.7, Math.min(1, root.width / (ScreenTools.defaultFontPixelWidth * 85)))
+                        font.pointSize: root.telemetryPointSize
+                        font.weight: Font.DemiBold
                     }
                 }
                 Canvas {
@@ -126,7 +132,8 @@ Rectangle {
                             anchors.centerIn: parent
                             text: isFinite(root.headingAngle) ? root.headingAngle.toFixed(1) + "°" : "—"
                             color: "white"
-                            font.pointSize: ScreenTools.smallFontPointSize * 0.85
+                            font.pointSize: ScreenTools.smallFontPointSize * 0.935
+                            font.weight: Font.DemiBold
                         }
                     }
                 }

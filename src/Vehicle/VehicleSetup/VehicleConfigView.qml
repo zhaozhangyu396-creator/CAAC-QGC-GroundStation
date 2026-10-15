@@ -12,6 +12,7 @@ Rectangle {
     z:      QGroundControl.zOrderTopMost
     property bool embedded: false
     property bool _embeddedPageOpened: false
+    readonly property real navigationWidth: Math.max(ScreenTools.defaultFontPixelWidth * 22, buttonColumn.implicitWidth) + _horizontalMargin * 2
     property string _offlinePageTitle: ""
     readonly property var _offlineFunctions: [
         ["PX4TuningComponent", "PID Tuning", "/qmlimages/TuningComponentIcon.png"],
@@ -576,7 +577,7 @@ Rectangle {
                                     if (typeof panelLoader.item.sectionVisible !== "function") return true
                                     return panelLoader.item.sectionVisible(modelData)
                                 }
-                                property color textColor: vehicleConfigView._caacStyle && (sectionChecked || pressed) ? qgcPal.colorGreen
+                                property color textColor: vehicleConfigView._caacStyle && (sectionChecked || pressed) ? qgcPal.text
                                     : sectionChecked || pressed ? qgcPal.buttonHighlightText : qgcPal.buttonText
                                 visible: sectionMatchesSearch && sectionContentVisible
 
@@ -716,7 +717,9 @@ Rectangle {
         Rectangle {
             width: _defaultTextWidth * 0.35
             height: _defaultTextHeight * 1.2
-            color: qgcPal.colorGreen
+            color: qgcPal.window
+            border.color: qgcPal.windowShadeLight
+            border.width: 1
             radius: width / 2
         }
         QGCLabel {
