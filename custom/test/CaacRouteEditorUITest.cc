@@ -583,7 +583,8 @@ void CaacRouteEditorUITest::_testMouseEditing()
     const double targetAltitude = target->altitude()->rawValue().toDouble();
     const auto targetFrame = target->altitudeFrame();
     const int targetCommand = target->command();
-    QVERIFY(clickButton(QStringLiteral("caacEditWaypoint_%1").arg(editor->currentItem()->sequenceNumber())));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacEditWaypoint_%1").arg(editor->currentItem()->sequenceNumber()),
+                                QStringLiteral("caacWaypointList")));
     QVERIFY(waitForDialog(QCoreApplication::translate("CaacWaypointDialog", "Waypoint properties")));
     auto* positionMode = findVisibleItem(_rootItem, QStringLiteral("caacWaypointPositionMode"));
     QVERIFY(positionMode && positionMode->isEnabled());
@@ -615,7 +616,8 @@ void CaacRouteEditorUITest::_testMouseEditing()
     step("coordinate format preserves precision");
     QVERIFY(editor->selectWaypoint(mission->visualItems()->value<SimpleMissionItem*>(1)));
     const auto beforeDms = master->saveToJson();
-    QVERIFY(clickButton(QStringLiteral("caacEditWaypoint_%1").arg(editor->currentItem()->sequenceNumber())));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacEditWaypoint_%1").arg(editor->currentItem()->sequenceNumber()),
+                                QStringLiteral("caacWaypointList")));
     QVERIFY(waitForDialog(QCoreApplication::translate("CaacWaypointDialog", "Waypoint properties")));
     QVERIFY(clickButtonScrolled(QStringLiteral("caacWaypointLatitudeFormatToggle"),
                                 QStringLiteral("popupDialog_contentFlickable")));
@@ -638,7 +640,8 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QCOMPARE(master->saveToJson(), beforeDms);
 
     step("edit DMS and advanced waypoint parameters atomically");
-    QVERIFY(clickButton(QStringLiteral("caacEditWaypoint_%1").arg(editor->currentItem()->sequenceNumber())));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacEditWaypoint_%1").arg(editor->currentItem()->sequenceNumber()),
+                                QStringLiteral("caacWaypointList")));
     QVERIFY(waitForDialog(QCoreApplication::translate("CaacWaypointDialog", "Waypoint properties")));
     QVERIFY(clickButtonScrolled(QStringLiteral("caacWaypointLatitudeFormatToggle"),
                                 QStringLiteral("popupDialog_contentFlickable")));

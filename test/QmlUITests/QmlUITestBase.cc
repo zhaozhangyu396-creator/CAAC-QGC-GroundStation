@@ -639,13 +639,16 @@ bool QmlUITestBase::scrollIntoView(QQuickItem* item, const QString& flickableObj
                 itemInFlickable.x() + currentContentX + guardedItem->width() / 2.0 - guardedFlickable->width() / 2.0;
             const double maxContentX =
                 guardedFlickable->property("contentWidth").toDouble() - guardedFlickable->width();
-            guardedFlickable->setProperty("contentX", qBound(0.0, targetX, qMax(0.0, maxContentX)));
+            // ListView can shift its origin after model edits, including undo/redo resets.
+            const double originX = guardedFlickable->property("originX").toDouble();
+            guardedFlickable->setProperty("contentX", qBound(originX, targetX, originX + qMax(0.0, maxContentX)));
             const double currentContentY = guardedFlickable->property("contentY").toDouble();
             const double absoluteY = itemInFlickable.y() + currentContentY;
             const double targetY = absoluteY + guardedItem->height() / 2.0 - guardedFlickable->height() / 2.0;
             const double maxContentY =
                 guardedFlickable->property("contentHeight").toDouble() - guardedFlickable->height();
-            guardedFlickable->setProperty("contentY", qBound(0.0, targetY, qMax(0.0, maxContentY)));
+            const double originY = guardedFlickable->property("originY").toDouble();
+            guardedFlickable->setProperty("contentY", qBound(originY, targetY, originY + qMax(0.0, maxContentY)));
             return false;
         },
         TestTimeout::shortMs(), QStringLiteral("scrollIntoView settled"));
@@ -653,9 +656,21 @@ bool QmlUITestBase::scrollIntoView(QQuickItem* item, const QString& flickableObj
         // Record a test failure (as the pre-refactor QTRY_VERIFY_WITH_TIMEOUT did)
         // rather than letting a click on a still-clipped item surface as a
         // harder-to-diagnose failure later in the test.
+        const auto value = [&guardedFlickable](const char* name) {
+            return guardedFlickable ? guardedFlickable->property(name).toDouble() : qQNaN();
+        };
         QTest::qFail(
-            qPrintable(
-                QStringLiteral("scrollIntoView: item never settled inside flickable %1").arg(flickableObjectName)),
+            qPrintable(QStringLiteral("scrollIntoView: item never settled inside flickable %1; item center %2,%3; "
+                                      "viewport %4x%5; content %6,%7; origin %8,%9")
+                           .arg(flickableObjectName)
+                           .arg(lastCenter.x())
+                           .arg(lastCenter.y())
+                           .arg(value("width"))
+                           .arg(value("height"))
+                           .arg(value("contentX"))
+                           .arg(value("contentY"))
+                           .arg(value("originX"))
+                           .arg(value("originY"))),
             __FILE__, __LINE__);
         return false;
     }
