@@ -20,7 +20,7 @@ Item {
     property var missionControllerOverride: null
     property var customOccluders: tools.visible ? [Qt.rect(tools.x, tools.y, tools.width, tools.height)] : []
     readonly property real clearTrajectoryCenterY: tools.y + toolbarScroller.y + toolbar.y
-        + clearTrajectoryButton.y + clearTrajectoryButton.width / 2 - toolbarScroller.contentY
+        + clearTrajectoryButton.y + clearTrajectoryButton.iconSize / 2 - toolbarScroller.contentY
 
     readonly property bool _simulationEmergency: _corePlugin.simulation.emergencyMode
     property Component _emergencyDialog: Component { CaacSimulationEmergencyDialog { } }
@@ -54,16 +54,18 @@ Item {
     component SquareTool: QGCButton {
         id: button
         property string toolIcon: "data"
+        readonly property real iconSize: ScreenTools.defaultFontPixelHeight * 2.5
         Layout.minimumWidth: Layout.preferredWidth
         Layout.maximumWidth: Layout.preferredWidth
-        Layout.preferredWidth: ScreenTools.defaultFontPixelHeight * 2.5
-        Layout.preferredHeight: Layout.preferredWidth + ScreenTools.defaultFontPixelHeight
+        Layout.preferredWidth: Math.max(iconSize, toolLabel.implicitWidth)
+        Layout.preferredHeight: iconSize + ScreenTools.defaultFontPixelHeight
         Accessible.name: text
         ToolTip.visible: hovered
         ToolTip.text: text
         background: Rectangle {
             anchors.top: parent.top
-            width: button.width
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: button.iconSize
             height: width
             radius: ScreenTools.defaultFontPixelWidth * 0.7
             color: button.checked ? "#245b46" : "#d9232629"
@@ -77,7 +79,8 @@ Item {
         contentItem: Item {
           Canvas {
             anchors.top: parent.top
-            width: button.width
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: button.iconSize
             height: width
             property color iconColor: "white"
             onIconColorChanged: requestPaint()
@@ -152,16 +155,15 @@ Item {
           }
         }
         QGCLabel {
+            id: toolLabel
             anchors.bottom: parent.bottom
             width: parent.width
             text: button.text
-            font.pointSize: ScreenTools.smallFontPointSize
+            font.pointSize: ScreenTools.defaultFontPointSize
             horizontalAlignment: Text.AlignHCenter
             color: "white"
             style: Text.Outline
             styleColor: "#222222"
-            fontSizeMode: Text.Fit
-            minimumPointSize: ScreenTools.smallFontPointSize * 0.7
         }
     }
 
