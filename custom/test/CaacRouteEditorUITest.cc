@@ -378,7 +378,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QTest::mouseDClick(_window, Qt::LeftButton, Qt::NoModifier, marker);
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickBearing")));
     QTest::keyClick(_window, Qt::Key_Escape);
-    QVERIFY(clickButton(QStringLiteral("caacEditWaypoint_1")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacEditWaypoint_1"), QStringLiteral("caacWaypointList")));
     QVERIFY(waitForDialog(QCoreApplication::translate("CaacWaypointDialog", "Waypoint properties"),
                           TestTimeout::mediumMs()));
     auto* latitude = findVisibleItem(_rootItem, QStringLiteral("caacWaypointLatitude"));
