@@ -1207,7 +1207,8 @@ Column {
             const vehicle = root._managerVehicle
             if (item && (item.command === 16 || item.command === 21) && root._dragStartCoordinate.isValid
                 && root._dragStartCoordinate.distanceTo(item.coordinate) > 0.01 && vehicle && vehicle.armed
-                && vehicle.flightMode === vehicle.missionFlightMode && !missionUpdate.busy) {
+                && (vehicle.flightMode === vehicle.missionFlightMode || vehicle.flightMode === vehicle.pauseFlightMode)
+                && !missionUpdate.busy) {
                 updateWaypointsFactory.open()
             }
         }

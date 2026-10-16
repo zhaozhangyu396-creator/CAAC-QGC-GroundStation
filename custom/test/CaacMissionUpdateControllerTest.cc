@@ -24,10 +24,13 @@ void CaacMissionUpdateControllerTest::_update_data()
     QTest::addColumn<bool>("transferFailure");
     QTest::addColumn<bool>("structuralChange");
     QTest::addColumn<bool>("landingPoint");
-    QTest::newRow("position-update") << false << false << false;
-    QTest::newRow("landing-position-update") << false << false << true;
-    QTest::newRow("transfer-failure-stays-paused") << true << false << false;
-    QTest::newRow("structural-change-stays-paused") << false << true << false;
+    QTest::addColumn<bool>("initiallyPaused");
+    QTest::newRow("position-update") << false << false << false << false;
+    QTest::newRow("landing-position-update") << false << false << true << false;
+    QTest::newRow("paused-position-update-resumes") << false << false << false << true;
+    QTest::newRow("paused-landing-position-update-resumes") << false << false << true << true;
+    QTest::newRow("transfer-failure-stays-paused") << true << false << false << false;
+    QTest::newRow("structural-change-stays-paused") << false << true << false << false;
 }
 
 void CaacMissionUpdateControllerTest::_update()
@@ -35,6 +38,7 @@ void CaacMissionUpdateControllerTest::_update()
     QFETCH(bool, transferFailure);
     QFETCH(bool, structuralChange);
     QFETCH(bool, landingPoint);
+    QFETCH(bool, initiallyPaused);
     QVERIFY(vehicle());
     QVERIFY(waitForInitialConnect());
     QTRY_VERIFY_WITH_TIMEOUT(vehicle()->homePosition().isValid(), TestTimeout::mediumMs());
@@ -60,6 +64,11 @@ void CaacMissionUpdateControllerTest::_update()
     QTRY_VERIFY_WITH_TIMEOUT(vehicle()->armed(), TestTimeout::mediumMs());
     vehicle()->setFlightMode(vehicle()->missionFlightMode());
     QTRY_COMPARE_WITH_TIMEOUT(vehicle()->flightMode(), vehicle()->missionFlightMode(), TestTimeout::mediumMs());
+    if (initiallyPaused) {
+        vehicle()->pauseVehicle();
+        QTRY_COMPARE_WITH_TIMEOUT(vehicle()->flightMode(), vehicle()->firmwarePlugin()->pauseFlightMode(),
+                                  TestTimeout::mediumMs());
+    }
     const auto reportTarget = [&](int sequence) {
         mavlink_message_t report{};
         mavlink_msg_mission_current_pack(vehicle()->id(), vehicle()->defaultComponentId(), &report, sequence,

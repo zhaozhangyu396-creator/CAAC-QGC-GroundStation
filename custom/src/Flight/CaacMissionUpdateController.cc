@@ -50,9 +50,10 @@ bool CaacMissionUpdateController::update(PlanMasterController* plan, CaacSimulat
     auto* vehicle = plan ? plan->managerVehicle() : nullptr;
     if (!vehicle || vehicle != MultiVehicleManager::instance()->activeVehicle() || plan->offline() ||
         !vehicle->isInitialConnectComplete() || !vehicle->armed() ||
-        vehicle->flightMode() != vehicle->missionFlightMode() || !vehicle->supports()->pauseVehicle() ||
-        vehicle->firmwarePlugin()->pauseFlightMode().isEmpty() || plan->syncInProgress() ||
-        plan->property("caacRotationPreviewActive").toBool() ||
+        (vehicle->flightMode() != vehicle->missionFlightMode() &&
+         vehicle->flightMode() != vehicle->firmwarePlugin()->pauseFlightMode()) ||
+        !vehicle->supports()->pauseVehicle() || vehicle->firmwarePlugin()->pauseFlightMode().isEmpty() ||
+        plan->syncInProgress() || plan->property("caacRotationPreviewActive").toBool() ||
         plan->missionController()->readyForSaveState() != VisualMissionItem::ReadyForSave) {
         emit finished(false, tr("The mission or connection changed. No waypoint update was sent."));
         return false;

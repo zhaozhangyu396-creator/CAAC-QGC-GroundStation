@@ -105,6 +105,25 @@ endif()
 
 add_qgc_test(CaacSimulationEngineTest LABELS Unit MissionManager)
 add_qgc_test(
+    CaacMissionUpdateUITest
+    LABELS
+    Integration
+    Vehicle
+    NoSanitizer
+    TIMEOUT
+    120
+    ENV_MODIFICATION
+    "QGC_TEST_LOCALE=set:zh_CN"
+    "QGC_TEST_REALTIME_PLAN_TIMEOUTS=set:1"
+)
+if(WIN32)
+    set_property(
+        TEST CaacMissionUpdateUITest
+        APPEND
+        PROPERTY ENVIRONMENT_MODIFICATION "QT_QPA_PLATFORM=set:windows"
+    )
+endif()
+add_qgc_test(
     CaacSimulationUITest
     LABELS
     Integration

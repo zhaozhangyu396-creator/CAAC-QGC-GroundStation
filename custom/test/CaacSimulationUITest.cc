@@ -1,5 +1,7 @@
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <functional>
 #include <memory>
 #include <utility>
 
@@ -53,6 +55,12 @@ private slots:
     void _fourLoopsFromUnsavedSettings();
     void _repeatFromLanding();
     void _usbJoystickModeSwitch();
+};
+
+class CaacMissionUpdateUITest : public QmlUITestBase
+{
+    Q_OBJECT
+private slots:
     void _updateWaypointsDuringFlight();
 };
 
@@ -129,7 +137,7 @@ void CaacSimulationUITest::_repeatFromLanding()
     }
 }
 
-void CaacSimulationUITest::_updateWaypointsDuringFlight()
+void CaacMissionUpdateUITest::_updateWaypointsDuringFlight()
 {
     startUI();
     if (QTest::currentTestFailed()) {
@@ -188,19 +196,62 @@ void CaacSimulationUITest::_updateWaypointsDuringFlight()
     QVERIFY(verifyText(QStringLiteral("caacMissionClimb"),
                        QCoreApplication::translate("CaacMissionDetails", "Change altitude along the leg"),
                        QStringLiteral("uploaded simulation climb mode")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacMissionDetailsButton"), QStringLiteral("caacMainToolsScroller")));
     const int previousTarget = manager->currentIndex();
     const int previousLoops = simulation->remainingLoops();
     auto* map = panel->property("editorMap").value<QObject*>();
     QVERIFY(map);
+    auto* mapItem = qobject_cast<QQuickItem*>(map);
+    QVERIFY(mapItem);
+    QString dragError;
     const auto drag = [&](SimpleMissionItem* item) -> bool {
-        if (!QMetaObject::invokeMethod(map, "missionItemDragStarted", Q_ARG(QVariant, QVariant::fromValue(item)))) {
+        dragError.clear();
+        map->setProperty("center", QVariant::fromValue(item->coordinate()));
+        map->setProperty("zoomLevel", 17);
+        auto* dragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_%1").arg(item->sequenceNumber()));
+        auto* indicator = dragger ? dragger->property("itemIndicator").value<QQuickItem*>() : nullptr;
+        if (!dragger || !indicator) {
+            dragError = QStringLiteral("Missing dragger or marker");
             return false;
         }
-        item->setCoordinate(QGCGeo::geodesicDestination(item->coordinate(), 0, 10));
-        if (!QMetaObject::invokeMethod(map, "missionItemDragFinished", Q_ARG(QVariant, QVariant::fromValue(item)))) {
+        const auto markerPosition = [&]() {
+            return dragger->mapToScene(indicator->property("anchorPoint").toPointF() +
+                                       QPointF(dragger->property("_touchMarginHorizontal").toDouble(),
+                                               dragger->property("_touchMarginVertical").toDouble()));
+        };
+        const auto middle = mapItem->mapToScene(QPointF(mapItem->width() / 2, mapItem->height() / 2));
+        if (!waitForCondition([&]() { return QLineF(markerPosition(), middle).length() < 1; }, TestTimeout::mediumMs(),
+                              QStringLiteral("Waypoint drag marker centered"))) {
             return false;
         }
-        return waitForDialog(QCoreApplication::translate("CaacRouteEditor", "Update waypoints"));
+        const auto before = item->coordinate();
+        const auto start = markerPosition().toPoint();
+        QTest::mousePress(_window, Qt::LeftButton, Qt::NoModifier, start);
+        auto* grabber = _window->mouseGrabberItem();
+        const bool grabbedWaypoint = grabber && grabber->parentItem() &&
+                                     grabber->parentItem()->property("gestureTarget").value<QObject*>() == dragger;
+        if (!grabbedWaypoint) {
+            dragError = QStringLiteral("Mouse press reached %1 (%2), not the waypoint at %3,%4")
+                            .arg(grabber ? grabber->objectName() : QStringLiteral("null"),
+                                 grabber ? QString::fromLatin1(grabber->metaObject()->className()) : QString())
+                            .arg(start.x())
+                            .arg(start.y());
+        }
+        for (int step = 1; step <= 6; ++step) {
+            QTest::mouseMove(_window, start + QPoint(step * 5, -step * 5));
+        }
+        QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, start + QPoint(30, -30));
+        if (QGCGeo::geodesicDistance(before, item->coordinate()) <= 0.01) {
+            if (dragError.isEmpty()) {
+                dragError = QStringLiteral("Waypoint coordinate did not move");
+            }
+            return false;
+        }
+        if (!waitForDialog(QCoreApplication::translate("CaacRouteEditor", "Update waypoints"))) {
+            dragError = QStringLiteral("Waypoint moved, but no upload dialog appeared");
+            return false;
+        }
+        return true;
     };
     QSignalSpy transfers(manager, &MissionManager::sendComplete);
     auto* globalSettings = findItem(_rootItem, QStringLiteral("caacGlobalSettingsPanel"));
@@ -208,11 +259,11 @@ void CaacSimulationUITest::_updateWaypointsDuringFlight()
     QVERIFY(globalSettings && takeoffDraft);
     QVERIFY(takeoffDraft->setProperty("text", QStringLiteral("3")));
     QVERIFY(globalSettings->setProperty("simulationInputsEdited", true));
-    QVERIFY(drag(waypoint));
+    QVERIFY2(drag(waypoint), qPrintable(dragError));
     QVERIFY(rejectDialog());
     QCOMPARE(transfers.count(), 0);
     QCOMPARE(vehicle->flightMode(), vehicle->missionFlightMode());
-    QVERIFY(drag(waypoint));
+    QVERIFY2(drag(waypoint), qPrintable(dragError));
     auto* update = panel->findChild<CaacMissionUpdateController*>(QStringLiteral("caacMissionUpdateController"));
     QVERIFY(update);
     QSignalSpy finished(update, &CaacMissionUpdateController::finished);
@@ -233,46 +284,99 @@ void CaacSimulationUITest::_updateWaypointsDuringFlight()
     QCOMPARE(manager->currentIndex(), previousTarget);
     QCOMPARE(simulation->remainingLoops(), previousLoops);
     QCOMPARE(vehicle->flightMode(), vehicle->missionFlightMode());
-    bool moved = false;
-    for (const auto* item : manager->missionItems()) {
-        if (item->command() == MAV_CMD_NAV_WAYPOINT &&
-            QGCGeo::geodesicDistance(item->coordinate(), waypoint->coordinate()) < 0.02) {
-            moved = true;
-        }
-    }
-    QVERIFY(moved);
-    QVERIFY(drag(landing));
-    QVERIFY(rejectDialog());
-    QCOMPARE(transfers.count(), 1);
-    QCOMPARE(vehicle->flightMode(), vehicle->missionFlightMode());
-    QVERIFY(drag(landing));
+    const auto positionUploaded = [&](const SimpleMissionItem* point) {
+        const auto& items = manager->missionItems();
+        return std::any_of(items.cbegin(), items.cend(), [&](const MissionItem* item) {
+            return item->command() == point->command() &&
+                   QGCGeo::geodesicDistance(item->coordinate(), point->coordinate()) < 0.02;
+        });
+    };
+    QVERIFY(positionUploaded(waypoint));
+    QVERIFY2(drag(waypoint), qPrintable(dragError));
     finished.clear();
     QVERIFY(acceptDialog());
     QTRY_VERIFY_WITH_TIMEOUT(!finished.isEmpty(), TestTimeout::longMs());
     QVERIFY2(finished.last()[0].toBool(), qPrintable(finished.last()[1].toString()));
     QCOMPARE(transfers.count(), 2);
+    QCOMPARE(vehicle->flightMode(), vehicle->missionFlightMode());
+    QVERIFY(positionUploaded(waypoint));
+    vehicle->pauseVehicle();
+    QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->pauseFlightMode(), TestTimeout::mediumMs());
+    QVERIFY2(drag(landing), qPrintable(dragError));
+    QVERIFY(rejectDialog());
+    QCOMPARE(transfers.count(), 2);
+    QCOMPARE(vehicle->flightMode(), vehicle->pauseFlightMode());
+    QVERIFY2(drag(landing), qPrintable(dragError));
+    finished.clear();
+    QVERIFY(acceptDialog());
+    QTRY_VERIFY_WITH_TIMEOUT(!finished.isEmpty(), TestTimeout::longMs());
+    QVERIFY2(finished.last()[0].toBool(), qPrintable(finished.last()[1].toString()));
+    QCOMPARE(transfers.count(), 3);
+    QCOMPARE(vehicle->flightMode(), vehicle->missionFlightMode());
     QCOMPARE(manager->currentIndex(), previousTarget);
     QCOMPARE(simulation->remainingLoops(), previousLoops);
-    bool landingUpdated = false;
-    for (const auto* item : manager->missionItems()) {
-        if (item->command() == MAV_CMD_NAV_LAND &&
-            QGCGeo::geodesicDistance(item->coordinate(), landing->coordinate()) < 0.02) {
-            landingUpdated = true;
-        }
-    }
-    QVERIFY(landingUpdated);
+    QVERIFY(positionUploaded(landing));
+    vehicle->pauseVehicle();
+    QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->pauseFlightMode(), TestTimeout::mediumMs());
+    QVERIFY2(drag(landing), qPrintable(dragError));
+    finished.clear();
+    QVERIFY(acceptDialog());
+    QTRY_VERIFY_WITH_TIMEOUT(!finished.isEmpty(), TestTimeout::longMs());
+    QVERIFY2(finished.last()[0].toBool(), qPrintable(finished.last()[1].toString()));
+    QCOMPARE(vehicle->flightMode(), vehicle->missionFlightMode());
+    QVERIFY(positionUploaded(landing));
     auto* link = qobject_cast<MockLink*>(vehicle->vehicleLinkManager()->primaryLink().lock().get());
     QVERIFY(link);
     expectLogMessage("API.QGCApplication.AppMessage", QtDebugMsg,
                      QRegularExpression(QStringLiteral("任务传输失败|Mission transfer failed")));
     link->setMissionItemFailureMode(MockLinkMissionItemHandler::FailWriteFinalAckErrorAck, MAV_MISSION_ERROR);
     finished.clear();
-    waypoint->setCoordinate(QGCGeo::geodesicDestination(waypoint->coordinate(), 0, 10));
-    QVERIFY(update->update(master, simulation));
+    QVERIFY2(drag(waypoint), qPrintable(dragError));
+    QVERIFY(acceptDialog());
     QTRY_VERIFY_WITH_TIMEOUT(!finished.isEmpty(), TestTimeout::longMs());
     QVERIFY(!finished.last()[0].toBool());
     verifyExpectedLogMessage();
     QVERIFY(vehicle->flightMode() != vehicle->missionFlightMode());
+    const auto dismissDialog = [&](const QString& title) {
+        std::function<QQuickItem*(QQuickItem*)> findAccept = [&](QQuickItem* item) -> QQuickItem* {
+            if (!item || !item->isVisible()) {
+                return nullptr;
+            }
+            if (item->objectName() == QStringLiteral("popupDialog_title") &&
+                item->property("text").toString() == title) {
+                return findVisibleItem(item->parentItem(), QStringLiteral("popupDialog_acceptButton"), 0);
+            }
+            for (auto* child : item->childItems()) {
+                if (auto* button = findAccept(child)) {
+                    return button;
+                }
+            }
+            return nullptr;
+        };
+        if (!waitForDialog(title)) {
+            return false;
+        }
+        auto* button = findAccept(_rootItem);
+        if (!button) {
+            return false;
+        }
+        QTest::mouseClick(_window, Qt::LeftButton, Qt::NoModifier,
+                          button->mapToScene(QPointF(button->width() / 2, button->height() / 2)).toPoint());
+        return waitForCondition([&]() { return !dialogVisible(title); }, TestTimeout::mediumMs(),
+                                QStringLiteral("Upload error acknowledged"));
+    };
+    QVERIFY(dismissDialog(QCoreApplication::translate("CaacRouteEditor", "Update waypoints")));
+    QVERIFY(dismissDialog(QCoreApplication::applicationName()));
+    link->setMissionItemFailureMode(MockLinkMissionItemHandler::FailNone, MAV_MISSION_ACCEPTED);
+    finished.clear();
+    QVERIFY2(drag(waypoint), qPrintable(dragError));
+    QVERIFY(acceptDialog());
+    QTRY_VERIFY_WITH_TIMEOUT(!finished.isEmpty(), TestTimeout::longMs());
+    QVERIFY2(finished.last()[0].toBool(), qPrintable(finished.last()[1].toString()));
+    QCOMPARE(vehicle->flightMode(), vehicle->missionFlightMode());
+    QVERIFY(positionUploaded(waypoint));
+    QCOMPARE(manager->currentIndex(), previousTarget);
+    QCOMPARE(simulation->remainingLoops(), previousLoops);
 }
 
 void CaacSimulationUITest::_usbJoystickModeSwitch()
@@ -1692,4 +1796,5 @@ void CaacSimulationUITest::_uploadAndFlightControls()
 }
 
 UT_REGISTER_TEST(CaacSimulationUITest, TestLabel::Integration, TestLabel::Vehicle)
+UT_REGISTER_TEST(CaacMissionUpdateUITest, TestLabel::Integration, TestLabel::Vehicle)
 #include "CaacSimulationUITest.moc"
