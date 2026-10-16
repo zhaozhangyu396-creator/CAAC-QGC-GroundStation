@@ -367,7 +367,7 @@
       <extracomment>.groups[Virtual Joystick].keywords[1]</extracomment>
       <location filename="../src/AppSettings/pages/FlyView.SettingsUI.json"/>
       <source>virtual stick</source>
-      <translation>虚拟棒</translation>
+      <translation>虚拟摇杆</translation>
     </message>
     <message>
       <extracomment>.groups[Virtual Joystick].keywords[2]</extracomment>
@@ -8652,7 +8652,7 @@
       <extracomment>.QGC.MetaData.Facts[axisFrequencyHz].shortDesc, .QGC.MetaData.Facts[axisFrequencyHz].label</extracomment>
       <location filename="../src/Settings/Joystick.SettingsGroup.json"/>
       <source>Axis Update Frequency</source>
-      <translation>轴更新频率</translation>
+      <translation>摇杆输入频率</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[buttonFrequencyHz].shortDesc, .QGC.MetaData.Facts[buttonFrequencyHz].label</extracomment>
@@ -8676,7 +8676,7 @@
       <extracomment>.QGC.MetaData.Facts[exponentialPct].shortDesc, .QGC.MetaData.Facts[exponentialPct].label</extracomment>
       <location filename="../src/Settings/Joystick.SettingsGroup.json"/>
       <source>Stick Exponential</source>
-      <translation>棒指数</translation>
+      <translation>EXP</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[enableManualControlPitchExtension].shortDesc, .QGC.MetaData.Facts[enableManualControlPitchExtension].label</extracomment>
@@ -8694,7 +8694,7 @@
       <extracomment>.QGC.MetaData.Facts[additionalAxesFunction].shortDesc</extracomment>
       <location filename="../src/Settings/Joystick.SettingsGroup.json"/>
       <source>Function for additional axes (manual control or RC override)</source>
-      <translation>附加轴功能（手动控制或 RC 倍率）</translation>
+      <translation>开关通道功能（手动控制或 RC 倍率）</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[additionalAxesFunction].enumStrings</extracomment>
@@ -8707,43 +8707,43 @@
       <extracomment>.QGC.MetaData.Facts[additionalAxesFunction].label</extracomment>
       <location filename="../src/Settings/Joystick.SettingsGroup.json"/>
       <source>Function for additional axes</source>
-      <translation>附加轴功能</translation>
+      <translation>开关通道功能</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[enableAdditionalAxis1].shortDesc, .QGC.MetaData.Facts[enableAdditionalAxis1].label</extracomment>
       <location filename="../src/Settings/Joystick.SettingsGroup.json"/>
       <source>Enable additional axis 1</source>
-      <translation>启用附加轴 1</translation>
+      <translation>启用开关通道 1</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[enableAdditionalAxis2].shortDesc, .QGC.MetaData.Facts[enableAdditionalAxis2].label</extracomment>
       <location filename="../src/Settings/Joystick.SettingsGroup.json"/>
       <source>Enable additional axis 2</source>
-      <translation>启用附加轴 2</translation>
+      <translation>启用开关通道 2</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[enableAdditionalAxis3].shortDesc, .QGC.MetaData.Facts[enableAdditionalAxis3].label</extracomment>
       <location filename="../src/Settings/Joystick.SettingsGroup.json"/>
       <source>Enable additional axis 3</source>
-      <translation>启用附加轴 3</translation>
+      <translation>启用开关通道 3</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[enableAdditionalAxis4].shortDesc, .QGC.MetaData.Facts[enableAdditionalAxis4].label</extracomment>
       <location filename="../src/Settings/Joystick.SettingsGroup.json"/>
       <source>Enable additional axis 4</source>
-      <translation>启用附加轴 4</translation>
+      <translation>启用开关通道 4</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[enableAdditionalAxis5].shortDesc, .QGC.MetaData.Facts[enableAdditionalAxis5].label</extracomment>
       <location filename="../src/Settings/Joystick.SettingsGroup.json"/>
       <source>Enable additional axis 5</source>
-      <translation>启用附加轴 5</translation>
+      <translation>启用开关通道 5</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[enableAdditionalAxis6].shortDesc, .QGC.MetaData.Facts[enableAdditionalAxis6].label</extracomment>
       <location filename="../src/Settings/Joystick.SettingsGroup.json"/>
       <source>Enable additional axis 6</source>
-      <translation>启用附加轴 6</translation>
+      <translation>启用开关通道 6</translation>
     </message>
     <message>
       <source>Enable simulation mode switch</source>

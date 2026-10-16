@@ -203,18 +203,21 @@ Item {
                         readonly property bool connected: !!control._activeVehicle && !control._communicationLost
                         heightFactor: 0.25
                         _horizontalPadding: ScreenTools.defaultFontPixelWidth * (control._compactToolbar ? 0.6 : 2)
-                        implicitWidth: contentItem.implicitWidth + leftPadding + rightPadding
+                        implicitWidth: control._iconExtent + connectionContents.spacing
+                            + connectionLabel.implicitWidth + leftPadding + rightPadding
                         Layout.minimumWidth: implicitWidth
+                        Layout.preferredWidth: implicitWidth
                         backgroundColor: qgcPal.window
                         text: connected ? qsTr("Connected") : qsTr("Not connected")
                         ToolTip.visible: hovered
                         ToolTip.text: qsTr("Open connection settings")
-                        contentItem: Row {
+                        contentItem: RowLayout {
+                            id: connectionContents
                             spacing: ScreenTools.defaultFontPixelWidth * 0.7
                             Item {
-                                width: control._iconExtent
-                                height: width
-                                anchors.verticalCenter: parent.verticalCenter
+                                Layout.preferredWidth: control._iconExtent
+                                Layout.minimumWidth: Layout.preferredWidth
+                                Layout.preferredHeight: control._iconExtent
                                 QGCColoredImage {
                                     anchors.fill: parent
                                     source: "/InstrumentValueIcons/link.svg"
@@ -244,8 +247,9 @@ Item {
                                 }
                             }
                             QGCLabel {
+                                id: connectionLabel
                                 objectName: "caacConnectionStatusLabel"
-                                anchors.verticalCenter: parent.verticalCenter
+                                Layout.minimumWidth: implicitWidth
                                 text: connectionButton.text
                                 color: qgcPal.text
                                 font.pointSize: control._fontPointSize

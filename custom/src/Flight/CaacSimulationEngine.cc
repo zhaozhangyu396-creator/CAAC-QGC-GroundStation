@@ -33,6 +33,7 @@ void CaacSimulationEngine::initialize(const QGeoCoordinate& home, const Options&
     _waypointOptions.clear();
     _wait = -1;
     _returnLanding = false;
+    _takeoffAtCurrentPosition = false;
 }
 
 bool CaacSimulationEngine::setHorizontalSpeed(double speed)
@@ -128,6 +129,7 @@ bool CaacSimulationEngine::load(const QMap<uint16_t, mavlink_mission_item_int_t>
     _jumpCounts.clear();
     _wait = -1;
     _returnLanding = false;
+    _takeoffAtCurrentPosition = false;
     error.clear();
     return true;
 }
@@ -161,6 +163,7 @@ bool CaacSimulationEngine::updateMission(const QMap<uint16_t, mavlink_mission_it
     updated._jumpCounts = _jumpCounts;
     updated._wait = _wait;
     updated._returnLanding = _returnLanding;
+    updated._takeoffAtCurrentPosition = _takeoffAtCurrentPosition;
     updated.pause();
     *this = updated;
     return true;
@@ -175,6 +178,22 @@ bool CaacSimulationEngine::jump(int sequence)
     _state.finished = false;
     _wait = -1;
     _returnLanding = false;
+    return true;
+}
+
+bool CaacSimulationEngine::restartMission()
+{
+    if (_items.isEmpty()) {
+        return false;
+    }
+    _state.sequence = _items.firstKey();
+    _state.finished = false;
+    _options = _missionOptions;
+    _jumpCounts.clear();
+    _wait = -1;
+    _returnLanding = false;
+    _takeoffAtCurrentPosition = true;
+    pause();
     return true;
 }
 
@@ -483,6 +502,10 @@ void CaacSimulationEngine::advance(double seconds)
             default:
                 if (coordinateCommand(item.command)) {
                     auto target = _target(item);
+                    if (item.command == MAV_CMD_NAV_TAKEOFF && _takeoffAtCurrentPosition) {
+                        target.setLatitude(_state.position.latitude());
+                        target.setLongitude(_state.position.longitude());
+                    }
                     if (item.command == MAV_CMD_NAV_LAND) {
                         target.setAltitude(_home.altitude());
                     }
@@ -505,6 +528,9 @@ void CaacSimulationEngine::advance(double seconds)
                     }
                     _wait -= seconds;
                     if (_wait <= 0) {
+                        if (item.command == MAV_CMD_NAV_TAKEOFF) {
+                            _takeoffAtCurrentPosition = false;
+                        }
                         _next();
                     }
                     return;

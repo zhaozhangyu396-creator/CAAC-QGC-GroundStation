@@ -9,6 +9,7 @@
 
 class CaacFlightDistance;
 class CaacSimulationController;
+class CaacActivationController;
 class QQmlAbstractUrlInterceptor;
 class QTimer;
 class Vehicle;
@@ -31,6 +32,7 @@ public:
     explicit CaacCorePlugin(QObject* parent = nullptr);
     static QGCCorePlugin* instance();
     void init() override;
+    bool requestApplicationAuthorization(QObject* parent, std::function<void()> onAuthorized) override;
     void adjustSettingMetaData(const QString& settingsGroup, FactMetaData& metaData, bool& userVisible) override;
 
     bool showInitialSetupVehiclePreferences() const override { return false; }
@@ -93,5 +95,6 @@ private:
     bool _dragWaypoints = true;
     QVariantMap _planningPreferences;
     CaacSimulationController* _simulation = nullptr;
+    CaacActivationController* _activation = nullptr;
     QPointer<QTimer> _flightAltitudeUpdateTimer;
 };

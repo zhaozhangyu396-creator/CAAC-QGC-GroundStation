@@ -118,9 +118,22 @@ ColumnLayout {
         QGCCheckBox {
             objectName: "caacSimulationModeSwitchEnabled"
             text: qsTr("Enable simulation mode switch")
-            enabled: root._calibrated && root._simulation.modeSwitchAxisAllowed(Number(root._settings.simulationModeSwitchAxis.rawValue))
+            enabled: !!root._settings && root._simulation.modeSwitchUnavailableReason.length === 0
             checked: root._settings ? root._settings.simulationModeSwitchEnabled.rawValue : false
-            onClicked: root._settings.simulationModeSwitchEnabled.rawValue = checked
+            onClicked: {
+                if (checked && root._simulation.active
+                    && root._simulation.vehicle === QGroundControl.multiVehicleManager.activeVehicle) {
+                    joystickManager.activeJoystickEnabledForActiveVehicle = true
+                }
+                root._settings.simulationModeSwitchEnabled.rawValue = checked
+            }
+        }
+        QGCLabel {
+            objectName: "caacSimulationModeSwitchUnavailableReason"
+            Layout.fillWidth: true
+            visible: text.length > 0
+            wrapMode: Text.WordWrap
+            text: root._simulation.modeSwitchUnavailableReason
         }
         QGCLabel {
             Layout.fillWidth: true

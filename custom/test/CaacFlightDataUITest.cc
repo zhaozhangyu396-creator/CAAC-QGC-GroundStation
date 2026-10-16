@@ -1,6 +1,7 @@
 #include <QtCore/QRegularExpression>
 #include <QtCore/QScopeGuard>
 #include <QtGui/QClipboard>
+#include <QtGui/QFont>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QImage>
 #include <QtGui/QWheelEvent>
@@ -32,10 +33,104 @@ class CaacFlightDataUITest : public QmlUITestBase
     Q_OBJECT
 
 private slots:
+    void _toolbarStatusSpacing_data();
+    void _toolbarStatusSpacing();
+    void _mapZoomControls_data();
+    void _mapZoomControls();
     void _liveFlightData();
     void _dashboardInteractions();
     void _safetyAndUomTelemetry();
 };
+
+void CaacFlightDataUITest::_toolbarStatusSpacing_data()
+{
+    QTest::addColumn<int>("windowWidth");
+    QTest::addColumn<qreal>("fontScale");
+    QTest::newRow("normal") << 1280 << qreal(1);
+    QTest::newRow("large-font") << 1280 << qreal(1.4);
+    QTest::newRow("narrow-large-font") << 800 << qreal(1.4);
+    QTest::newRow("wide") << 1920 << qreal(1);
+}
+
+void CaacFlightDataUITest::_toolbarStatusSpacing()
+{
+    QFETCH(int, windowWidth);
+    QFETCH(qreal, fontScale);
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    _window->resize(windowWidth, 800);
+    auto* label = findVisibleItem(_rootItem, QStringLiteral("caacConnectionStatusLabel"));
+    auto* button = findVisibleItem(_rootItem, QStringLiteral("caacConnectionStatusButton"));
+    auto* rc = findVisibleItem(_rootItem, QStringLiteral("caacRCRSSIIndicator"));
+    QVERIFY(label && button && rc);
+    QFont font = label->property("font").value<QFont>();
+    font.setPointSizeF(font.pointSizeF() * fontScale);
+    QVERIFY(label->setProperty("font", font));
+    const auto labelBounds = [&]() {
+        return label->mapRectToScene(QRectF(0, 0, label->property("paintedWidth").toReal(), label->height()));
+    };
+    const auto spacingIsClear = [&]() {
+        const auto text = labelBounds();
+        const auto buttonBounds = button->mapRectToScene(button->boundingRect());
+        const auto rcBounds = rc->mapRectToScene(rc->boundingRect());
+        return text.width() > 0 && text.right() <= buttonBounds.right() &&
+               rcBounds.left() - text.right() >= text.height() * 0.4;
+    };
+    QTRY_VERIFY2_WITH_TIMEOUT(
+        spacingIsClear(),
+        qPrintable(QStringLiteral("Connection text right=%1, button right=%2, RC left=%3, text height=%4")
+                       .arg(labelBounds().right())
+                       .arg(button->mapRectToScene(button->boundingRect()).right())
+                       .arg(rc->mapRectToScene(rc->boundingRect()).left())
+                       .arg(labelBounds().height())),
+        TestTimeout::shortMs());
+}
+
+void CaacFlightDataUITest::_mapZoomControls_data()
+{
+    QTest::addColumn<QSize>("windowSize");
+    QTest::newRow("short") << QSize(800, 600);
+    QTest::newRow("normal") << QSize(1280, 800);
+    QTest::newRow("large") << QSize(1600, 1200);
+}
+
+void CaacFlightDataUITest::_mapZoomControls()
+{
+    QFETCH(QSize, windowSize);
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    _window->resize(windowSize);
+    auto* map = findVisibleItem(_rootItem, QStringLiteral("planView_map"));
+    auto* zoomIn = findVisibleItem(_rootItem, QStringLiteral("caacMapZoomIn"));
+    auto* zoomOut = findVisibleItem(_rootItem, QStringLiteral("caacMapZoomOut"));
+    QVERIFY(map && zoomIn && zoomOut);
+    const auto controlsFit = [&]() {
+        for (auto* button : {zoomIn, zoomOut}) {
+            const auto bounds = button->mapRectToScene(button->boundingRect());
+            if (bounds.width() <= 0 || bounds.height() <= 0 || bounds.top() < 0 ||
+                bounds.bottom() > _window->height()) {
+                return false;
+            }
+            for (auto* parent = button->parentItem(); parent; parent = parent->parentItem()) {
+                if (parent->clip() && !parent->mapRectToScene(parent->boundingRect()).contains(bounds)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    };
+    QTRY_VERIFY_WITH_TIMEOUT(controlsFit(), TestTimeout::shortMs());
+    const qreal zoom = (map->property("minimumZoomLevel").toReal() + map->property("maximumZoomLevel").toReal()) / 2;
+    QVERIFY(map->setProperty("zoomLevel", zoom));
+    QVERIFY(clickButton(QStringLiteral("caacMapZoomIn")));
+    QTRY_COMPARE_WITH_TIMEOUT(map->property("zoomLevel").toReal(), zoom + 1, TestTimeout::shortMs());
+    QVERIFY(clickButton(QStringLiteral("caacMapZoomOut")));
+    QTRY_COMPARE_WITH_TIMEOUT(map->property("zoomLevel").toReal(), zoom, TestTimeout::shortMs());
+}
 
 void CaacFlightDataUITest::_safetyAndUomTelemetry()
 {
@@ -388,8 +483,7 @@ void CaacFlightDataUITest::_liveFlightData()
     QVERIFY(QMetaObject::invokeMethod(map, "mapPanStart"));
     QVERIFY(map->setProperty("center", QVariant::fromValue(QGeoCoordinate(-30, -120))));
     QVERIFY(QMetaObject::invokeMethod(map, "mapPanStop"));
-    auto* center =
-        findVisibleItemScrolled(QStringLiteral("caacHomeCenterButton"), QStringLiteral("caacMainToolsScroller"));
+    auto* center = findVisibleItem(_rootItem, QStringLiteral("caacHomeCenterButton"));
     QVERIFY(center && center->isEnabled());
     auto* master = map->property("planMasterController").value<PlanMasterController*>();
     QVERIFY(master);
@@ -397,7 +491,7 @@ void CaacFlightDataUITest::_liveFlightData()
     const auto homeBefore = master->missionController()->plannedHomePosition();
     const auto missionBefore = master->saveToJson();
     QVERIFY(homeBefore.isValid());
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacHomeCenterButton"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacHomeCenterButton")));
     QTRY_VERIFY_WITH_TIMEOUT(
         QGCGeo::geodesicDistance(map->property("center").value<QGeoCoordinate>(), homeBefore) < 0.01,
         TestTimeout::mediumMs());

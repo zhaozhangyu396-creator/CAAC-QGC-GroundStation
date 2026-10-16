@@ -998,8 +998,7 @@ Column {
                     text: qsTr("Upload the new waypoint positions? The aircraft will pause, upload, and continue from its previous target waypoint. Cancelling keeps the edits locally.")
                 }
                 onAccepted: {
-                    if (root._managerVehicle === vehicleAtOpen && root.planMasterController === masterAtOpen
-                        && root.prepareUpload()) {
+                    if (root._managerVehicle === vehicleAtOpen && root.planMasterController === masterAtOpen) {
                         missionUpdate.update(masterAtOpen, QGroundControl.corePlugin.simulation)
                     }
                 }
@@ -1206,7 +1205,7 @@ Column {
             if (item && item.sequenceNumber === 0) { globalSettings.saveHomeAutomatically() }
             editorController.endEdit()
             const vehicle = root._managerVehicle
-            if (item && item.command === 16 && root._dragStartCoordinate.isValid
+            if (item && (item.command === 16 || item.command === 21) && root._dragStartCoordinate.isValid
                 && root._dragStartCoordinate.distanceTo(item.coordinate) > 0.01 && vehicle && vehicle.armed
                 && vehicle.flightMode === vehicle.missionFlightMode && !missionUpdate.busy) {
                 updateWaypointsFactory.open()

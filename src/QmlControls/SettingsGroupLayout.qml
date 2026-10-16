@@ -61,7 +61,7 @@ ColumnLayout {
             Rectangle {
                 width: ScreenTools.defaultFontPixelWidth * 0.35
                 height: ScreenTools.defaultFontPixelHeight
-                color: QGroundControl.globalPalette.settingsAccent
+                color: QGroundControl.globalPalette.settingsSectionAccent
                 radius: width / 2
                 visible: control.vehicleSetupStyle || control.settingsMenuStyle
             }

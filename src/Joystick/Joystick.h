@@ -335,6 +335,7 @@ public:
     void stop();
 
 signals:
+    void axisMappingChanged();
     void buttonActionsChanged();
     void assignableActionsChanged();
     void playerIndexChanged();

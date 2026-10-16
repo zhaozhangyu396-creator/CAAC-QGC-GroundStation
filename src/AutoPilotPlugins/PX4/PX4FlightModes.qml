@@ -21,8 +21,54 @@ SetupPage {
             property real _margins:         ScreenTools.defaultFontPixelHeight / 2
             property var  _switchNameList:  [ "RC_MAP_ARM_SW", "RC_MAP_GEAR_SW", "RC_MAP_KILL_SW", "RC_MAP_LOITER_SW", "RC_MAP_OFFB_SW", "RC_MAP_RETURN_SW" ]
             property var  _switchTHList:    [ "RC_ARMSWITCH_TH", "RC_GEAR_TH", "RC_KILLSWITCH_TH", "RC_LOITER_TH", "RC_OFFB_TH", "RC_RETURN_TH" ]
+            readonly property var _switchLabels: ({
+                "RC_MAP_ARM_SW": qsTr("Arm switch channel"),
+                "RC_MAP_GEAR_SW": qsTr("Landing gear switch channel"),
+                "RC_MAP_KILL_SW": qsTr("Emergency Kill switch channel"),
+                "RC_MAP_LOITER_SW": qsTr("Loiter switch channel"),
+                "RC_MAP_OFFB_SW": qsTr("Offboard switch channel"),
+                "RC_MAP_RETURN_SW": qsTr("Return switch channel"),
+                "RC_MAP_TRANS_SW": qsTr("VTOL transition switch channel"),
+                "RC_MAP_FLAPS": qsTr("Flaps channel")
+            })
+            readonly property var _modeLabels: ({
+                "Unassigned": qsTr("Unassigned"),
+                "Manual": qsTr("Manual"),
+                "Altitude": qsTr("Altitude"),
+                "Position": qsTr("Position"),
+                "Mission": qsTr("Mission"),
+                "Hold": qsTr("Hold"),
+                "Return": qsTr("Return"),
+                "Acro": qsTr("Acro"),
+                "Offboard": qsTr("Offboard"),
+                "Stabilized": qsTr("Stabilized"),
+                "Position Slow": qsTr("Position Slow"),
+                "Takeoff": qsTr("Takeoff"),
+                "Land": qsTr("Land"),
+                "Follow Me": qsTr("Follow Me"),
+                "Precision Land": qsTr("Precision Land"),
+                "Altitude Cruise": qsTr("Altitude Cruise")
+            })
+
+            function modeLabels(fact) {
+                return fact.enumStrings.map(function(label) {
+                    const externalMode = /^External Mode (\d+)$/.exec(label)
+                    return externalMode ? qsTr("External Mode %1").arg(externalMode[1])
+                        : root._modeLabels[label] || label
+                })
+            }
 
             readonly property real _channelComboWidth: ScreenTools.defaultFontPixelWidth * 13
+
+            function channelLabels(fact) {
+                return fact.enumStrings.map(function(label) {
+                    if (label === "Unassigned") {
+                        return qsTr("Unassigned")
+                    }
+                    const channel = /^Channel (\d+)$/.exec(label)
+                    return channel ? qsTr("Channel %1").arg(channel[1]) : label
+                })
+            }
 
             Component.onCompleted: {
                 if (controller.vehicle.vtol) {
@@ -41,6 +87,7 @@ SetupPage {
             }
 
             QGCFlickable {
+                objectName: "px4FlightModesScroller"
                 anchors.fill:   parent
                 clip:           true
                 contentWidth:   settingsRow.width
@@ -49,6 +96,19 @@ SetupPage {
                 Column {
                     id:         column1
                     spacing:    _margins
+
+                    QGCLabel {
+                        objectName: "px4ModeInputSource"
+                        text: qsTr("Input source: %1").arg(controller.joystickInput
+                            ? qsTr("USB joystick") : qsTr("Flight controller receiver"))
+                    }
+
+                    QGCLabel {
+                        width: root.width
+                        wrapMode: Text.WordWrap
+                        text: qsTr("Yellow indicates the input switch position. Check the top bar for the actual flight mode.")
+                        visible: sectionIdFilter === "" || sectionIdFilter === "Flight Modes"
+                    }
 
                     Grid {
                         id:         settingsRow
@@ -91,6 +151,7 @@ SetupPage {
                                         model: 6
 
                                         QGCLabel {
+                                            objectName:         "px4FlightModeSlot_" + (modelData + 1)
                                             Layout.fillWidth:   true
                                             text:               qsTr("Flight Mode %1").arg(modelData + 1)
                                             color:              (controller.activeFlightMode - 1) == index ? "yellow" : qgcPal.text
@@ -98,8 +159,10 @@ SetupPage {
                                     }
 
                                     FactComboBox {
+                                        objectName:         "px4FlightModeChannel"
                                         Layout.fillWidth:   true
                                         fact:               controller.getParameterFact(-1, "RC_MAP_FLTMODE")
+                                        model:              root.channelLabels(fact)
                                         indexModel:         false
                                         sizeToContents:     true
                                     }
@@ -108,8 +171,10 @@ SetupPage {
                                         model: 6
 
                                         FactComboBox {
+                                            objectName:         "px4FlightModeValue_" + (modelData + 1)
                                             Layout.fillWidth:   true
                                             fact:               controller.getParameterFact(-1, "COM_FLTMODE" + (modelData + 1))
+                                            model:              root.modeLabels(fact)
                                             indexModel:         false
                                             sizeToContents:     true
                                         }
@@ -162,14 +227,16 @@ SetupPage {
                                                                                      (controller.rcChannelValues[swChannel] > thPWM) :
                                                                                      (controller.rcChannelValues[swChannel] <= thPWM))
                                             QGCLabel {
-                                                text:               swFact.shortDescription
+                                                text:               root._switchLabels[modelData] || swFact.shortDescription
                                                 Layout.fillWidth:   true
                                                 color:              swActive ? "yellow" : qgcPal.text
                                             }
 
                                             FactComboBox {
+                                                objectName:             "px4SwitchChannel_" + modelData
                                                 Layout.preferredWidth:  _channelComboWidth
                                                 fact:                   swFact
+                                                model:                  root.channelLabels(fact)
                                                 indexModel:             false
                                             }
                                         }
@@ -178,8 +245,10 @@ SetupPage {
                             } // Rectangle
 
                             RCChannelMonitor {
+                                objectName: "px4ModeChannelMonitor"
                                 width:      switchSettingsRect.width
                                 twoColumn:  true
+                                channelValuesOverride: controller.rcChannelValues
                             }
                         } // Column - Switch settings
                     } // Row - Settings

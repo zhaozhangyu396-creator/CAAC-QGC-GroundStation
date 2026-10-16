@@ -11467,7 +11467,7 @@ VTOL</source>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/JoystickComponentSettings.qml" line="147"/>
       <source>Additional Axes</source>
-      <translation>附加轴</translation>
+      <translation>开关通道</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/JoystickComponentSettings.qml" line="159"/>
@@ -16807,6 +16807,126 @@ Is this really what you want?</source>
       <source>Switch Settings</source>
       <translation>开关设置</translation>
     </message>
+    <message>
+      <source>Arm switch channel</source>
+      <translation>解锁开关通道</translation>
+    </message>
+    <message>
+      <source>Landing gear switch channel</source>
+      <translation>起落架开关通道</translation>
+    </message>
+    <message>
+      <source>Emergency Kill switch channel</source>
+      <translation>紧急停机开关通道</translation>
+    </message>
+    <message>
+      <source>Loiter switch channel</source>
+      <translation>盘旋开关通道</translation>
+    </message>
+    <message>
+      <source>Offboard switch channel</source>
+      <translation>外部控制开关通道</translation>
+    </message>
+    <message>
+      <source>Return switch channel</source>
+      <translation>返航开关通道</translation>
+    </message>
+    <message>
+      <source>VTOL transition switch channel</source>
+      <translation>垂直起降转换开关通道</translation>
+    </message>
+    <message>
+      <source>Flaps channel</source>
+      <translation>襟翼通道</translation>
+    </message>
+    <message>
+      <source>Unassigned</source>
+      <translation>未分配</translation>
+    </message>
+    <message>
+      <source>Channel %1</source>
+      <translation>通道 %1</translation>
+    </message>
+    <message>
+      <source>Manual</source>
+      <translation>手动模式</translation>
+    </message>
+    <message>
+      <source>Altitude</source>
+      <translation>定高模式</translation>
+    </message>
+    <message>
+      <source>Position</source>
+      <translation>定点模式</translation>
+    </message>
+    <message>
+      <source>Mission</source>
+      <translation>航线任务</translation>
+    </message>
+    <message>
+      <source>Hold</source>
+      <translation>悬停／盘旋</translation>
+    </message>
+    <message>
+      <source>Return</source>
+      <translation>自动返航</translation>
+    </message>
+    <message>
+      <source>Acro</source>
+      <translation>特技模式</translation>
+    </message>
+    <message>
+      <source>Offboard</source>
+      <translation>外部控制模式</translation>
+    </message>
+    <message>
+      <source>Stabilized</source>
+      <translation>姿态模式</translation>
+    </message>
+    <message>
+      <source>Position Slow</source>
+      <translation>低速定点模式</translation>
+    </message>
+    <message>
+      <source>Takeoff</source>
+      <translation>自动起飞</translation>
+    </message>
+    <message>
+      <source>Land</source>
+      <translation>自动降落</translation>
+    </message>
+    <message>
+      <source>Follow Me</source>
+      <translation>跟随模式</translation>
+    </message>
+    <message>
+      <source>Precision Land</source>
+      <translation>精准降落</translation>
+    </message>
+    <message>
+      <source>Altitude Cruise</source>
+      <translation>定高巡航</translation>
+    </message>
+    <message>
+      <source>External Mode %1</source>
+      <translation>外部模式 %1</translation>
+    </message>
+    <message>
+      <source>Input source: %1</source>
+      <translation>输入来源：%1</translation>
+    </message>
+    <message>
+      <source>USB joystick</source>
+      <translation>USB 遥控器</translation>
+    </message>
+    <message>
+      <source>Flight controller receiver</source>
+      <translation>飞控接收机</translation>
+    </message>
+    <message>
+      <source>Yellow indicates the input switch position. Check the top bar for the actual flight mode.</source>
+      <translation>黄色标记表示开关输入档位，实际飞行模式请查看顶部状态栏。</translation>
+    </message>
   </context>
   <context>
     <name>PX4LogControl</name>
@@ -20978,7 +21098,7 @@ Click 'Ok' to upload the Plan anyway.</source>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/RemoteControlCalibration.qml" line="107"/>
       <source>Additional Axes</source>
-      <translation>附加轴</translation>
+      <translation>开关通道</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/RemoteControlCalibration.qml" line="114"/>
@@ -21159,7 +21279,10 @@ Click 'Ok' to upload the Plan anyway.</source>
 * Make sure any additional axes are at a neutral position.
 * Please ensure all motor power is disconnected from the vehicle.
 * Click Next to continue</source>
-      <translation>* 如图所示，将所有棒居中。 * 确保所有附加轴均位于中间位置。 * 请确保所有电机电源均已与无人机断开。 * 单击“下一步”继续</translation>
+      <translation>* 如图所示，将所有摇杆回中。
+* 确保所有开关通道均处于中立位置。
+* 请确保所有电机电源均已与无人机断开。
+* 点击“下一步”继续。</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/RemoteControlCalibrationController.cc" line="36"/>
@@ -21248,32 +21371,32 @@ Click 'Ok' to upload the Plan anyway.</source>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/RemoteControlCalibrationController.cc" line="1411"/>
       <source>Additional Axis 1</source>
-      <translation>附加轴 1</translation>
+      <translation>开关通道 1</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/RemoteControlCalibrationController.cc" line="1413"/>
       <source>Additional Axis 2</source>
-      <translation>附加轴 2</translation>
+      <translation>开关通道 2</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/RemoteControlCalibrationController.cc" line="1415"/>
       <source>Additional Axis 3</source>
-      <translation>附加轴 3</translation>
+      <translation>开关通道 3</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/RemoteControlCalibrationController.cc" line="1417"/>
       <source>Additional Axis 4</source>
-      <translation>附加轴 4</translation>
+      <translation>开关通道 4</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/RemoteControlCalibrationController.cc" line="1419"/>
       <source>Additional Axis 5</source>
-      <translation>附加轴 5</translation>
+      <translation>开关通道 5</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/RemoteControlCalibrationController.cc" line="1421"/>
       <source>Additional Axis 6</source>
-      <translation>附加轴 6</translation>
+      <translation>开关通道 6</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/RemoteControlCalibrationController.cc" line="1423"/>
@@ -26475,6 +26598,22 @@ altitude</source>
       <source>Not available</source>
       <translation>未获取</translation>
     </message>
+    <message>
+      <source>Connect a USB joystick first.</source>
+      <translation>请先连接 USB 遥控器。</translation>
+    </message>
+    <message>
+      <source>Complete joystick calibration first.</source>
+      <translation>请先完成遥控器校准。</translation>
+    </message>
+    <message>
+      <source>Select a mode switch axis channel.</source>
+      <translation>请选择模式开关对应的轴通道。</translation>
+    </message>
+    <message>
+      <source>CH%1 is assigned to a control stick. Select an independent switch channel.</source>
+      <translation>CH%1 已用于操纵摇杆，请选择独立的开关通道。</translation>
+    </message>
   </context>
 <context>
     <name>CaacMeasureMap</name>
@@ -28050,6 +28189,16 @@ altitude</source>
       <source>Only waypoint positions can be updated during flight. Pause and upload other mission changes manually.</source>
       <translation>飞行中仅支持更新航点位置。其他任务变更请暂停后手动上传。</translation>
     </message>
+    <message>
+      <source>Upload error %1: %2</source>
+      <translation>上传错误 %1：%2</translation>
+    </message>
+    <message>
+      <source>Waypoint upload failed. The mission remains paused.
+%1</source>
+      <translation>航点上传失败，任务保持暂停。
+%1</translation>
+    </message>
   </context>
   <context>
     <name>CaacUnitConverter</name>
@@ -28105,4 +28254,78 @@ altitude</source>
       <translation>OFF</translation>
     </message>
   </context>
+<context>
+    <name>CaacActivationWindow</name>
+    <message>
+        <source>Ground station activation</source>
+        <translation>地面站激活</translation>
+    </message>
+    <message>
+        <source>Software activation</source>
+        <translation>软件激活</translation>
+    </message>
+    <message>
+        <source>Activate this computer to use the ground station.</source>
+        <translation>激活当前电脑后即可使用地面站。</translation>
+    </message>
+    <message>
+        <source>Machine code</source>
+        <translation>机器码</translation>
+    </message>
+    <message>
+        <source>Copy machine code</source>
+        <translation>复制机器码</translation>
+    </message>
+    <message>
+        <source>Send the machine code to your software provider to receive an activation code.</source>
+        <translation>将机器码发送给软件提供方，获取本机专属激活码。</translation>
+    </message>
+    <message>
+        <source>Activation code</source>
+        <translation>激活码</translation>
+    </message>
+    <message>
+        <source>Paste the complete activation code</source>
+        <translation>请粘贴完整激活码</translation>
+    </message>
+    <message>
+        <source>Permanent license · Offline activation · Bound to this computer</source>
+        <translation>永久授权 · 离线激活 · 绑定当前电脑</translation>
+    </message>
+    <message>
+        <source>Exit</source>
+        <translation>退出</translation>
+    </message>
+    <message>
+        <source>Activate and start</source>
+        <translation>激活并启动</translation>
+    </message>
+</context>
+<context>
+    <name>CaacActivationController</name>
+    <message>
+        <source>The publisher has not configured an activation key. Contact the software provider.</source>
+        <translation>发行方尚未配置激活公钥，请联系软件提供方。</translation>
+    </message>
+    <message>
+        <source>Unable to read this computer&#x27;s machine identity. Activation is unavailable.</source>
+        <translation>无法读取当前电脑的机器标识，暂时无法激活。</translation>
+    </message>
+    <message>
+        <source>Invalid activation code format. Paste the complete code.</source>
+        <translation>激活码格式不正确，请粘贴完整激活码。</translation>
+    </message>
+    <message>
+        <source>The activation code is invalid or has been modified.</source>
+        <translation>激活码无效或已被修改。</translation>
+    </message>
+    <message>
+        <source>This activation code belongs to another computer. Send this machine code to the provider.</source>
+        <translation>此激活码属于其他电脑，请将当前机器码发送给软件提供方。</translation>
+    </message>
+    <message>
+        <source>Unable to save the activation. Check write permissions and try again.</source>
+        <translation>无法保存激活信息，请检查写入权限后重试。</translation>
+    </message>
+</context>
 </TS>

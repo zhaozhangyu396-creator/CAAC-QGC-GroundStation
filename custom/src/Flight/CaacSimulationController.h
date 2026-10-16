@@ -25,6 +25,8 @@ class CaacSimulationController : public QObject
     Q_PROPERTY(bool active READ active NOTIFY statusChanged)
     Q_PROPERTY(bool emergencyMode READ emergencyMode WRITE setEmergencyMode NOTIFY emergencyModeChanged)
     Q_PROPERTY(bool missionReady READ missionReady NOTIFY statusChanged)
+    Q_PROPERTY(bool missionFinished READ missionFinished NOTIFY statusChanged)
+    Q_PROPERTY(bool hasFlown READ hasFlown NOTIFY statusChanged)
     Q_PROPERTY(double takeoffHeight READ takeoffHeight NOTIFY statusChanged)
     Q_PROPERTY(QString status READ status NOTIFY statusChanged)
     Q_PROPERTY(Vehicle* vehicle READ vehicle NOTIFY statusChanged)
@@ -34,12 +36,18 @@ class CaacSimulationController : public QObject
     Q_PROPERTY(bool manualControlActive READ manualControlActive NOTIFY statusChanged)
     Q_PROPERTY(QVariantList joystickChannels READ joystickChannels NOTIFY joystickChannelsChanged)
     Q_PROPERTY(int modeSwitchPosition READ modeSwitchPosition NOTIFY joystickChannelsChanged)
+    Q_PROPERTY(
+        QString modeSwitchUnavailableReason READ modeSwitchUnavailableReason NOTIFY modeSwitchConfigurationChanged)
 
 public:
     explicit CaacSimulationController(QObject* parent = nullptr);
     ~CaacSimulationController() override;
 
     bool active() const { return !_link.isNull(); }
+
+    bool hasFlown() const { return _hasFlown; }
+
+    bool missionFinished() const { return _missionReady && _engine.state().finished; }
 
     bool emergencyMode() const { return _emergencyMode; }
 
@@ -72,6 +80,7 @@ public:
     Q_INVOKABLE bool beginManualControl();
     Q_INVOKABLE void endManualControl();
     Q_INVOKABLE bool modeSwitchAxisAllowed(int axis) const;
+    QString modeSwitchUnavailableReason() const;
     Q_INVOKABLE void stop();
     static QVariantMap defaults();
     static QString validateSettings(const QVariantMap& settings);
@@ -84,6 +93,7 @@ signals:
     void emergencyModeChanged();
     void waypointNumbersChanged();
     void joystickChannelsChanged();
+    void modeSwitchConfigurationChanged();
 
 private:
     bool _prepareFlightPlan();
@@ -94,8 +104,11 @@ private:
     void _setJoystick(Joystick* joystick);
     void _processJoystickChannels(const QVector<int>& channels);
     void _applyJoystickMode(int mode);
+    void _enterManualControl();
     QPointer<Joystick> _joystick;
+    bool _hasFlown = false;
     QMetaObject::Connection _joystickChannelsConnection;
+    QList<QMetaObject::Connection> _joystickConfigurationConnections;
     QVariantList _joystickChannels;
     QString _modeMappingSignature;
     QElapsedTimer _modeCandidateTime;

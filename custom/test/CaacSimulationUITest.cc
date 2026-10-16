@@ -51,9 +51,83 @@ private slots:
     void _uploadAndFlightControls();
     void _closedRouteAndSimulationToggle();
     void _fourLoopsFromUnsavedSettings();
+    void _repeatFromLanding();
     void _usbJoystickModeSwitch();
     void _updateWaypointsDuringFlight();
 };
+
+void CaacSimulationUITest::_repeatFromLanding()
+{
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    auto* plan = findVisibleItem(_rootItem, QStringLiteral("mainView_plan"));
+    QVERIFY(plan);
+    auto* master = plan->property("_planMasterController").value<PlanMasterController*>();
+    QVERIFY(master);
+    const QGeoCoordinate home(30, 120, 0);
+    const auto landing = QGCGeo::geodesicDestination(home, 90, 15);
+    auto* mission = master->missionController();
+    mission->setHomePosition(home);
+    auto* waypoint = qobject_cast<SimpleMissionItem*>(
+        mission->insertSimpleMissionItem(QGCGeo::geodesicDestination(home, 0, 15), 1, false));
+    auto* land = qobject_cast<SimpleMissionItem*>(mission->insertSimpleMissionItem(landing, 2, false));
+    QVERIFY(waypoint && land);
+    waypoint->altitude()->setRawValue(3);
+    land->missionItem().setCommand(MAV_CMD_NAV_LAND);
+    land->altitude()->setRawValue(0);
+    CaacRouteEditorController editor;
+    editor.setPlanMasterController(master);
+    auto settings = CaacSimulationController::defaults();
+    settings["takeoffHeight"] = 3.0;
+    settings["horizontalSpeed"] = 25.0;
+    settings["verticalSpeed"] = 10.0;
+    settings["yawRate"] = 360.0;
+    QVERIFY(editor.setSimulationSettings(settings));
+    auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
+    QVERIFY(plugin);
+    auto* simulation = plugin->simulation();
+    const auto stop = qScopeGuard([simulation]() { simulation->stop(); });
+    QVERIFY(simulation->start(master));
+    QTRY_VERIFY_WITH_TIMEOUT(simulation->vehicle() && simulation->vehicle()->isInitialConnectComplete(),
+                             TestTimeout::longMs());
+    QSignalSpy uploaded(simulation, &CaacSimulationController::missionUploaded);
+    QVERIFY(simulation->upload(master));
+    QTRY_VERIFY_WITH_TIMEOUT(!uploaded.isEmpty(), TestTimeout::longMs());
+    auto* vehicle = simulation->vehicle();
+    const auto action = [&](const QString& name) {
+        if (!findVisibleItem(_rootItem, QStringLiteral("caacFlightSettingsPanel"), 0) &&
+            !clickButton(QStringLiteral("caacFlightSettingsButton"))) {
+            return false;
+        }
+        auto* button = findVisibleItemScrolled(name, QStringLiteral("flyViewToolStrip_flickable"));
+        if (!button || !button->isEnabled()) {
+            return false;
+        }
+        const auto point = button->mapToScene(QPointF(button->width() / 2, button->height() / 2)).toPoint();
+        QTest::mouseDClick(_window, Qt::LeftButton, Qt::NoModifier, point);
+        return true;
+    };
+    for (int round = 0; round < 2; ++round) {
+        QVERIFY(action(QStringLiteral("caacTakeoff")));
+        QTRY_VERIFY_WITH_TIMEOUT(vehicle->airborne() && vehicle->altitudeRelative()->rawValue().toDouble() > 2.9,
+                                 TestTimeout::longMs());
+        QVERIFY(QGCGeo::geodesicDistance(vehicle->coordinate(), round == 0 ? home : landing) < 0.2);
+        QVERIFY(action(QStringLiteral("caacStartMission")));
+        QTRY_VERIFY_WITH_TIMEOUT(QGCGeo::geodesicDistance(vehicle->coordinate(), round == 0 ? home : landing) > 3,
+                                 TestTimeout::longMs());
+        QTRY_VERIFY_WITH_TIMEOUT(!vehicle->airborne() && !vehicle->armed() &&
+                                     simulation->status() == QCoreApplication::translate("CaacSimulationController",
+                                                                                         "Simulation mission finished"),
+                                 TestTimeout::longMs());
+        QVERIFY(QGCGeo::geodesicDistance(vehicle->coordinate(), landing) < 0.2);
+        auto* marker = findVisibleItem(_rootItem, QStringLiteral("planView_vehicle_%1").arg(vehicle->id()));
+        QVERIFY(marker);
+        QVERIFY(!marker->property("previewHome").toBool());
+        QVERIFY(QGCGeo::geodesicDistance(marker->property("coordinate").value<QGeoCoordinate>(), landing) < 0.2);
+    }
+}
 
 void CaacSimulationUITest::_updateWaypointsDuringFlight()
 {
@@ -74,6 +148,11 @@ void CaacSimulationUITest::_updateWaypointsDuringFlight()
     waypoint->altitude()->setRawValue(2);
     QVERIFY(editor->addWaypoint(QGCGeo::geodesicDestination(home, 0, 200)));
     editor->currentItem()->altitude()->setRawValue(2);
+    auto* landing = qobject_cast<SimpleMissionItem*>(
+        master->missionController()->insertSimpleMissionItem(QGCGeo::geodesicDestination(home, 180, 200), 3, false));
+    QVERIFY(landing);
+    landing->missionItem().setCommand(MAV_CMD_NAV_LAND);
+    landing->altitude()->setRawValue(0);
     auto settings = CaacSimulationController::defaults();
     settings["takeoffHeight"] = 2.0;
     settings["loopMode"] = 1;
@@ -113,23 +192,27 @@ void CaacSimulationUITest::_updateWaypointsDuringFlight()
     const int previousLoops = simulation->remainingLoops();
     auto* map = panel->property("editorMap").value<QObject*>();
     QVERIFY(map);
-    const auto drag = [&]() -> bool {
-        if (!QMetaObject::invokeMethod(map, "missionItemDragStarted", Q_ARG(QVariant, QVariant::fromValue(waypoint)))) {
+    const auto drag = [&](SimpleMissionItem* item) -> bool {
+        if (!QMetaObject::invokeMethod(map, "missionItemDragStarted", Q_ARG(QVariant, QVariant::fromValue(item)))) {
             return false;
         }
-        waypoint->setCoordinate(QGCGeo::geodesicDestination(waypoint->coordinate(), 0, 10));
-        if (!QMetaObject::invokeMethod(map, "missionItemDragFinished",
-                                       Q_ARG(QVariant, QVariant::fromValue(waypoint)))) {
+        item->setCoordinate(QGCGeo::geodesicDestination(item->coordinate(), 0, 10));
+        if (!QMetaObject::invokeMethod(map, "missionItemDragFinished", Q_ARG(QVariant, QVariant::fromValue(item)))) {
             return false;
         }
         return waitForDialog(QCoreApplication::translate("CaacRouteEditor", "Update waypoints"));
     };
     QSignalSpy transfers(manager, &MissionManager::sendComplete);
-    QVERIFY(drag());
+    auto* globalSettings = findItem(_rootItem, QStringLiteral("caacGlobalSettingsPanel"));
+    auto* takeoffDraft = findItem(_rootItem, QStringLiteral("caacSimTakeoffHeight"));
+    QVERIFY(globalSettings && takeoffDraft);
+    QVERIFY(takeoffDraft->setProperty("text", QStringLiteral("3")));
+    QVERIFY(globalSettings->setProperty("simulationInputsEdited", true));
+    QVERIFY(drag(waypoint));
     QVERIFY(rejectDialog());
     QCOMPARE(transfers.count(), 0);
     QCOMPARE(vehicle->flightMode(), vehicle->missionFlightMode());
-    QVERIFY(drag());
+    QVERIFY(drag(waypoint));
     auto* update = panel->findChild<CaacMissionUpdateController*>(QStringLiteral("caacMissionUpdateController"));
     QVERIFY(update);
     QSignalSpy finished(update, &CaacMissionUpdateController::finished);
@@ -144,6 +227,8 @@ void CaacSimulationUITest::_updateWaypointsDuringFlight()
     QTRY_VERIFY_WITH_TIMEOUT(!finished.isEmpty(), TestTimeout::longMs());
     QVERIFY2(finished.last()[0].toBool(), qPrintable(finished.last()[1].toString()));
     QVERIFY(pausedDuringTransfer);
+    QCOMPARE(editor->simulationSettings().value("takeoffHeight").toDouble(), 2.0);
+    QVERIFY(globalSettings->property("simulationInputsEdited").toBool());
     QCOMPARE(transfers.count(), 1);
     QCOMPARE(manager->currentIndex(), previousTarget);
     QCOMPARE(simulation->remainingLoops(), previousLoops);
@@ -156,6 +241,26 @@ void CaacSimulationUITest::_updateWaypointsDuringFlight()
         }
     }
     QVERIFY(moved);
+    QVERIFY(drag(landing));
+    QVERIFY(rejectDialog());
+    QCOMPARE(transfers.count(), 1);
+    QCOMPARE(vehicle->flightMode(), vehicle->missionFlightMode());
+    QVERIFY(drag(landing));
+    finished.clear();
+    QVERIFY(acceptDialog());
+    QTRY_VERIFY_WITH_TIMEOUT(!finished.isEmpty(), TestTimeout::longMs());
+    QVERIFY2(finished.last()[0].toBool(), qPrintable(finished.last()[1].toString()));
+    QCOMPARE(transfers.count(), 2);
+    QCOMPARE(manager->currentIndex(), previousTarget);
+    QCOMPARE(simulation->remainingLoops(), previousLoops);
+    bool landingUpdated = false;
+    for (const auto* item : manager->missionItems()) {
+        if (item->command() == MAV_CMD_NAV_LAND &&
+            QGCGeo::geodesicDistance(item->coordinate(), landing->coordinate()) < 0.02) {
+            landingUpdated = true;
+        }
+    }
+    QVERIFY(landingUpdated);
     auto* link = qobject_cast<MockLink*>(vehicle->vehicleLinkManager()->primaryLink().lock().get());
     QVERIFY(link);
     expectLogMessage("API.QGCApplication.AppMessage", QtDebugMsg,
@@ -258,7 +363,29 @@ void CaacSimulationUITest::_usbJoystickModeSwitch()
                                     QStringLiteral("popupDialog_contentFlickable")));
     QVERIFY(findVisibleItemScrolled(QStringLiteral("caacSimulationModePosition2"),
                                     QStringLiteral("popupDialog_contentFlickable")));
+    auto* modeEnabled = findVisibleItemScrolled(QStringLiteral("caacSimulationModeSwitchEnabled"),
+                                                QStringLiteral("popupDialog_contentFlickable"));
+    QVERIFY(modeEnabled);
+    QTRY_VERIFY_WITH_TIMEOUT(modeEnabled->isEnabled(), TestTimeout::shortMs());
+    settings->simulationModeSwitchAxis()->setRawValue(0);
+    QTRY_VERIFY_WITH_TIMEOUT(!modeEnabled->isEnabled(), TestTimeout::shortMs());
+    QVERIFY(simulation->modeSwitchUnavailableReason().contains(QStringLiteral("CH1")));
+    joystick->setFunctionForChannel(Calibration::stickFunctionRoll, 4);
+    QTRY_VERIFY_WITH_TIMEOUT(modeEnabled->isEnabled(), TestTimeout::shortMs());
+    settings->calibrated()->setRawValue(false);
+    QTRY_VERIFY_WITH_TIMEOUT(!modeEnabled->isEnabled(), TestTimeout::shortMs());
+    settings->calibrated()->setRawValue(true);
+    QTRY_VERIFY_WITH_TIMEOUT(modeEnabled->isEnabled(), TestTimeout::shortMs());
+    settings->simulationModeSwitchAxis()->setRawValue(4);
+    joystick->setFunctionForChannel(Calibration::stickFunctionRoll, 0);
+    manager->setActiveJoystickEnabledForActiveVehicle(false);
+    QVERIFY(clickButton(QStringLiteral("caacSimulationModeSwitchEnabled")));
+    QVERIFY(!settings->simulationModeSwitchEnabled()->rawValue().toBool());
+    QVERIFY(clickButton(QStringLiteral("caacSimulationModeSwitchEnabled")));
+    QVERIFY(settings->simulationModeSwitchEnabled()->rawValue().toBool());
+    QVERIFY(manager->activeJoystickEnabledForActiveVehicle());
     QVERIFY(rejectDialog());
+    QTRY_COMPARE_WITH_TIMEOUT(simulation->modeSwitchPosition(), 2, TestTimeout::mediumMs());
     QVERIFY(input->setAxis(4, 0));
     QTRY_VERIFY_WITH_TIMEOUT(simulation->manualControlActive(), TestTimeout::mediumMs());
     QTRY_VERIFY_WITH_TIMEOUT(vehicle->flightMode() != vehicle->missionFlightMode(), TestTimeout::mediumMs());
@@ -269,11 +396,32 @@ void CaacSimulationUITest::_usbJoystickModeSwitch()
                              TestTimeout::mediumMs());
     QTRY_VERIFY_WITH_TIMEOUT(vehicle->pitch()->rawValue().toDouble() < -10, TestTimeout::mediumMs());
     QCOMPARE(vehicle->missionManager()->currentIndex(), sequence);
+    QTRY_COMPARE_WITH_TIMEOUT(
+        simulation->status(),
+        QCoreApplication::translate("CaacSimulationController", "Simulation controlled by USB joystick"),
+        TestTimeout::mediumMs());
+    QVERIFY(clickButton(QStringLiteral("caacSimulationManagement")));
+    auto* takeover = findVisibleItem(_rootItem, QStringLiteral("caacEmergencyManualControl"));
+    QVERIFY(takeover);
+    const auto takeoverText =
+        QCoreApplication::translate("CaacSimulationEmergencyDialog", "Attitude mode / joystick takeover");
+    const auto releaseText =
+        QCoreApplication::translate("CaacSimulationEmergencyDialog", "End manual control and hover");
+    QTRY_COMPARE_WITH_TIMEOUT(takeover->property("text").toString(), releaseText, TestTimeout::mediumMs());
+    QVERIFY(input->setAxis(4, Joystick::AxisMin));
+    QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->rtlFlightMode(), TestTimeout::mediumMs());
+    QVERIFY(!simulation->manualControlActive());
+    QTRY_COMPARE_WITH_TIMEOUT(takeover->property("text").toString(), takeoverText, TestTimeout::mediumMs());
+    QVERIFY(input->setAxis(4, 0));
+    QTRY_VERIFY_WITH_TIMEOUT(simulation->manualControlActive(), TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(takeover->property("text").toString(), releaseText, TestTimeout::mediumMs());
+    QVERIFY(rejectDialog());
     manager->setActiveJoystickEnabledForActiveVehicle(false);
     QTRY_COMPARE_WITH_TIMEOUT(vehicle->groundSpeed()->rawValue().toDouble(), 0.0, TestTimeout::mediumMs());
     QVERIFY(simulation->manualControlActive());
-    QVERIFY(simulation->status().contains(
-        QCoreApplication::translate("CaacSimulationController", "Joystick input lost; simulation hovering.")));
+    QTRY_VERIFY_WITH_TIMEOUT(simulation->status().contains(QCoreApplication::translate(
+                                 "CaacSimulationController", "Joystick input lost; simulation hovering.")),
+                             TestTimeout::mediumMs());
     QVERIFY(input->setAxis(1, 0));
     manager->setActiveJoystickEnabledForActiveVehicle(true);
     QVERIFY(input->setAxis(4, Joystick::AxisMin));

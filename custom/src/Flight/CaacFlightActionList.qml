@@ -94,7 +94,9 @@ ToolStripActionList {
             objectName: "caacStartMission"
             text: qsTr("Start route")
             iconSource: "/InstrumentValueIcons/play.svg"
-            enabled: root._hasMission && (root._guided.showStartMission || root._guided.showContinueMission)
+            enabled: root._hasMission && (root._guided.showStartMission || root._guided.showContinueMission
+                || (root._simulatedVehicle && root._simulation.missionFinished && root._vehicle.armed
+                    && root._vehicle.airborne && root._vehicle.flightMode !== root._vehicle.missionFlightMode))
             onTriggered: {
                 if (enabled) {
                     root._guided.closeAll()

@@ -244,6 +244,15 @@ void QGCApplication::init()
         qCWarning(QGCApplicationLog) << "Could not load /fonts/opensans-demibold font";
     }
 
+    if (!_runningUnitTests &&
+        QGCCorePlugin::instance()->requestApplicationAuthorization(this, [this]() { _initAuthorizedApp(); })) {
+        return;
+    }
+    _initAuthorizedApp();
+}
+
+void QGCApplication::_initAuthorizedApp()
+{
     if (_simpleBootTest) {
         // Since GStream builds are so problematic we initialize video during the simple boot test
         // to make sure it works and verfies plugin availability.
@@ -271,7 +280,9 @@ bool QGCApplication::_initVideo()
 
 bool QGCApplication::_initQmlRootWindow()
 {
-    QQuickStyle::setStyle("Basic");
+    if (QQuickStyle::name() != QStringLiteral("Basic")) {
+        QQuickStyle::setStyle(QStringLiteral("Basic"));
+    }
     QGCCorePlugin::instance()->init();
     MAVLinkProtocol::instance()->init();
     MultiVehicleManager::instance()->init();

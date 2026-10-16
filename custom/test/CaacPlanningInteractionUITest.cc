@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cmath>
+#include <memory>
 #include <utility>
 
 #include <QtCore/QDir>
@@ -27,8 +28,13 @@
 #include "FlightPathSegment.h"
 #include "GeoFenceController.h"
 #include "GeoFenceManager.h"
+#include "Joystick.h"
+#include "JoystickManager.h"
+#include "JoystickManagerSettings.h"
+#include "JoystickSettings.h"
 #include "MissionController.h"
 #include "MissionSettingsItem.h"
+#include "MockJoystick.h"
 #include "MockLink.h"
 #include "ParameterManager.h"
 #include "PlanMasterController.h"
@@ -55,6 +61,7 @@ private slots:
     void _calculatorUI();
     void _preferencesUI();
     void _newSettingsPages();
+    void _calibrationAndSwitchSettings();
     void _waypointDragRemainsResponsive_data();
     void _waypointDragRemainsResponsive();
     void _statisticsPanelInteraction();
@@ -62,6 +69,151 @@ private slots:
     void _homeAltitudeAutoSave();
     void _batteryAndFenceSettings();
 };
+
+void CaacPlanningInteractionUITest::_calibrationAndSwitchSettings()
+{
+    std::unique_ptr<MockJoystick> input;
+    runWithMockLink(
+        [] { return MockLink::startPX4MockLink(); },
+        [&](QPointer<MockLink>, Vehicle* vehicle) {
+            const QString joystickName = QStringLiteral("USB calibration preview");
+            auto* manager = JoystickManager::instance();
+            manager->init();
+            input.reset(MockJoystick::create(joystickName, 5, 4, 0));
+            QVERIFY(input && input->isValid());
+            QTRY_VERIFY_WITH_TIMEOUT(manager->availableJoystickNames().contains(joystickName), TestTimeout::mediumMs());
+            SettingsManager::instance()->joystickManagerSettings()->activeJoystickName()->setRawValue(joystickName);
+            QTRY_VERIFY_WITH_TIMEOUT(manager->activeJoystick() && manager->activeJoystick()->name() == joystickName,
+                                     TestTimeout::mediumMs());
+            QCOMPARE(manager->activeJoystick()->settings()->exponentialPct()->shortDescription(),
+                     QStringLiteral("EXP"));
+            QCOMPARE(manager->activeJoystick()->settings()->axisFrequencyHz()->shortDescription(),
+                     QStringLiteral("摇杆输入频率"));
+            const QString previewDir = qEnvironmentVariable("CAAC_CONTROL_PREVIEW_DIR");
+            if (!previewDir.isEmpty()) {
+                _window->resize(1000, 760);
+            }
+            const auto capture = [&](const QString& name) {
+                if (previewDir.isEmpty()) {
+                    return true;
+                }
+                if (!QDir().mkpath(previewDir)) {
+                    return false;
+                }
+                QSignalSpy frame(_window, &QQuickWindow::frameSwapped);
+                _window->update();
+                return waitForCondition([&]() { return !frame.isEmpty(); }, TestTimeout::mediumMs(), name) &&
+                       _window->grabWindow().save(previewDir + "/" + name + ".png");
+            };
+            auto* plan = findVisibleItem(_rootItem, QStringLiteral("mainView_plan"));
+            QVERIFY(plan);
+            QQmlExpression open(qmlContext(plan), plan, QStringLiteral("mainWindow.showVehicleConfig()"));
+            open.evaluate();
+            QVERIFY(!open.hasError());
+            const auto componentName = [](const char* context, const char* text) {
+                return QStringLiteral("vehicleConfig_comp_") + QCoreApplication::translate(context, text).remove(' ');
+            };
+            const auto sidebar = QStringLiteral("vehicleConfig_sidebarFlickable");
+            QVERIFY(clickButtonScrolled(componentName("JoystickComponent", "Joystick"), sidebar));
+            const auto scroller = QStringLiteral("vehicleSetup_scroller");
+            auto* next = findVisibleItemScrolled(QStringLiteral("remoteControlCalibrationNext"), scroller);
+            QVERIFY(next);
+            auto* calibration = qobject_cast<RemoteControlCalibrationController*>(
+                next->parentItem()->parentItem()->property("controller").value<QObject*>());
+            QVERIFY(calibration);
+            QTRY_VERIFY_WITH_TIMEOUT(calibration->channelCount() >= 4, TestTimeout::mediumMs());
+            QVERIFY(clickButtonScrolled(QStringLiteral("remoteControlCalibrationNext"), scroller));
+            QTRY_COMPARE_WITH_TIMEOUT(next->property("text").toString(),
+                                      QCoreApplication::translate("RemoteControlCalibrationController", "Next"),
+                                      TestTimeout::mediumMs());
+            QVERIFY(next->isEnabled());
+            QVERIFY(next->property("settingsMenuStyle").toBool());
+            QCOMPARE(next->property("textColor").value<QColor>(), QColor(Qt::white));
+            QVERIFY(capture(QStringLiteral("calibration-next-white")));
+            QVERIFY(clickButtonScrolled(QStringLiteral("remoteControlCalibrationCancel"), scroller));
+            QVERIFY(clickButton(QStringLiteral("vehicleConfig_backToMenu")));
+            QVERIFY(clickButtonScrolled(componentName("FlightModesComponent", "Flight Modes"), sidebar));
+            if (findVisibleItem(_rootItem, QStringLiteral("vehicleConfig_backToMenu"), 0)) {
+                QVERIFY(clickButton(QStringLiteral("vehicleConfig_backToMenu")));
+            }
+            QVERIFY(clickButtonScrolled(QStringLiteral("vehicleConfig_section_SwitchSettings"), sidebar));
+            const QString channelName = QStringLiteral("px4SwitchChannel_RC_MAP_ARM_SW");
+            auto* channel = findVisibleItem(_rootItem, channelName);
+            QVERIFY(channel);
+            QTRY_COMPARE_WITH_TIMEOUT(channel->property("currentText").toString(), QStringLiteral("未分配"),
+                                      TestTimeout::mediumMs());
+            QVERIFY(capture(QStringLiteral("switch-settings-chinese")));
+            QVERIFY(clickButton(channelName));
+            QTest::keyClick(_window, Qt::Key_Home);
+            QTest::keyClick(_window, Qt::Key_Down);
+            QTest::keyClick(_window, Qt::Key_Return);
+            QTRY_COMPARE_WITH_TIMEOUT(channel->property("currentText").toString(), QStringLiteral("通道 1"),
+                                      TestTimeout::mediumMs());
+            QCOMPARE(vehicle->parameterManager()->getParameter(-1, QStringLiteral("RC_MAP_ARM_SW"))->rawValue().toInt(),
+                     1);
+            auto* joystick = manager->activeJoystick();
+            for (int axis = 0; axis < 5; ++axis) {
+                joystick->setAxisCalibration(axis, {});
+            }
+            using Calibration = RemoteControlCalibrationController;
+            joystick->setFunctionForChannel(Calibration::stickFunctionRoll, 0);
+            joystick->setFunctionForChannel(Calibration::stickFunctionPitch, 1);
+            joystick->setFunctionForChannel(Calibration::stickFunctionYaw, 2);
+            joystick->setFunctionForChannel(Calibration::stickFunctionThrottle, 3);
+            joystick->settings()->calibrated()->setRawValue(true);
+            const auto parameter = [vehicle](const char* name) {
+                return vehicle->parameterManager()->getParameter(-1, QLatin1String(name));
+            };
+            parameter("RC_MAP_FLTMODE")->setRawValue(5);
+            parameter("COM_FLTMODE1")->setRawValue(5);
+            parameter("COM_FLTMODE4")->setRawValue(8);
+            parameter("COM_FLTMODE6")->setRawValue(3);
+            manager->setActiveJoystickEnabledForActiveVehicle(true);
+            auto* source = findVisibleItem(_rootItem, QStringLiteral("px4ModeInputSource"));
+            QVERIFY(source);
+            QTRY_VERIFY_WITH_TIMEOUT(source->property("text").toString().contains(QStringLiteral("USB")),
+                                     TestTimeout::mediumMs());
+            auto* monitor = findVisibleItemScrolled(QStringLiteral("rcChannelMonitorValue_4"),
+                                                    QStringLiteral("px4FlightModesScroller"));
+            QVERIFY(monitor);
+            QVERIFY(input->setAxis(4, Joystick::AxisMin));
+            QTRY_COMPARE_WITH_TIMEOUT(monitor->property("rcValue").toInt(), 1000, TestTimeout::mediumMs());
+            QVERIFY(capture(QStringLiteral("usb-channel-monitor-low")));
+            QVERIFY(input->setAxis(4, Joystick::AxisMax));
+            QTRY_COMPARE_WITH_TIMEOUT(monitor->property("rcValue").toInt(), 2000, TestTimeout::mediumMs());
+            QVERIFY(capture(QStringLiteral("usb-channel-monitor-high")));
+            QVERIFY(clickButton(QStringLiteral("vehicleConfig_backToMenu")));
+            QVERIFY(clickButtonScrolled(QStringLiteral("vehicleConfig_section_FlightModes"), sidebar));
+            for (const auto& position :
+                 {qMakePair(Joystick::AxisMin, 1), qMakePair(0, 4), qMakePair(Joystick::AxisMax, 6)}) {
+                QVERIFY(input->setAxis(4, position.first));
+                auto* slot = findVisibleItemScrolled(QStringLiteral("px4FlightModeSlot_%1").arg(position.second),
+                                                     QStringLiteral("px4FlightModesScroller"));
+                QVERIFY(slot);
+                QTRY_COMPARE_WITH_TIMEOUT(slot->property("color").value<QColor>(), QColor(Qt::yellow),
+                                          TestTimeout::mediumMs());
+                QVERIFY(capture(QStringLiteral("usb-mode-slot-%1").arg(position.second)));
+            }
+            QSignalSpy modeWrites(vehicle->parameterManager(), &ParameterManager::_paramSetSuccess);
+            parameter("RC_MAP_FLTMODE")->setRawValue(6);
+            auto* highSlot = findVisibleItem(_rootItem, QStringLiteral("px4FlightModeSlot_6"));
+            QVERIFY(highSlot);
+            QTRY_VERIFY_WITH_TIMEOUT(highSlot->property("color").value<QColor>() != QColor(Qt::yellow),
+                                     TestTimeout::mediumMs());
+            QTRY_VERIFY_WITH_TIMEOUT(!modeWrites.isEmpty(), TestTimeout::mediumMs());
+            QCOMPARE(modeWrites.last()[1].toString(), QStringLiteral("RC_MAP_FLTMODE"));
+            modeWrites.clear();
+            parameter("RC_MAP_FLTMODE")->setRawValue(5);
+            QTRY_VERIFY_WITH_TIMEOUT(!modeWrites.isEmpty(), TestTimeout::mediumMs());
+            QCOMPARE(modeWrites.last()[1].toString(), QStringLiteral("RC_MAP_FLTMODE"));
+            manager->setActiveJoystickEnabledForActiveVehicle(false);
+            source = findVisibleItem(_rootItem, QStringLiteral("px4ModeInputSource"));
+            QVERIFY(source);
+            QTRY_VERIFY_WITH_TIMEOUT(source->property("text").toString().contains(QStringLiteral("飞控接收机")),
+                                     TestTimeout::mediumMs());
+            QTRY_VERIFY_WITH_TIMEOUT(!vehicle->parameterManager()->pendingWrites(), TestTimeout::mediumMs());
+        });
+}
 
 void CaacPlanningInteractionUITest::_batteryAndFenceSettings()
 {
@@ -193,15 +345,22 @@ void CaacPlanningInteractionUITest::_statisticsPanelInteraction()
     if (QTest::currentTestFailed()) {
         return;
     }
-    auto* clear = findVisibleItem(_rootItem, QStringLiteral("caacClearTrajectoryButton"));
-    auto* center =
-        findVisibleItemScrolled(QStringLiteral("caacHomeCenterButton"), QStringLiteral("caacMainToolsScroller"));
+    auto* clear =
+        findVisibleItemScrolled(QStringLiteral("caacClearTrajectoryButton"), QStringLiteral("caacMainToolsScroller"));
+    auto* center = findVisibleItem(_rootItem, QStringLiteral("caacHomeCenterButton"));
     auto* rail = findVisibleItem(_rootItem, QStringLiteral("caacMapEditTools"));
     QVERIFY(clear && center && rail);
-    QCOMPARE(rail->parentItem(), clear->parentItem());
-    QTRY_VERIFY_WITH_TIMEOUT(rail->y() >= clear->y() + clear->height(), TestTimeout::mediumMs());
-    QTRY_VERIFY_WITH_TIMEOUT(std::abs(rail->x() + rail->width() / 2 - clear->x() - clear->width() / 2) < 1,
-                             TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(
+        rail->mapRectToScene(rail->boundingRect()).top() >= clear->mapRectToScene(clear->boundingRect()).bottom(),
+        TestTimeout::shortMs());
+    QTRY_VERIFY2_WITH_TIMEOUT(std::abs(rail->mapRectToScene(rail->boundingRect()).center().x() -
+                                       clear->mapRectToScene(clear->boundingRect()).center().x()) < 1,
+                              qPrintable(QStringLiteral("Rail center %1; clear button center %2; parent widths %3, %4")
+                                             .arg(rail->mapRectToScene(rail->boundingRect()).center().x())
+                                             .arg(clear->mapRectToScene(clear->boundingRect()).center().x())
+                                             .arg(rail->parentItem()->width())
+                                             .arg(clear->parentItem()->width())),
+                              TestTimeout::shortMs());
     QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_planningStats")));
     auto* statistics = findVisibleItem(_rootItem, QStringLiteral("planView_statistics"));
     QVERIFY(statistics);
@@ -1006,7 +1165,7 @@ void CaacPlanningInteractionUITest::_dragSnappingAndRelations()
     QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, target);
     QTRY_VERIFY_WITH_TIMEOUT(!findVisibleItem(_rootItem, QStringLiteral("caacWaypointSnapGuides"), 0),
                              TestTimeout::mediumMs());
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), original);
     auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
     QVERIFY(plugin);
@@ -1060,7 +1219,7 @@ void CaacPlanningInteractionUITest::_dragSnappingAndRelations()
     QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, target);
     QTRY_VERIFY_WITH_TIMEOUT(!findVisibleItem(_rootItem, QStringLiteral("caacWaypointSnapGuides"), 0),
                              TestTimeout::mediumMs());
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), original);
     QVERIFY(clickButton(QStringLiteral("caacWaypointListButton")));
     auto* files = findVisibleItem(_rootItem, QStringLiteral("caacWaypointFileActions"));
@@ -1106,7 +1265,7 @@ void CaacPlanningInteractionUITest::_dragSnappingAndRelations()
     QVERIFY(undoButton && undoButton->isEnabled());
     QSignalSpy undoClick(undoButton, SIGNAL(clicked()));
     QVERIFY(undoClick.isValid());
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(undoClick.count(), 1);
     QCOMPARE(master->saveToJson(), original);
 }
@@ -1246,7 +1405,7 @@ void CaacPlanningInteractionUITest::_homeRelativeEditing()
                                      QGCGeo::geodesicDestination(reference, 238, 28.1)) < 0.01);
     QCOMPARE(mission->plannedHomePosition().altitude(), 20.0);
     QCOMPARE(mission->visualItems()->value<SimpleMissionItem*>(1)->coordinate().latitude(), reference.latitude());
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), original);
     map->setProperty("center", QVariant::fromValue(reference));
     auto* firstDragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_1"));
@@ -1465,7 +1624,7 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     QVERIFY(undoButton && undoButton->isEnabled());
     QSignalSpy undoClick(undoButton, SIGNAL(clicked()));
     QVERIFY(undoClick.isValid());
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(undoClick.count(), 1);
     QCOMPARE(master->saveToJson(), beforeHomeDrag);
     mission->setCurrentPlanViewSeqNum(1, true);
@@ -1629,13 +1788,13 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     QVERIFY(clickButton(QStringLiteral("caacDeleteSelectedWaypoints")));
     QCOMPARE(mission->visualItems()->count(), 2);
     QCOMPARE(mission->plannedHomePosition(), home);
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), beforeBatchDelete);
     QCOMPARE(panel->property("selectedWaypointCount").toInt(), 0);
     QVERIFY(clickButton(QStringLiteral("caacSelectAllWaypoints")));
     QVERIFY(clickButton(QStringLiteral("caacDeleteSelectedWaypoints")));
     QCOMPARE(mission->visualItems()->count(), 1);
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), beforeBatchDelete);
     QVERIFY(clickButton(QStringLiteral("caacRelativeEditorButton")));
     auto* relativeTarget = findVisibleItem(_rootItem, QStringLiteral("caacRelativeTarget"));
@@ -1674,8 +1833,8 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     const auto secondRelative = mission->visualItems()->value<SimpleMissionItem*>(2)->coordinate();
     QVERIFY(std::abs(QGCGeo::geodesicDistance(firstRelative, secondRelative) - 30) < 0.01);
     QVERIFY(std::abs(std::remainder(QGCGeo::geodesicAzimuth(firstRelative, secondRelative), 360)) < 0.02);
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), beforeRelativeChain);
     const auto beforeEndpoint = master->saveToJson();
     for (int targetIndex : {1, 2}) {
@@ -1697,7 +1856,7 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
         const auto reference = mission->visualItems()->value<SimpleMissionItem*>(1)->coordinate();
         QVERIFY(std::abs(QGCGeo::geodesicDistance(reference, endpoint) - 25) < 0.01);
         QVERIFY(std::abs(std::remainder(QGCGeo::geodesicAzimuth(reference, endpoint), 360)) < 0.02);
-        QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+        QVERIFY(clickButton(QStringLiteral("caacUndo")));
         QCOMPARE(master->saveToJson(), beforeEndpoint);
     }
     QVERIFY(clickButton(QStringLiteral("caacTemplateEditorButton")));
@@ -1727,7 +1886,7 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     QVERIFY(clickButtonScrolled(QStringLiteral("caacConfirmOrientation"), QStringLiteral("caacTemplateScroller")));
     QCOMPARE(editor->routeOrientation(), 90.0);
     QVERIFY(!editor->rotationPreviewActive());
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), original);
     QVERIFY(clickButton(QStringLiteral("caacGlobalSettingsButton")));
     for (const auto* name : {"caacHomeSection", "caacBasicSection", "caacSimTurnSection", "caacSimClimbSection",
@@ -1764,7 +1923,7 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     QVERIFY(minutes->setProperty("text", QStringLiteral("60")));
     QVERIFY(clickButtonScrolled(QStringLiteral("caacApplyHome"), QStringLiteral("caacGlobalSettingsScroller")));
     QCOMPARE(master->saveToJson(), validDmsHome);
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), beforeHomeCoordinates);
     QVERIFY(!findItem(_rootItem, QStringLiteral("caacSimFlightSection")));
     QVERIFY(!findItem(_rootItem, QStringLiteral("caacSimActionsSection")));

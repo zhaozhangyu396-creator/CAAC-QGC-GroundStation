@@ -87,7 +87,7 @@ Item {
         Layout.bottomMargin: ScreenTools.defaultFontPixelHeight
         RowLayout {
             Layout.fillWidth: true
-            Rectangle { Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 0.4; Layout.preferredHeight: ScreenTools.defaultFontPixelHeight; color: palette.settingsAccent; radius: width / 2 }
+            Rectangle { Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 0.4; Layout.preferredHeight: ScreenTools.defaultFontPixelHeight; color: palette.settingsSectionAccent; radius: width / 2 }
             QGCLabel { text: section.title; font.bold: true; Layout.fillWidth: true; wrapMode: Text.WordWrap }
             QGCButton {
                 text: qsTr("Read parameters")

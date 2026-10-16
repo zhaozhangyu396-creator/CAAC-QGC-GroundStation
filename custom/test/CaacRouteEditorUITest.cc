@@ -528,9 +528,9 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QVERIFY(std::abs(std::remainder(QGCGeo::geodesicAzimuth(homeBeforeRotation, firstAfterRotation) -
                                         QGCGeo::geodesicAzimuth(homeBeforeRotation, firstBeforeRotation) - 90,
                                     360)) < 1e-5);
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), beforeRotation);
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacRedo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacRedo")));
     QVERIFY(master->saveToJson() != beforeRotation);
 
     step("relative point through native controls");
@@ -551,7 +551,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     const int beforeInsert = mission->visualItems()->count();
     QVERIFY(clickButton(QStringLiteral("caacRelativeAdd")));
     QCOMPARE(mission->visualItems()->count(), beforeInsert + 1);
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(mission->visualItems()->count(), beforeInsert);
     relativeDistance->setProperty("focus", false);
     _window->requestActivate();
@@ -559,7 +559,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     _rootItem->forceActiveFocus();
     QTest::keyClick(_window, Qt::Key_Space);
     QTRY_COMPARE_WITH_TIMEOUT(mission->visualItems()->count(), beforeInsert + 1, TestTimeout::mediumMs());
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(mission->visualItems()->count(), beforeInsert);
     const QString relativeScreenshot = qEnvironmentVariable("CAAC_RELATIVE_UI_SCREENSHOT");
     if (!relativeScreenshot.isEmpty() && chinese) {
@@ -605,7 +605,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QCOMPARE(target->altitudeFrame(), targetFrame);
     QCOMPARE(target->command(), targetCommand);
     QCOMPARE(reference->coordinate(), referenceCoordinate);
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), beforeRelativeEdit);
     if (chinese) {
         const auto* rotateButton = findVisibleItem(_rootItem, QStringLiteral("caacGlobalSettingsButton"));
@@ -681,7 +681,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QCOMPARE(dmsPoint->coordinate().latitude(), -0.5);
     QCOMPARE(dmsPoint->missionItem().param1(), 2.5);
     QCOMPARE(dmsPoint->missionItem().param4(), -90);
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), beforeDms);
 
     step("generate template through native controls");
@@ -691,7 +691,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacTemplateSize")));
     QVERIFY(clickButton(QStringLiteral("caacTemplateAdd")));
     QCOMPARE(mission->visualItems()->count(), beforeTemplateCount + 10);
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), beforeTemplate);
 
     step("precise translation through native controls");
@@ -710,7 +710,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QVERIFY(std::abs(std::remainder(QGCGeo::geodesicAzimuth(beforeTranslationHome, mission->plannedHomePosition()) - 45,
                                     360)) < 0.001);
     QVERIFY(master->saveToJson() != beforeTranslation);
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), beforeTranslation);
 
     step("drag entire route in one undo step");
@@ -729,7 +729,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, routePress + QPoint(50, 20));
     QTRY_VERIFY_WITH_TIMEOUT(master->saveToJson() != beforeRouteDrag, TestTimeout::mediumMs());
     QCOMPARE(map->property("center").value<QGeoCoordinate>(), mapCenterBeforeDrag);
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), beforeRouteDrag);
     QVERIFY(scrollIntoView(dragToggle, QStringLiteral("caacGlobalSettingsScroller")));
     QVERIFY(clickButton(QStringLiteral("caacRouteDragToggle")));
@@ -1098,7 +1098,7 @@ void CaacRouteEditorUITest::_planningUtilities()
     QVERIFY(scrollIntoView(apply, QStringLiteral("caacGlobalSettingsScroller")));
     QVERIFY(clickButton(QStringLiteral("caacApplyMissionSpeed")));
     QVERIFY(master->saveToJson() != before);
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), before);
     master->removeAll();
 }

@@ -48,7 +48,46 @@ private slots:
     void _runtimeFlightSpeed();
     void _joystickManualFlight();
     void _attitudeInertiaAndReturn();
+    void _repeatFromLanding();
 };
+
+void CaacSimulationEngineTest::_repeatFromLanding()
+{
+    const QGeoCoordinate home(30, 120, 20);
+    const auto landing = QGCGeo::geodesicDestination(home, 90, 15);
+    auto takeoff = waypoint(0, home, 5);
+    takeoff.command = MAV_CMD_NAV_TAKEOFF;
+    auto land = waypoint(3, landing, 0);
+    land.command = MAV_CMD_NAV_LAND;
+    auto loop = waypoint(2, home, 0);
+    loop.command = MAV_CMD_DO_JUMP;
+    loop.param1 = 1;
+    loop.param2 = 1;
+    CaacSimulationEngine engine;
+    QString error;
+    QVERIFY(
+        engine.load({{0, takeoff}, {1, waypoint(1, QGCGeo::geodesicDestination(home, 0, 15), 5)}, {2, loop}, {3, land}},
+                    home, {.horizontalSpeed = 20, .verticalSpeed = 5, .yawRate = 360}, error));
+    for (int round = 0; round < 2; ++round) {
+        for (int tick = 0; tick < 500 && !engine.state().finished; ++tick) {
+            engine.advance(0.1);
+        }
+        QVERIFY(engine.state().finished);
+        QVERIFY(!engine.state().airborne);
+        QVERIFY(QGCGeo::geodesicDistance(engine.state().position, landing) < 0.03);
+        QCOMPARE(engine.remainingLoops(), 0);
+        QVERIFY(engine.restartMission());
+        QCOMPARE(engine.remainingLoops(), 2);
+        const auto launch = engine.state().position;
+        for (int tick = 0; tick < 10; ++tick) {
+            engine.advance(0.1);
+            QVERIFY(QGCGeo::geodesicDistance(engine.state().position, launch) < 0.001);
+        }
+        QCOMPARE(engine.state().position.altitude(), 25.0);
+        engine.advance(0.1);
+        QVERIFY(QGCGeo::geodesicDistance(engine.state().position, launch) > 0.1);
+    }
+}
 
 void CaacSimulationEngineTest::_joystickManualFlight()
 {

@@ -84,7 +84,7 @@ Item {
                 Rectangle {
                     Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 0.4
                     Layout.preferredHeight: ScreenTools.defaultFontPixelHeight
-                    color: palette.settingsAccent
+                    color: palette.settingsSectionAccent
                     radius: width / 2
                 }
                 QGCLabel { text: qsTr("连接设置"); font.bold: true; Layout.fillWidth: true }

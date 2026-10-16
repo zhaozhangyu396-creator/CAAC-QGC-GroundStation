@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <limits>
+#include <utility>
 
 #include <QtCore/QApplicationStatic>
 #include <QtCore/QJsonObject>
@@ -14,6 +15,7 @@
 
 #include "AppMessages.h"
 #include "AppSettings.h"
+#include "CaacActivationController.h"
 #include "CaacFlightDistance.h"
 #include "CaacSimulationController.h"
 #include "FactMetaData.h"
@@ -67,6 +69,7 @@ CaacCorePlugin::CaacCorePlugin(QObject* parent)
     : QGCCorePlugin(parent)
 {
     _simulation = new CaacSimulationController(this);
+    _activation = new CaacActivationController(this);
     const QSettings settings;
     _doubleClickAddWaypoint = settings.value(QStringLiteral("CAAC/Map/DoubleClickAddWaypoint"), true).toBool();
     _dragWaypoints = settings.value(QStringLiteral("CAAC/Map/DragWaypoints"), true).toBool();
@@ -78,6 +81,11 @@ CaacCorePlugin::CaacCorePlugin(QObject* parent)
     const double angle = settings.value(QStringLiteral("CAAC/Planning/snapAngle"), 15.0).toDouble();
     _planningPreferences[QStringLiteral("snapAngle")] =
         std::isfinite(angle) && angle >= 1 && angle <= 90 ? angle : 15.0;
+}
+
+bool CaacCorePlugin::requestApplicationAuthorization(QObject* parent, std::function<void()> onAuthorized)
+{
+    return _activation->showWindow(this, parent, std::move(onAuthorized));
 }
 
 bool CaacCorePlugin::updatePlanningPreferences(const QVariantMap& values)

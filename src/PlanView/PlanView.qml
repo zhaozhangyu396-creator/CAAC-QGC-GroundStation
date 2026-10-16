@@ -575,7 +575,8 @@ Item {
                     readonly property var planningSimulation: QGroundControl.corePlugin.directMissionItemEditing
                         ? QGroundControl.corePlugin.simulation : null
                     readonly property bool previewHome: vehicle && planningSimulation && planningSimulation.vehicle === vehicle
-                        && !vehicle.airborne && !vehicle.armed && _missionController.plannedHomePosition.isValid
+                        && !planningSimulation.hasFlown && !vehicle.airborne && !vehicle.armed
+                        && _missionController.plannedHomePosition.isValid
                     coordinate: previewHome ? _missionController.plannedHomePosition
                         : vehicle ? vehicle.coordinate : QtPositioning.coordinate()
                     map: editorMap
