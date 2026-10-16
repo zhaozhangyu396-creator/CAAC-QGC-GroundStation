@@ -101,9 +101,11 @@ add_qgc_test(
 )
 if(WIN32)
     # Native Windows fonts are required for the setup pages' geometry and mouse interactions.
-    foreach(_px4_setup_test PX4VehicleConfigUITest PX4SensorsCalibrationUITest PX4AirframeSetupUITest)
+    foreach(_setup_test PX4VehicleConfigUITest PX4SensorsCalibrationUITest PX4AirframeSetupUITest
+                        APMVehicleConfigUITest APMSensorsCalibrationUITest APMFreshFlashUITest
+    )
         set_property(
-            TEST ${_px4_setup_test}
+            TEST ${_setup_test}
             APPEND
             PROPERTY ENVIRONMENT_MODIFICATION "QT_QPA_PLATFORM=set:windows"
         )
