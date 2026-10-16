@@ -261,9 +261,18 @@ bool JoystickManager::_joystickEnabledForVehicle(Vehicle *vehicle) const
     return vehicleIds.contains(QString::number(vehicle->id()));
 }
 
-void JoystickManager::_setJoystickEnabledForVehicle(Vehicle *vehicle, bool enabled)
+void JoystickManager::_setJoystickEnabledForVehicle(Vehicle* vehicle, bool enabled)
 {
-    QStringList vehicleIds = _joystickManagerSettings->joystickEnabledVehiclesIds()->rawValue().toString().split(",", Qt::SkipEmptyParts);
+    if (!vehicle) {
+        return;
+    }
+    // Stop vehicle output before publishing the disabled setting to the polling thread.
+    if (!enabled && _activeJoystick && vehicle == MultiVehicleManager::instance()->activeVehicle() &&
+        _joystickEnabledForVehicle(vehicle)) {
+        _activeJoystick->_stopAllPollingForVehicle();
+    }
+    QStringList vehicleIds =
+        _joystickManagerSettings->joystickEnabledVehiclesIds()->rawValue().toString().split(",", Qt::SkipEmptyParts);
     const QString vehicleIdStr = QString::number(vehicle->id());
 
     if (enabled) {
