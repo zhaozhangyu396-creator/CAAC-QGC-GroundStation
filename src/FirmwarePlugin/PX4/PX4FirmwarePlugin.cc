@@ -1,9 +1,12 @@
 #include "PX4FirmwarePlugin.h"
 
+#include <cmath>
+
 #include <QtCore/QHash>
 #include <QtCore/QString>
 
 #include "AppMessages.h"
+#include "Fact.h"
 #include "MAVLinkLib.h"
 #include "PX4AutoPilotPlugin.h"
 #include "PX4ParameterMetaData.h"
@@ -110,6 +113,67 @@ PX4FirmwarePlugin::~PX4FirmwarePlugin()
 AutoPilotPlugin* PX4FirmwarePlugin::autopilotPlugin(Vehicle* vehicle) const
 {
     return new PX4AutoPilotPlugin(vehicle, vehicle);
+}
+
+FirmwarePlugin::GeoFencePolicy PX4FirmwarePlugin::trainingGeoFencePolicy(Vehicle* vehicle) const
+{
+    GeoFencePolicy policy;
+    policy.unsupportedReason =
+        tr("PX4 原生围栏悬停失败时可能回退降落，不满足制动失败不降落要求，禁止写入。"
+           "需要适配机载回退策略。");
+    if (!vehicle || !vehicle->multiRotor()) {
+        return policy;
+    }
+    auto* parameters = vehicle->parameterManager();
+    const QString noLandName = QStringLiteral("GF_NOLAND");
+    const QString actionName = QStringLiteral("GF_ACTION");
+    if (!parameters || !parameters->parametersReady() ||
+        !parameters->parameterExists(ParameterManager::defaultComponentId, noLandName) ||
+        !parameters->parameterExists(ParameterManager::defaultComponentId, actionName)) {
+        return policy;
+    }
+    const auto* noLand = parameters->getParameter(ParameterManager::defaultComponentId, noLandName);
+    const auto* action = parameters->getParameter(ParameterManager::defaultComponentId, actionName);
+    if (!noLand || !action || noLand->readOnly() || action->readOnly() ||
+        noLand->type() != FactMetaData::valueTypeInt32 || !action->enumValues().contains(2)) {
+        policy.unsupportedReason = tr("未能验证 PX4 训练围栏不降落扩展的参数支持，禁止写入。");
+        return policy;
+    }
+    bool validNoLand = false;
+    const double noLandValue = noLand->rawValue().toDouble(&validNoLand);
+    const auto noLandEnums = noLand->enumValues();
+    if (!validNoLand || (noLandValue != 0 && noLandValue != 1) ||
+        (!noLandEnums.isEmpty() && !noLandEnums.contains(1))) {
+        policy.unsupportedReason = tr("未能验证 PX4 训练围栏不降落扩展的参数支持，禁止写入。");
+        return policy;
+    }
+    policy.description = tr("PX4 训练围栏：触发时制动悬停，无法悬停时保持原模式并报警，等待人工接管。");
+    QStringList additionalConstraints;
+    const QList<QPair<QString, QString>> constraintParameters = {
+        {QStringLiteral("GF_MAX_HOR_DIST"), tr("距 HOME 半径上限")},
+        {QStringLiteral("GF_MAX_VER_DIST"), tr("距 HOME 高度上限")},
+    };
+    for (const auto& [name, label] : constraintParameters) {
+        if (!parameters->parameterExists(ParameterManager::defaultComponentId, name)) {
+            continue;
+        }
+        const auto* fact = parameters->getParameter(ParameterManager::defaultComponentId, name);
+        if (!fact) {
+            continue;
+        }
+        bool validValue = false;
+        const double value = fact->rawValue().toDouble(&validValue);
+        if (validValue && std::isfinite(value) && value > 0) {
+            additionalConstraints.append(tr("%1 %2 米").arg(label, QString::number(value, 'g', 8)));
+        }
+    }
+    if (!additionalConstraints.isEmpty()) {
+        policy.description += tr("同时生效：%1。").arg(additionalConstraints.join(tr("；")));
+    }
+    policy.unsupportedReason.clear();
+    policy.preparation = {{noLandName, 1}, {actionName, 2}};
+    policy.activation = {{actionName, 2}};
+    return policy;
 }
 
 QStringList PX4FirmwarePlugin::flightModes(Vehicle* vehicle) const

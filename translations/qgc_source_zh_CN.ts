@@ -8815,6 +8815,10 @@ VTOL</source>
       <source>Route flight</source>
       <translation>航线飞行</translation>
     </message>
+    <message>
+      <source>Figure-eight flight</source>
+      <translation>八字飞行</translation>
+    </message>
   </context>
   <context>
     <name>FlyViewTopRightPanel</name>
@@ -24412,7 +24416,7 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
       <location filename="../src/Vehicle/VehicleSetup/VehicleConfigView.qml" line="390"/>
       <source>Summary</source>
-      <translation>总结</translation>
+      <translation>概览</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/VehicleConfigView.qml" line="537"/>

@@ -44,8 +44,6 @@ SetupPage {
             readonly property int sideBarH1PointSize:  ScreenTools.mediumFontPointSize
             readonly property int mainTextH1PointSize: ScreenTools.mediumFontPointSize // Seems to be unused
 
-            readonly property int rotationColumnWidth: 250
-
             property Fact noFact: Fact { }
 
             property bool accelCalNeeded:                   controller.accelSetupNeeded
@@ -58,49 +56,44 @@ SetupPage {
             readonly property int _calTypeSet:      3   ///< Set orientations only
             readonly property int _buttonWidth:     ScreenTools.defaultFontPixelWidth * 15
 
-            property bool   _orientationsDialogShowCompass: true
-            property string _orientationDialogHelp:         orientationHelpSet
-            property int    _orientationDialogCalType
+            property bool   _orientationSettingsExpanded:  false
+            property bool   _orientationSettingsShowCompass: true
+            property string _orientationSettingsHelp:       orientationHelpSet
+            property int    _orientationSettingsCalType:    _calTypeSet
+            property string _orientationSettingsTitle:      qsTr("飞控朝向")
+            property bool   _calibrationButtonsEnabled:     true
+            readonly property bool _canConfigure:          globals.activeVehicle && !globals.activeVehicle.armed && !controller.calibrationActive
             property real   _margins:                       ScreenTools.defaultFontPixelHeight / 2
             property bool   _compassAutoRotAvailable:       controller.parameterExists(-1, "COMPASS_AUTO_ROT")
             property Fact   _compassAutoRotFact:            controller.getParameterFact(-1, "COMPASS_AUTO_ROT", false /* reportMissing */)
             property bool   _compassAutoRot:                _compassAutoRotAvailable ? _compassAutoRotFact.rawValue == 2 : false
-            property bool   _showSimpleAccelCalOption:      false
             property bool   _doSimpleAccelCal:              false
             property var    _gcsPosition:                    QGroundControl.positionManager.gcsPosition
             property var    _mapPosition:                    QGroundControl.flightMapPosition
 
-            function showOrientationsDialog(calType) {
-                let dialogTitle
-                let dialogButtons = Dialog.Ok
-                _showSimpleAccelCalOption = false
-
-                _orientationDialogCalType = calType
-                switch (calType) {
-                case _calTypeCompass:
-                    _orientationsDialogShowCompass = true
-                    _orientationDialogHelp = orientationHelpCal
-                    dialogTitle = qsTr("Calibrate Compass")
-                    dialogButtons |= Dialog.Cancel
-                    break
-                case _calTypeAccel:
-                    _orientationsDialogShowCompass = false
-                    _orientationDialogHelp = orientationHelpCal
-                    dialogTitle = qsTr("Calibrate Accelerometer")
-                    dialogButtons |= Dialog.Cancel
-                    break
-                case _calTypeSet:
-                    _orientationsDialogShowCompass = true
-                    _orientationDialogHelp = orientationHelpSet
-                    dialogTitle = qsTr("Sensor Settings")
-                    break
+            function showOrientationSettings(calType) {
+                if (!_canConfigure || !_calibrationButtonsEnabled) {
+                    return
                 }
-
-                orientationsDialogFactory.open({ title: dialogTitle, buttons: dialogButtons })
+                if (calType === _calTypeSet && _orientationSettingsExpanded && _orientationSettingsCalType === _calTypeSet) {
+                    _orientationSettingsExpanded = false
+                    return
+                }
+                _orientationSettingsExpanded = false
+                _doSimpleAccelCal = false
+                _orientationSettingsCalType = calType
+                _orientationSettingsShowCompass = calType !== _calTypeAccel
+                _orientationSettingsHelp = calType === _calTypeSet ? orientationHelpSet : orientationHelpCal
+                _orientationSettingsTitle = calType === _calTypeCompass ? qsTr("Calibrate Compass")
+                    : calType === _calTypeAccel ? qsTr("Calibrate Accelerometer") : qsTr("飞控朝向")
+                _orientationSettingsExpanded = true
+                buttonFlickable.contentY = 0
             }
 
-            function showSimpleAccelCalOption() {
-                _showSimpleAccelCalOption = true
+            on_CanConfigureChanged: {
+                if (!_canConfigure) {
+                    _orientationSettingsExpanded = false
+                }
             }
 
             // Maps the APM controller per-side done/inProgress bools to a VehicleRotationCal.CalState
@@ -169,7 +162,7 @@ SetupPage {
                 }
 
                 onSetAllCalButtonsEnabled: (enabled) => {
-                    buttonColumn.enabled = enabled
+                    _calibrationButtonsEnabled = enabled
                 }
 
                 onCalibrationActiveChanged: {
@@ -345,32 +338,42 @@ SetupPage {
                 id: singleCompassSettingsComponent
 
                 Column {
+                    width: parent ? parent.width : 0
                     spacing: Math.round(ScreenTools.defaultFontPixelHeight / 2)
                     visible: sensorParams.rgCompassAvailable[index]
 
                     QGCLabel {
+                        width: parent.width
+                        wrapMode: Text.WordWrap
                         text: compassLabel(index)
                     }
                     APMSensorIdDecoder {
+                        width: parent.width
+                        wrapMode: Text.WordWrap
                         fact: sensorParams.rgCompassId[index]
                     }
 
                     Column {
-                        anchors.margins:    ScreenTools.defaultFontPixelWidth * 2
+                        anchors.leftMargin: ScreenTools.defaultFontPixelWidth
                         anchors.left:       parent.left
+                        anchors.right:      parent.right
                         spacing:            Math.round(ScreenTools.defaultFontPixelHeight / 4)
 
-                        RowLayout {
+                        Column {
+                            width: parent.width
                             spacing: ScreenTools.defaultFontPixelWidth
 
                             FactCheckBox {
                                 id:         useCompassCheckBox
+                                width:      parent.width
+                                wrapMode:   Text.WordWrap
                                 text:       qsTr("Use Compass")
                                 fact:       sensorParams.rgCompassUseFact[index]
                                 visible:    sensorParams.rgCompassUseParamAvailable[index] && !sensorParams.rgCompassPrimary[index]
                             }
 
                             QGCComboBox {
+                                width:      parent.width
                                 model:      [ qsTr("Priority 1"), qsTr("Priority 2"), qsTr("Priority 3"), qsTr("Not Set") ]
                                 visible:    _singleCompassSettingsComponentShowPriority && sensorParams.compassPrioFactsAvailable && useCompassCheckBox.visible && useCompassCheckBox.checked
 
@@ -401,12 +404,13 @@ SetupPage {
                         }
 
                         Column {
+                            width: parent.width
                             visible: !_compassAutoRot && sensorParams.rgCompassExternal[index] && sensorParams.rgCompassRotParamAvailable[index]
 
                             QGCLabel { text: qsTr("Orientation:") }
 
                             FactComboBox {
-                                width:      rotationColumnWidth
+                                width:      parent.width
                                 indexModel: false
                                 fact:       sensorParams.rgCompassRotFact[index]
                             }
@@ -415,29 +419,34 @@ SetupPage {
                 }
             }
 
-            QGCPopupDialogFactory {
-                id: orientationsDialogFactory
-
-                dialogComponent: orientationsDialogComponent
-            }
-
             Component {
-                id: orientationsDialogComponent
+                id: orientationSettingsComponent
 
-                QGCPopupDialog {
-                    function compassMask () {
+                Column {
+                    id: orientationSettingsColumn
+                    objectName: "sensorsSetup_orientationSettings"
+                    width: parent ? parent.width : 0
+                    spacing: ScreenTools.defaultFontPixelHeight
+                    enabled: _canConfigure && _calibrationButtonsEnabled
+
+                    function compassMask() {
                         let mask = 0
-                        mask |=  (0 + (sensorParams.rgCompassPrio[0].rawValue !== 0)) << 0
-                        mask |=  (0 + (sensorParams.rgCompassPrio[1].rawValue !== 0)) << 1
-                        mask |=  (0 + (sensorParams.rgCompassPrio[2].rawValue !== 0)) << 2
+                        mask |= (0 + (sensorParams.rgCompassPrio[0].rawValue !== 0)) << 0
+                        mask |= (0 + (sensorParams.rgCompassPrio[1].rawValue !== 0)) << 1
+                        mask |= (0 + (sensorParams.rgCompassPrio[2].rawValue !== 0)) << 2
                         return mask
                     }
 
-                    onAccepted: {
-                        if (_orientationDialogCalType == _calTypeAccel) {
+                    function confirmCalibration() {
+                        if (!_canConfigure || !_calibrationButtonsEnabled) {
+                            return
+                        }
+                        if (_orientationSettingsCalType === _calTypeAccel) {
+                            _orientationSettingsExpanded = false
                             controller.calibrateAccel(_doSimpleAccelCal)
-                        } else if (_orientationDialogCalType == _calTypeCompass) {
+                        } else if (_orientationSettingsCalType === _calTypeCompass) {
                             if (!northCalibrationCheckBox.checked) {
+                                _orientationSettingsExpanded = false
                                 controller.calibrateCompass()
                             } else {
                                 let lat = parseFloat(northCalLat.text)
@@ -453,155 +462,190 @@ SetupPage {
                                 if (isNaN(lat) || isNaN(lon)) {
                                     return
                                 }
-                                controller.calibrateCompassNorth(lat, lon, compassMask())
+                                let mask = compassMask()
+                                _orientationSettingsExpanded = false
+                                controller.calibrateCompassNorth(lat, lon, mask)
                             }
                         }
                     }
 
+                    QGCLabel {
+                        width: parent.width
+                        text: _orientationSettingsTitle
+                        font.bold: true
+                        wrapMode: Text.WordWrap
+                    }
+
+                    QGCLabel {
+                        width:      parent.width
+                        wrapMode:   Text.WordWrap
+                        text:       _orientationSettingsHelp
+                    }
+
                     Column {
-                        width:      40 * ScreenTools.defaultFontPixelWidth
-                        spacing:    ScreenTools.defaultFontPixelHeight
+                        width: parent.width
+                        QGCLabel { text: qsTr("Autopilot Rotation:") }
+
+                        FactComboBox {
+                            objectName: "sensorsSetup_boardOrientation"
+                            width:      parent.width
+                            indexModel: false
+                            fact:       boardRot
+                        }
+                    }
+
+                    Column {
+                        width: parent.width
+                        visible: _orientationSettingsCalType == _calTypeAccel
+                        spacing: ScreenTools.defaultFontPixelHeight
 
                         QGCLabel {
                             width:      parent.width
                             wrapMode:   Text.WordWrap
-                            text:       _orientationDialogHelp
+                            text: qsTr("Simple accelerometer calibration is less precise but allows calibrating without rotating the vehicle. Check this if you have a large/heavy vehicle.")
                         }
 
-                        Column {
-                            QGCLabel { text: qsTr("Autopilot Rotation:") }
+                        QGCCheckBox {
+                            width: parent.width
+                            wrapMode: Text.WordWrap
+                            text: qsTr("Simple Accelerometer Calibration")
+                            checked: _doSimpleAccelCal
+                            onClicked: _doSimpleAccelCal = checked
+                        }
+                    }
 
-                            FactComboBox {
-                                width:      rotationColumnWidth
-                                indexModel: false
-                                fact:       boardRot
-                            }
+                    Repeater {
+                        model:      _orientationSettingsShowCompass ? 3 : 0
+                        delegate:   singleCompassSettingsComponent
+                    }
+
+                    QGCLabel {
+                        id:         magneticDeclinationLabel
+                        width:      parent.width
+                        visible:    globals.activeVehicle && globals.activeVehicle.sub && _orientationSettingsShowCompass
+                        text:       qsTr("Magnetic Declination")
+                    }
+
+                    Column {
+                        visible:            magneticDeclinationLabel.visible
+                        anchors.margins:    ScreenTools.defaultFontPixelWidth
+                        anchors.left:       parent.left
+                        anchors.right:      parent.right
+                        spacing:            ScreenTools.defaultFontPixelHeight
+
+                        QGCCheckBox {
+                            id:                           manualMagneticDeclinationCheckBox
+                            width:                        parent.width
+                            wrapMode:                     Text.WordWrap
+                            text:                         qsTr("Manual Magnetic Declination")
+                            property Fact autoDecFact:    controller.getParameterFact(-1, "COMPASS_AUTODEC")
+                            property int manual:          0
+                            property int automatic:       1
+
+                            checked:    autoDecFact.rawValue === manual
+                            onClicked:  autoDecFact.value = (checked ? manual : automatic)
                         }
 
-                        Column {
-
-                            visible: _orientationDialogCalType == _calTypeAccel
-                            spacing: ScreenTools.defaultFontPixelHeight
-
-                            QGCLabel {
-                                width:      parent.width
-                                wrapMode:   Text.WordWrap
-                                text: qsTr("Simple accelerometer calibration is less precise but allows calibrating without rotating the vehicle. Check this if you have a large/heavy vehicle.")
-                            }
-
-                            QGCCheckBox {
-                                text: qsTr("Simple Accelerometer Calibration")
-                                onClicked: _doSimpleAccelCal = this.checked
-                            }
+                        FactTextField {
+                            width:      parent.width
+                            fact:       sensorParams.declinationFact
+                            enabled:    manualMagneticDeclinationCheckBox.checked
                         }
+                    }
 
-                        Repeater {
-                            model:      _orientationsDialogShowCompass ? 3 : 0
-                            delegate:   singleCompassSettingsComponent
+                    Item { height: ScreenTools.defaultFontPixelHeight; width: 10 } // spacer
+
+                    QGCLabel {
+                        id:         northCalibrationLabel
+                        width:      parent.width
+                        visible:    _orientationSettingsShowCompass
+                        wrapMode:   Text.WordWrap
+                        text:       qsTr("Fast compass calibration given vehicle position and yaw. This ") +
+                                    qsTr("results in zero diagonal and off-diagonal elements, so is only ") +
+                                    qsTr("suitable for vehicles where the field is close to spherical. It is ") +
+                                    qsTr("useful for large vehicles where moving the vehicle to calibrate it ") +
+                                    qsTr("is difficult. Point the vehicle North before using it.")
+                    }
+
+                    Column {
+                        visible:            northCalibrationLabel.visible
+                        anchors.margins:    ScreenTools.defaultFontPixelWidth
+                        anchors.left:       parent.left
+                        anchors.right:      parent.right
+                        spacing:            ScreenTools.defaultFontPixelHeight
+
+                        QGCCheckBox {
+                            id:             northCalibrationCheckBox
+                            width:          parent.width
+                            visible:        northCalibrationLabel.visible
+                            wrapMode:       Text.WordWrap
+                            text:           qsTr("Fast Calibration")
                         }
 
                         QGCLabel {
-                            id:         magneticDeclinationLabel
+                            id:         northCalibrationManualPosition
                             width:      parent.width
-                            visible:    globals.activeVehicle.sub && _orientationsDialogShowCompass
-                            text:       qsTr("Magnetic Declination")
-                        }
-
-                        Column {
-                            visible:            magneticDeclinationLabel.visible
-                            anchors.margins:    ScreenTools.defaultFontPixelWidth
-                            anchors.left:       parent.left
-                            anchors.right:      parent.right
-                            spacing:            ScreenTools.defaultFontPixelHeight
-
-                            QGCCheckBox {
-                                id:                           manualMagneticDeclinationCheckBox
-                                text:                         qsTr("Manual Magnetic Declination")
-                                property Fact autoDecFact:    controller.getParameterFact(-1, "COMPASS_AUTODEC")
-                                property int manual:          0
-                                property int automatic:       1
-
-                                checked:    autoDecFact.rawValue === manual
-                                onClicked:  autoDecFact.value = (checked ? manual : automatic)
-                            }
-
-                            FactTextField {
-                                fact:       sensorParams.declinationFact
-                                enabled:    manualMagneticDeclinationCheckBox.checked
-                            }
-                        }
-
-                        Item { height: ScreenTools.defaultFontPixelHeight; width: 10 } // spacer
-
-                        QGCLabel {
-                            id:         northCalibrationLabel
-                            width:      parent.width
-                            visible:    _orientationsDialogShowCompass
+                            visible:    northCalibrationCheckBox.checked && (!globals.activeVehicle || !globals.activeVehicle.coordinate.isValid)
                             wrapMode:   Text.WordWrap
-                            text:       qsTr("Fast compass calibration given vehicle position and yaw. This ") +
-                                        qsTr("results in zero diagonal and off-diagonal elements, so is only ") +
-                                        qsTr("suitable for vehicles where the field is close to spherical. It is ") +
-                                        qsTr("useful for large vehicles where moving the vehicle to calibrate it ") +
-                                        qsTr("is difficult. Point the vehicle North before using it.")
+                            text:       qsTr("Vehicle has no Valid positon, please provide it")
                         }
 
-                        Column {
-                            visible:            northCalibrationLabel.visible
-                            anchors.margins:    ScreenTools.defaultFontPixelWidth
-                            anchors.left:       parent.left
-                            anchors.right:      parent.right
-                            spacing:            ScreenTools.defaultFontPixelHeight
-
-                            QGCCheckBox {
-                                id:             northCalibrationCheckBox
-                                visible:        northCalibrationLabel.visible
-                                text:           qsTr("Fast Calibration")
-                            }
-
-                            QGCLabel {
-                                id:         northCalibrationManualPosition
-                                width:      parent.width
-                                visible:    northCalibrationCheckBox.checked && !globals.activeVehicle.coordinate.isValid
-                                wrapMode:   Text.WordWrap
-                                text:       qsTr("Vehicle has no Valid positon, please provide it")
-                            }
-
-                            QGCCheckBox {
-                                visible:    northCalibrationManualPosition.visible && _gcsPosition.isValid
-                                id:         useGcsPositionCheckbox
-                                text:       qsTr("Use GCS position instead")
-                                checked:    _gcsPosition.isValid
-                            }
-                            QGCCheckBox {
-                                visible:    northCalibrationManualPosition.visible && !_gcsPosition.isValid
-                                id:         useMapPositionCheckbox
-                                text:       qsTr("Use current map position instead")
-                            }
-
-                            QGCLabel {
-                                width:      parent.width
-                                visible:    useMapPositionCheckbox.checked
-                                wrapMode:   Text.WordWrap
-                                //: %1 is latitude, %2 is longitude
-                                text:       qsTr("Lat: %1 Lon: %2").arg(_mapPosition.latitude.toFixed(4)).arg(_mapPosition.longitude.toFixed(4))
-                            }
-
-                            FactTextField {
-                                id:         northCalLat
-                                visible:    !useGcsPositionCheckbox.checked && !useMapPositionCheckbox.checked && northCalibrationCheckBox.checked
-                                text:       "0.00"
-                                textColor:  isNaN(parseFloat(text)) ? qgcPal.warningText: qgcPal.textFieldText
-                                enabled:    !useGcsPositionCheckbox.checked
-                            }
-                            FactTextField {
-                                id:         northCalLon
-                                visible:    !useGcsPositionCheckbox.checked && !useMapPositionCheckbox.checked && northCalibrationCheckBox.checked
-                                text:       "0.00"
-                                textColor:  isNaN(parseFloat(text)) ? qgcPal.warningText: qgcPal.textFieldText
-                                enabled:    !useGcsPositionCheckbox.checked
-                            }
-
+                        QGCCheckBox {
+                            visible:    northCalibrationManualPosition.visible && _gcsPosition.isValid
+                            id:         useGcsPositionCheckbox
+                            width:      parent.width
+                            wrapMode:   Text.WordWrap
+                            text:       qsTr("Use GCS position instead")
+                            checked:    _gcsPosition.isValid
                         }
+                        QGCCheckBox {
+                            visible:    northCalibrationManualPosition.visible && !_gcsPosition.isValid
+                            id:         useMapPositionCheckbox
+                            width:      parent.width
+                            wrapMode:   Text.WordWrap
+                            text:       qsTr("Use current map position instead")
+                        }
+
+                        QGCLabel {
+                            width:      parent.width
+                            visible:    useMapPositionCheckbox.checked
+                            wrapMode:   Text.WordWrap
+                            //: %1 is latitude, %2 is longitude
+                            text:       qsTr("Lat: %1 Lon: %2").arg(_mapPosition.latitude.toFixed(4)).arg(_mapPosition.longitude.toFixed(4))
+                        }
+
+                        FactTextField {
+                            id:         northCalLat
+                            width:      parent.width
+                            visible:    !useGcsPositionCheckbox.checked && !useMapPositionCheckbox.checked && northCalibrationCheckBox.checked
+                            text:       "0.00"
+                            textColor:  isNaN(parseFloat(text)) ? qgcPal.warningText: qgcPal.textFieldText
+                            enabled:    !useGcsPositionCheckbox.checked
+                        }
+                        FactTextField {
+                            id:         northCalLon
+                            width:      parent.width
+                            visible:    !useGcsPositionCheckbox.checked && !useMapPositionCheckbox.checked && northCalibrationCheckBox.checked
+                            text:       "0.00"
+                            textColor:  isNaN(parseFloat(text)) ? qgcPal.warningText: qgcPal.textFieldText
+                            enabled:    !useGcsPositionCheckbox.checked
+                        }
+
+                    }
+
+                    QGCButton {
+                        objectName: "sensorsSetup_confirmOrientationCalibration"
+                        width: parent.width
+                        visible: _orientationSettingsCalType !== _calTypeSet
+                        text: qsTr("开始校准")
+                        onClicked: orientationSettingsColumn.confirmCalibration()
+                    }
+
+                    QGCButton {
+                        objectName: "sensorsSetup_closeOrientationSettings"
+                        width: parent.width
+                        text: _orientationSettingsCalType === _calTypeSet ? qsTr("Close") : qsTr("Cancel")
+                        onClicked: _orientationSettingsExpanded = false
                     }
                 }
             }
@@ -672,31 +716,47 @@ SetupPage {
                 anchors.left:   parent.left
                 anchors.top:    parent.top
                 anchors.bottom: parent.bottom
-                width:          _buttonWidth
+                width:          _orientationSettingsExpanded ? parent.width : Math.min(_buttonWidth, parent.width)
                 contentHeight:  nextCancelColumn.y + nextCancelColumn.height + _margins
 
                 // Calibration button column - Calibratin buttons are kept in a separate column from Next/Cancel buttons
                 // so we can enable/disable them all as a group
                 Column {
                     id:                 buttonColumn
+                    width:              buttonFlickable.width
+                    enabled:            _canConfigure && _calibrationButtonsEnabled
                     spacing:            _margins
                     Layout.alignment:   Qt.AlignLeft | Qt.AlignTop
 
+                    QGCButton {
+                        objectName: "sensorsSetup_setOrientation"
+                        width:      buttonColumn.width
+                        text:       qsTr("飞控朝向")
+                        onClicked:  showOrientationSettings(_calTypeSet)
+                    }
+
+                    Loader {
+                        id: orientationSettingsLoader
+                        width: parent.width
+                        active: _orientationSettingsExpanded
+                        visible: active
+                        sourceComponent: orientationSettingsComponent
+                    }
+
                     IndicatorButton {
                         objectName:     "sensorsSetup_calibrateAccel"
-                        width:          _buttonWidth
+                        width:          buttonColumn.width
                         text:           qsTr("Accelerometer")
                         indicatorGreen: !accelCalNeeded
 
                         onClicked: function () {
-                            showOrientationsDialog(_calTypeAccel);
-                            showSimpleAccelCalOption();
+                            showOrientationSettings(_calTypeAccel)
                         }
                     }
 
                     IndicatorButton {
                         objectName:     "sensorsSetup_calibrateCompass"
-                        width:          _buttonWidth
+                        width:          buttonColumn.width
                         text:           qsTr("Compass")
                         indicatorGreen: !compassCalNeeded
 
@@ -704,13 +764,13 @@ SetupPage {
                             if (controller.accelSetupNeeded) {
                                 QGroundControl.showMessageDialog(sensorsPage, qsTr("Calibrate Compass"), qsTr("Accelerometer must be calibrated prior to Compass."))
                             } else {
-                                showOrientationsDialog(_calTypeCompass)
+                                showOrientationSettings(_calTypeCompass)
                             }
                         }
                     }
 
                     QGCButton {
-                        width:  _buttonWidth
+                        width:  buttonColumn.width
                         text:   _levelHorizonText
 
                         readonly property string _levelHorizonText: qsTr("Level Horizon")
@@ -728,7 +788,7 @@ SetupPage {
                     }
 
                     QGCButton {
-                        width:      _buttonWidth
+                        width:      buttonColumn.width
                         text:       qsTr("Gyro")
                         visible:    globals.activeVehicle && (globals.activeVehicle.multiRotor | globals.activeVehicle.rover | globals.activeVehicle.sub)
                         onClicked:  QGroundControl.showMessageDialog(sensorsPage, qsTr("Calibrate Gyro"),
@@ -738,7 +798,7 @@ SetupPage {
                     }
 
                     QGCButton {
-                        width:      _buttonWidth
+                        width:      buttonColumn.width
                         text:       _calibratePressureText
                         onClicked:  QGroundControl.showMessageDialog(sensorsPage, _calibratePressureText,
                                                                  qsTr("Pressure calibration will set the %1 to zero at the current pressure reading. %2").arg(_altText).arg(_helpTextFW),
@@ -751,21 +811,16 @@ SetupPage {
                     }
 
                     QGCButton {
-                        width:      _buttonWidth
+                        width:      buttonColumn.width
                         text:       qsTr("CompassMot")
                         visible:    globals.activeVehicle ? globals.activeVehicle.supports.motorInterference : false
                         onClicked:  compassMotDialogFactory.open()
-                    }
-
-                    QGCButton {
-                        width:      _buttonWidth
-                        text:       qsTr("Sensor Settings")
-                        onClicked:  showOrientationsDialog(_calTypeSet)
                     }
                 } // Column - Cal Buttons
 
                 Column {
                     id:                 nextCancelColumn
+                    width:              buttonColumn.width
                     anchors.topMargin:  buttonColumn.spacing
                     anchors.top:        buttonColumn.bottom
                     anchors.left:       buttonColumn.left
@@ -774,7 +829,7 @@ SetupPage {
                     QGCButton {
                         id:         nextButton
                         objectName: "sensorsSetup_nextButton"
-                        width:      _buttonWidth
+                        width:      buttonColumn.width
                         text:       qsTr("Next")
                         enabled:    false
                         onClicked:  controller.nextClicked()
@@ -783,7 +838,7 @@ SetupPage {
                     QGCButton {
                         id:             cancelButton
                         objectName:     "sensorsSetup_cancelButton"
-                        width:          _buttonWidth
+                        width:          buttonColumn.width
                         text:           qsTr("Cancel")
                         enabled:        false
                         onClicked:      controller.cancelCalibration()
@@ -793,7 +848,8 @@ SetupPage {
 
             /// Right column - cal area
             Column {
-                anchors.leftMargin: _margins
+                visible:            !_orientationSettingsExpanded
+                anchors.leftMargin: _orientationSettingsExpanded ? 0 : _margins
                 anchors.top:        parent.top
                 anchors.bottom:     parent.bottom
                 anchors.left:       buttonFlickable.right

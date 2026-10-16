@@ -375,16 +375,14 @@ void VehicleConfigUITestBase::verifyAPMCalIndicators(bool compassGreen, bool acc
 void VehicleConfigUITestBase::runAPMFullAccelCal()
 {
     // APM requires accel cal before compass can be run.
-    // Click Accelerometer button → orientation dialog opens → accept (full cal, not simple).
+    // Expand the orientation controls and explicitly start the full calibration.
     QVERIFY2(clickButtonScrolled(QStringLiteral("sensorsSetup_calibrateAccel"),
                                  QStringLiteral("sensorsSetup_buttonScroller")),
              "Failed to click Accelerometer button");
 
-    // Accept the orientation/pre-cal dialog (do NOT check the Simple checkbox)
-    QVERIFY2(findVisibleItem(_rootItem, QStringLiteral("popupDialog_acceptButton"), 5000),
-             "Pre-accel-cal dialog accept button not found");
-    QVERIFY2(clickButton(QStringLiteral("popupDialog_acceptButton")),
-             "Failed to accept pre-accel-cal dialog");
+    QVERIFY2(clickButtonScrolled(QStringLiteral("sensorsSetup_confirmOrientationCalibration"),
+                                 QStringLiteral("sensorsSetup_buttonScroller")),
+             "Failed to confirm inline accel calibration");
 
     // MockLink will now drive the 6-pose ACCELCAL_VEHICLE_POS handshake.
     // For each pose the orientation cal area becomes visible with the relevant
@@ -458,11 +456,9 @@ void VehicleConfigUITestBase::runAPMCompassCal()
                                  QStringLiteral("sensorsSetup_buttonScroller")),
              "Failed to click Compass button");
 
-    // Orientation dialog opens → accept to start MAV_CMD_DO_START_MAG_CAL
-    QVERIFY2(findVisibleItem(_rootItem, QStringLiteral("popupDialog_acceptButton"), 5000),
-             "Pre-compass-cal dialog accept button not found");
-    QVERIFY2(clickButton(QStringLiteral("popupDialog_acceptButton")),
-             "Failed to accept pre-compass-cal dialog");
+    QVERIFY2(clickButtonScrolled(QStringLiteral("sensorsSetup_confirmOrientationCalibration"),
+                                 QStringLiteral("sensorsSetup_buttonScroller")),
+             "Failed to confirm inline compass calibration");
 
     // MockLink sends MAG_CAL_PROGRESS 0→100 at ~10Hz
     QPointer<QQuickItem> progressBar = findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_progressBar"), 2000);

@@ -61,6 +61,8 @@ public:
     QString autoDisarmParameter(Vehicle *vehicle) const override { Q_UNUSED(vehicle); return QStringLiteral("DISARM_DELAY"); }
     bool supportsSmartRTL() const override { return true; }
 
+    GeoFencePolicy trainingGeoFencePolicy(Vehicle* vehicle) const override;
+
     void updateAvailableFlightModes(FlightModeList &modeList) override;
 
 protected:

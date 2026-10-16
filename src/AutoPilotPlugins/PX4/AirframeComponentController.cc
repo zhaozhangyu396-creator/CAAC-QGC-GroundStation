@@ -53,7 +53,7 @@ AirframeComponentController::AirframeComponentController(void) :
                 _currentVehicleName = pInfo->name;
                 _currentVehicleIndex = index;
             }
-            airframeType->addAirframe(pInfo->name, pInfo->autostartId);
+            airframeType->addAirframe(pInfo->name, pInfo->autostartId, pInfo->category);
         }
 
         _airframeTypes.append(QVariant::fromValue(airframeType));
@@ -130,21 +130,20 @@ AirframeType::~AirframeType()
 
 }
 
-void AirframeType::addAirframe(const QString& name, int autostartId)
+void AirframeType::addAirframe(const QString& name, int autostartId, const QString& category)
 {
-    Airframe* airframe = new Airframe(name, autostartId);
+    Airframe* airframe = new Airframe(name, autostartId, category, this);
     Q_CHECK_PTR(airframe);
 
     _airframes.append(QVariant::fromValue(airframe));
 }
 
-Airframe::Airframe(const QString& name, int autostartId, QObject* parent) :
-    QObject(parent),
-    _name(name),
-    _autostartId(autostartId)
-{
-
-}
+Airframe::Airframe(const QString& name, int autostartId, const QString& category, QObject* parent)
+    : QObject(parent)
+    , _name(name)
+    , _autostartId(autostartId)
+    , _category(category)
+{}
 
 Airframe::~Airframe()
 {

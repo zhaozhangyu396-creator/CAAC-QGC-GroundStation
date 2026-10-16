@@ -12,6 +12,7 @@ GridLayout {
     readonly property bool vehicleSetupStyle: ScreenTools.isVehicleSetupItem(pidLayout)
     columns: vehicleSetupStyle ? 1 : 2
     width: vehicleSetupStyle ? availableWidth : implicitWidth
+    Layout.minimumWidth: vehicleSetupStyle ? 0 : -1
     rowSpacing: _margins
     columnSpacing: _margins
 
@@ -175,12 +176,15 @@ GridLayout {
     Column {
         id:                 leftPanel
         Layout.fillWidth:   true
+        Layout.minimumWidth: pidLayout.vehicleSetupStyle ? 0 : -1
         Layout.alignment:   Qt.AlignTop
         spacing:            ScreenTools.defaultFontPixelHeight / 4
         clip:               true // chart has redraw problems
 
         QGCLabel {
             id:                 chartTitleLabel
+            width:              pidLayout.vehicleSetupStyle ? parent.width : implicitWidth
+            wrapMode:           pidLayout.vehicleSetupStyle ? Text.WordWrap : Text.NoWrap
             text:               _chartTitle
             font.pointSize:     ScreenTools.defaultFontPointSize
             font.family:        ScreenTools.normalFontFamily
@@ -289,6 +293,7 @@ GridLayout {
 
         Column {
             id:         leftPanelBottomColumn
+            width: pidLayout.vehicleSetupStyle ? parent.width : implicitWidth
             spacing:    ScreenTools.defaultFontPixelHeight / 4
 
             RowLayout {
@@ -321,6 +326,8 @@ GridLayout {
             }
 
             QGCCheckBox {
+                width: pidLayout.vehicleSetupStyle ? parent.width : implicitWidth
+                wrapMode: pidLayout.vehicleSetupStyle ? Text.WordWrap : Text.NoWrap
                 visible: showAutoModeChange
                 id:     autoModeChange
                 text:   qsTr("Automatic Flight Mode Switching")
@@ -332,12 +339,17 @@ GridLayout {
 
             Column {
                 visible: autoModeChange.checked
+                width: pidLayout.vehicleSetupStyle ? parent.width : implicitWidth
                 QGCLabel {
+                    width: pidLayout.vehicleSetupStyle ? parent.width : implicitWidth
+                    wrapMode: pidLayout.vehicleSetupStyle ? Text.WordWrap : Text.NoWrap
                     text:            qsTr("Switches to 'Stabilized' when you click Start.")
                     font.pointSize:     ScreenTools.smallFontPointSize
                 }
 
                 QGCLabel {
+                    width: pidLayout.vehicleSetupStyle ? parent.width : implicitWidth
+                    wrapMode: pidLayout.vehicleSetupStyle ? Text.WordWrap : Text.NoWrap
                     text:            qsTr("Switches to '%1' when you click Stop.").arg(globals.activeVehicle.pauseFlightMode)
                     font.pointSize:     ScreenTools.smallFontPointSize
                 }
@@ -349,18 +361,27 @@ GridLayout {
         id:                 rightPanel
         Layout.alignment:   Qt.AlignTop
         Layout.fillWidth:   true
+        Layout.minimumWidth: pidLayout.vehicleSetupStyle ? 0 : -1
 
-        RowLayout {
+        Flow {
+            id: tuningModeChoice
+            Layout.fillWidth: pidLayout.vehicleSetupStyle
+            Layout.minimumWidth: pidLayout.vehicleSetupStyle ? 0 : -1
+            spacing: _margins
             visible: showAutoTuning
 
             QGCRadioButton {
                 id:         useAutoTuningRadio
+                width: pidLayout.vehicleSetupStyle ? Math.min(implicitWidth, tuningModeChoice.width) : implicitWidth
+                wrapMode: pidLayout.vehicleSetupStyle ? Text.WordWrap : Text.NoWrap
                 text:       qsTr("Use auto-tuning")
                 checked:    useAutoTuning
                 onClicked:  useAutoTuning = true
             }
             QGCRadioButton {
                 id:         useManualTuningRadio
+                width: pidLayout.vehicleSetupStyle ? Math.min(implicitWidth, tuningModeChoice.width) : implicitWidth
+                wrapMode: pidLayout.vehicleSetupStyle ? Text.WordWrap : Text.NoWrap
                 text:       qsTr("Use manual tuning")
                 checked:    !useAutoTuning
                 onClicked:  useAutoTuning = false
@@ -368,23 +389,36 @@ GridLayout {
         }
 
         AutotuneUI {
+            Layout.fillWidth: pidLayout.vehicleSetupStyle
+            Layout.minimumWidth: pidLayout.vehicleSetupStyle ? 0 : -1
             visible: showAutoTuning && useAutoTuningRadio.checked
         }
 
         ColumnLayout {
             visible: !showAutoTuning || useManualTuningRadio.checked
             Layout.fillWidth: true
+            Layout.minimumWidth: pidLayout.vehicleSetupStyle ? 0 : -1
 
-            Column {
-                RowLayout {
+            GridLayout {
+                Layout.fillWidth: true
+                Layout.minimumWidth: pidLayout.vehicleSetupStyle ? 0 : -1
+                columns: pidLayout.vehicleSetupStyle ? 1 : 2
+                visible: axis.length > 1
+
+                QGCLabel { text: qsTr("Select Tuning:") }
+
+                Flow {
+                    id: axisChoices
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: pidLayout.vehicleSetupStyle ? 0 : -1
                     spacing: _margins
-                    visible: axis.length > 1
-
-                    QGCLabel { text: qsTr("Select Tuning:") }
 
                     Repeater {
                         model: axis
                         QGCRadioButton {
+                            width: pidLayout.vehicleSetupStyle
+                                ? Math.min(implicitWidth, axisChoices.width) : implicitWidth
+                            wrapMode: pidLayout.vehicleSetupStyle ? Text.WordWrap : Text.NoWrap
                             objectName:     "pidTuning_axisButton_" + modelData.name.replace(/ /g, "")
                             text:           modelData.name
                             checked:        index == _currentAxis
@@ -410,7 +444,8 @@ GridLayout {
                         heading:                title
                         headingDescription:     description
                         visible:                _currentAxis === paramRepeater.axisIndex
-                        Layout.preferredWidth:  ScreenTools.defaultFontPixelWidth * 40
+                        Layout.preferredWidth: pidLayout.vehicleSetupStyle ? 0 : ScreenTools.defaultFontPixelWidth * 40
+                        Layout.minimumWidth: pidLayout.vehicleSetupStyle ? 0 : -1
                         Layout.fillWidth: pidLayout.vehicleSetupStyle
 
                         FactSlider {
@@ -419,15 +454,21 @@ GridLayout {
                             to:                     max
                             majorTickStepSize:      step
                             Layout.fillWidth:       true
+                            Layout.minimumWidth: pidLayout.vehicleSetupStyle ? 0 : -1
                         }
                     }
                 }
             }
 
-            Column {
+            ColumnLayout {
+                Layout.fillWidth: pidLayout.vehicleSetupStyle
+                Layout.minimumWidth: pidLayout.vehicleSetupStyle ? 0 : -1
+                spacing: 0
                 QGCLabel { text: qsTr("Clipboard Values:") }
 
                 GridLayout {
+                    Layout.fillWidth: pidLayout.vehicleSetupStyle
+                    Layout.minimumWidth: pidLayout.vehicleSetupStyle ? 0 : -1
                     rows:           savedRepeater.model.length
                     flow:           GridLayout.TopToBottom
                     rowSpacing:     0
@@ -436,26 +477,43 @@ GridLayout {
                     Repeater {
                         model: axis[_currentAxis].params
 
-                        QGCLabel { text: param }
+                        QGCLabel {
+                            Layout.fillWidth: pidLayout.vehicleSetupStyle
+                            Layout.minimumWidth: pidLayout.vehicleSetupStyle ? 0 : -1
+                            wrapMode: pidLayout.vehicleSetupStyle ? Text.WrapAnywhere : Text.NoWrap
+                            text: param
+                        }
                     }
 
                     Repeater {
                         id: savedRepeater
 
-                        QGCLabel { text: modelData }
+                        QGCLabel {
+                            Layout.fillWidth: pidLayout.vehicleSetupStyle
+                            Layout.minimumWidth: pidLayout.vehicleSetupStyle ? 0 : -1
+                            wrapMode: pidLayout.vehicleSetupStyle ? Text.WrapAnywhere : Text.NoWrap
+                            text: modelData
+                        }
                     }
                 }
             }
 
-            RowLayout {
+            Flow {
+                id: clipboardActions
+                Layout.fillWidth: pidLayout.vehicleSetupStyle
+                Layout.minimumWidth: pidLayout.vehicleSetupStyle ? 0 : -1
                 spacing: _margins
 
                 QGCButton {
+                    width: pidLayout.vehicleSetupStyle ? Math.min(implicitWidth, clipboardActions.width) : implicitWidth
+                    wrapMode: pidLayout.vehicleSetupStyle ? Text.WordWrap : Text.NoWrap
                     text:       qsTr("Save To Clipboard")
                     onClicked:  saveTuningParamValues()
                 }
 
                 QGCButton {
+                    width: pidLayout.vehicleSetupStyle ? Math.min(implicitWidth, clipboardActions.width) : implicitWidth
+                    wrapMode: pidLayout.vehicleSetupStyle ? Text.WordWrap : Text.NoWrap
                     text:       qsTr("Restore From Clipboard")
                     onClicked:  resetToSavedTuningParamValues()
                 }

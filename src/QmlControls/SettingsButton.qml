@@ -8,6 +8,10 @@ import QGroundControl.Controls
 Button {
     id:             control
     padding:        ScreenTools.defaultFontPixelWidth * 0.75
+    leftPadding:    outlined ? ScreenTools.defaultFontPixelWidth : padding
+    rightPadding:   leftPadding
+    topPadding:     outlined ? ScreenTools.defaultFontPixelHeight * 0.5 : padding
+    bottomPadding:  topPadding
     hoverEnabled:   !ScreenTools.isMobile
     autoExclusive:  true
     icon.color:     textColor
@@ -18,6 +22,7 @@ Button {
         : checked || pressed ? qgcPal.buttonHighlightText : qgcPal.buttonText
     property bool expandable: false
     property bool expanded:   false
+    property bool outlined:   false
 
     signal toggleExpand()
 
@@ -27,12 +32,17 @@ Button {
     }
 
     background: Rectangle {
-        color:      control.settingsMenuStyle ? qgcPal.windowShadeDark
+        readonly property color fillColor: control.settingsMenuStyle ? qgcPal.windowShadeDark
                         : control.vehicleSetupStyle ? qgcPal.windowShade : qgcPal.buttonHighlight
-        border.color: control.settingsMenuStyle && checked ? qgcPal.text : "transparent"
-        border.width: control.settingsMenuStyle && checked ? 1 : 0
-        opacity:    checked || pressed ? 1 : enabled && hovered ? .2 : 0
-        radius:     ScreenTools.defaultFontPixelWidth / 2
+        readonly property real highlightOpacity: control.checked || control.pressed
+                        ? 1 : control.enabled && control.hovered ? 0.2 : 0
+        color:      control.outlined
+                        ? Qt.rgba(fillColor.r, fillColor.g, fillColor.b, fillColor.a * highlightOpacity) : fillColor
+        border.color: control.settingsMenuStyle && control.checked ? qgcPal.text
+                        : control.outlined ? qgcPal.groupBorder : "transparent"
+        border.width: control.outlined || (control.settingsMenuStyle && control.checked) ? 1 : 0
+        opacity:    control.outlined ? 1 : highlightOpacity
+        radius:     control.outlined ? ScreenTools.defaultBorderRadius : ScreenTools.defaultFontPixelWidth / 2
 
         Rectangle {
             anchors.left: parent.left
@@ -62,6 +72,7 @@ Button {
             Layout.fillWidth:       true
             text:                   control.text
             font.pointSize:         control.vehicleSetupStyle ? ScreenTools.defaultFontPointSize : ScreenTools.menuFontPointSize
+            font.bold:              control.outlined && control.vehicleSetupStyle
             wrapMode:               Text.WordWrap
             color:                  control.textColor
             horizontalAlignment:    QGCLabel.AlignLeft

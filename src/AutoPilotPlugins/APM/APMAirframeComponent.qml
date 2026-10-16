@@ -9,7 +9,9 @@ import QGroundControl.Controls
 
 SetupPage {
     id:             airframePage
+    objectName:     "apmAirframePage"
     pageComponent:  pageComponent
+    property string category: ""
 
     Component {
         id: pageComponent
@@ -22,9 +24,19 @@ SetupPage {
             property real _boxWidth:            _minW
             property real _boxSpace:            ScreenTools.defaultFontPixelWidth
             property real _margins:             ScreenTools.defaultFontPixelWidth
-            property Fact _frameClass:          controller.getParameterFact(-1, "FRAME_CLASS")
+            property Fact _frameClass:          controller.getParameterFact(-1, "FRAME_CLASS", false)
             property Fact _frameType:           controller.getParameterFact(-1, "FRAME_TYPE", false)    // FRAME_TYPE is not available on all Rover versions
-            property bool _frameTypeAvailable:  controller.vehicle.multiRotor
+            property bool _frameTypeAvailable:  !!_frameType && !!controller.vehicle && controller.vehicle.multiRotor
+            readonly property var _frameClasses: {
+                const frames = []
+                for (let i = 0; i < controller.frameClassModel.count; ++i) {
+                    const frame = controller.frameClassModel.get(i)
+                    if (frame.category === airframePage.category) {
+                        frames.push(frame)
+                    }
+                }
+                return frames
+            }
 
             readonly property real spacerHeight: ScreenTools.defaultFontPixelHeight
 
@@ -51,10 +63,25 @@ SetupPage {
 
             APMAirframeComponentController { id: controller; }
 
+            AirframeCategoryMenu {
+                Layout.fillWidth: true
+                category: airframePage.category
+                onCategorySelected: (category) => { airframePage.category = category }
+            }
+
+            QGCLabel {
+                objectName: "apmAirframeCategoryUnavailable"
+                Layout.fillWidth: true
+                visible: airframePage.category !== "" && mainColumn._frameClasses.length === 0
+                text: qsTr("当前固件未提供此类机架。")
+                wrapMode: Text.WordWrap
+            }
+
             QGCLabel {
                 id:                 helpText
                 Layout.fillWidth:   true
-                text:               (_frameClass.rawValue === 0 ?
+                visible:            mainColumn._frameClasses.length > 0
+                text:               (!_frameClass || _frameClass.rawValue === 0 ?
                                          qsTr("Airframe is currently not set.") :
                                          qsTr("Currently set to frame class '%1'").arg(_frameClass.enumStringValue) +
                                          (_frameTypeAvailable ?  qsTr(" and frame type '%2'").arg(_frameType.enumStringValue) : "") +
@@ -75,39 +102,41 @@ SetupPage {
                 Layout.fillWidth:   true
                 spacing:            _boxSpace
 
-                ButtonGroup {
-                    id: airframeTypeExclusive
-                }
-
                 Repeater {
-                    model: controller.frameClassModel
+                    model: mainColumn._frameClasses
 
                     // Outer summary item rectangle
                     Rectangle {
                         id:         outerRect
-                        objectName: "apmAirframeBox_" + object.name
+                        objectName: "apmAirframeBox_" + frame.name
                         width:      _boxWidth
                         height:     ScreenTools.defaultFontPixelHeight * 14
                         color:      qgcPal.window
 
+                        required property var modelData
+                        readonly property var frame: modelData
+                        readonly property bool selected: !!_frameClass && frame.frameClass === _frameClass.rawValue
                         readonly property real titleHeight: ScreenTools.defaultFontPixelHeight * 1.75
                         readonly property real innerMargin: ScreenTools.defaultFontPixelWidth
 
                         MouseArea {
                             anchors.fill: parent
                             onClicked: {
-                                if (!airframeCheckBox.checked || !combo.valid) {
-                                    if (_frameTypeAvailable && object.defaultFrameType != -1) {
-                                        _frameType.rawValue = object.defaultFrameType
+                                if (!_frameClass || !controller.vehicle || controller.vehicle.armed || controller.vehicle.airborne) {
+                                    return
+                                }
+                                if (!outerRect.selected || !combo.valid) {
+                                    if (_frameTypeAvailable && outerRect.frame.defaultFrameType !== -1) {
+                                        _frameType.rawValue = outerRect.frame.defaultFrameType
                                     }
-                                    airframeCheckBox.checked = true
+                                    _frameClass.rawValue = outerRect.frame.frameClass
                                 }
                             }
                         }
 
                         QGCLabel {
                             id:     title
-                            text:   object.name
+                            text:   outerRect.frame.name
                         }
 
                         Rectangle {
@@ -117,7 +146,9 @@ SetupPage {
                             anchors.bottom:     parent.bottom
                             anchors.left:       parent.left
                             anchors.right:      parent.right
-                            color:              airframeCheckBox.checked ? qgcPal.buttonHighlight : qgcPal.windowShade
+                            color:              Qt.lighter(qgcPal.settingsAccent, 1.3)
+                            border.color:       qgcPal.text
+                            border.width:       outerRect.selected ? 1 : 0
                             opacity:            combo.valid ? 1.0 : 0.5
 
                             ColumnLayout {
@@ -133,45 +164,35 @@ SetupPage {
                                     smooth:             true
                                     antialiasing:       true
                                     sourceSize.width:   width
-                                    source:             airframeCheckBox.checked ? object.imageResource : object.imageResourceDefault
-                                }
-
-                                QGCCheckBox {
-                                    // Although this item is invisible we still use it to manage state
-                                    id:             airframeCheckBox
-                                    checked:        object.frameClass === _frameClass.rawValue
-                                    buttonGroup: airframeTypeExclusive
-                                    visible:        false
-
-                                    onCheckedChanged: {
-                                        if (checked) {
-                                            _frameClass.rawValue = object.frameClass
-                                        }
-                                    }
+                                    source:             outerRect.selected ? outerRect.frame.imageResource : outerRect.frame.imageResourceDefault
                                 }
 
                                 QGCLabel {
                                     text:           qsTr("Frame Type")
                                     font.pointSize: ScreenTools.smallFontPointSize
                                     color:          qgcPal.buttonHighlightText
-                                    visible:        airframeCheckBox.checked && object.frameTypeSupported
+                                    visible:        outerRect.selected && outerRect.frame.frameTypeSupported
                                 }
 
                                 QGCComboBox {
                                     id:                 combo
                                     Layout.fillWidth:   true
-                                    model:              object.frameTypeEnumStrings
-                                    visible:            airframeCheckBox.checked && object.frameTypeSupported
-                                    onActivated: (index) => { _frameType.rawValue = object.frameTypeEnumValues[index] }
+                                    model:              outerRect.frame.frameTypeEnumStrings
+                                    visible:            outerRect.selected && outerRect.frame.frameTypeSupported
+                                    onActivated: (index) => {
+                                        if (_frameType && controller.vehicle && !controller.vehicle.armed && !controller.vehicle.airborne) {
+                                            _frameType.rawValue = outerRect.frame.frameTypeEnumValues[index]
+                                        }
+                                    }
 
                                     property bool valid: true
 
                                     function checkFrameType(value) {
-                                        return value == _frameType.rawValue
+                                        return !!_frameType && value === _frameType.rawValue
                                     }
 
                                     function selectFrameType() {
-                                        let index = object.frameTypeEnumValues.findIndex(checkFrameType)
+                                        let index = outerRect.frame.frameTypeEnumValues.findIndex(checkFrameType)
                                         if (index == -1 && combo.visible) {
                                             // Frame Class/Type is set to an invalid combination
                                             combo.valid = false
@@ -182,6 +203,7 @@ SetupPage {
                                     }
 
                                     Component.onCompleted: selectFrameType()
+                                    onVisibleChanged: selectFrameType()
 
                                     Connections {
                                         target:                 _frameTypeAvailable ? _frameType : null

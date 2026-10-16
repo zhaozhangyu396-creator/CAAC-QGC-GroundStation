@@ -2,13 +2,15 @@
 
 #include <QtCore/QList>
 #include <QtCore/QMap>
+#include <QtCore/QPair>
 #include <QtCore/QString>
+#include <QtCore/QVariant>
 #include <QtCore/QVariantList>
 #include <QtPositioning/QGeoCoordinate>
 
+#include "FollowMe.h"
 #include "MAVLinkEnums.h"
 #include "QGCMAVLinkTypes.h"
-#include "FollowMe.h"
 #include "VehicleTypes.h"
 
 class Vehicle;
@@ -89,6 +91,17 @@ public:
         GuidedTakeoffCapability =   1 << 7, ///< Vehicle supports guided takeoff
         VTOLMulticopterTakeoffCapability = 1 << 8, ///< VTOL supports MAV_CMD_NAV_TAKEOFF while remaining in multicopter mode
     };
+
+    struct GeoFencePolicy
+    {
+        QString description;
+        QString unsupportedReason;
+        QList<QPair<QString, QVariant>> preparation;
+        QList<QPair<QString, QVariant>> activation;
+    };
+
+    /// Read-only parameter policy; an empty description means this vehicle is unsupported.
+    virtual GeoFencePolicy trainingGeoFencePolicy(Vehicle* vehicle) const;
 
     /// Parameter name remapping support:
     /// When firmware renames a parameter across versions, callers should use the *newest* (current)

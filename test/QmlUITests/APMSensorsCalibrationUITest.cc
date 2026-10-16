@@ -89,10 +89,9 @@ void APMSensorsCalibrationUITest::_testCompassCalibrationCancel()
     QVERIFY2(clickButtonScrolled(QStringLiteral("sensorsSetup_calibrateCompass"),
                                  QStringLiteral("sensorsSetup_buttonScroller")),
              "Failed to click Compass button");
-    QVERIFY2(findVisibleItem(_rootItem, QStringLiteral("popupDialog_acceptButton"), 5000),
-             "Pre-compass-cal dialog not found");
-    QVERIFY2(clickButton(QStringLiteral("popupDialog_acceptButton")),
-             "Failed to accept pre-compass-cal dialog");
+    QVERIFY2(clickButtonScrolled(QStringLiteral("sensorsSetup_confirmOrientationCalibration"),
+                                 QStringLiteral("sensorsSetup_buttonScroller")),
+             "Failed to confirm inline compass calibration");
 
     // Wait for some progress
     QQuickItem *progressBar = findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_progressBar"), 2000);
@@ -157,10 +156,9 @@ void APMSensorsCalibrationUITest::_testCompassCalibrationIgnoresStaleFailedRepor
     QVERIFY2(clickButtonScrolled(QStringLiteral("sensorsSetup_calibrateCompass"),
                                  QStringLiteral("sensorsSetup_buttonScroller")),
              "Failed to click Compass button");
-    QVERIFY2(findVisibleItem(_rootItem, QStringLiteral("popupDialog_acceptButton"), 5000),
-             "Pre-compass-cal dialog not found");
-    QVERIFY2(clickButton(QStringLiteral("popupDialog_acceptButton")),
-             "Failed to accept pre-compass-cal dialog");
+    QVERIFY2(clickButtonScrolled(QStringLiteral("sensorsSetup_confirmOrientationCalibration"),
+                                 QStringLiteral("sensorsSetup_buttonScroller")),
+             "Failed to confirm inline compass calibration");
 
     // The stale failed reports must not terminate the new calibration: the cancel
     // button stays enabled while a compass cal is active, so it must remain enabled.
@@ -229,10 +227,9 @@ void APMSensorsCalibrationUITest::_testCompassCalibrationStartRejected()
     QVERIFY2(clickButtonScrolled(QStringLiteral("sensorsSetup_calibrateCompass"),
                                  QStringLiteral("sensorsSetup_buttonScroller")),
              "Failed to click Compass button");
-    QVERIFY2(findVisibleItem(_rootItem, QStringLiteral("popupDialog_acceptButton"), 5000),
-             "Pre-compass-cal dialog not found");
-    QVERIFY2(clickButton(QStringLiteral("popupDialog_acceptButton")),
-             "Failed to accept pre-compass-cal dialog");
+    QVERIFY2(clickButtonScrolled(QStringLiteral("sensorsSetup_confirmOrientationCalibration"),
+                                 QStringLiteral("sensorsSetup_buttonScroller")),
+             "Failed to confirm inline compass calibration");
 
     // The rejected START must cleanly stop the calibration: the cancel button is only
     // enabled while a cal is active, so it must end up disabled.
@@ -267,6 +264,31 @@ void APMSensorsCalibrationUITest::_testAccelCalibration()
 
     navigateToAPMSensorsPage();
     if (QTest::currentTestFailed()) return;
+
+    QVERIFY2(clickButtonScrolled(QStringLiteral("sensorsSetup_setOrientation"),
+                                 QStringLiteral("sensorsSetup_buttonScroller")),
+             "Failed to expand flight controller orientation");
+    QVERIFY2(findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_boardOrientation"), 3000),
+             "Board orientation Fact control was not shown inline");
+    QVERIFY2(!findVisibleItem(_rootItem, QStringLiteral("popupDialog_acceptButton"), 0),
+             "Orientation settings unexpectedly opened a dialog");
+    QVERIFY2(clickButtonScrolled(QStringLiteral("sensorsSetup_setOrientation"),
+                                 QStringLiteral("sensorsSetup_buttonScroller")),
+             "Failed to collapse flight controller orientation");
+    QTRY_VERIFY_WITH_TIMEOUT(!findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_orientationSettings"), 0), 3000);
+
+    QVERIFY2(clickButtonScrolled(QStringLiteral("sensorsSetup_calibrateAccel"),
+                                 QStringLiteral("sensorsSetup_buttonScroller")),
+             "Failed to open inline accel confirmation");
+    QVERIFY2(clickButtonScrolled(QStringLiteral("sensorsSetup_closeOrientationSettings"),
+                                 QStringLiteral("sensorsSetup_buttonScroller")),
+             "Failed to cancel inline accel confirmation");
+    QQuickItem* cancelBtn = findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_cancelButton"), 2000);
+    QVERIFY2(cancelBtn && !cancelBtn->property("enabled").toBool(),
+             "Cancelling the inline confirmation started calibration");
+    QQuickItem* accelBtn = findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_calibrateAccel"), 2000);
+    QVERIFY2(accelBtn && accelBtn->property("enabled").toBool(),
+             "Cancelling the inline confirmation did not restore the calibration entry");
 
     verifyAPMCalIndicators(/*compassGreen=*/false, /*accelGreen=*/false, "after param reset");
     if (QTest::currentTestFailed()) return;

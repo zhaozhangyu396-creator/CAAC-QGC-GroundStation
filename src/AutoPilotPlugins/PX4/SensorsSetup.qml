@@ -64,7 +64,7 @@ Item {
     property string _calMagIdParamFormat:               "CAL_MAG#_ID"
     property string _calMagRotParamFormat:              "CAL_MAG#_ROT"
     property bool 	_allMagsDisabled:                   controller.parameterExists(-1, "SYS_HAS_MAG") ? controller.getParameterFact(-1, "SYS_HAS_MAG").value === 0 : false
-    property bool   _boardOrientationChangeAllowed:     !_sensorsHaveFixedOrientation && setOrientationsDialogShowBoardOrientation
+    property bool   _boardOrientationChangeAllowed:     !_sensorsHaveFixedOrientation && _showBoardOrientation
     property bool   _compassOrientationChangeAllowed:   !_sensorsHaveFixedOrientation
     property int    _arbitrarilyLargeMaxMagIndex:       50
 
@@ -106,10 +106,24 @@ Item {
     }
 
     function orientationsButtonVisible() {
-        // Deliberately independent of setOrientationsDialogShowBoardOrientation: that is a
-        // transient flag controlling dialog contents only (cleared by onMagCalComplete) and
+        // Deliberately independent of _showBoardOrientation: that is a
+        // transient flag controlling settings contents only (cleared by onMagCalComplete) and
         // must not hide the Orientations button after a compass calibration completes.
         return !_sensorsHaveFixedOrientation && showSetOrientations
+    }
+
+    property bool orientationExpanded: false
+    property bool orientationRebootRequired: false
+    property bool _showBoardOrientation: true
+
+    function showOrientationSettings(showBoardOrientation, showRebootMessage) {
+        _showBoardOrientation = showBoardOrientation
+        orientationRebootRequired = showRebootMessage
+        if (QGroundControl.corePlugin.directMissionItemEditing) {
+            caacPanel.focusOrientation()
+        } else {
+            orientationExpanded = true
+        }
     }
 
     QGCPalette { id: qgcPal; colorGroupEnabled: true }
@@ -123,8 +137,7 @@ Item {
         onResetStatusTextArea: statusLog.text = statusTextAreaDefaultText
 
         onMagCalComplete: {
-            setOrientationsDialogShowBoardOrientation   = false
-            setOrientationsDialogFactory.open({ title: qsTr("Compass Calibration Complete"), showRebootMessage: true })
+            _root.showOrientationSettings(false, true)
         }
 
         onWaitingForCancelChanged: {
@@ -241,71 +254,72 @@ Item {
         }
     }
 
-    property bool setOrientationsDialogShowBoardOrientation:    true
-
-    QGCPopupDialogFactory {
-        id: setOrientationsDialogFactory
-
-        dialogComponent: setOrientationsDialogComponent
-    }
-
     Component {
-        id: setOrientationsDialogComponent
+        id: orientationControlsComponent
 
-        QGCPopupDialog {
-            buttons: Dialog.Ok
+        ColumnLayout {
+            objectName: "sensorsSetup_orientationControls"
+            spacing: ScreenTools.defaultFontPixelHeight
 
-            property bool showRebootMessage: true
+            QGCLabel {
+                objectName: "sensorsSetup_orientationRebootMessage"
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                text: qsTr("Reboot the vehicle prior to flight.")
+                visible: _root.orientationRebootRequired
+            }
+
+            QGCLabel {
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                text: qsTr("Adjust orientations as needed.\n\nROTATION_NONE indicates component points in direction of flight.")
+                visible: _boardOrientationChangeAllowed || (_compassOrientationChangeAllowed && currentExternalMagCount() !== 0)
+            }
 
             ColumnLayout {
-                spacing: ScreenTools.defaultFontPixelHeight
+                Layout.fillWidth: true
+                visible: _boardOrientationChangeAllowed
 
                 QGCLabel {
-                    text:       qsTr("Reboot the vehicle prior to flight.")
-                    visible:    showRebootMessage
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    text: qsTr("Autopilot Orientation")
                 }
 
-                QGCLabel {
-                    text:       qsTr("Adjust orientations as needed.\n\nROTATION_NONE indicates component points in direction of flight.")
-                    visible:    _boardOrientationChangeAllowed || (_compassOrientationChangeAllowed && currentExternalMagCount() !== 0)
+                FactComboBox {
+                    objectName: "sensorsSetup_boardOrientation"
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: 0
+                    fact: sens_board_rot
                 }
+            }
 
-                Column {
-                    visible: _boardOrientationChangeAllowed
+            Repeater {
+                model: _compassOrientationChangeAllowed ? currentMagParamCount() : 0
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    visible: calMagIdFact.value > 0 && calMagRotFact.value >= 0
+
+                    property Fact calMagIdFact: controller.getParameterFact(-1, _calMagIdParamFormat.replace("#", index))
+                    property Fact calMagRotFact: controller.getParameterFact(-1, _calMagRotParamFormat.replace("#", index))
 
                     QGCLabel {
-                        text: qsTr("Autopilot Orientation")
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        text: qsTr("Mag %1 Orientation").arg(index)
                     }
 
                     FactComboBox {
-                        sizeToContents: true
-                        fact:           sens_board_rot
+                        objectName: "sensorsSetup_magOrientation_" + index
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        fact: parent.calMagRotFact
                     }
                 }
-
-                Repeater {
-                    model: _compassOrientationChangeAllowed ? currentMagParamCount() : 0
-
-                    Column {
-                        // id > = signals compass available, rot < 0 signals internal compass
-                        visible: calMagIdFact.value > 0 && calMagRotFact.value >= 0
-
-                        property Fact calMagIdFact:     controller.getParameterFact(-1, _calMagIdParamFormat.replace("#", index))
-                        property Fact calMagRotFact:    controller.getParameterFact(-1, _calMagRotParamFormat.replace("#", index))
-
-                        QGCLabel {
-                            text: qsTr("Mag %1 Orientation").arg(index)
-                        }
-
-                        FactComboBox {
-                            sizeToContents: true
-                            fact:           parent.calMagRotFact
-                        }
-                    }
-                }
-            } // Column
-        } // QGCPopupDialog
-    } // Component - setOrientationsDialogComponent
+            }
+        }
+    }
 
     property string sectionIdFilter: ""
 
@@ -362,6 +376,8 @@ Item {
         anchors.fill: parent
         visible: QGroundControl.corePlugin.directMissionItemEditing
         calibrationActive: controller.calibrationActive
+        orientationAvailable: orientationsButtonVisible() || _root.orientationRebootRequired
+        orientationControls: orientationControlsComponent
         compassAvailable: sectionVisible("Compass")
         accelAvailable: sectionVisible("Accelerometer")
         levelAvailable: sectionVisible("Level Horizon")
@@ -379,6 +395,7 @@ Item {
             controller.orientationCalRightSideVisible, controller.orientationCalNoseDownSideVisible,
             controller.orientationCalTailDownSideVisible, controller.orientationCalUpsideDownSideVisible]
         sideRotating: sideStates.map(state => _sideRotating(state))
+        onSetOrientation: _root.showOrientationSettings(true, false)
         onStartAccel: _startCalibration("accel", accelHelp, qsTr("Calibrate Accelerometer"))
         onStartLevel: _startCalibration("level", levelHelp, qsTr("Level Horizon"))
         onStartCompass: _startCalibration("compass", compassHelp, qsTr("Calibrate Compass"))
@@ -398,14 +415,6 @@ Item {
                     text: qsTr("Calibrate Airspeed")
                     visible: _root.sectionVisible("Airspeed")
                     onClicked: _startCalibration("airspeed", airspeedHelp, qsTr("Calibrate Airspeed"))
-                }
-                SettingsActionButton {
-                    text: qsTr("Set Orientations")
-                    visible: _root.orientationsButtonVisible()
-                    onClicked: {
-                        setOrientationsDialogShowBoardOrientation = true
-                        setOrientationsDialogFactory.open({ title: qsTr("Set Orientations"), showRebootMessage: false })
-                    }
                 }
                 SettingsActionButton {
                     text: qsTr("Factory Reset")
@@ -443,6 +452,30 @@ Item {
             }
 
             QGCButton {
+                objectName: "sensorsSetup_setOrientation"
+                Layout.fillWidth: true
+                text:       qsTr("飞控朝向")
+                checked:    _root.orientationExpanded
+                visible:    sectionIdFilter === "" || sectionIdFilter === "Orientations" || _root.orientationExpanded
+                enabled:    globals.activeVehicle && !globals.activeVehicle.armed && !controller.calibrationActive
+                onClicked: {
+                    if (_root.orientationExpanded) {
+                        _root.orientationExpanded = false
+                    } else {
+                        _root.showOrientationSettings(true, false)
+                    }
+                }
+            }
+
+            Loader {
+                Layout.fillWidth: true
+                visible: _root.orientationExpanded
+                active: _root.orientationExpanded
+                enabled: globals.activeVehicle && !globals.activeVehicle.armed && !controller.calibrationActive
+                sourceComponent: orientationControlsComponent
+            }
+
+            QGCButton {
                 objectName: "sensorsSetup_calibrateAccel"
                 Layout.fillWidth: true
                 text:       qsTr("Calibrate Accelerometer")
@@ -463,16 +496,6 @@ Item {
                 text:       qsTr("Calibrate Airspeed")
                 visible:    sectionIdFilter === "" || sectionIdFilter === "Airspeed"
                 onClicked:  _startCalibration("airspeed", airspeedHelp, qsTr("Calibrate Airspeed"))
-            }
-
-            QGCButton {
-                Layout.fillWidth: true
-                text:       qsTr("Set Orientations")
-                visible:    sectionIdFilter === "" || sectionIdFilter === "Orientations"
-                onClicked: {
-                    setOrientationsDialogShowBoardOrientation = true
-                    setOrientationsDialogFactory.open({ title: qsTr("Set Orientations"), showRebootMessage: false })
-                }
             }
 
             QGCButton {

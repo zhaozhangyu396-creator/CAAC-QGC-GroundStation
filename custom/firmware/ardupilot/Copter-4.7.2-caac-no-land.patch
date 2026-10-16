@@ -1,0 +1,77 @@
+diff --git a/ArduCopter/fence.cpp b/ArduCopter/fence.cpp
+index b6df76b..e409c67 100644
+--- a/ArduCopter/fence.cpp
++++ b/ArduCopter/fence.cpp
+@@ -63,13 +63,17 @@ void Copter::fence_check()
+
+             // disarm immediately if we think we are on the ground or in a manual flight mode with zero throttle
+             // don't disarm if the high-altitude fence has been broken because it's likely the user has pulled their throttle to zero to bring it down
+-            if (ap.land_complete || (flightmode->has_manual_throttle() && ap.throttle_zero && !failsafe.radio && ((fence.get_breaches() & AC_FENCE_TYPE_ALT_MAX)== 0))){
++            if (ap.land_complete || (!fence.brake_no_land() && flightmode->has_manual_throttle() && ap.throttle_zero && !failsafe.radio && ((fence.get_breaches() & AC_FENCE_TYPE_ALT_MAX)== 0))){
+                 arming.disarm(AP_Arming::Method::FENCEBREACH);
+
+             } else {
+
+-                // if more than 100m outside the fence just force a land
+-                if (fence.get_breach_distance(fence_breaches.new_breaches) > AC_FENCE_GIVE_UP_DISTANCE) {
++                // The opt-in Brake policy has no landing fallback, including beyond 100m.
++                if (fence.brake_no_land()) {
++                    if (!set_mode(Mode::Number::BRAKE, ModeReason::FENCE_BREACHED)) {
++                        GCS_SEND_TEXT(MAV_SEVERITY_CRITICAL, "Fence brake failed: take control");
++                    }
++                } else if (fence.get_breach_distance(fence_breaches.new_breaches) > AC_FENCE_GIVE_UP_DISTANCE) {
+                     set_mode(Mode::Number::LAND, ModeReason::FENCE_BREACHED);
+                 } else {
+                     switch (fence_act) {
+diff --git a/ArduCopter/mode.cpp b/ArduCopter/mode.cpp
+index 394c28c..b0b4c83 100644
+--- a/ArduCopter/mode.cpp
++++ b/ArduCopter/mode.cpp
+@@ -409,6 +409,7 @@ bool Copter::set_mode(Mode::Number mode, ModeReason reason)
+     // may not be allowed to change mode if recovering from fence breach
+     if (!ignore_checks &&
+         fence.enabled() &&
++        !fence.brake_no_land() &&
+         fence.option_enabled(AC_Fence::OPTIONS::DISABLE_MODE_CHANGE) &&
+         fence.get_breaches() &&
+         motors->armed() &&
+diff --git a/libraries/AC_Fence/AC_Fence.cpp b/libraries/AC_Fence/AC_Fence.cpp
+index 156544c..0730eb4 100644
+--- a/libraries/AC_Fence/AC_Fence.cpp
++++ b/libraries/AC_Fence/AC_Fence.cpp
+@@ -179,6 +179,13 @@ const AP_Param::GroupInfo AC_Fence::var_info[] = {
+     // @Values: 0:Above sea level, 1:Above Home, 2: Above Origin, 3: Above Terrain
+     AP_GROUPINFO_FRAME("ALT_MIN_TP", 15, AC_Fence, _alt_min_type, float(Location::AltFrame::ABOVE_HOME), AP_PARAM_FRAME_COPTER | AP_PARAM_FRAME_SUB | AP_PARAM_FRAME_TRICOPTER | AP_PARAM_FRAME_HELI | AP_PARAM_FRAME_PLANE),
+
++    // @Param{Copter}: NOLD
++    // @DisplayName: Fence Brake without landing fallback
++    // @Description: With FENCE_ACTION=4, attempt Brake on every fence breach, including breaches beyond 100 metres. If Brake cannot be entered, keep the current flight mode and issue a critical take-control warning instead of landing. Allow pilot mode changes during fence recovery. Other failsafes are unchanged.
++    // @Values: 0:Disabled,1:Enabled
++    // @User: Advanced
++    AP_GROUPINFO_FRAME("NOLD", 16, AC_Fence, _no_land, 0, AP_PARAM_FRAME_COPTER | AP_PARAM_FRAME_TRICOPTER | AP_PARAM_FRAME_HELI),
++
+     AP_GROUPEND
+ };
+
+diff --git a/libraries/AC_Fence/AC_Fence.h b/libraries/AC_Fence/AC_Fence.h
+index 6251e66..370ecdd 100644
+--- a/libraries/AC_Fence/AC_Fence.h
++++ b/libraries/AC_Fence/AC_Fence.h
+@@ -136,6 +136,9 @@ public:
+     /// get_breach_count - returns number of times we have breached the fence
+     uint16_t get_breach_count() const { return _breach_count; }
+
++    // Only the opt-in Brake policy disables geofence landing fallbacks and mode lockout.
++    bool brake_no_land() const { return _no_land.get() == 1 && get_action() == Action::BRAKE; }
++
+     /// get_breaches - returns bitmask of the fence types that have had their margins breached
+     uint8_t get_margin_breaches() const { return _breached_fence_margins; }
+
+@@ -289,6 +292,7 @@ private:
+     uint8_t         _last_auto_enabled; // value of auto_enabled last time we checked
+     AP_Int8         _configured_fences; // bit mask holding which fences are enabled
+     AP_Enum<Action> _action;            // recovery action specified by user
++    AP_Int8         _no_land;           // opt-in Brake policy without geofence landing fallback
+     AP_Float        _alt_max_m;         // altitude upper limit in meters
+     AP_Float        _alt_min_m;         // altitude lower limit in meters
+     AP_Float        _circle_radius_m;   // circle fence radius in meters

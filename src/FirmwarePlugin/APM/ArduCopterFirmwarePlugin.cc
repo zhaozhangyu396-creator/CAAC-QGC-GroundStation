@@ -1,9 +1,88 @@
 #include "ArduCopterFirmwarePlugin.h"
+
+#include <cmath>
+
+#include "Fact.h"
 #include "ParameterManager.h"
 #include "Vehicle.h"
 
 bool ArduCopterFirmwarePlugin::_remapParamNameIntialized = false;
 FirmwarePlugin::remapParamNameMajorVersionMap_t ArduCopterFirmwarePlugin::_remapParamName;
+
+FirmwarePlugin::GeoFencePolicy ArduCopterFirmwarePlugin::trainingGeoFencePolicy(Vehicle* vehicle) const
+{
+    GeoFencePolicy policy;
+    policy.unsupportedReason =
+        tr("ArduCopter 原生围栏制动失败时可能回退降落，不满足制动失败不降落要求，禁止写入。"
+           "需要适配机载回退策略。");
+    if (!vehicle || !vehicle->multiRotor()) {
+        return policy;
+    }
+    auto* parameters = vehicle->parameterManager();
+    const QString noLandName = QStringLiteral("FENCE_NOLD");
+    const QString actionName = QStringLiteral("FENCE_ACTION");
+    const QString typeName = QStringLiteral("FENCE_TYPE");
+    const QString enableName = QStringLiteral("FENCE_ENABLE");
+    if (!parameters || !parameters->parametersReady() ||
+        !parameters->parameterExists(ParameterManager::defaultComponentId, noLandName) ||
+        !parameters->parameterExists(ParameterManager::defaultComponentId, actionName) ||
+        !parameters->parameterExists(ParameterManager::defaultComponentId, typeName) ||
+        !parameters->parameterExists(ParameterManager::defaultComponentId, enableName)) {
+        return policy;
+    }
+    const auto* noLand = parameters->getParameter(ParameterManager::defaultComponentId, noLandName);
+    const auto* action = parameters->getParameter(ParameterManager::defaultComponentId, actionName);
+    const auto* type = parameters->getParameter(ParameterManager::defaultComponentId, typeName);
+    const auto* enable = parameters->getParameter(ParameterManager::defaultComponentId, enableName);
+    if (!noLand || !action || !type || !enable || noLand->readOnly() || action->readOnly() || type->readOnly() ||
+        enable->readOnly() || noLand->type() != FactMetaData::valueTypeInt8 || !action->enumValues().contains(4) ||
+        !type->bitmaskValues().contains(4) || !enable->enumValues().contains(1)) {
+        policy.unsupportedReason = tr("未能验证 ArduCopter 训练围栏不降落扩展的参数支持，禁止写入。");
+        return policy;
+    }
+    // Custom parameters can arrive before official online metadata includes their enum definitions.
+    bool validNoLand = false;
+    const double noLandValue = noLand->rawValue().toDouble(&validNoLand);
+    const auto noLandEnums = noLand->enumValues();
+    if (!validNoLand || (noLandValue != 0 && noLandValue != 1) ||
+        (!noLandEnums.isEmpty() && !noLandEnums.contains(1))) {
+        policy.unsupportedReason = tr("未能验证 ArduCopter 训练围栏不降落扩展的参数支持，禁止写入。");
+        return policy;
+    }
+    bool validType = false;
+    const int configuredTypes = type->rawValue().toInt(&validType);
+    if (!validType || configuredTypes < 0) {
+        policy.unsupportedReason = tr("无法读取 ArduCopter 当前围栏类型，禁止写入。");
+        return policy;
+    }
+    policy.description = tr("ArduCopter 训练围栏：触发时制动，制动失败时保持原模式并报警，等待人工接管。");
+    QStringList additionalConstraints;
+    const auto appendConstraint = [parameters, configuredTypes, &additionalConstraints](
+                                      int typeMask, const QString& name, const QString& label) {
+        if (!(configuredTypes & typeMask) || !parameters->parameterExists(ParameterManager::defaultComponentId, name)) {
+            return;
+        }
+        const auto* fact = parameters->getParameter(ParameterManager::defaultComponentId, name);
+        if (!fact) {
+            return;
+        }
+        bool validValue = false;
+        const double value = fact->rawValue().toDouble(&validValue);
+        if (validValue && std::isfinite(value)) {
+            additionalConstraints.append(tr("%1 %2 米").arg(label, QString::number(value, 'g', 8)));
+        }
+    };
+    appendConstraint(2, QStringLiteral("FENCE_RADIUS"), tr("HOME 圆形围栏半径"));
+    appendConstraint(1, QStringLiteral("FENCE_ALT_MAX"), tr("最高高度"));
+    appendConstraint(8, QStringLiteral("FENCE_ALT_MIN"), tr("最低高度"));
+    if (!additionalConstraints.isEmpty()) {
+        policy.description += tr("同时生效：%1。").arg(additionalConstraints.join(tr("；")));
+    }
+    policy.unsupportedReason.clear();
+    policy.preparation = {{noLandName, 1}, {actionName, 4}, {typeName, configuredTypes | 4}};
+    policy.activation = {{enableName, 1}};
+    return policy;
+}
 
 ArduCopterFirmwarePlugin::ArduCopterFirmwarePlugin(QObject *parent)
     : APMFirmwarePlugin(parent)
@@ -176,7 +255,11 @@ int ArduCopterFirmwarePlugin::remapParamNameHigestMinorVersionNumber(int majorVe
 
 bool ArduCopterFirmwarePlugin::multiRotorXConfig(Vehicle *vehicle) const
 {
-    return (vehicle->parameterManager()->getParameter(ParameterManager::defaultComponentId, "FRAME")->rawValue().toInt() != 0);
+    if (!vehicle || !vehicle->parameterManager()) {
+        return false;
+    }
+    const auto* frame = vehicle->parameterManager()->getParameter(ParameterManager::defaultComponentId, "FRAME");
+    return frame && frame->rawValue().toInt() != 0;
 }
 
 QString ArduCopterFirmwarePlugin::pauseFlightMode() const

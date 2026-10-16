@@ -93,6 +93,9 @@ qt_add_qml_module(
     RESOURCE_PREFIX /qml
     QML_FILES AltFrameCombo.qml
               AltFrameDialog.qml
+              AirframeCatalog.js
+              AirframeCatalogPage.qml
+              AirframeCategoryMenu.qml
               AppSettings.qml
               APMSubMotorDisplay.qml
               AutotuneUI.qml

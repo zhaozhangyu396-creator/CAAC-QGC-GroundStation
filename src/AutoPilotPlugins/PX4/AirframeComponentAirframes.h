@@ -10,7 +10,9 @@ class AirframeComponentAirframes
 public:
     typedef struct {
         QString name;
-        int         autostartId;
+        int autostartId;
+        QString vehicleClass;
+        QString category;
     } AirframeInfo_t;
 
     typedef struct {
@@ -26,7 +28,8 @@ public:
     static QList<AirframeType_t*> sortedTypes();
 
     static void clear();
-    static void insert(QString& group, QString& image, QString& name, int id);
+    static void insert(const QString& group, const QString& image, const QString& name, int id,
+                       const QString& vehicleClass);
 
 protected:
     static QMap<QString, AirframeType_t*> rgAirframeTypes;

@@ -240,7 +240,7 @@ Rectangle {
         ColumnLayout {
             id:         buttonColumn
             width:      buttonList.width
-            spacing:    0
+            spacing:    settingsView.embedded ? ScreenTools.defaultFontPixelHeight * 0.5 : 0
 
             Repeater {
                 id:     buttonRepeater
@@ -248,7 +248,7 @@ Rectangle {
 
                 ColumnLayout {
                     id:     pageColumn
-                    spacing: 0
+                    spacing: settingsView.embedded ? ScreenTools.defaultFontPixelHeight * 0.5 : 0
                     Layout.fillWidth: true
 
                     required property int index
@@ -287,7 +287,7 @@ Rectangle {
                     }
 
                     visible: {
-                        if (pageName === "Divider") return settingsView._dividerVisible(index)
+                        if (pageName === "Divider") return !settingsView.embedded && settingsView._dividerVisible(index)
                         if (!pageAvailable) return false
                         if (isSearching) return matchesSearch
                         return true
@@ -306,6 +306,7 @@ Rectangle {
                         icon.source:   pageIconUrl
                         expandable:    hasMultipleSections
                         expanded:      isExpanded
+                        outlined:      settingsView.embedded
                         checked:       isSelected && settingsView._selectedSectionIndex === -1
                         visible:       pageName !== "Divider" && pageAvailable
 
@@ -343,6 +344,8 @@ Rectangle {
                             id:             sectionBtn
                             Layout.fillWidth: true
                             padding:        ScreenTools.defaultFontPixelWidth * 0.75
+                            topPadding:     settingsView.embedded ? ScreenTools.defaultFontPixelHeight * 0.5 : padding
+                            bottomPadding:  topPadding
                             leftPadding:    ScreenTools.defaultFontPixelWidth * 3
                             hoverEnabled:   !ScreenTools.isMobile
 
@@ -357,9 +360,18 @@ Rectangle {
                             visible: sectionMatchesSearch
 
                             background: Rectangle {
-                                color:   qgcPal.buttonHighlight
-                                opacity: sectionBtn.sectionChecked || sectionBtn.pressed ? 1 : sectionBtn.enabled && sectionBtn.hovered ? 0.2 : 0
-                                radius:  ScreenTools.defaultFontPixelWidth / 2
+                                readonly property real highlightOpacity: sectionBtn.sectionChecked || sectionBtn.pressed
+                                    ? 1 : sectionBtn.enabled && sectionBtn.hovered ? 0.2 : 0
+
+                                color: settingsView.embedded
+                                    ? Qt.rgba(qgcPal.buttonHighlight.r, qgcPal.buttonHighlight.g,
+                                              qgcPal.buttonHighlight.b, highlightOpacity)
+                                    : qgcPal.buttonHighlight
+                                opacity: settingsView.embedded ? 1 : highlightOpacity
+                                border.color: qgcPal.groupBorder
+                                border.width: settingsView.embedded ? 1 : 0
+                                radius: settingsView.embedded
+                                    ? ScreenTools.defaultBorderRadius : ScreenTools.defaultFontPixelWidth / 2
                             }
 
                             contentItem: QGCLabel {

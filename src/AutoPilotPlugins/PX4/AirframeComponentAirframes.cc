@@ -53,7 +53,8 @@ QList<AirframeComponentAirframes::AirframeType_t*> AirframeComponentAirframes::s
     return sorted;
 }
 
-void AirframeComponentAirframes::insert(QString& group, QString& image, QString& name, int id)
+void AirframeComponentAirframes::insert(const QString& group, const QString& image, const QString& name, int id,
+                                        const QString& vehicleClass)
 {
     AirframeType_t *g;
     if (!rgAirframeTypes.contains(group)) {
@@ -81,6 +82,20 @@ void AirframeComponentAirframes::insert(QString& group, QString& image, QString&
     AirframeInfo_t *i = new AirframeInfo_t;
     i->name = name;
     i->autostartId = id;
+    i->vehicleClass = vehicleClass;
+    if (vehicleClass == QLatin1String("Copter") && group != QLatin1String("Helicopter")) {
+        i->category = QStringLiteral("multirotor");
+    } else if (vehicleClass == QLatin1String("Plane")) {
+        i->category = QStringLiteral("fixedwing");
+    } else if (vehicleClass == QLatin1String("VTOL")) {
+        i->category = QStringLiteral("vtol");
+    } else if (vehicleClass == QLatin1String("Rover")) {
+        i->category = QStringLiteral("rover");
+    } else if (vehicleClass == QLatin1String("Airship") || vehicleClass == QLatin1String("Balloon")) {
+        i->category = QStringLiteral("airship");
+    } else {
+        i->category = QStringLiteral("other");
+    }
 
     g->rgAirframeInfo.append(i);
 }

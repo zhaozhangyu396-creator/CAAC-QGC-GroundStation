@@ -7,18 +7,28 @@ import QGroundControl.Controls
 import QGroundControl.FactControls
 
 ColumnLayout {
+    id: velocityPage
+    readonly property bool vehicleSetupStyle: ScreenTools.isVehicleSetupItem(velocityPage)
+    width: vehicleSetupStyle ? _availableWidth : implicitWidth
     property real _availableHeight: availableHeight
     property real _availableWidth:  availableWidth
     property Fact _mcPosMode:       controller.getParameterFact(-1, "MPC_POS_MODE", false)
 
     GridLayout {
-        columns: 2
+        Layout.fillWidth: velocityPage.vehicleSetupStyle
+        Layout.minimumWidth: velocityPage.vehicleSetupStyle ? 0 : -1
+        columns: velocityPage.vehicleSetupStyle ? 1 : 2
 
         QGCLabel {
+            Layout.fillWidth: velocityPage.vehicleSetupStyle
+            Layout.minimumWidth: velocityPage.vehicleSetupStyle ? 0 : -1
+            wrapMode: velocityPage.vehicleSetupStyle ? Text.WordWrap : Text.NoWrap
             text:               qsTr("Position control mode (set this to 'simple' during tuning):")
             visible:            _mcPosMode
         }
         FactComboBox {
+            Layout.fillWidth: velocityPage.vehicleSetupStyle
+            Layout.minimumWidth: velocityPage.vehicleSetupStyle ? 0 : -1
             fact:               _mcPosMode
             indexModel:         false
             visible:            _mcPosMode

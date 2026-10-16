@@ -1,12 +1,15 @@
 #include "PX4AirframeSetupUITest.h"
 
+#include <QtQml/QJSValue>
 #include <QtQuick/QQuickItem>
 #include <QtQuick/QQuickWindow>
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
+#include "Fact.h"
 #include "MockLink.h"
 #include "MultiVehicleManager.h"
+#include "ParameterManager.h"
 #include "QGCCorePlugin.h"
 #include "Vehicle.h"
 
@@ -32,9 +35,15 @@ void PX4AirframeSetupUITest::_navigateToAirframePanel()
     QVERIFY2(QTest::qWaitFor([&] { return airframeBtn->property("checked").toBool(); }, 3000),
              "Airframe button not selected after clicking it");
 
-    // SYS_AUTOSTART is 0 (no airframe set) which is a standard metadata value, so
-    // the normal airframe-selection page shows rather than the custom config panel
-    QQuickItem *applyButton = findVisibleItem(_rootItem, QStringLiteral("airframeSetup_applyButton"), 3000);
+    QVERIFY2(findVisibleItem(_rootItem, QStringLiteral("airframeCategory_multirotor"), 3000),
+             "Airframe category menu not shown after opening Airframe page");
+    QVERIFY2(!findVisibleItem(_rootItem, QStringLiteral("airframeSetup_applyButton"), 0),
+             "Apply and Restart shown before choosing an airframe category");
+    QVERIFY2(
+        clickButtonScrolled(QStringLiteral("airframeCategory_multirotor"), QStringLiteral("vehicleSetup_scroller")),
+        "Failed to open multirotor airframes");
+
+    QQuickItem* applyButton = findVisibleItem(_rootItem, QStringLiteral("airframeSetup_applyButton"), 3000);
     QVERIFY2(applyButton, "Apply and Restart button not found after opening Airframe page");
 
     // No airframe has been selected yet so Apply and Restart must not show as
@@ -93,7 +102,7 @@ void PX4AirframeSetupUITest::_verifyAirframePrereq(const QString &compObjectName
     if (!checkedSectionObjectName.isEmpty()) {
         const auto expectedSection = QGCCorePlugin::instance()->directMissionItemEditing() &&
                                              checkedSectionObjectName == QStringLiteral("vehicleConfig_section_Compass")
-                                         ? QStringLiteral("vehicleConfig_section_Accelerometer")
+                                         ? QStringLiteral("vehicleConfig_section_Orientations")
                                          : checkedSectionObjectName;
         QQuickItem* sectionBtn = findItem(_rootItem, expectedSection);
         QVERIFY2(sectionBtn,
@@ -107,15 +116,47 @@ void PX4AirframeSetupUITest::_testNavigateToAirframe()
 {
     runWithMockLink(
         [] { return MockLink::startPX4MockLink(); },
-        [&](QPointer<MockLink> mockLink, Vehicle *vehicle) {
-    // Reset all params including SYS_AUTOSTART so the test starts with no
-    // airframe configured
-    mockLink->setResetSysAutostartOnParamReset(true);
-    resetParamsToFirmwareDefaults(vehicle, QStringLiteral("SYS_AUTOSTART"));
-    if (QTest::currentTestFailed()) return;
+        [&](QPointer<MockLink> mockLink, Vehicle* vehicle) {
+            // Reset all params including SYS_AUTOSTART so the test starts with no
+            // airframe configured
+            mockLink->setResetSysAutostartOnParamReset(true);
+            resetParamsToFirmwareDefaults(vehicle, QStringLiteral("SYS_AUTOSTART"));
+            if (QTest::currentTestFailed())
+                return;
 
-    _navigateToAirframePanel();
-    });
+            _navigateToAirframePanel();
+            if (QTest::currentTestFailed())
+                return;
+
+            QQuickItem* page = findVisibleItem(_rootItem, QStringLiteral("airframeSetup_root"), 3000);
+            QVERIFY(page);
+            Fact* autostart = vehicle->parameterManager()->getParameter(-1, QStringLiteral("SYS_AUTOSTART"));
+            Fact* autoconfig = vehicle->parameterManager()->getParameter(-1, QStringLiteral("SYS_AUTOCONFIG"));
+            QVERIFY(autostart);
+            QVERIFY(autoconfig);
+            QSignalSpy autostartWrites(autostart, &Fact::containerRawValueChanged);
+            QSignalSpy autoconfigWrites(autoconfig, &Fact::containerRawValueChanged);
+            QVERIFY(autostartWrites.isValid());
+            QVERIFY(autoconfigWrites.isValid());
+            const QVariant originalAutostart = autostart->rawValue();
+            const QVariant originalAutoconfig = autoconfig->rawValue();
+            const QStringList categories = {
+                QStringLiteral("fixedwing"), QStringLiteral("vtol"),  QStringLiteral("rover"),
+                QStringLiteral("airship"),   QStringLiteral("other"),
+            };
+            for (const auto& category : categories) {
+                QVERIFY(clickButtonScrolled(QStringLiteral("airframeCategory_back"),
+                                            QStringLiteral("vehicleSetup_scroller")));
+                QVERIFY(clickButtonScrolled(QStringLiteral("airframeCategory_%1").arg(category),
+                                            QStringLiteral("vehicleSetup_scroller")));
+                QTRY_COMPARE_WITH_TIMEOUT(page->property("categoryFilter").toString(), category, 3000);
+                QCOMPARE(page->property("pendingAutostartId").toInt(), originalAutostart.toInt());
+            }
+            QCOMPARE(autostart->rawValue(), originalAutostart);
+            QCOMPARE(autoconfig->rawValue(), originalAutoconfig);
+            QCOMPARE(autostartWrites.count(), 0);
+            QCOMPARE(autoconfigWrites.count(), 0);
+        });
 }
 
 void PX4AirframeSetupUITest::_testAirframePrereqPages()
@@ -173,11 +214,23 @@ void PX4AirframeSetupUITest::_testApplyAirframe()
     _navigateToAirframePanel();
     if (QTest::currentTestFailed()) return;
 
+    Fact* autostart = vehicle->parameterManager()->getParameter(-1, QStringLiteral("SYS_AUTOSTART"));
+    Fact* autoconfig = vehicle->parameterManager()->getParameter(-1, QStringLiteral("SYS_AUTOCONFIG"));
+    QVERIFY(autostart);
+    QVERIFY(autoconfig);
+    QSignalSpy autostartWrites(autostart, &Fact::containerRawValueChanged);
+    QSignalSpy autoconfigWrites(autoconfig, &Fact::containerRawValueChanged);
+    QVERIFY(autostartWrites.isValid());
+    QVERIFY(autoconfigWrites.isValid());
+
     // The expected autostart id comes from the first entry of the Quadrotor x
     // combo model so the test doesn't hardcode airframe metadata values
     QQuickItem *combo = findVisibleItem(_rootItem, QStringLiteral("Quadrotor xComboBox"), 3000);
     QVERIFY2(combo, "Quadrotor x combo box not found");
-    const QVariantList comboModel = combo->property("model").toList();
+    const QVariant modelValue = combo->property("model");
+    const QVariantList comboModel = modelValue.metaType() == QMetaType::fromType<QJSValue>()
+                                        ? modelValue.value<QJSValue>().toVariant().toList()
+                                        : modelValue.toList();
     QVERIFY2(!comboModel.isEmpty(), "Quadrotor x combo model is empty");
     QObject *firstAirframe = comboModel.first().value<QObject*>();
     QVERIFY2(firstAirframe, "First Quadrotor x airframe entry is not a QObject");
@@ -196,11 +249,31 @@ void PX4AirframeSetupUITest::_testApplyAirframe()
     QVERIFY2(QTest::qWaitFor([&] { return typeBox->property("airframeTypeSelected").toBool(); }, 3000),
              "Quadrotor x type box not selected after clicking it");
 
+    QQuickItem* page = findVisibleItem(_rootItem, QStringLiteral("airframeSetup_root"), 3000);
+    QVERIFY(page);
+    QCOMPARE(page->property("pendingAutostartId").toInt(), expectedAutostartId);
+    QVERIFY(clickButtonScrolled(QStringLiteral("airframeCategory_back"), QStringLiteral("vehicleSetup_scroller")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("airframeCategory_fixedwing"), QStringLiteral("vehicleSetup_scroller")));
+    QCOMPARE(page->property("pendingAutostartId").toInt(), expectedAutostartId);
+    QVERIFY(clickButtonScrolled(QStringLiteral("airframeCategory_back"), QStringLiteral("vehicleSetup_scroller")));
+    QVERIFY(
+        clickButtonScrolled(QStringLiteral("airframeCategory_multirotor"), QStringLiteral("vehicleSetup_scroller")));
+    typeBox = findVisibleItem(_rootItem, QStringLiteral("airframeTypeBox_0"), 3000);
+    QVERIFY(typeBox);
+    QTRY_VERIFY_WITH_TIMEOUT(typeBox->property("airframeTypeSelected").toBool(), 3000);
+    QCOMPARE(autostartWrites.count(), 0);
+    QCOMPARE(autoconfigWrites.count(), 0);
+
     // Selecting an airframe makes Apply and Restart the primary action
     QQuickItem *applyButton = findVisibleItem(_rootItem, QStringLiteral("airframeSetup_applyButton"), 3000);
     QVERIFY2(applyButton, "Apply and Restart button not found");
     QVERIFY2(QTest::qWaitFor([&] { return applyButton->property("primary").toBool(); }, 3000),
              "Apply and Restart button not primary after selecting an airframe");
+
+    QVERIFY(clickButtonScrolled(QStringLiteral("airframeSetup_applyButton"), QStringLiteral("vehicleSetup_scroller")));
+    QVERIFY(rejectDialog());
+    QCOMPARE(autostartWrites.count(), 0);
+    QCOMPARE(autoconfigWrites.count(), 0);
 
     // Apply and confirm the restart dialog. The reboot command, its ack and the
     // link disconnect all happen within a single timer callback, so a signal spy

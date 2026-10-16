@@ -51,6 +51,7 @@ Popup {
     property bool   destroyOnClose:         true
     property bool   preventClose:           false
     property bool   bypassNavigationCheck:  false
+    property bool   closeOnOutsideClick:    false
     property bool   draggable: true
     property point  _dragOffset: Qt.point(0, 0)
 
@@ -73,8 +74,16 @@ Popup {
         width:  mainWindow.width
         height: mainWindow.height
 
-        onClicked: {
-            if (closePolicy & Popup.CloseOnPressOutside) {
+        onClicked: (mouse) => {
+            if (root.closeOnOutsideClick) {
+                const point = mapToItem(root.contentItem, mouse.x, mouse.y)
+                if (point.x < mainLayout.x - root._contentMargin
+                    || point.x > mainLayout.x + mainLayout.width + root._contentMargin
+                    || point.y < mainLayout.y - root._contentMargin
+                    || point.y > mainLayout.y + mainLayout.height + root._contentMargin) {
+                    root._reject()
+                }
+            } else if (closePolicy & Popup.CloseOnPressOutside) {
                 _reject()
             }
         }

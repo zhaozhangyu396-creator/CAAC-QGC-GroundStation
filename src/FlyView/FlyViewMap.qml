@@ -61,6 +61,8 @@ FlightMap {
         }
     }
 
+    Component.onCompleted: center = QGroundControl.flightMapPosition
+
     onZoomLevelChanged: {
         if (_saveZoomLevelSetting) {
             QGroundControl.flightMapZoom = _root.zoomLevel

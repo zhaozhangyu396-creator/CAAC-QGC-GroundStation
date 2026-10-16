@@ -29,6 +29,7 @@ ColumnLayout {
     QGCTabBar {
         id: tabBar
         Layout.fillWidth: true
+        Layout.minimumWidth: ScreenTools.isVehicleSetupItem(root) ? 0 : -1
         visible: !root.compactNavigation
         currentIndex: root.currentPageIndex
 
@@ -46,6 +47,7 @@ ColumnLayout {
     QGCComboBox {
         objectName: "pidTuning_sectionMenu"
         Layout.fillWidth: true
+        Layout.minimumWidth: ScreenTools.isVehicleSetupItem(root) ? 0 : -1
         visible: root.compactNavigation
         model: root.model
         textRole: "buttonText"
@@ -55,6 +57,8 @@ ColumnLayout {
 
     Loader {
         id:     loader
+        Layout.fillWidth: ScreenTools.isVehicleSetupItem(root)
+        Layout.minimumWidth: ScreenTools.isVehicleSetupItem(root) ? 0 : -1
         source: root.model && root.currentPageIndex >= 0 && root.currentPageIndex < root.model.count
             ? root.model.get(root.currentPageIndex).tuningPage : ""
 

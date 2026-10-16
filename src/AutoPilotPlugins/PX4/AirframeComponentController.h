@@ -60,15 +60,17 @@ class Airframe : public QObject
     QML_UNCREATABLE("")
 
 public:
-    Airframe(const QString& name, int autostartId, QObject* parent = nullptr);
+    Airframe(const QString& name, int autostartId, const QString& category, QObject* parent = nullptr);
     ~Airframe();
 
     Q_PROPERTY(QString text MEMBER _name CONSTANT)
     Q_PROPERTY(int autostartId MEMBER _autostartId CONSTANT)
+    Q_PROPERTY(QString category MEMBER _category CONSTANT)
 
 private:
     QString _name;
-    int     _autostartId;
+    int _autostartId;
+    QString _category;
 };
 
 class AirframeType : public QObject
@@ -85,7 +87,7 @@ public:
     Q_PROPERTY(QString imageResource MEMBER _imageResource CONSTANT)
     Q_PROPERTY(QVariantList airframes MEMBER _airframes CONSTANT)
 
-    void addAirframe(const QString& name, int autostartId);
+    void addAirframe(const QString& name, int autostartId, const QString& category);
 
 private:
     QString         _name;

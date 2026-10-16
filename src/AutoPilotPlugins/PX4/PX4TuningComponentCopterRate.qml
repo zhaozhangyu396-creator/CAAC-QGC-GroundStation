@@ -17,17 +17,23 @@ ColumnLayout {
 
     GridLayout {
         Layout.fillWidth: true
-        columns: ratePage.vehicleSetupStyle ? 2 : 5
+        Layout.minimumWidth: ratePage.vehicleSetupStyle ? 0 : -1
+        columns: ratePage.vehicleSetupStyle ? 1 : 5
         rowSpacing: ScreenTools.defaultFontPixelHeight / 2
         columnSpacing: ScreenTools.defaultFontPixelWidth
 
         QGCLabel {
+            Layout.fillWidth: ratePage.vehicleSetupStyle
+            Layout.minimumWidth: ratePage.vehicleSetupStyle ? 0 : -1
+            wrapMode: ratePage.vehicleSetupStyle ? Text.WordWrap : Text.NoWrap
             textFormat:         Text.RichText
             text:               qsTr("Airmode (disable during tuning) <b><a href=\"https://docs.px4.io/main/en/config_mc/pid_tuning_guide_multicopter.html#airmode-mixer-saturation\">?</a></b>")
             onLinkActivated:    (link) => Qt.openUrlExternally(link)
             visible:            _airmode
         }
         FactComboBox {
+            Layout.fillWidth: ratePage.vehicleSetupStyle
+            Layout.minimumWidth: ratePage.vehicleSetupStyle ? 0 : -1
             fact:               _airmode
             indexModel:         false
             visible:            _airmode
@@ -40,12 +46,17 @@ ColumnLayout {
         }
 
         QGCLabel {
+            Layout.fillWidth: ratePage.vehicleSetupStyle
+            Layout.minimumWidth: ratePage.vehicleSetupStyle ? 0 : -1
+            wrapMode: ratePage.vehicleSetupStyle ? Text.WordWrap : Text.NoWrap
             textFormat:         Text.RichText
             text:               qsTr("Thrust curve <b><a href=\"https://docs.px4.io/main/en/config_mc/pid_tuning_guide_multicopter.html#thrust-curve\">?</a></b>")
             onLinkActivated:    (link) => Qt.openUrlExternally(link)
             visible:            _thrustModelFactor
         }
         FactTextField {
+            Layout.fillWidth: ratePage.vehicleSetupStyle
+            Layout.minimumWidth: ratePage.vehicleSetupStyle ? 0 : -1
             fact:               _thrustModelFactor
             visible:            _thrustModelFactor
         }

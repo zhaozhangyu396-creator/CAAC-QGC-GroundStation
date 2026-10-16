@@ -7,8 +7,9 @@
 /// airframe selected, compass/accel/radio uncalibrated) and verifies that
 /// Frame, Sensors and Radio all report setup required, that Frame is the
 /// required prerequisite for the Sensors and Radio pages, that selecting
+/// airframe categories does not write frame parameters, that selecting
 /// a frame class unblocks them, and that completing accel + compass
-/// calibration turns the Sensors indicator green while Radio stays red.
+/// calibration clears Sensors setup while Radio remains incomplete.
 class APMFreshFlashUITest : public VehicleConfigUITestBase
 {
     Q_OBJECT
@@ -27,8 +28,6 @@ private:
     /// whether the prerequisite-setup message panel is shown.
     void _verifyFramePrereq(const QString &compObjectName, bool expectPrereqShown);
 
-    /// Verify the sidebar button for the given component shows the red
-    /// setup-required icon (ConfigButton turns icon.color red when
-    /// setupComplete is false).
-    void _verifySetupIndicator(const QString &compObjectName, bool expectSetupComplete);
+    /// Verify setup state and the neutral embedded or standalone status icon color.
+    void _verifySetupIndicator(const QString& compObjectName, bool expectSetupComplete);
 };

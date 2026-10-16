@@ -37,7 +37,11 @@ APMAirframeComponentController::~APMAirframeComponentController()
 
 void APMAirframeComponentController::_fillFrameClasses()
 {
-    FirmwarePlugin *const fwPlugin = _vehicle->firmwarePlugin();
+    if (!_vehicle || !_frameClassFact) {
+        return;
+    }
+
+    FirmwarePlugin* const fwPlugin = _vehicle->firmwarePlugin();
 
     if (qobject_cast<ArduCopterFirmwarePlugin*>(fwPlugin)) {
         static const QList<int> frameTypeNotSupported = {
@@ -177,7 +181,8 @@ APMFrameClass::APMFrameClass(const QString &name, bool copter, int frameClass, F
                 if (_defaultFrameType == -1) {
                     // Default frame type/icon is the first item found to match frameClass
                     _defaultFrameType = pFrameToImageInfo.frameType;
-                    _imageResourceDefault = QStringLiteral("/qmlimages/Airframe/%1").arg(pFrameToImageInfo.imageResource);
+                    _imageResourceDefault =
+                        QStringLiteral("/qmlimages/Airframe/%1.svg").arg(pFrameToImageInfo.imageResource);
                 }
 
                 if (pFrameToImageInfo.frameType != -1) {
@@ -192,12 +197,22 @@ APMFrameClass::APMFrameClass(const QString &name, bool copter, int frameClass, F
         }
 
         // Filter the enums
-        for (const int frameType: rgSupportedFrameTypes) {
+        for (const int frameType : rgSupportedFrameTypes) {
+            if (!frameTypeFact) {
+                break;
+            }
             const int index = frameTypeFact->enumValues().indexOf(frameType);
             if (index != -1) {
                 _frameTypeEnumValues.append(frameType);
                 _frameTypeEnumStrings.append(frameTypeFact->enumStrings()[index]);
             }
+        }
+
+        _defaultFrameType = _frameTypeEnumValues.isEmpty() ? -1 : _frameTypeEnumValues.first().toInt();
+        if (_defaultFrameType != -1) {
+            int frameType = _defaultFrameType;
+            _imageResourceDefault =
+                QStringLiteral("/qmlimages/Airframe/%1.svg").arg(_findImageResourceCopter(frameClass, frameType));
         }
     } else {
         _imageResourceDefault = imageResource();
@@ -214,7 +229,15 @@ APMFrameClass::~APMFrameClass()
 
 int APMFrameClass::frameType() const
 {
-    return _frameTypeFact->rawValue().toInt();
+    return _frameTypeFact ? _frameTypeFact->rawValue().toInt() : -1;
+}
+
+QString APMFrameClass::category() const
+{
+    if (_copter) {
+        return QStringLiteral("multirotor");
+    }
+    return _frameClass == FRAME_CLASS_BOAT ? QStringLiteral("other") : QStringLiteral("rover");
 }
 
 QString APMFrameClass::imageResource() const
@@ -228,9 +251,8 @@ QString APMFrameClass::imageResource() const
         imageResource = _findImageResourceRover(_frameClass, frameType);
     }
 
-    return QStringLiteral("/qmlimages/Airframe/%1").arg(imageResource);
+    return QStringLiteral("/qmlimages/Airframe/%1.svg").arg(imageResource);
 }
-
 
 QString APMFrameClass::_findImageResourceCopter(int frameClass, int &frameType)
 {

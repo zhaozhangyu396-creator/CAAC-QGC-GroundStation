@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "firmware": "ArduCopter",
+  "upstream_repository": "https://github.com/ArduPilot/ardupilot",
+  "upstream_tag": "Copter-4.7.2",
+  "upstream_commit": "fb773567896014da007bca58358704d4a0d8516f",
+  "release_published_at": "2026-10-14T00:52:51Z",
+  "verified_at": "2026-10-16",
+  "stable_board_git_version_url": "https://firmware.ardupilot.org/Copter/stable/Pixhawk6C/git-version.txt",
+  "board": "Pixhawk6C",
+  "build_commands": [
+    "./waf configure --board Pixhawk6C",
+    "./waf copter"
+  ],
+  "patch": "Copter-4.7.2-caac-no-land.patch",
+  "patch_sha256": "013fb89852990c9287c07cda085bb65381d0dc36e950b38dbaf29126cbb9a0c0",
+  "capability_parameter": {
+    "name": "FENCE_NOLD",
+    "type": "AP_Int8",
+    "group_index": 16,
+    "default": 0,
+    "values": {
+      "0": "Disabled",
+      "1": "Enabled"
+    },
+    "requires": {
+      "FENCE_ACTION": 4
+    }
+  },
+  "source_files": {
+    "ArduCopter/fence.cpp": "b410ab5265cdd1f259876f17c9ec59a024b609a4b83c5ee05cd75ec47f1418cd",
+    "ArduCopter/mode.cpp": "7f2dfc0318692fdb3c0989a91acac95cc521c0bdcd06f3270600cc181904b345",
+    "ArduCopter/mode_brake.cpp": "a7fe80c49dc72fd7d14e60bf5e6ea432f205fc5601452f1bb2306259e643a471",
+    "libraries/AC_Fence/AC_Fence.cpp": "9fa580a04c7f0ef1b4885892100450ac75fef1e88ef924d6486313bb2989ecd1",
+    "libraries/AC_Fence/AC_Fence.h": "cafef13186db1af1c19c64b3501765f356748dd6389a3e2bcbcd3e9e4ca198a7",
+    "libraries/AP_HAL_ChibiOS/hwdef/Pixhawk6C/hwdef.dat": "1678e64fa2435bb8c0442be159e8e77135b9c548db98abca5ecc918a188df690"
+  },
+  "patched_files": {
+    "ArduCopter/fence.cpp": "27b412cd95434eaa0c5b2274233cc2626fa5c09a398d2929b6c3bc5e757939ea",
+    "ArduCopter/mode.cpp": "54be201269dcd7326d77af7e1092a411d7cff3717f03244cc8dcd735319207c0",
+    "libraries/AC_Fence/AC_Fence.cpp": "a1ed9b9d3c250e44b02e9657e2fece8668e1a189863f59d526cf755bf2ab4268",
+    "libraries/AC_Fence/AC_Fence.h": "1156b28121203ef67e5f6a75803906c5b435b48c7952a6a2060ad3f45a2d5a69"
+  },
+  "validation": {
+    "patch_apply_check": true,
+    "host_policy_harness": true,
+    "full_firmware_build": false,
+    "sitl": false,
+    "hardware": false,
+    "host_policy_scenarios": 92,
+    "command": "python3 custom/firmware/ardupilot/validate.py --source-root /tmp/caac-ap-no-land-source"
+  }
+}

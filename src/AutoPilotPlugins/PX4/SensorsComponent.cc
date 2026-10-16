@@ -103,14 +103,13 @@ QStringList SensorsComponent::sectionIds() const
     }
 
     sectionList << QStringLiteral("Gyroscope");
+    sectionList << QStringLiteral("Orientations");
     sectionList << QStringLiteral("Accelerometer");
     sectionList << QStringLiteral("Level Horizon");
 
     if (_airspeedCalSupported()) {
         sectionList << QStringLiteral("Airspeed");
     }
-
-    sectionList << QStringLiteral("Orientations");
 
     return sectionList;
 }
@@ -133,7 +132,7 @@ QString SensorsComponent::sectionDisplayName(const QString& sectionId) const
         return tr("Airspeed");
     }
     if (sectionId == QStringLiteral("Orientations")) {
-        return tr("Orientations");
+        return tr("飞控朝向");
     }
     return sectionId;
 }

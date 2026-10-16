@@ -9,6 +9,7 @@
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
+#include "Fact.h"
 #include "MockLink.h"
 #include "ParameterManager.h"
 #include "QGCCorePlugin.h"
@@ -116,11 +117,11 @@ void PX4SensorsCalibrationUITest::_navigateToSensorsPanel()
     QQuickItem *sensorsBtn = clickSidebarButton(QStringLiteral("vehicleConfig_comp_Sensors"));
     if (QTest::currentTestFailed()) return;
 
-    // CAAC opens the accelerometer section first to match the calibration panel;
+    // CAAC opens flight controller orientation before accelerometer calibration;
     // the stock interface opens the first firmware section (Compass).
     QVERIFY2(sensorsBtn->property("expanded").toBool(), "Sensors section tree not expanded after clicking Sensors button");
     const auto initialSection = QGCCorePlugin::instance()->directMissionItemEditing()
-                                    ? QStringLiteral("vehicleConfig_section_Accelerometer")
+                                    ? QStringLiteral("vehicleConfig_section_Orientations")
                                     : QStringLiteral("vehicleConfig_section_Compass");
     QQuickItem* selectedSection = findItem(_rootItem, initialSection);
     QVERIFY2(selectedSection, "Initial sensor section button not visible after clicking Sensors button");
@@ -216,6 +217,21 @@ void PX4SensorsCalibrationUITest::_testMagCalibration()
         .orientationsComplete = true,
     }, "after param reset");
     if (QTest::currentTestFailed()) return;
+
+    clickSidebarButton(QStringLiteral("vehicleConfig_section_Orientations"));
+    if (QTest::currentTestFailed())
+        return;
+    QVERIFY(clickButtonScrolled(QStringLiteral("sensorsSetup_setOrientation"),
+                                QStringLiteral("sensorsSetup_buttonScroller")));
+    auto* boardOrientation = findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_boardOrientation"));
+    QVERIFY(boardOrientation);
+    QCOMPARE(boardOrientation->property("fact").value<Fact*>(),
+             vehicle->parameterManager()->getParameter(ParameterManager::defaultComponentId,
+                                                       QStringLiteral("SENS_BOARD_ROT")));
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("popupDialog_acceptButton"), 0));
+    QVERIFY(clickButtonScrolled(QStringLiteral("sensorsSetup_setOrientation"),
+                                QStringLiteral("sensorsSetup_buttonScroller")));
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_orientationControls"), 0));
 
     // Select the Compass section: the idle orientation preview appears with all
     // six poses in the neutral Idle state
@@ -334,16 +350,16 @@ void PX4SensorsCalibrationUITest::_testMagCalibration()
     }
 
     // ---------------------------------------------------------------------
-    // Calibration complete: progress hits 100% and the completion dialog opens
+    // Calibration complete: progress reaches 100% and direction settings expand inline.
     // ---------------------------------------------------------------------
     QVERIFY2(QTest::qWaitFor([&] { return qFuzzyCompare(progressBar->property("value").toDouble(), 1.0); }, 5000),
              qPrintable(QStringLiteral("Progress bar never reached 1.0: %1")
                             .arg(progressBar->property("value").toDouble())));
 
-    QVERIFY2(findVisibleItem(_rootItem, QStringLiteral("popupDialog_acceptButton"), 5000),
-             "Compass Calibration Complete dialog not shown");
+    QVERIFY2(findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_orientationRebootMessage"), 5000),
+             "Compass completion reboot reminder not shown below the orientation button");
     QVERIFY2(vehicle->rebootRequired(), "Compass calibration did not latch rebootRequired");
-    QVERIFY2(clickButton(QStringLiteral("popupDialog_acceptButton")), "Failed to dismiss completion dialog");
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("popupDialog_acceptButton"), 0));
 
     // Calibration no longer active: the cancel button row hides
     QVERIFY2(QTest::qWaitFor([&] { return !cancelButton->isVisible(); }, 5000),

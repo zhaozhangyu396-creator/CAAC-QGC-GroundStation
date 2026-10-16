@@ -35,7 +35,7 @@ void PX4VehicleConfigUITest::_testNavigateVehicleConfig()
     });
 }
 
-// With a full-parameter vehicle both dividers show; searching flattens the sidebar and hides them.
+// Embedded directories use bordered rows; standalone dividers are hidden while searching.
 void PX4VehicleConfigUITest::_testSidebarDividers()
 {
     runWithMockLink(
@@ -46,10 +46,13 @@ void PX4VehicleConfigUITest::_testSidebarDividers()
 
     QQuickItem *const summaryDivider = findItem(_rootItem, QStringLiteral("vehicleConfig_summaryDivider"));
     QQuickItem *const componentsDivider = findItem(_rootItem, QStringLiteral("vehicleConfig_componentsDivider"));
+    QQuickItem* const config = findVisibleItem(_rootItem, QStringLiteral("vehicleConfig_root"));
     QVERIFY(summaryDivider);
     QVERIFY(componentsDivider);
-    QTRY_VERIFY(summaryDivider->isVisible());
-    QTRY_VERIFY(componentsDivider->isVisible());
+    QVERIFY(config);
+    const bool showDividers = !config->property("embedded").toBool();
+    QTRY_COMPARE_WITH_TIMEOUT(summaryDivider->isVisible(), showDividers, TestTimeout::shortMs());
+    QTRY_COMPARE_WITH_TIMEOUT(componentsDivider->isVisible(), showDividers, TestTimeout::shortMs());
 
     QQuickItem *const searchField = findVisibleItem(_rootItem, QStringLiteral("vehicleConfig_searchField"), 3000);
     QVERIFY(searchField);
@@ -58,23 +61,28 @@ void PX4VehicleConfigUITest::_testSidebarDividers()
     QTRY_VERIFY(!componentsDivider->isVisible());
 
     searchField->setProperty("text", QString());
-    QTRY_VERIFY(summaryDivider->isVisible());
-    QTRY_VERIFY(componentsDivider->isVisible());
+    QTRY_COMPARE_WITH_TIMEOUT(summaryDivider->isVisible(), showDividers, TestTimeout::shortMs());
+    QTRY_COMPARE_WITH_TIMEOUT(componentsDivider->isVisible(), showDividers, TestTimeout::shortMs());
 
     });
 }
 
 void PX4VehicleConfigUITest::_selectTuningPage(const QString& tabObjectName, int pageIndex)
 {
-    if (auto* menu = findVisibleItem(_rootItem, QStringLiteral("pidTuning_sectionMenu"), 0)) {
-        scrollIntoView(menu, QStringLiteral("vehicleSetup_scroller"));
+    const QPointer<QQuickItem> menu = findVisibleItem(_rootItem, QStringLiteral("pidTuning_sectionMenu"), 0);
+    if (menu) {
+        QVERIFY(scrollIntoView(menu, QStringLiteral("vehicleSetup_scroller")));
         QVERIFY(clickButton(QStringLiteral("pidTuning_sectionMenu")));
         QTest::keyClick(_window, Qt::Key_Home);
         for (int index = 0; index < pageIndex; ++index) {
             QTest::keyClick(_window, Qt::Key_Down);
         }
         QTest::keyClick(_window, Qt::Key_Return);
-        QTRY_COMPARE(menu->property("currentIndex").toInt(), pageIndex);
+        const auto selectedPageIndex = [this]() {
+            const auto* currentMenu = findVisibleItem(_rootItem, QStringLiteral("pidTuning_sectionMenu"), 0);
+            return currentMenu ? currentMenu->property("currentIndex").toInt() : -1;
+        };
+        QTRY_COMPARE_WITH_TIMEOUT(selectedPageIndex(), pageIndex, TestTimeout::shortMs());
     } else {
         QVERIFY(clickButton(tabObjectName));
     }

@@ -14,6 +14,8 @@
 
 #include "AppMessages.h"
 #include "AppSettings.h"
+#include "CaacExamAudio.h"
+#include "CaacFigureEightController.h"
 #include "CaacFlightDistance.h"
 #include "CaacSimulationController.h"
 #include "FactMetaData.h"
@@ -67,6 +69,10 @@ CaacCorePlugin::CaacCorePlugin(QObject* parent)
     : QGCCorePlugin(parent)
 {
     _simulation = new CaacSimulationController(this);
+    _figureEight = new CaacFigureEightController(this);
+    auto* examAudio = new CaacExamAudio(this);
+    connect(_figureEight, &CaacFigureEightController::announcementRequested, examAudio, &CaacExamAudio::play);
+    connect(_figureEight, &CaacFigureEightController::alarmsCleared, examAudio, &CaacExamAudio::clearPendingWarnings);
     const QSettings settings;
     _doubleClickAddWaypoint = settings.value(QStringLiteral("CAAC/Map/DoubleClickAddWaypoint"), true).toBool();
     _dragWaypoints = settings.value(QStringLiteral("CAAC/Map/DragWaypoints"), true).toBool();

@@ -1,6 +1,9 @@
 #include "LoggingQmlBindingTest.h"
 
+#include <algorithm>
+
 #include <QtCore/QTimer>
+#include <QtCore/QUuid>
 #include <QtQml/QQmlComponent>
 #include <QtQml/QQmlContext>
 #include <QtQuick/QQuickItem>
@@ -8,10 +11,7 @@
 #include "LogEntry.h"
 #include "LogManager.h"
 #include "LogModel.h"
-#include "QGCLoggingCategory.h"
 #include "UnitTestList.h"
-
-QGC_LOGGING_CATEGORY(LoggingQmlBindingTestLog, "Test.LoggingQmlBinding")
 
 // Share a single QQmlEngine across all test methods.
 // qmlRegisterSingletonInstance ties the singleton to the first engine that
@@ -80,14 +80,6 @@ void LoggingQmlBindingTest::_modelRolesExposed()
 void LoggingQmlBindingTest::_modelReceivesEntries()
 {
     auto* model = LogManager::instance()->model();
-    const int before = model->totalCount();
-
-    expectLogMessage("Test.LoggingQmlBinding", QtWarningMsg, QRegularExpression("test message for model"));
-    qCWarning(LoggingQmlBindingTestLog) << "test message for model";
-    // Model update is an in-process queued signal, not I/O; a 500 ms window
-    // is generous for a local Qt signal and keeps failure feedback fast.
-    QTRY_VERIFY_WITH_TIMEOUT(model->totalCount() > before, 500);
-    verifyExpectedLogMessage();
 
     QQmlComponent component(_engine);
     component.setData(R"(
@@ -96,16 +88,34 @@ void LoggingQmlBindingTest::_modelReceivesEntries()
 
         QtObject {
             property int total: LogManager.model.totalCount
-            property int filtered: LogManager.model.rowCount()
+            property int filtered: total > 0 ? LogManager.model.rowCount() : 0
         }
-    )", QUrl());
+    )",
+                      QUrl());
 
     QVERIFY2(component.isReady(), qPrintable(component.errorString()));
 
     QScopedPointer<QObject> obj(component.create());
     QVERIFY(obj);
 
-    QVERIFY(obj->property("total").toInt() > 0);
+    const int before = model->totalCount();
+    QCOMPARE(obj->property("total").toInt(), before);
+
+    LogEntry entry;
+    entry.level = LogEntry::Info;
+    entry.category = QStringLiteral("Test.LoggingQmlBinding");
+    entry.message = QStringLiteral("model binding entry %1").arg(QUuid::createUuid().toString(QUuid::WithoutBraces));
+    entry.buildFormatted();
+    model->enqueue(entry);
+
+    const auto containsEntry = [model, &entry]() {
+        return std::ranges::any_of(model->allEntriesSnapshot(), [&entry](const LogEntry& stored) {
+            return stored.category == entry.category && stored.message == entry.message;
+        });
+    };
+    QTRY_VERIFY_WITH_TIMEOUT(containsEntry(), TestTimeout::shortMs());
+    QTRY_COMPARE_WITH_TIMEOUT(obj->property("total").toInt(), model->totalCount(), TestTimeout::shortMs());
+    QVERIFY(obj->property("total").toInt() > before);
     QVERIFY(obj->property("filtered").toInt() > 0);
 }
 

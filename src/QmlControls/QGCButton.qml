@@ -11,6 +11,8 @@ import QGroundControl.Controls
 Button {
     property bool primary: false
     readonly property bool settingsMenuStyle: ScreenTools.isSettingsMenuItem(control)
+    readonly property bool _settingsAccentBackground: qgcPal.globalTheme === QGCPalette.Dark
+        && (settingsMenuStyle || ScreenTools.isVehicleSetupItem(control))
     property bool showBorder: settingsMenuStyle || qgcPal.globalTheme === QGCPalette.Light
     property real backRadius: ScreenTools.defaultBorderRadius
     property real heightFactor: 0.5
@@ -47,11 +49,13 @@ Button {
         implicitHeight: ScreenTools.implicitButtonHeight
         border.width: showBorder ? 1 : 0
         border.color: qgcPal.buttonBorder
-        color: control.settingsMenuStyle ? qgcPal.window : primary ? qgcPal.primaryButton : qgcPal.button
+        color: control._settingsAccentBackground ? Qt.lighter(qgcPal.settingsAccent, 1.3)
+            : control.settingsMenuStyle ? qgcPal.window : primary ? qgcPal.primaryButton : qgcPal.button
 
         Rectangle {
             anchors.fill: parent
-            color: control.settingsMenuStyle ? qgcPal.windowShade : qgcPal.buttonHighlight
+            color: control._settingsAccentBackground ? Qt.lighter(qgcPal.settingsAccent, 1.8)
+                : control.settingsMenuStyle ? qgcPal.windowShade : qgcPal.buttonHighlight
             opacity: _showHighlight ? 1 : control.enabled && control.hovered ? .2 : 0
             radius: parent.radius
         }

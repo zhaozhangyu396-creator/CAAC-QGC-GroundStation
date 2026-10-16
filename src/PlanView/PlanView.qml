@@ -35,6 +35,8 @@ Item {
     property var    _planViewSettings: QGroundControl.settingsManager.planViewSettings
     readonly property bool unifiedFlightPlan: QGroundControl.corePlugin.directMissionItemEditing
     readonly property bool _simulationEmergency: unifiedFlightPlan && QGroundControl.corePlugin.simulation.emergencyMode
+    readonly property bool _figureEightView: unifiedFlightPlan && !!QGroundControl.corePlugin.figureEight
+        && QGroundControl.corePlugin.figureEight.viewActive
     function collapsePlanningPanels() { rightPanel.collapsePanels() }
     function togglePlanningSimulation() { editorMap.simulationRequested() }
     property bool unifiedStatisticsVisible: false
@@ -324,6 +326,9 @@ Item {
             }
 
             onMapClicked: (mouse) => {
+                if (_root._figureEightView) {
+                    return
+                }
                 // Take focus to close any previous editing
                 editorMap.focus = true
 
@@ -363,7 +368,7 @@ Item {
                 id: _missionItemIndicatorGroup
 
                 map: editorMap
-                missionItems: _root._missionController.visualItems
+                missionItems: _root._figureEightView ? null : _root._missionController.visualItems
                 onItemSelected: (sequenceNumber) => {
                     _root._missionController.setCurrentPlanViewSeqNum(sequenceNumber, false)
                 }
@@ -371,11 +376,12 @@ Item {
 
             // Add the mission item visuals to the map
             Repeater {
-                model: _missionController.visualItems
+                objectName: "caacPlanMissionVisuals"
+                model: _root._figureEightView ? null : _missionController.visualItems
                 delegate: MissionItemMapVisual {
                     map: editorMap
                     opacity: _editingLayer == _layerMission ? 1 : editorMap._nonInteractiveOpacity
-                    interactive: _editingLayer == _layerMission
+                    interactive: !_root._figureEightView && _editingLayer == _layerMission
                     vehicle: _planMasterController.controllerVehicle
                     indicatorGroup: _missionItemIndicatorGroup
                     onClicked: (sequenceNumber) => {
@@ -392,7 +398,7 @@ Item {
                 line.width: ScreenTools.defaultFontPixelWidth * 0.3
                 line.color: QGroundControl.globalPalette.colorRed
                 z: QGroundControl.zOrderTrajectoryLines
-                visible: _root.unifiedFlightPlan
+                visible: _root.unifiedFlightPlan && !_root._figureEightView
                 onVehicleChanged: path = vehicle ? vehicle.trajectoryPoints.list() : []
                 Component.onCompleted: path = vehicle ? vehicle.trajectoryPoints.list() : []
                 Connections {
@@ -407,14 +413,16 @@ Item {
                 }
             }
             MissionLineView {
+                objectName: "caacPlanMissionLines"
                 showSpecialVisual: _missionController.isROIBeginCurrentItem
-                model: rightPanel.simulationPreviewActive ? null : _missionController.simpleFlightPathSegments
+                model: _root._figureEightView || rightPanel.simulationPreviewActive
+                    ? null : _missionController.simpleFlightPathSegments
                 opacity: _editingLayer == _layerMission ? 1 : editorMap._nonInteractiveOpacity
             }
 
             // Direction arrows in waypoint lines
             MapItemView {
-                model: !editorMap.directMissionItemEditing && _editingLayer == _layerMission
+                model: !_root._figureEightView && !editorMap.directMissionItemEditing && _editingLayer == _layerMission
                     && !rightPanel.simulationPreviewActive ? _missionController.directionArrows : undefined
 
                 delegate: MapLineArrow {
@@ -428,6 +436,7 @@ Item {
 
             HoverHandler {
                 id: routeHover
+                enabled: !_root._figureEightView
                 acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
             }
 
@@ -492,7 +501,7 @@ Item {
                 anchorPoint.x: sourceItem.width / 2
                 anchorPoint.y: sourceItem.height / 2
                 z: QGroundControl.zOrderWaypointLines + 1
-                visible: !!hoveredSegment && metrics.distance > 0
+                visible: !_root._figureEightView && !!hoveredSegment && metrics.distance > 0
                 sourceItem: SplitIndicator {
                     objectName: "caacRouteSplitButton"
                     enabled: !_planMasterController.syncInProgress
@@ -515,7 +524,7 @@ Item {
                 anchorPoint.x: sourceItem.width / 2
                 anchorPoint.y: sourceItem.height / 2
                 z: QGroundControl.zOrderWaypointLines + 1
-                visible: !QGroundControl.corePlugin.directMissionItemEditing
+                visible: !_root._figureEightView && !QGroundControl.corePlugin.directMissionItemEditing
                          && _editingLayer == _layerMission
                          && !rightPanel.simulationPreviewActive
                          && _screenLegLength > _missionItemIndicatorGroup.groupingDistance * 2
@@ -574,7 +583,8 @@ Item {
                     vehicle: object
                     readonly property var planningSimulation: QGroundControl.corePlugin.directMissionItemEditing
                         ? QGroundControl.corePlugin.simulation : null
-                    readonly property bool previewHome: vehicle && planningSimulation && planningSimulation.vehicle === vehicle
+                    readonly property bool previewHome: !_root._figureEightView && vehicle && planningSimulation
+                        && planningSimulation.vehicle === vehicle
                         && !vehicle.airborne && !vehicle.armed && _missionController.plannedHomePosition.isValid
                     coordinate: previewHome ? _missionController.plannedHomePosition
                         : vehicle ? vehicle.coordinate : QtPositioning.coordinate()
@@ -589,7 +599,7 @@ Item {
                 visible: !_root.unifiedFlightPlan || _root.safetyFenceVisible || _editingLayer === _layerFence
                 map: editorMap
                 myGeoFenceController: _geoFenceController
-                interactive: _editingLayer == _layerFence
+                interactive: !_root._figureEightView && _editingLayer == _layerFence
                 homePosition: _missionController.plannedHomePosition
                 planView: true
                 opacity: _editingLayer != _layerFence ? editorMap._nonInteractiveOpacity : 1
@@ -599,7 +609,7 @@ Item {
                 objectName: "planView_rallyPointMapVisuals"
                 map: editorMap
                 myRallyPointController: _rallyPointController
-                interactive: _editingLayer == _layerRally
+                interactive: !_root._figureEightView && _editingLayer == _layerRally
                 planView: true
                 opacity: _editingLayer != _layerRally ? editorMap._nonInteractiveOpacity : 1
             }
@@ -616,7 +626,7 @@ Item {
             anchors.top: parent.top
             z: QGroundControl.zOrderWidgets
             maxHeight: parent.height - toolStrip.y
-            visible: _editingLayer == _layerMission && !editorMap.directMissionItemEditing
+            visible: !_root._figureEightView && _editingLayer == _layerMission && !editorMap.directMissionItemEditing
 
             property bool _isMissionLayer: _editingLayer == _layerMission
 
@@ -723,7 +733,7 @@ Item {
             anchors.margins: _toolsMargin
             anchors.left: editorMap.directMissionItemEditing ? undefined : toolStrip.right
             anchors.right: editorMap.directMissionItemEditing
-                ? (rightPanel.panelsCollapsed ? parent.right : rightPanel.left) : undefined
+                ? (!rightPanel.visible || rightPanel.panelsCollapsed ? parent.right : rightPanel.left) : undefined
             anchors.top: editorMap.directMissionItemEditing ? undefined : parent.top
             anchors.bottom: editorMap.directMissionItemEditing ? parent.bottom : undefined
             z: QGroundControl.zOrderWidgets + 4
@@ -733,7 +743,8 @@ Item {
 
         PlanViewRightPanel {
             id: rightPanel
-            visible: !_root._simulationEmergency
+            visible: !_root._simulationEmergency && !_root._figureEightView
+            enabled: !_root._figureEightView
             anchors.top: parent.top
             anchors.bottom: parent.bottom
             anchors.right: parent.right
@@ -754,7 +765,8 @@ Item {
             width:                  layerRow.width
             height:                 _layerButtonSize
             z:                      QGroundControl.zOrderWidgets
-            visible:                rightPanel.showNativeEditor && !_planMasterController.showCreateFromTemplate
+            visible:                !_root._figureEightView && rightPanel.showNativeEditor
+                                    && !_planMasterController.showCreateFromTemplate
 
             property bool   expanded: false
             property real   _layerButtonSize: ScreenTools.defaultFontPixelHeight * 2.0
@@ -868,9 +880,9 @@ Item {
             visible: _root.unifiedFlightPlan
             z: QGroundControl.zOrderWidgets + 3
             mapControl: editorMap
-            planningPaneExpanded: !rightPanel.panelsCollapsed
-            planningPanelWidth: rightPanel.width
-            planningNavigationHeight: rightPanel.navigationHeight
+            planningPaneExpanded: rightPanel.visible && !rightPanel.panelsCollapsed
+            planningPanelWidth: rightPanel.visible ? rightPanel.width : 0
+            planningNavigationHeight: rightPanel.visible ? rightPanel.navigationHeight : 0
         }
 
         RowLayout {
@@ -889,7 +901,8 @@ Item {
             property point _dragOffset: Qt.point(0, 0)
             spacing: 0
             anchors.bottomMargin: _root.unifiedFlightPlan ? unifiedFlightLayer.telemetryHeight + _toolsMargin : _toolsMargin
-            visible: !_root._simulationEmergency && !hidden && _editingLayer == _layerMission && QGroundControl.corePlugin.options.showMissionStatus
+            visible: !_root._simulationEmergency && !_root._figureEightView && !hidden
+                && _editingLayer == _layerMission && QGroundControl.corePlugin.options.showMissionStatus
 
             readonly property bool hidden: _root.unifiedFlightPlan ? !_root.unifiedStatisticsVisible : !_planViewSettings.showMissionItemStatus.rawValue
 

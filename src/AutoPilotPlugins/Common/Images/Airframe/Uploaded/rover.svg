@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800">
+<rect x="195" y="197" width="90" height="116" rx="15" fill="#292b30"/>
+<rect x="200" y="215" width="13" height="80" rx="5" fill="#23b878"/>
+<rect x="195" y="507" width="90" height="116" rx="15" fill="#292b30"/>
+<rect x="200" y="525" width="13" height="80" rx="5" fill="#23b878"/>
+<rect x="515" y="197" width="90" height="116" rx="15" fill="#292b30"/>
+<rect x="520" y="215" width="13" height="80" rx="5" fill="#23b878"/>
+<rect x="515" y="507" width="90" height="116" rx="15" fill="#292b30"/>
+<rect x="520" y="525" width="13" height="80" rx="5" fill="#23b878"/>
+<rect x="280" y="180" width="240" height="490" rx="65" fill="#48494d"/>
+<polygon points="309,250 341,220 459,220 491,250 473,340 327,340" fill="#4086ff"/>
+<rect x="311" y="445" width="178" height="153" rx="15" fill="#292b30"/>
+<polyline points="340,470 340,575" fill="none" stroke="#aeb4be" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="370,470 370,575" fill="none" stroke="#aeb4be" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="400,470 400,575" fill="none" stroke="#aeb4be" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="430,470 430,575" fill="none" stroke="#aeb4be" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="460,470 460,575" fill="none" stroke="#aeb4be" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="400,370 387,398 413,398" fill="#aeb4be"/>
+</svg>

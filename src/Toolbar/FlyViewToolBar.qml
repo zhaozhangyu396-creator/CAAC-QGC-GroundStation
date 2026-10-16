@@ -307,20 +307,6 @@ Item {
             scale: Math.min(1, parent.width / Math.max(1, implicitWidth))
             transformOrigin: Item.Left
             spacing: ScreenTools.defaultFontPixelWidth * 0.5
-            QGCButton {
-                id: flightSettingsButton
-                objectName: "caacFlightSettingsButton"
-                text: qsTr("Route flight")
-                checked: control.flightSettingsExpanded
-                checkable: true
-                heightFactor: 0.25
-                pointSize: control._fontPointSize
-                _horizontalPadding: ScreenTools.defaultFontPixelWidth * (control._compactToolbar ? 0.6 : 2)
-                implicitWidth: contentItem.implicitWidth + leftPadding + rightPadding
-                backgroundColor: checked ? qgcPal.colorGreen : qgcPal.window
-                textColor: qgcPal.text
-                onClicked: control.flightSettingsExpanded = checked
-            }
             RowLayout {
                 objectName: "caacArmStatusIndicator"
                 spacing: ScreenTools.defaultFontPixelWidth * 0.35
@@ -352,6 +338,44 @@ Item {
                 text: qsTr("Sensor status")
                 enabled: !!control._activeVehicle
                 onClicked: mainStatusIndicator.dropStatusSection(3, this)
+            }
+            QGCButton {
+                id: flightSettingsButton
+                objectName: "caacFlightSettingsButton"
+                text: qsTr("Route flight")
+                checked: control.flightSettingsExpanded
+                checkable: true
+                heightFactor: 0.25
+                pointSize: control._fontPointSize
+                _horizontalPadding: ScreenTools.defaultFontPixelWidth * (control._compactToolbar ? 0.6 : 2)
+                implicitWidth: contentItem.implicitWidth + leftPadding + rightPadding
+                backgroundColor: checked ? qgcPal.colorGreen : qgcPal.window
+                textColor: qgcPal.text
+                onClicked: {
+                    if (QGroundControl.corePlugin.directMissionItemEditing) {
+                        const controller = QGroundControl.corePlugin.figureEight
+                        if (controller) { controller.viewActive = false }
+                    }
+                    control.flightSettingsExpanded = checked
+                }
+            }
+            QGCButton {
+                objectName: "caacFigureEightButton"
+                visible: QGroundControl.corePlugin.directMissionItemEditing
+                text: qsTr("Figure-eight flight")
+                heightFactor: 0.25
+                pointSize: control._fontPointSize
+                _horizontalPadding: ScreenTools.defaultFontPixelWidth * (control._compactToolbar ? 0.6 : 2)
+                implicitWidth: contentItem.implicitWidth + leftPadding + rightPadding
+                backgroundColor: qgcPal.window
+                textColor: qgcPal.text
+                onClicked: {
+                    if (QGroundControl.corePlugin.directMissionItemEditing) {
+                        const controller = QGroundControl.corePlugin.figureEight
+                        if (controller) { controller.viewActive = true }
+                    }
+                    control.flightSettingsExpanded = false
+                }
             }
 
         }

@@ -17,6 +17,7 @@ public:
     // Overrides from FirmwarePlugin
 
     QList<MAV_CMD> supportedMissionCommands(QGCMAVLink::VehicleClass_t vehicleClass) const override;
+    GeoFencePolicy trainingGeoFencePolicy(Vehicle* vehicle) const override;
 
     AutoPilotPlugin*    autopilotPlugin                 (Vehicle* vehicle) const override;
     bool                isCapable                       (const Vehicle *vehicle, FirmwareCapabilities capabilities) const override;

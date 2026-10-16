@@ -6,10 +6,65 @@
 #include <QtGui/QGuiApplication>
 
 #include "APMAirframeComponentController.h"
+#include "Fact.h"
 
 APMAirframeComponentControllerTest::APMAirframeComponentControllerTest()
 {
     setWaitForParameters(true);
+}
+
+void APMAirframeComponentControllerTest::_frameClassImagesAndDefaults_data()
+{
+    QTest::addColumn<bool>("copter");
+    QTest::addColumn<int>("frameClass");
+    QTest::addColumn<QVariantList>("frameTypes");
+    QTest::addColumn<int>("defaultFrameType");
+    QTest::addColumn<QString>("defaultImage");
+    QTest::addColumn<QString>("category");
+
+    QTest::newRow("quad-prefers-x") << true << 1 << QVariantList{0, 1} << 1 << QStringLiteral("QuadRotorX")
+                                    << QStringLiteral("multirotor");
+    QTest::newRow("quad-without-x") << true << 1 << QVariantList{0} << 0 << QStringLiteral("QuadRotorPlus")
+                                    << QStringLiteral("multirotor");
+    QTest::newRow("quad-without-supported-type")
+        << true << 1 << QVariantList{99} << -1 << QStringLiteral("QuadRotorX") << QStringLiteral("multirotor");
+    QTest::newRow("rover-without-frame-type")
+        << false << 1 << QVariantList{} << -1 << QStringLiteral("Rover") << QStringLiteral("rover");
+    QTest::newRow("boat-without-frame-type")
+        << false << 2 << QVariantList{} << -1 << QStringLiteral("Boat") << QStringLiteral("other");
+    QTest::newRow("unmapped-rover-class")
+        << false << 3 << QVariantList{} << -1 << QStringLiteral("AirframeUnknown") << QStringLiteral("rover");
+}
+
+void APMAirframeComponentControllerTest::_frameClassImagesAndDefaults()
+{
+    QFETCH(bool, copter);
+    QFETCH(int, frameClass);
+    QFETCH(QVariantList, frameTypes);
+    QFETCH(int, defaultFrameType);
+    QFETCH(QString, defaultImage);
+    QFETCH(QString, category);
+
+    Fact frameType(1, QStringLiteral("FRAME_TYPE"), FactMetaData::valueTypeInt32, this);
+    QStringList frameTypeNames;
+    for (const QVariant& value : frameTypes) {
+        frameTypeNames.append(value.toString());
+    }
+    frameType.setEnumInfo(frameTypeNames, frameTypes);
+    QSignalSpy writeSpy(&frameType, &Fact::containerRawValueChanged);
+    QVERIFY(writeSpy.isValid());
+
+    APMFrameClass frame(QStringLiteral("Frame"), copter, frameClass, copter ? &frameType : nullptr, this);
+    QCOMPARE(frame.category(), category);
+    QCOMPARE(frame._defaultFrameType, defaultFrameType);
+    QCOMPARE(frame._imageResourceDefault, QStringLiteral("/qmlimages/Airframe/%1.svg").arg(defaultImage));
+    QVERIFY2(QFile::exists(QStringLiteral(":") + frame._imageResourceDefault), qPrintable(frame._imageResourceDefault));
+    QVERIFY2(QFile::exists(QStringLiteral(":") + frame.imageResource()), qPrintable(frame.imageResource()));
+    QCOMPARE(frame._frameTypeSupported, defaultFrameType != -1);
+    if (defaultFrameType != -1) {
+        QVERIFY(frameTypes.contains(defaultFrameType));
+    }
+    QCOMPARE(writeSpy.count(), 0);
 }
 
 void APMAirframeComponentControllerTest::_downloadCompleteSlotsRestoreCursor()

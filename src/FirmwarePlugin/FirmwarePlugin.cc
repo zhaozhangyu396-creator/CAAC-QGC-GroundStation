@@ -47,6 +47,16 @@ AutoPilotPlugin *FirmwarePlugin::autopilotPlugin(Vehicle *vehicle) const
     return new GenericAutoPilotPlugin(vehicle, vehicle);
 }
 
+FirmwarePlugin::GeoFencePolicy FirmwarePlugin::trainingGeoFencePolicy(Vehicle* vehicle) const
+{
+    Q_UNUSED(vehicle);
+    GeoFencePolicy policy;
+    policy.unsupportedReason =
+        tr("当前飞控未提供满足制动失败不降落要求的训练围栏策略，禁止写入。"
+           "需要适配机载回退策略。");
+    return policy;
+}
+
 QString FirmwarePlugin::flightMode(uint8_t base_mode, uint32_t custom_mode) const
 {
     Q_UNUSED(custom_mode);

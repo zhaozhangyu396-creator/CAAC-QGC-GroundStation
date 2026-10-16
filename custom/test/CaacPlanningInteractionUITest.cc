@@ -30,6 +30,7 @@
 #include "MissionController.h"
 #include "MissionSettingsItem.h"
 #include "MockLink.h"
+#include "MultiVehicleManager.h"
 #include "ParameterManager.h"
 #include "PlanMasterController.h"
 #include "QGCFencePolygon.h"
@@ -525,6 +526,31 @@ void CaacPlanningInteractionUITest::_newSettingsPages()
             QVERIFY(plan->isVisible());
             QVERIFY(!drawer->isVisible());
             QVERIFY(capture(QStringLiteral("caacVehicleSetupMenu")));
+            QVERIFY(clickButtonScrolled(QStringLiteral("vehicleConfig_offline_Airframe"),
+                                        QStringLiteral("vehicleConfig_sidebarFlickable")));
+            auto* catalog = findVisibleItem(_rootItem, QStringLiteral("airframeCatalogPage"));
+            QVERIFY(catalog);
+            QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("airframeCategory_boat"), 0));
+            QVERIFY(capture(QStringLiteral("caacAirframeCategories")));
+            const auto catalogScroller = QStringLiteral("airframeCatalogScroller");
+            for (const auto& category :
+                 {qMakePair("multirotor", "quadrotor-x"), qMakePair("fixedwing", "standard-plane"),
+                  qMakePair("vtol", "standard-vtol"), qMakePair("rover", "rover"), qMakePair("airship", "airship"),
+                  qMakePair("other", "helicopter")}) {
+                QVERIFY(clickButtonScrolled(QStringLiteral("airframeCategory_") + QLatin1String(category.first),
+                                            catalogScroller));
+                QCOMPARE(catalog->property("category").toString(), QLatin1String(category.first));
+                auto* image = findVisibleItemScrolled(
+                    QStringLiteral("airframeCatalogImage_") + QLatin1String(category.second), catalogScroller);
+                QVERIFY(image);
+                QTRY_COMPARE_WITH_TIMEOUT(image->property("status").toInt(), 1, TestTimeout::mediumMs());
+                QVERIFY(!image->property("source").toUrl().isEmpty());
+                QVERIFY(!MultiVehicleManager::instance()->activeVehicle());
+                QVERIFY(capture(QStringLiteral("caacAirframe_") + QLatin1String(category.first)));
+                QVERIFY(clickButtonScrolled(QStringLiteral("airframeCategory_back"), catalogScroller));
+                QCOMPARE(catalog->property("category").toString(), QString());
+            }
+            QVERIFY(clickButton(QStringLiteral("vehicleConfig_backToMenu")));
             QVERIFY(clickButtonScrolled(QStringLiteral("vehicleConfig_offline_Sensors"),
                                         QStringLiteral("vehicleConfig_sidebarFlickable")));
             auto* calibration = findVisibleItemScrolled(QStringLiteral("sensorsSetup_calibrateAccel"),
@@ -1621,6 +1647,7 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacRemoveWaypoint_%1").arg(selected)));
 
     const auto beforeBatchDelete = master->saveToJson();
+    const auto homeBeforeBatchDelete = mission->plannedHomePosition();
     QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacSelectWaypoint_0"), 0));
     QVERIFY(clickButton(QStringLiteral("caacSelectAllWaypoints")));
     QCOMPARE(panel->property("selectedWaypointCount").toInt(), 2);
@@ -1628,7 +1655,7 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     QCOMPARE(panel->property("selectedWaypointCount").toInt(), 1);
     QVERIFY(clickButton(QStringLiteral("caacDeleteSelectedWaypoints")));
     QCOMPARE(mission->visualItems()->count(), 2);
-    QCOMPARE(mission->plannedHomePosition(), home);
+    QCOMPARE(mission->plannedHomePosition(), homeBeforeBatchDelete);
     QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
     QCOMPARE(master->saveToJson(), beforeBatchDelete);
     QCOMPARE(panel->property("selectedWaypointCount").toInt(), 0);

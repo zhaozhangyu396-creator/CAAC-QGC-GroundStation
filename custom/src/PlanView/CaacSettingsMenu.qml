@@ -10,8 +10,8 @@ import QGroundControl.Controls
 Rectangle {
     id: root
     objectName: "caacSettingsMenu"
-    width: !submenuExpanded ? ScreenTools.defaultFontPixelWidth * 11 + spacingSize * 2 : Math.min(mainWindow.width * (mainWindow.width < ScreenTools.defaultFontPixelWidth * 96 ? 0.95 : 0.58),
-        preferredContentWidth + ScreenTools.defaultFontPixelWidth * 11 + spacingSize * 4)
+    width: !submenuExpanded ? ScreenTools.defaultFontPixelWidth * 11 + spacingSize * 2
+        : _expandedWidth - (compactDirectory ? 0 : _expandedContentWidth * 0.25)
     height: Math.min(mainWindow.height * 0.8, ScreenTools.defaultFontPixelHeight * 35)
     color: QGroundControl.globalPalette.window
     radius: ScreenTools.defaultBorderRadius
@@ -28,9 +28,14 @@ Rectangle {
         submenuExpanded = true
         mainWindow.caacSettingsPage = page
     }
-    readonly property bool compactDirectory: (selectedPage === "VehicleSetup" || selectedPage === "ApplicationSettings" || selectedPage === "Analyze")
+    readonly property bool compactDirectory: selectedPage === "Analyze"
         && !!submenu.item && !submenu.item._embeddedPageOpened
     readonly property real preferredContentWidth: compactDirectory ? submenu.item.navigationWidth : ScreenTools.defaultFontPixelWidth * 58
+    readonly property real _expandedWidth: Math.min(
+        mainWindow.width * (mainWindow.width < ScreenTools.defaultFontPixelWidth * 96 ? 0.95 : 0.58),
+        preferredContentWidth + ScreenTools.defaultFontPixelWidth * 11 + spacingSize * 4)
+    readonly property real _expandedContentWidth: Math.max(0,
+        _expandedWidth - ScreenTools.defaultFontPixelWidth * 11 - spacingSize * 4 - 1)
     Component.onCompleted: mainWindow.caacSettingsMenu = root
     Component.onDestruction: {
         mainWindow.caacSettingsMenu = null
@@ -95,6 +100,8 @@ Rectangle {
         QGCFlickable {
             objectName: "caacSettingsNavigationScroller"
             Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 11
+            Layout.minimumWidth: Layout.preferredWidth
+            Layout.maximumWidth: Layout.preferredWidth
             Layout.fillHeight: true
             contentWidth: width
             contentHeight: navigation.implicitHeight
@@ -118,6 +125,15 @@ Rectangle {
                     onClicked: root.togglePage("Connection")
                 }
                 NavigationButton {
+                    objectName: "toolbar_viewConfigure"
+                    text: qsTr("Vehicle setup")
+                    imageSource: "/res/GearWithPaperPlane.svg"
+                    checked: root.submenuExpanded && root.selectedPage === "VehicleSetup"
+                    onClicked: {
+                        if (mainWindow.allowViewSwitch() && !root.closeCurrentPage("VehicleSetup")) { mainWindow.showVehicleConfig() }
+                    }
+                }
+                NavigationButton {
                     objectName: "toolbar_rtk"
                     text: "RTK"
                     imageSource: "/InstrumentValueIcons/globe.svg"
@@ -130,15 +146,6 @@ Rectangle {
                     imageSource: "/qmlimages/RidIconManNoID.svg"
                     checked: root.submenuExpanded && root.selectedPage === "RID"
                     onClicked: root.togglePage("RID")
-                }
-                NavigationButton {
-                    objectName: "toolbar_viewConfigure"
-                    text: qsTr("Vehicle setup")
-                    imageSource: "/res/GearWithPaperPlane.svg"
-                    checked: root.submenuExpanded && root.selectedPage === "VehicleSetup"
-                    onClicked: {
-                        if (mainWindow.allowViewSwitch() && !root.closeCurrentPage("VehicleSetup")) { mainWindow.showVehicleConfig() }
-                    }
                 }
                 NavigationButton {
                     objectName: "toolbar_preferences"
@@ -202,6 +209,7 @@ Rectangle {
             objectName: "caacSettingsDetails"
             visible: root.submenuExpanded
             Layout.fillWidth: true
+            Layout.minimumWidth: 0
             Layout.fillHeight: true
             QGCLabel {
                 text: root.selectedPage === "Connection" ? qsTr("Connection")
@@ -217,6 +225,7 @@ Rectangle {
                 id: submenu
                 objectName: "caacSettingsSubmenu"
                 Layout.fillWidth: true
+                Layout.minimumWidth: 0
                 Layout.fillHeight: true
                 source: root.selectedPage === "Connection" ? "qrc:/qml/CAAC/Plan/CaacConnectionSettings.qml"
                     : root.selectedPage === "VehicleSetup" ? "qrc:/qml/QGroundControl/VehicleSetup/VehicleConfigView.qml"

@@ -18,16 +18,20 @@ Item {
     property real planningNavigationHeight: 0
     property real reservedBottomHeight: 0
     property var missionControllerOverride: null
-    property var customOccluders: tools.visible ? [Qt.rect(tools.x, tools.y, tools.width, tools.height)] : []
+    property var customOccluders: tools.visible ? [Qt.rect(tools.x, tools.y, tools.width, tools.height)]
+        : eightTools.visible ? [Qt.rect(eightTools.x, eightTools.y, eightTools.width, eightTools.height),
+            Qt.rect(eightExamControl.x, eightExamControl.y, eightExamControl.width, eightExamControl.height)] : []
     property alias mapToolsContainer: toolbar
 
     readonly property bool _simulationEmergency: _corePlugin.simulation.emergencyMode
     property Component _emergencyDialog: Component { CaacSimulationEmergencyDialog { } }
     readonly property var _vehicle: QGroundControl.multiVehicleManager.activeVehicle
     readonly property var _corePlugin: QGroundControl.corePlugin
+    readonly property bool _figureEightView: !!_corePlugin.figureEight && _corePlugin.figureEight.viewActive
     readonly property var _missionController: missionControllerOverride || (mapControl && mapControl.planMasterController
         ? mapControl.planMasterController.missionController : null)
     readonly property real _margin: ScreenTools.defaultFontPixelWidth
+    readonly property color _mapToolBackground: "#d9232629"
     property point _panelOffset: Qt.point(0, 0)
     readonly property real _panelBottom: !root.planningOverlay && root.occluders
         ? Math.min(root.occluders.bottomRight.y, root.occluders.virtualJoystickRight.y)
@@ -42,6 +46,10 @@ Item {
     }
 
     QGCPalette { id: caacPalette; colorGroupEnabled: true }
+
+    CaacFigureEightMap {
+        mapControl: root.mapControl
+    }
     function selectPanel(button) {
         if (button.checked) {
             for (const panelButton of [missionButton, dataButton, mapButton]) {
@@ -53,6 +61,7 @@ Item {
     component SquareTool: QGCButton {
         id: button
         property string toolIcon: "data"
+        property string toolImage: ""
         readonly property real iconSize: ScreenTools.defaultFontPixelHeight * 2.5
         Layout.minimumWidth: Layout.preferredWidth
         Layout.maximumWidth: Layout.preferredWidth
@@ -67,7 +76,7 @@ Item {
             width: button.iconSize
             height: width
             radius: ScreenTools.defaultFontPixelWidth * 0.7
-            color: button.checked ? "#245b46" : "#d9232629"
+            color: button.checked ? "#245b46" : root._mapToolBackground
             border.width: 1
             border.color: button.checked ? "#40d58b" : "#a0a5aa"
         }
@@ -77,6 +86,7 @@ Item {
         bottomPadding: 0
         contentItem: Item {
           Canvas {
+            visible: button.toolImage.length === 0
             anchors.top: parent.top
             anchors.horizontalCenter: parent.horizontalCenter
             width: button.iconSize
@@ -152,6 +162,16 @@ Item {
                 }
             }
           }
+          QGCColoredImage {
+              anchors.top: parent.top
+              anchors.topMargin: button.iconSize * 0.2
+              anchors.horizontalCenter: parent.horizontalCenter
+              width: button.iconSize * 0.6
+              height: width
+              visible: button.toolImage.length > 0
+              source: button.toolImage
+              color: caacPalette.mapWidgetBorderLight
+          }
         }
         QGCLabel {
             id: toolLabel
@@ -167,7 +187,7 @@ Item {
     }
 
     CaacWaypointOverlap {
-        visible: !root._simulationEmergency && !root.planningOverlay
+        visible: !root._simulationEmergency && !root._figureEightView && !root.planningOverlay
         anchors.fill: parent
         z: QGroundControl.zOrderMapItems + 1
         mapControl: root.mapControl
@@ -176,7 +196,7 @@ Item {
     }
 
     CaacRouteLegLabels {
-        visible: !root._simulationEmergency && !root.planningOverlay
+        visible: !root._simulationEmergency && !root._figureEightView && !root.planningOverlay
         anchors.fill: parent
         mapControl: root.mapControl
         blockedAreas: root.occluders ? root.occluders.all.concat(root.customOccluders) : root.customOccluders
@@ -264,7 +284,8 @@ Item {
         readonly property real panelWidth: Math.min(ScreenTools.defaultFontPixelWidth * 46, parent.width / 2)
         width: toolbar.implicitWidth + (panelScroller.visible ? panelWidth + spacing : 0)
         readonly property real availableHeight: root._panelBottom - y - root._margin
-        visible: !root._simulationEmergency && (!root.planningPaneExpanded || root.planningOverlay)
+        visible: !root._simulationEmergency && !root._figureEightView
+            && (!root.planningPaneExpanded || root.planningOverlay)
             && availableHeight > 0
         spacing: root._margin
 
@@ -367,6 +388,125 @@ Item {
             }
         }
     }
+    QGCFlickable {
+        id: eightTools
+        objectName: "caacEightToolsScroller"
+        x: root._margin
+        y: root.occluders
+            ? root.occluders.toolStrip.y + ScreenTools.defaultFontPixelWidth * 0.7 : root._margin
+        width: eightToolbar.implicitWidth
+        height: Math.max(0, Math.min(eightToolbar.implicitHeight, root._panelBottom - y - root._margin))
+        visible: root._figureEightView && !root._simulationEmergency && height > 0
+        contentWidth: width
+        contentHeight: eightToolbar.implicitHeight
+        clip: true
+
+        ColumnLayout {
+            id: eightToolbar
+            width: parent.width
+            spacing: root._margin * 0.5
+
+            SquareTool {
+                objectName: "caacEightSiteListButton"
+                text: qsTr("场地列表")
+                toolImage: "/InstrumentValueIcons/list.svg"
+                onClicked: eightDialogFactory.open({ initialPage: 0 })
+            }
+            SquareTool {
+                objectName: "caacEightPreferencesButton"
+                text: qsTr("考试偏好")
+                toolImage: "/InstrumentValueIcons/list-bullet.svg"
+                onClicked: eightDialogFactory.open({ initialPage: 1 })
+            }
+            SquareTool {
+                objectName: "caacEightStandardsButton"
+                text: qsTr("标准设置")
+                toolImage: "/res/sliders.svg"
+                onClicked: eightDialogFactory.open({ initialPage: 2 })
+            }
+            SquareTool {
+                objectName: "caacEightFenceButton"
+                text: qsTr("电子围栏")
+                toolImage: "/InstrumentValueIcons/shield.svg"
+                onClicked: eightDialogFactory.open({ initialPage: 4 })
+            }
+            SquareTool {
+                objectName: "caacEightClearTrajectoryButton"
+                text: qsTr("清除轨迹")
+                toolIcon: "clearTrajectory"
+                onClicked: {
+                    const controller = root._corePlugin.figureEight
+                    if (controller) { controller.clearTrajectory() }
+                }
+            }
+        }
+    }
+
+    Rectangle {
+        id: eightExamControl
+        objectName: "caacEightExamControl"
+        x: eightTools.x + eightTools.width + root._margin
+        y: eightTools.y
+        width: examControls.implicitWidth + root._margin
+        height: ScreenTools.defaultFontPixelHeight * 3.4
+        radius: ScreenTools.defaultFontPixelHeight
+        visible: eightTools.visible
+        color: root._mapToolBackground
+
+        readonly property var controller: root._corePlugin.figureEight
+        readonly property int elapsedSeconds: controller && typeof controller.metrics.elapsed === "number"
+            && isFinite(controller.metrics.elapsed)
+            ? Math.max(0, Math.floor(controller.metrics.elapsed)) : 0
+
+        RowLayout {
+            id: examControls
+            anchors.centerIn: parent
+            spacing: root._margin * 0.5
+
+            QGCButton {
+                objectName: "caacEightExamTimer"
+                text: String(Math.floor(eightExamControl.elapsedSeconds / 60)).padStart(2, "0")
+                    + ":" + String(eightExamControl.elapsedSeconds % 60).padStart(2, "0")
+                pointSize: ScreenTools.defaultFontPointSize * 1.25
+                fontWeight: Font.DemiBold
+                textColor: caacPalette.text
+                Accessible.name: qsTr("查看考试监测")
+                background: Item { }
+                onClicked: eightDialogFactory.open({ initialPage: 3 })
+            }
+
+            Rectangle {
+                Layout.preferredWidth: 1
+                Layout.preferredHeight: eightExamControl.height * 0.6
+                color: caacPalette.text
+                opacity: 0.35
+            }
+
+            QGCButton {
+                objectName: "caacEightStartExamButton"
+                text: eightExamControl.controller && eightExamControl.controller.running
+                    ? qsTr("结束考试") : qsTr("开始考试")
+                pointSize: ScreenTools.defaultFontPointSize * 1.25
+                textColor: caacPalette.text
+                enabled: !!eightExamControl.controller
+                background: Item { }
+                onClicked: {
+                    if (eightExamControl.controller.running) {
+                        eightExamControl.controller.stop()
+                        eightDialogFactory.open({ initialPage: 3 })
+                    } else if (!eightExamControl.controller.start()) {
+                        eightDialogFactory.open({ initialPage: 3 })
+                    }
+                }
+            }
+        }
+    }
+
+    QGCPopupDialogFactory {
+        id: eightDialogFactory
+        dialogComponent: Component { CaacFigureEightDialog { } }
+    }
+
     QGCPopupDialogFactory {
         id: calculatorFactory
         dialogComponent: Component { CaacCalculator { } }

@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "locale": "zh-CN",
+  "description": "Offline Mandarin exam and real-time correction prompts.",
+  "synthesis": {
+    "provider": "Microsoft Edge Read Aloud TTS via edge-tts",
+    "voice": "zh-CN-XiaoxiaoNeural",
+    "voiceGender": "Female",
+    "synthetic": true,
+    "rate": "+0%",
+    "pitch": "+0Hz",
+    "generatedAtUtc": "2026-10-16T12:45:44+00:00",
+    "source": "https://github.com/rany2/edge-tts"
+  },
+  "audio": {
+    "container": "WAV",
+    "codec": "pcm_s16le",
+    "sampleRateHz": 22050,
+    "channels": 1,
+    "bitsPerSample": 16,
+    "targetLoudnessLufs": -18,
+    "truePeakDbtp": -1.5
+  },
+  "clips": [
+    {
+      "id": "ready",
+      "text": "可以开始考试",
+      "file": "ready.wav",
+      "durationSeconds": 1.896009,
+      "byteSize": 83692,
+      "sha256": "8d851032b50e82e1f6f0acd550d7ee0ead1b46144a18405690b774eaa35e5bd9"
+    },
+    {
+      "id": "spin",
+      "text": "开始原地自旋",
+      "file": "spin.wav",
+      "durationSeconds": 1.992018,
+      "byteSize": 87926,
+      "sha256": "cefc1e45400c6b56b5d635270d7864519920d4c017a99d73e938fcfb96c7e940"
+    },
+    {
+      "id": "spin_reverse",
+      "text": "开始反向原地自旋",
+      "file": "spin_reverse.wav",
+      "durationSeconds": 2.424036,
+      "byteSize": 106978,
+      "sha256": "f72715be977188afbe876aef4ca53c5e89f076c455cb81f1f6e5ccc995130a38"
+    },
+    {
+      "id": "figure_eight",
+      "text": "开始八字飞行",
+      "file": "figure_eight.wav",
+      "durationSeconds": 2.04,
+      "byteSize": 90042,
+      "sha256": "c61690c0cfa996462679974a9db3013c862ff286008b7131caee62e7780f8fce"
+    },
+    {
+      "id": "area",
+      "text": "超出考试区域范围，请修正位置",
+      "file": "area.wav",
+      "durationSeconds": 3.648027,
+      "byteSize": 160956,
+      "sha256": "3d73395b688d1f2eee1765d409ca0a28582b20e8db0299587cd5185c3c095d28"
+    },
+    {
+      "id": "speed_high",
+      "text": "航速过大，请减速",
+      "file": "speed_high.wav",
+      "durationSeconds": 2.448027,
+      "byteSize": 108036,
+      "sha256": "85c2384893060b4cff0e91617600c4475bf3eb933a4a790bf172769b47963eca"
+    },
+    {
+      "id": "speed_low",
+      "text": "航速过小，请保持飞行速度",
+      "file": "speed_low.wav",
+      "durationSeconds": 3.168027,
+      "byteSize": 139788,
+      "sha256": "2fc9cc93d6d9883cf740995e7b48e393d11a4cebc5c0e76a14b6a81a86d9b00b"
+    },
+    {
+      "id": "time_up",
+      "text": "考试时间结束",
+      "file": "time_up.wav",
+      "durationSeconds": 2.04,
+      "byteSize": 90042,
+      "sha256": "5a56c7618b18b2c8740e6478ec6b790fd1f00719f50d2545662556493c90c939"
+    },
+    {
+      "id": "heading",
+      "text": "航向角偏差过大，请修正航向",
+      "file": "heading.wav",
+      "durationSeconds": 3.48,
+      "byteSize": 153546,
+      "sha256": "1814a5993d1269f0c0b5ca683396893053dfa85033fa15dff9939e1b4d1a8261"
+    },
+    {
+      "id": "altitude",
+      "text": "高度偏差过大，请修正高度",
+      "file": "altitude.wav",
+      "durationSeconds": 3.24,
+      "byteSize": 142962,
+      "sha256": "c0a46b508f3ab0211980cebc6cf3616d3473cdd4733ef167f75142256da7de37"
+    },
+    {
+      "id": "completed",
+      "text": "考试科目完成",
+      "file": "completed.wav",
+      "durationSeconds": 2.016009,
+      "byteSize": 88984,
+      "sha256": "21cb3b447d07326536bb266ba6136f69f9f8862eea8f403e14b4803641ccfccd"
+    },
+    {
+      "id": "stopped",
+      "text": "考试记录已结束",
+      "file": "stopped.wav",
+      "durationSeconds": 2.16,
+      "byteSize": 95334,
+      "sha256": "be1d0d4e4b5314dc5661fff2b6c59c4e2203a299df081d435e13cb635abf962c"
+    },
+    {
+      "id": "telemetry",
+      "text": "遥测数据异常，考试记录已结束",
+      "file": "telemetry.wav",
+      "durationSeconds": 3.6,
+      "byteSize": 158838,
+      "sha256": "918a2664993a97961f008b7c9bb3bb84b788ee148829446ad1307e0629d067b9"
+    },
+    {
+      "id": "wind",
+      "text": "地面风速数据失效，考试记录已结束",
+      "file": "wind.wav",
+      "durationSeconds": 4.08,
+      "byteSize": 180006,
+      "sha256": "63ea07557ff735b6e53c85c8b25d85cc48b6661dca831f2b98919602ebe4a579"
+    },
+    {
+      "id": "spin_too_fast",
+      "text": "原地自旋过快，请保持匀速",
+      "file": "spin_too_fast.wav",
+      "durationSeconds": 3.144036,
+      "byteSize": 138730,
+      "sha256": "f056cca9b1d59d50f522e4a8521129e577aa4890f51983024f25df3c64e5bd67"
+    }
+  ]
+}

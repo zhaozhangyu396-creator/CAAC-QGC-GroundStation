@@ -8,6 +8,10 @@ target_sources(
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacPlanningToolsTest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacSimulationEngineTest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacSimulationUITest.cc
+            ${CMAKE_CURRENT_SOURCE_DIR}/CaacFigureEightControllerTest.cc
+            ${CMAKE_CURRENT_SOURCE_DIR}/CaacFigureEightFenceControllerTest.cc
+            ${CMAKE_CURRENT_SOURCE_DIR}/CaacFigureEightFenceGeometryTest.cc
+            ${CMAKE_CURRENT_SOURCE_DIR}/CaacFigureEightUITest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacPlanningInteractionUITest.cc
 )
 if(WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -78,6 +82,21 @@ if(WIN32)
 endif()
 
 add_qgc_test(CaacSimulationEngineTest LABELS Unit MissionManager)
+add_qgc_test(CaacFigureEightControllerTest LABELS Unit Vehicle)
+add_qgc_test(CaacFigureEightFenceControllerTest LABELS Unit Vehicle)
+add_qgc_test(CaacFigureEightFenceGeometryTest LABELS Unit MissionManager)
+add_qgc_test(
+    CaacFigureEightUITest
+    LABELS
+    Integration
+    Vehicle
+    NoSanitizer
+    TIMEOUT
+    120
+    ENV_MODIFICATION
+    "QGC_TEST_LOCALE=set:zh_CN"
+    ${_caac_ui_env}
+)
 add_qgc_test(
     CaacSimulationUITest
     LABELS

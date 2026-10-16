@@ -1,0 +1,440 @@
+diff --git a/src/modules/commander/failsafe/failsafe.cpp b/src/modules/commander/failsafe/failsafe.cpp
+index 6a61d65..1424005 100644
+--- a/src/modules/commander/failsafe/failsafe.cpp
++++ b/src/modules/commander/failsafe/failsafe.cpp
+@@ -559,7 +559,10 @@ void Failsafe::checkStateAndMode(const hrt_abstime &time_us, const State &state,
+ 			       ActionOptions(Action::Hold).clearOn(ClearCondition::OnModeChangeOrDisarm));
+ 	}
+
+-	CHECK_FAILSAFE(status_flags, geofence_breached, fromGfActParam(_param_gf_action.get()).cannotBeDeferred());
++	ActionOptions geofence_action = fromGfActParam(_param_gf_action.get()).cannotBeDeferred();
++	geofence_action.warn_on_hold_failure = _param_gf_noland.get() == 1 && geofence_action.action == Action::Hold
++			&& state.vehicle_type == vehicle_status_s::VEHICLE_TYPE_ROTARY_WING;
++	CHECK_FAILSAFE(status_flags, geofence_breached, geofence_action);
+
+ 	// Battery flight time remaining failsafe
+ 	CHECK_FAILSAFE(status_flags, battery_low_remaining_time,
+diff --git a/src/modules/commander/failsafe/failsafe.h b/src/modules/commander/failsafe/failsafe.h
+index 9a9384f..cfe92f2 100644
+--- a/src/modules/commander/failsafe/failsafe.h
++++ b/src/modules/commander/failsafe/failsafe.h
+@@ -203,6 +203,7 @@ private:
+ 					(ParamInt<px4::params::COM_DLL_EXCEPT>) _param_com_dll_except,
+ 					(ParamInt<px4::params::COM_RC_IN_MODE>) _param_com_rc_in_mode,
+ 					(ParamInt<px4::params::GF_ACTION>)  	_param_gf_action,
++					(ParamInt<px4::params::GF_NOLAND>)  	_param_gf_noland,
+ 					(ParamFloat<px4::params::COM_SPOOLUP_TIME>) _param_com_spoolup_time,
+ 					(ParamInt<px4::params::COM_IMB_PROP_ACT>) _param_com_imb_prop_act,
+ 					(ParamFloat<px4::params::COM_LKDOWN_TKO>) _param_com_lkdown_tko,
+diff --git a/src/modules/commander/failsafe/failsafe_test.cpp b/src/modules/commander/failsafe/failsafe_test.cpp
+index 2c190c6..2539d66 100644
+--- a/src/modules/commander/failsafe/failsafe_test.cpp
++++ b/src/modules/commander/failsafe/failsafe_test.cpp
+@@ -34,6 +34,8 @@
+ #include <gtest/gtest.h>
+
+ #include "framework.h"
++#include "failsafe.h"
++#include <uORB/topics/battery_status.h>
+ #include <uORB/topics/vehicle_status.h>
+ #include "../ModeUtil/mode_requirements.hpp"
+
+@@ -529,3 +531,258 @@ TEST_F(FailsafeTest, user_termination)
+ 	EXPECT_EQ(updated_user_intented_mode, state.user_intended_mode);
+ 	EXPECT_EQ(failsafe.selectedAction(), FailsafeBase::Action::Terminate);
+ }
++
++
++class GeofenceNoLandTest : public ::testing::Test
++{
++protected:
++	void SetUp() override
++	{
++		param_control_autosave(false);
++		setInt("GF_ACTION", 2);
++		setInt("GF_NOLAND", 1);
++		setInt("NAV_RCL_ACT", 2);
++		setInt("NAV_DLL_ACT", 0);
++		setInt("COM_RC_IN_MODE", 0);
++		setInt("COM_LOW_BAT_ACT", 2);
++		const float delay = 0.f;
++		ASSERT_EQ(param_set(param_find("COM_FAIL_ACT_T"), &delay), 0);
++		state.armed = true;
++		state.user_intended_mode = vehicle_status_s::NAVIGATION_STATE_ALTCTL;
++		state.vehicle_type = vehicle_status_s::VEHICLE_TYPE_ROTARY_WING;
++	}
++
++	static void setInt(const char *name, int32_t value)
++	{
++		ASSERT_NE(param_find(name), PARAM_INVALID);
++		ASSERT_EQ(param_set(param_find(name), &value), 0);
++	}
++
++	void blockMode(uint8_t mode)
++	{
++		flags.mode_req_other |= 1u << mode;
++	}
++
++	uint8_t update(Failsafe &failsafe, hrt_abstime elapsed = 10_ms, bool mode_updated = false)
++	{
++		time += elapsed;
++		return failsafe.update(time, state, mode_updated, false, flags);
++	}
++
++	FailsafeBase::State state{};
++	failsafe_flags_s flags{};
++	hrt_abstime time{5_s};
++};
++
++TEST_F(GeofenceNoLandTest, availableHoldAndPilotModeSwitch)
++{
++	Failsafe failsafe(nullptr);
++	update(failsafe);
++	flags.geofence_breached = true;
++	EXPECT_EQ(update(failsafe), state.user_intended_mode);
++	EXPECT_EQ(failsafe.selectedAction(), FailsafeBase::Action::Hold);
++	state.user_intended_mode = vehicle_status_s::NAVIGATION_STATE_STAB;
++	EXPECT_EQ(update(failsafe, 10_ms, true), state.user_intended_mode);
++	EXPECT_EQ(failsafe.selectedAction(), FailsafeBase::Action::Warn);
++}
++
++TEST_F(GeofenceNoLandTest, unavailableHoldKeepsPilotModeWithoutEscalation)
++{
++	Failsafe failsafe(nullptr);
++	update(failsafe);
++	blockMode(vehicle_status_s::NAVIGATION_STATE_AUTO_LOITER);
++	blockMode(vehicle_status_s::NAVIGATION_STATE_AUTO_RTL);
++	flags.geofence_breached = true;
++
++	for (hrt_abstime elapsed : {10_ms, 6_s, 120_s}) {
++		EXPECT_EQ(update(failsafe, elapsed), state.user_intended_mode);
++		EXPECT_EQ(failsafe.selectedAction(), FailsafeBase::Action::Warn);
++		EXPECT_EQ(FailsafeBase::modeFromAction(failsafe.selectedAction(), state.user_intended_mode),
++			  state.user_intended_mode);
++	}
++}
++
++TEST_F(GeofenceNoLandTest, persistentBreachLosesHoldAndRepeatsAlarm)
++{
++	Failsafe failsafe(nullptr);
++	int notifications = 0;
++	failsafe.setOnNotifyUserCallback([](void *arg) { ++*static_cast<int *>(arg); }, &notifications);
++	update(failsafe);
++	flags.geofence_breached = true;
++	update(failsafe);
++	ASSERT_EQ(failsafe.selectedAction(), FailsafeBase::Action::Hold);
++	const int initial_notifications = notifications;
++	blockMode(vehicle_status_s::NAVIGATION_STATE_AUTO_LOITER);
++	blockMode(vehicle_status_s::NAVIGATION_STATE_AUTO_RTL);
++	EXPECT_EQ(update(failsafe), state.user_intended_mode);
++	EXPECT_EQ(failsafe.selectedAction(), FailsafeBase::Action::Warn);
++	EXPECT_EQ(notifications, initial_notifications + 1);
++	update(failsafe, 2_s);
++	EXPECT_EQ(notifications, initial_notifications + 1);
++	update(failsafe, 4_s);
++	EXPECT_EQ(notifications, initial_notifications + 2);
++}
++
++TEST_F(GeofenceNoLandTest, clearedBreachLatchedHoldAlsoCannotLand)
++{
++	Failsafe failsafe(nullptr);
++	update(failsafe);
++	flags.geofence_breached = true;
++	update(failsafe);
++	ASSERT_EQ(failsafe.selectedAction(), FailsafeBase::Action::Hold);
++	flags.geofence_breached = false;
++	update(failsafe);
++	ASSERT_EQ(failsafe.selectedAction(), FailsafeBase::Action::Hold);
++	blockMode(vehicle_status_s::NAVIGATION_STATE_AUTO_LOITER);
++	blockMode(vehicle_status_s::NAVIGATION_STATE_AUTO_RTL);
++	EXPECT_EQ(update(failsafe), state.user_intended_mode);
++	EXPECT_EQ(failsafe.selectedAction(), FailsafeBase::Action::Warn);
++	state.user_intended_mode = vehicle_status_s::NAVIGATION_STATE_STAB;
++	update(failsafe, 10_ms, true);
++	EXPECT_EQ(failsafe.selectedAction(), FailsafeBase::Action::None);
++}
++
++TEST_F(GeofenceNoLandTest, independentBatteryLandIsUnchanged)
++{
++	Failsafe failsafe(nullptr);
++	update(failsafe);
++	flags.geofence_breached = true;
++	blockMode(vehicle_status_s::NAVIGATION_STATE_AUTO_LOITER);
++	blockMode(vehicle_status_s::NAVIGATION_STATE_AUTO_RTL);
++	flags.battery_warning = battery_status_s::WARNING_EMERGENCY;
++	update(failsafe);
++	EXPECT_EQ(failsafe.selectedAction(), FailsafeBase::Action::Land);
++}
++
++TEST_F(GeofenceNoLandTest, independentRcFailsafeStillFallsBackToLand)
++{
++	Failsafe failsafe(nullptr);
++	update(failsafe);
++	flags.geofence_breached = true;
++	blockMode(vehicle_status_s::NAVIGATION_STATE_AUTO_LOITER);
++	blockMode(vehicle_status_s::NAVIGATION_STATE_AUTO_RTL);
++	flags.manual_control_signal_lost = true;
++	update(failsafe);
++	EXPECT_EQ(failsafe.selectedAction(), FailsafeBase::Action::Land);
++}
++
++TEST_F(GeofenceNoLandTest, invalidPilotModeStillUsesNativePositionFallback)
++{
++	Failsafe failsafe(nullptr);
++	update(failsafe);
++	flags.geofence_breached = true;
++	blockMode(vehicle_status_s::NAVIGATION_STATE_AUTO_LOITER);
++	blockMode(vehicle_status_s::NAVIGATION_STATE_ALTCTL);
++	update(failsafe);
++	EXPECT_EQ(failsafe.selectedAction(), FailsafeBase::Action::FallbackStab);
++}
++
++TEST_F(GeofenceNoLandTest, disabledPolicyKeepsNativeLandFallback)
++{
++	setInt("GF_NOLAND", 0);
++	Failsafe failsafe(nullptr);
++	update(failsafe);
++	flags.geofence_breached = true;
++	blockMode(vehicle_status_s::NAVIGATION_STATE_AUTO_LOITER);
++	blockMode(vehicle_status_s::NAVIGATION_STATE_AUTO_RTL);
++	update(failsafe);
++	EXPECT_EQ(failsafe.selectedAction(), FailsafeBase::Action::Land);
++}
++
++TEST_F(GeofenceNoLandTest, otherGeofenceActionIsUnchanged)
++{
++	setInt("GF_ACTION", 5);
++	Failsafe failsafe(nullptr);
++	update(failsafe);
++	flags.geofence_breached = true;
++	update(failsafe);
++	EXPECT_EQ(failsafe.selectedAction(), FailsafeBase::Action::Land);
++}
++
++TEST_F(GeofenceNoLandTest, fixedWingIsUnchanged)
++{
++	state.vehicle_type = vehicle_status_s::VEHICLE_TYPE_FIXED_WING;
++	Failsafe failsafe(nullptr);
++	update(failsafe);
++	flags.geofence_breached = true;
++	blockMode(vehicle_status_s::NAVIGATION_STATE_AUTO_LOITER);
++	blockMode(vehicle_status_s::NAVIGATION_STATE_AUTO_RTL);
++	update(failsafe);
++	EXPECT_EQ(failsafe.selectedAction(), FailsafeBase::Action::Land);
++}
++
++
++class ReconfigurableGeofenceFailsafe : public Failsafe
++{
++public:
++	ReconfigurableGeofenceFailsafe() : Failsafe(nullptr) {}
++	using Failsafe::updateParams;
++};
++
++TEST_F(GeofenceNoLandTest, latchedHoldPolicyDisablesWithDifferentAction)
++{
++	ReconfigurableGeofenceFailsafe failsafe;
++	update(failsafe);
++	flags.geofence_breached = true;
++	update(failsafe);
++	flags.geofence_breached = false;
++	update(failsafe);
++	ASSERT_EQ(failsafe.selectedAction(), FailsafeBase::Action::Hold);
++	setInt("GF_ACTION", 5);
++	failsafe.updateParams();
++	blockMode(vehicle_status_s::NAVIGATION_STATE_AUTO_LOITER);
++	blockMode(vehicle_status_s::NAVIGATION_STATE_AUTO_RTL);
++	update(failsafe);
++	EXPECT_EQ(failsafe.selectedAction(), FailsafeBase::Action::Land);
++}
++
++TEST_F(GeofenceNoLandTest, latchedHoldPolicyDisablesWhenOptedOut)
++{
++	ReconfigurableGeofenceFailsafe failsafe;
++	update(failsafe);
++	flags.geofence_breached = true;
++	update(failsafe);
++	flags.geofence_breached = false;
++	update(failsafe);
++	ASSERT_EQ(failsafe.selectedAction(), FailsafeBase::Action::Hold);
++	setInt("GF_NOLAND", 0);
++	failsafe.updateParams();
++	blockMode(vehicle_status_s::NAVIGATION_STATE_AUTO_LOITER);
++	blockMode(vehicle_status_s::NAVIGATION_STATE_AUTO_RTL);
++	update(failsafe);
++	EXPECT_EQ(failsafe.selectedAction(), FailsafeBase::Action::Land);
++}
++
++TEST_F(GeofenceNoLandTest, latchedHoldPolicyDisablesForFixedWing)
++{
++	Failsafe failsafe(nullptr);
++	update(failsafe);
++	flags.geofence_breached = true;
++	update(failsafe);
++	flags.geofence_breached = false;
++	update(failsafe);
++	ASSERT_EQ(failsafe.selectedAction(), FailsafeBase::Action::Hold);
++	state.vehicle_type = vehicle_status_s::VEHICLE_TYPE_FIXED_WING;
++	blockMode(vehicle_status_s::NAVIGATION_STATE_AUTO_LOITER);
++	blockMode(vehicle_status_s::NAVIGATION_STATE_AUTO_RTL);
++	update(failsafe);
++	EXPECT_EQ(failsafe.selectedAction(), FailsafeBase::Action::Land);
++}
++
++TEST_F(GeofenceNoLandTest, orbitRequestIsNotRewrittenToUnavailableLoiter)
++{
++	state.user_intended_mode = vehicle_status_s::NAVIGATION_STATE_ORBIT;
++	Failsafe failsafe(nullptr);
++	update(failsafe);
++	flags.geofence_breached = true;
++	update(failsafe);
++	ASSERT_EQ(failsafe.selectedAction(), FailsafeBase::Action::Hold);
++	blockMode(vehicle_status_s::NAVIGATION_STATE_AUTO_LOITER);
++	blockMode(vehicle_status_s::NAVIGATION_STATE_AUTO_RTL);
++
++	for (hrt_abstime elapsed : {10_ms, 6_s, 120_s}) {
++		state.user_intended_mode = update(failsafe, elapsed);
++		EXPECT_EQ(state.user_intended_mode, vehicle_status_s::NAVIGATION_STATE_ORBIT);
++		EXPECT_EQ(failsafe.selectedAction(), FailsafeBase::Action::Warn);
++	}
++}
+diff --git a/src/modules/commander/failsafe/framework.cpp b/src/modules/commander/failsafe/framework.cpp
+index 19528b5..f7e3cd4 100644
+--- a/src/modules/commander/failsafe/framework.cpp
++++ b/src/modules/commander/failsafe/framework.cpp
+@@ -86,6 +86,22 @@ uint8_t FailsafeBase::update(const hrt_abstime &time_us, const State &state, boo
+ 	SelectedActionState action_state{};
+ 	getSelectedAction(state, status_flags, user_intended_mode_updated, rc_sticks_takeover_request, action_state);
+
++	if (action_state.hold_failure_warning
++	    && (!_hold_failure_warning || time_us - _last_hold_failure_warning >= 5_s)) {
++		if (_on_notify_user_cb) {
++			_on_notify_user_cb(_on_notify_user_arg);
++		}
++
++#ifndef EMSCRIPTEN_BUILD
++		events::send(events::ID("commander_geofence_hold_unavailable"), events::Log::Critical,
++			     "Geofence Hold unavailable; pilot takeover required");
++		mavlink_log_critical(&_mavlink_log_pub, "Geofence Hold unavailable; pilot takeover required");
++#endif
++		_last_hold_failure_warning = time_us;
++	}
++
++	_hold_failure_warning = action_state.hold_failure_warning;
++
+ 	updateStartDelay(time_us - _last_update, action_state.delayed_action != Action::None);
+ 	updateFailsafeDeferState(time_us, action_state.failsafe_deferred);
+
+@@ -96,8 +112,14 @@ uint8_t FailsafeBase::update(const hrt_abstime &time_us, const State &state, boo
+
+ 	_notification_required = false;
+
+-	_last_user_intended_mode = modifyUserIntendedMode(_selected_action, action_state.action,
+-				   action_state.updated_user_intended_mode);
++	// This warning explicitly retains the pilot request; do not rewrite e.g. ORBIT to LOITER.
++	if (action_state.hold_failure_warning && action_state.action == Action::Warn) {
++		_last_user_intended_mode = action_state.updated_user_intended_mode;
++
++	} else {
++		_last_user_intended_mode = modifyUserIntendedMode(_selected_action, action_state.action,
++					   action_state.updated_user_intended_mode);
++	}
+ 	_user_takeover_active = action_state.user_takeover;
+ 	_selected_action = action_state.action;
+ 	_last_update = time_us;
+@@ -301,6 +323,12 @@ void FailsafeBase::notifyUser(uint8_t user_intended_mode, Action action, Action
+ bool FailsafeBase::checkFailsafe(int caller_id, bool last_state_failure, bool cur_state_failure,
+ 				 const ActionOptions &options)
+ {
++	for (ActionOptions &action : _actions) {
++		if (action.id == caller_id) {
++			action.warn_on_hold_failure = options.warn_on_hold_failure;
++		}
++	}
++
+ 	if (cur_state_failure) {
+ 		// Invalid state: find or add action
+ 		int free_idx = -1;
+@@ -464,13 +492,23 @@ void FailsafeBase::getSelectedAction(const State &state, const failsafe_flags_s
+ 		const ActionOptions &cur_action = _actions[action_idx];
+
+ 		if (cur_action.valid()) {
++			Action action = cur_action.action;
++
++			// Resolve this cause before arbitration, including latched actions.
++			// Another cause must still be able to select its normal Hold/RTL/Land.
++			if (action == Action::Hold && cur_action.warn_on_hold_failure
++			    && !modeCanRun(status_flags, vehicle_status_s::NAVIGATION_STATE_AUTO_LOITER)) {
++				action = Action::Warn;
++				returned_state.hold_failure_warning = true;
++			}
++
+ 			if (cur_action.allow_user_takeover > allow_user_takeover) {
+ 				// Use the most restrictive setting among all active actions
+ 				allow_user_takeover = cur_action.allow_user_takeover;
+ 			}
+
+-			if (cur_action.action > selected_action) {
+-				selected_action = cur_action.action;
++			if (action > selected_action) {
++				selected_action = action;
+ 				returned_state.cause = cur_action.cause;
+ 			}
+
+diff --git a/src/modules/commander/failsafe/framework.h b/src/modules/commander/failsafe/framework.h
+index a0ff266..3ecff2f 100644
+--- a/src/modules/commander/failsafe/framework.h
++++ b/src/modules/commander/failsafe/framework.h
+@@ -199,6 +199,7 @@ protected:
+ 		Cause cause{Cause::Generic};
+ 		UserTakeoverAllowed allow_user_takeover{UserTakeoverAllowed::Auto};
+ 		bool can_be_deferred{true};
++		bool warn_on_hold_failure{false}; ///< Opt-in per cause; never change other actions.
+
+ 		bool state_failure{false}; ///< used when the clear_condition isn't set to clear immediately
+ 		bool activated{false}; ///< true if checkFailsafe was called during current update
+@@ -212,6 +213,7 @@ protected:
+ 		uint8_t updated_user_intended_mode{};
+ 		bool user_takeover{false};
+ 		bool failsafe_deferred{false};
++		bool hold_failure_warning{false};
+ 	};
+
+ 	virtual void checkStateAndMode(const hrt_abstime &time_us, const State &state,
+@@ -276,6 +278,8 @@ private:
+ 	Action _selected_action{Action::None};
+ 	bool _user_takeover_active{false};
+ 	bool _notification_required{false};
++	bool _hold_failure_warning{false};
++	hrt_abstime _last_hold_failure_warning{0};
+
+ 	bool _defer_failsafes{false};
+ 	hrt_abstime _defer_timeout{0};
+diff --git a/src/modules/navigator/geofence_params.c b/src/modules/navigator/geofence_params.c
+index a775405..bd4e0db 100644
+--- a/src/modules/navigator/geofence_params.c
++++ b/src/modules/navigator/geofence_params.c
+@@ -61,6 +61,23 @@
+  */
+ PARAM_DEFINE_INT32(GF_ACTION, 2);
+
++/**
++ * Keep pilot mode if geofence Hold is unavailable.
++ *
++ * Custom CAAC training capability. For multirotors with GF_ACTION=2 only,
++ * an unavailable geofence Hold action becomes a warning instead of falling
++ * back to Return, Land, Descend or Terminate. The requested pilot mode is
++ * retained if it is runnable. Independent failsafes retain their normal
++ * actions. This does not detect physical braking performance.
++ *
++ * @min 0
++ * @max 1
++ * @value 0 Native fallback
++ * @value 1 Warn and retain pilot mode
++ * @group Geofence
++ */
++PARAM_DEFINE_INT32(GF_NOLAND, 0);
++
+ /**
+  * Geofence source
+  *

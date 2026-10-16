@@ -106,6 +106,39 @@ qt_add_resources(${CMAKE_PROJECT_NAME} autopilot_plugin_common_airframes
         "${CMAKE_SOURCE_DIR}/src/AutoPilotPlugins/Common/Images/YPlus.svg"
 )
 
+qt_add_resources(
+    ${CMAKE_PROJECT_NAME} autopilot_plugin_uploaded_airframes
+    PREFIX "/qmlimages/Airframe/Uploaded"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/Images/Airframe/Uploaded"
+    FILES Images/Airframe/Uploaded/airship.svg
+          Images/Airframe/Uploaded/autogyro.svg
+          Images/Airframe/Uploaded/balloon.svg
+          Images/Airframe/Uploaded/dodecarotor-coaxial.svg
+          Images/Airframe/Uploaded/flying-wing.svg
+          Images/Airframe/Uploaded/free-flyer.svg
+          Images/Airframe/Uploaded/helicopter.svg
+          Images/Airframe/Uploaded/hexarotor-coaxial.svg
+          Images/Airframe/Uploaded/hexarotor-plus.svg
+          Images/Airframe/Uploaded/hexarotor-x.svg
+          Images/Airframe/Uploaded/octorotor-coaxial.svg
+          Images/Airframe/Uploaded/octorotor-plus.svg
+          Images/Airframe/Uploaded/octorotor-x.svg
+          Images/Airframe/Uploaded/plane-a-tail.svg
+          Images/Airframe/Uploaded/quadrotor-h.svg
+          Images/Airframe/Uploaded/quadrotor-plus.svg
+          Images/Airframe/Uploaded/quadrotor-x.svg
+          Images/Airframe/Uploaded/rover.svg
+          Images/Airframe/Uploaded/simulation.svg
+          Images/Airframe/Uploaded/standard-plane.svg
+          Images/Airframe/Uploaded/standard-vtol.svg
+          Images/Airframe/Uploaded/tricopter-coaxial.svg
+          Images/Airframe/Uploaded/tricopter-y-plus.svg
+          Images/Airframe/Uploaded/underwater-robot.svg
+          Images/Airframe/Uploaded/vectored-6dof-uuv.svg
+          Images/Airframe/Uploaded/vtol-tailsitter.svg
+          Images/Airframe/Uploaded/vtol-tiltrotor.svg
+)
+
 qt_add_resources(${CMAKE_PROJECT_NAME} autopilot_plugin_common_qmlimages
     PREFIX "/qmlimages"
     BASE "${CMAKE_SOURCE_DIR}/src/AutoPilotPlugins/Common/Images"

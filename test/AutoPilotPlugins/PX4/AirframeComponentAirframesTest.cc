@@ -41,3 +41,44 @@ void AirframeComponentAirframesTest::_sortedTypesStandardFramesFirst()
         }
     }
 }
+
+void AirframeComponentAirframesTest::_categoriesPreserveVehicleClasses()
+{
+    PX4AirframeLoader::loadAirframeMetaData();
+    QMap<int, const AirframeComponentAirframes::AirframeInfo_t*> airframes;
+    for (const auto* type : AirframeComponentAirframes::sortedTypes()) {
+        for (const auto* airframe : type->rgAirframeInfo) {
+            QVERIFY2(!airframe->vehicleClass.isEmpty(), qPrintable(airframe->name));
+            QVERIFY2(!airframe->category.isEmpty(), qPrintable(airframe->name));
+            airframes.insert(airframe->autostartId, airframe);
+        }
+    }
+
+    // The XML repeats Simulation across three classes; the merged group must retain each entry's class.
+    struct ExpectedAirframe
+    {
+        int id;
+        const char* vehicleClass;
+        const char* category;
+    };
+
+    const ExpectedAirframe expected[] = {
+        {1001, "Copter", "multirotor"},
+        {1100, "Copter", "multirotor"},
+        {1101, "Plane", "fixedwing"},
+        {1102, "VTOL", "vtol"},
+        {1103, "VTOL", "vtol"},
+        {60000, "Underwater Robot", "other"},
+        {60002, "Underwater Robot", "other"},
+        {70000, "Spacecraft", "other"},
+        {16001, "Copter", "other"},
+        {17002, "Autogyro", "other"},
+        {18001, "Balloon", "airship"},
+    };
+    for (const auto& entry : expected) {
+        const auto* airframe = airframes.value(entry.id, nullptr);
+        QVERIFY2(airframe, qPrintable(QStringLiteral("Missing metadata entry %1").arg(entry.id)));
+        QCOMPARE(airframe->vehicleClass, QLatin1String(entry.vehicleClass));
+        QCOMPARE(airframe->category, QLatin1String(entry.category));
+    }
+}

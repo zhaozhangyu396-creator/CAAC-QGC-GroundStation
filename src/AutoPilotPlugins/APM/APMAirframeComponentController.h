@@ -46,8 +46,9 @@ private:
 class APMFrameClass : public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(QString      name                    MEMBER _name                    CONSTANT)
-    Q_PROPERTY(int          frameClass              MEMBER _frameClass              CONSTANT)
+    Q_PROPERTY(QString name MEMBER _name CONSTANT)
+    Q_PROPERTY(QString category READ category CONSTANT)
+    Q_PROPERTY(int frameClass MEMBER _frameClass CONSTANT)
     Q_PROPERTY(int          frameType               READ   frameType                NOTIFY frameTypeChanged)
     Q_PROPERTY(QStringList  frameTypeEnumStrings    MEMBER _frameTypeEnumStrings    CONSTANT)
     Q_PROPERTY(QVariantList frameTypeEnumValues     MEMBER _frameTypeEnumValues     CONSTANT)
@@ -61,6 +62,7 @@ public:
     ~APMFrameClass();
 
     int frameType() const;
+    QString category() const;
     QString imageResource() const;
 
     const QString _name;

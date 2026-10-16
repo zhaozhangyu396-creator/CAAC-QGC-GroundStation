@@ -15,11 +15,11 @@ Rectangle {
     readonly property real navigationWidth: Math.max(ScreenTools.defaultFontPixelWidth * 22, buttonColumn.implicitWidth) + _horizontalMargin * 2
     property string _offlinePageTitle: ""
     readonly property var _offlineFunctions: [
+        ["AirframeComponent", "Airframe", "/qmlimages/AirframeComponentIcon.png"],
         ["PX4TuningComponent", "PID Tuning", "/qmlimages/TuningComponentIcon.png"],
         ["SensorsComponent", "Sensors", "/qmlimages/SensorsComponentIcon.png"],
         ["SafetyComponent", "Safety", "/qmlimages/SafetyComponentIcon.png"],
         ["JoystickComponent", "Joystick", "/qmlimages/Joystick.png"],
-        ["AirframeComponent", "Airframe", "/qmlimages/AirframeComponentIcon.png"],
         ["MotorComponent", "Motors", "/qmlimages/MotorComponentIcon.svg"],
         ["PowerComponent", "Power", "/qmlimages/Battery.svg"],
         ["PX4RadioComponent", "Radio", "/qmlimages/RadioComponentIcon.png"],
@@ -40,7 +40,8 @@ Rectangle {
         _selectedSpecial = "offline"
         _offlinePageTitle = qsTranslate(entry[0], entry[1])
         _messagePanelText = qsTr("请连接 PX4 飞控并完成参数读取后再设置此项。")
-        panelLoader.setSourceComponent(entry[1] === "Sensors" ? offlineSensorsComponent : messagePanelComponent)
+        panelLoader.setSourceComponent(entry[1] === "Airframe" ? airframeCatalogComponent
+            : entry[1] === "Sensors" ? offlineSensorsComponent : messagePanelComponent)
     }
 
     // This need to block click event leakage to underlying map.
@@ -76,9 +77,9 @@ Rectangle {
     function _orderedComponents() {
         if (!_fullParameterVehicleAvailable) { return [] }
         const components = _activeVehicle.autopilotPlugin.vehicleComponents
-        const order = ["PX4TuningComponent", "SensorsComponent", "SafetyComponent", "JoystickComponent",
-            "AirframeComponent", "MotorComponent", "ActuatorComponent", "PowerComponent", "PX4RadioComponent",
-            "FlightModesComponent", "PX4FlightBehavior"]
+        const order = ["AirframeComponent", "APMAirframeComponent", "PX4TuningComponent", "SensorsComponent",
+            "SafetyComponent", "JoystickComponent", "MotorComponent", "ActuatorComponent", "PowerComponent",
+            "PX4RadioComponent", "FlightModesComponent", "PX4FlightBehavior"]
         const entries = components.map((component, index) => ({component: component, componentIndex: index}))
         if (_caacStyle) {
             entries.sort((left, right) => {
@@ -180,8 +181,14 @@ Rectangle {
         return false
     }
 
+    function _isAirframeComponent(component) {
+        if (!component) { return false }
+        const className = component.toString().split("(")[0]
+        return className === "AirframeComponent" || className === "APMAirframeComponent"
+    }
+
     function _componentVisible(component) {
-        if (!component || component.setupSource.toString() === "") {
+        if (!component || (component.setupSource.toString() === "" && !(_caacStyle && _isAirframeComponent(component)))) {
             return false
         }
         return _searchQuery.trim() === "" || _componentMatchesSearch(component)
@@ -242,12 +249,19 @@ Rectangle {
         // If component opts in and root was clicked, auto-select first section
         if (sectionIndex < 0 && vehicleComponent.showFirstSectionOnRootClick && vehicleComponent.sectionIds.length > 0) {
             sectionIndex = 0
-            if (_caacStyle && _corePlugin.options.showSensorCalibrationAccel) {
-                const accelIndex = vehicleComponent.sectionIds.indexOf("Accelerometer")
-                if (accelIndex >= 0) { sectionIndex = accelIndex }
+            if (_caacStyle) {
+                const orientationIndex = vehicleComponent.sectionIds.indexOf("Orientations")
+                if (orientationIndex >= 0) { sectionIndex = orientationIndex }
             }
         }
         _selectedSectionIndex = sectionIndex
+
+        if (_caacStyle && _isAirframeComponent(vehicleComponent) && vehicleComponent.setupSource.toString() === "") {
+            _selectedComponentIndex = compIndex
+            _showingPrereqMessage = false
+            panelLoader.setSourceComponent(airframeCatalogComponent, vehicleComponent)
+            return
+        }
 
         var autopilotPlugin = _activeVehicle.autopilotPlugin
         var prereq = autopilotPlugin.prerequisiteSetup(vehicleComponent)
@@ -405,9 +419,17 @@ Rectangle {
     }
 
     Component {
+        id: airframeCatalogComponent
+        AirframeCatalogPage {
+            connected: vehicleConfigView._fullParameterVehicleAvailable
+        }
+    }
+
+    Component {
         id: offlineSensorsComponent
         SensorCalibrationPanel {
             vehicle: null
+            sectionId: "Orientations"
             calibrationEnabled: false
             levelEnabled: false
             sideStates: [0, 0, 0, 0, 0, 0]
@@ -462,7 +484,7 @@ Rectangle {
             ColumnLayout {
                 id:         buttonColumn
                 width:      parent.width
-                spacing:    0
+                spacing:    vehicleConfigView.embedded ? ScreenTools.defaultFontPixelHeight * 0.5 : 0
 
                 // Summary button
                 ConfigButton {
@@ -470,6 +492,7 @@ Rectangle {
                     objectName:         "vehicleConfig_summary"
                     icon.source:        "/qmlimages/VehicleSummaryIcon.png"
                     checked:            vehicleConfigView._selectedSpecial === "summary"
+                    outlined:           vehicleConfigView.embedded
                     text:               qsTr("Summary")
                     Layout.fillWidth:   true
                     visible:            vehicleConfigView._searchQuery.trim() === ""
@@ -480,7 +503,7 @@ Rectangle {
                 // When the component group is empty only this divider shows, not the second one
                 SidebarDivider {
                     objectName: "vehicleConfig_summaryDivider"
-                    visible:    summaryButton.visible &&
+                    visible:    !vehicleConfigView.embedded && summaryButton.visible &&
                                 (vehicleConfigView._anyComponentVisible() || opticalFlowButton.visible ||
                                  parametersButton.visible || firmwareButton.visible)
                 }
@@ -492,7 +515,7 @@ Rectangle {
 
                     ColumnLayout {
                         id:             compColumn
-                        spacing:        0
+                        spacing:        vehicleConfigView.embedded ? ScreenTools.defaultFontPixelHeight * 0.5 : 0
                         Layout.fillWidth: true
 
                         required property int index
@@ -519,6 +542,7 @@ Rectangle {
                             expandable:         compColumn.hasSections
                             expanded:           compColumn.isExpanded
                             checked:            compColumn.isSelected && vehicleConfigView._selectedSectionIndex === -1
+                            outlined:           vehicleConfigView.embedded
 
                             onClicked: {
                                 vehicleConfigView._navigateToComponent(compColumn.componentIndex, -1)
@@ -550,6 +574,8 @@ Rectangle {
                                 objectName:     "vehicleConfig_section_" + modelData.replace(/ /g, "")
                                 Layout.fillWidth: true
                                 padding:        ScreenTools.defaultFontPixelWidth * 0.75
+                                topPadding:     vehicleConfigView.embedded ? ScreenTools.defaultFontPixelHeight * 0.5 : padding
+                                bottomPadding:  vehicleConfigView.embedded ? ScreenTools.defaultFontPixelHeight * 0.5 : padding
                                 leftPadding:    ScreenTools.defaultFontPixelWidth * 3
                                 hoverEnabled:   !ScreenTools.isMobile
 
@@ -582,9 +608,24 @@ Rectangle {
                                 visible: sectionMatchesSearch && sectionContentVisible
 
                                 background: Rectangle {
-                                    color:   vehicleConfigView._caacStyle ? qgcPal.windowShade : qgcPal.buttonHighlight
-                                    opacity: sectionBtn.sectionChecked || sectionBtn.pressed ? 1 : sectionBtn.enabled && sectionBtn.hovered ? 0.2 : 0
-                                    radius:  ScreenTools.defaultFontPixelWidth / 2
+                                    color: vehicleConfigView.embedded ? "transparent"
+                                        : vehicleConfigView._caacStyle ? qgcPal.windowShade : qgcPal.buttonHighlight
+                                    opacity: vehicleConfigView.embedded ? 1
+                                        : sectionBtn.sectionChecked || sectionBtn.pressed ? 1 : sectionBtn.enabled && sectionBtn.hovered ? 0.2 : 0
+                                    border.color: qgcPal.groupBorder
+                                    border.width: vehicleConfigView.embedded ? 1 : 0
+                                    radius: vehicleConfigView.embedded ? ScreenTools.defaultBorderRadius
+                                        : ScreenTools.defaultFontPixelWidth / 2
+
+                                    Rectangle {
+                                        anchors.fill: parent
+                                        anchors.margins: parent.border.width
+                                        visible: vehicleConfigView.embedded
+                                        color: vehicleConfigView._caacStyle ? qgcPal.windowShade : qgcPal.buttonHighlight
+                                        opacity: sectionBtn.sectionChecked || sectionBtn.pressed ? 1
+                                            : sectionBtn.enabled && sectionBtn.hovered ? 0.2 : 0
+                                        radius: Math.max(0, parent.radius - parent.border.width)
+                                    }
                                 }
 
                                 contentItem: RowLayout {
@@ -625,6 +666,7 @@ Rectangle {
                         text: qsTranslate(modelData[0], modelData[1])
                         icon.source: modelData[2]
                         setupComplete: false
+                        outlined: vehicleConfigView.embedded
                         onClicked: vehicleConfigView.showOfflinePage(modelData)
                     }
                 }
@@ -636,12 +678,14 @@ Rectangle {
                     text:               qsTr("Optical Flow")
                     Layout.fillWidth:   true
                     checked:            vehicleConfigView._selectedSpecial === "opticalflow"
+                    outlined:           vehicleConfigView.embedded
                     onClicked:          showPanel("opticalflow", "qrc:/qml/QGroundControl/VehicleSetup/OpticalFlowSensor.qml")
                 }
 
                 SidebarDivider {
                     objectName: "vehicleConfig_componentsDivider"
-                    visible:    (vehicleConfigView._anyComponentVisible() || opticalFlowButton.visible) &&
+                    visible:    !vehicleConfigView.embedded &&
+                                (vehicleConfigView._anyComponentVisible() || opticalFlowButton.visible) &&
                                 (parametersButton.visible || firmwareButton.visible)
                 }
 
@@ -656,6 +700,7 @@ Rectangle {
                     Layout.fillWidth:   true
                     icon.source:        "/qmlimages/subMenuButtonImage.png"
                     checked:            vehicleConfigView._selectedSpecial === "parameters"
+                    outlined:           vehicleConfigView.embedded
                     onClicked:          showPanel("parameters", "qrc:/qml/QGroundControl/VehicleSetup/SetupParameterEditor.qml")
                 }
 
@@ -668,6 +713,7 @@ Rectangle {
                     text:               qsTr("Firmware")
                     Layout.fillWidth:   true
                     checked:            vehicleConfigView._selectedSpecial === "firmware"
+                    outlined:           vehicleConfigView.embedded
 
                     onClicked: showPanel("firmware", "qrc:/qml/QGroundControl/VehicleSetup/FirmwareUpgrade.qml")
                 }

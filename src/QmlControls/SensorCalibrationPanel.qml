@@ -16,6 +16,8 @@ Item {
     property var vehicle: globals.activeVehicle
     property bool calibrationActive: false
     property bool calibrationEnabled: true
+    property bool orientationAvailable: true
+    property bool orientationExpanded: !vehicle
     property bool compassAvailable: true
     property bool accelAvailable: true
     property bool levelAvailable: true
@@ -31,6 +33,7 @@ Item {
     property string sectionId: ""
     property string currentType: "accel"
     property string cancelObjectName: "sensorsSetup_cancelCalibration"
+    property Component orientationControls
     property Component additionalControls
     readonly property var idleStates: [0, 0, 0, 0, 0, 0]
     readonly property var allSides: [true, true, true, true, true, true]
@@ -40,10 +43,19 @@ Item {
         Math.min(width * 0.7, scroller.height * 0.64))
 
     signal startAccel()
+    signal setOrientation()
     signal startLevel()
     signal startCompass()
     signal next()
     signal cancel()
+
+    function focusOrientation() {
+        orientationExpanded = true
+        Qt.callLater(() => {
+            scroller.contentY = Math.max(0, Math.min(orientationSection.y,
+                scroller.contentHeight - scroller.height))
+        })
+    }
 
     function focusSection() {
         let section = accelSection
@@ -51,7 +63,7 @@ Item {
         case "Compass": currentType = "compass"; section = compassSection; break
         case "Level Horizon": currentType = "level"; section = levelSection; break
         case "Gyroscope": currentType = "gyro"; section = extraSection; break
-        case "Orientations":
+        case "Orientations": section = orientationSection; break
         case "Airspeed": section = extraSection; break
         default: currentType = "accel"; break
         }
@@ -127,6 +139,35 @@ Item {
                     Layout.fillWidth: true
                     text: root.calibrationActive ? root.helpText : qsTr("选择校准项目，按提示摆放无人机。")
                     wrapMode: Text.WordWrap
+                }
+
+                ColumnLayout {
+                    id: orientationSection
+                    visible: root.orientationAvailable
+                    Layout.fillWidth: true
+                    spacing: root.margins
+
+                    SectionTitle { title: qsTr("飞控朝向") }
+                    SettingsActionButton {
+                        objectName: "sensorsSetup_setOrientation"
+                        text: qsTr("飞控朝向")
+                        checked: root.orientationExpanded
+                        enabled: root.calibrationEnabled && !root.calibrationActive
+                            && (!root.vehicle || !root.vehicle.armed) && !motorTest.motorsEnabled
+                        onClicked: {
+                            root.orientationExpanded = !root.orientationExpanded
+                            if (root.orientationExpanded) { root.setOrientation() }
+                        }
+                    }
+                    Loader {
+                        objectName: "sensorsSetup_orientationInlineLoader"
+                        Layout.fillWidth: true
+                        visible: root.orientationExpanded
+                        active: root.orientationExpanded
+                        enabled: root.calibrationEnabled && !root.calibrationActive
+                            && (!root.vehicle || !root.vehicle.armed) && !motorTest.motorsEnabled
+                        sourceComponent: root.orientationControls || offlineOrientationControls
+                    }
                 }
 
                 ColumnLayout {
@@ -216,18 +257,9 @@ Item {
                     id: extraSection
                     Layout.fillWidth: true
                     spacing: root.margins
+                    visible: root.additionalControls !== null
+                        || (root.statusText !== "" && (root.calibrationActive || root.progress > 0))
 
-                    SectionTitle { title: qsTr("其他传感器设置") }
-                    SensorCalibrationPreview {
-                        objectName: "sensorCalibrationPreview"
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: root.previewHeight
-                        visible: root.currentType === "gyro"
-                        indicatorPrefix: root.currentType === "gyro" ? "sensorsCal_" : "sensorsGyro_"
-                        sideStates: root.sideStates
-                        sideVisible: root.calibrationActive ? root.sideVisible : [true, false, false, false, false, false]
-                        sideRotating: root.stillSides
-                    }
                     Loader {
                         Layout.fillWidth: true
                         sourceComponent: root.additionalControls
@@ -253,6 +285,19 @@ Item {
                         calibrationActive: root.calibrationActive
                     }
                 }
+            }
+        }
+    }
+
+    Component {
+        id: offlineOrientationControls
+        ColumnLayout {
+            objectName: "sensorsSetup_orientationControls"
+            QGCComboBox {
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                model: [qsTr("默认朝向")]
+                enabled: false
             }
         }
     }

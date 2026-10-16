@@ -5,13 +5,29 @@ import QtQuick.Dialogs
 import QGroundControl
 import QGroundControl.FactControls
 import QGroundControl.Controls
+import "qrc:/qml/QGroundControl/Controls/AirframeCatalog.js" as AirframeCatalog
 
 SetupPage {
     id:             airframePage
-    pageComponent:  (controller && controller.showCustomConfigPanel) ? customFrame : pageComponent
+    objectName:     "airframeSetup_root"
+    pageComponent:  categoryPage
+
+    property string categoryFilter: ""
+    readonly property int pendingAutostartId: controller.autostartId
+    readonly property var _filteredTypes: controller.airframeTypes.filter(type =>
+        type.airframes.some(airframe => airframe.category === categoryFilter))
+    property bool _selectionMade: false
+
+    function selectAirframe(airframe) {
+        if (airframe) {
+            controller.autostartId = airframe.autostartId
+            _selectionMade = true
+        }
+    }
 
     AirframeComponentController {
         id:         controller
+        objectName: "airframeSetup_controller"
     }
 
     Component {
@@ -47,7 +63,7 @@ SetupPage {
     }
 
     Component {
-        id: pageComponent
+        id: categoryPage
 
         Column {
             id:     mainColumn
@@ -58,6 +74,27 @@ SetupPage {
             property real _boxSpace:    ScreenTools.defaultFontPixelWidth
 
             readonly property real spacerHeight: ScreenTools.defaultFontPixelHeight
+
+            AirframeCategoryMenu {
+                width: parent.width
+                category: airframePage.categoryFilter
+                onCategorySelected: category => airframePage.categoryFilter = category
+            }
+
+            Loader {
+                width: parent.width
+                active: airframePage.categoryFilter !== "" && controller.showCustomConfigPanel
+                visible: active
+                sourceComponent: customFrame
+            }
+
+            QGCLabel {
+                width: parent.width
+                visible: airframePage.categoryFilter !== "" && !controller.showCustomConfigPanel
+                    && airframePage._filteredTypes.length === 0
+                text: qsTr("当前固件没有此类型的可选机架。")
+                wrapMode: Text.WordWrap
+            }
 
             onWidthChanged: {
                 computeDimensions()
@@ -85,6 +122,8 @@ SetupPage {
 
             Item {
                 id:             helpApplyRow
+                visible:        airframePage.categoryFilter !== "" && !controller.showCustomConfigPanel
+                    && airframePage._filteredTypes.length > 0
                 anchors.left:   parent.left
                 anchors.right:  parent.right
                 height:         Math.max(helpText.contentHeight, applyButton.height)
@@ -105,6 +144,8 @@ SetupPage {
                     objectName:     "airframeSetup_applyButton"
                     anchors.right:  parent.right
                     text:           qsTr("Apply and Restart")
+                    primary:        airframePage._selectionMade
+                    enabled:        airframePage._selectionMade
                     onClicked:      QGroundControl.showMessageDialog(airframePage, qsTr("Apply and Restart"),
                                                                  qsTr("Clicking 'Apply' will save the changes you have made to your airframe configuration.<br><br>\
                                                                         All vehicle parameters other than Radio Calibration will be reset.<br><br>\
@@ -117,31 +158,33 @@ SetupPage {
 
             Item {
                 id:             lastSpacer
+                visible:        helpApplyRow.visible
                 height:         parent.spacerHeight
                 width:          10
             }
 
             Flow {
                 id:         flowView
+                visible:    helpApplyRow.visible
                 width:      parent.width
                 spacing:    _boxSpace
 
-                ButtonGroup {
-                    id: airframeTypeExclusive
-                }
-
                 Repeater {
-                    model: controller.airframeTypes
+                    model: airframePage._filteredTypes
 
                     // Outer summary item rectangle
                     Rectangle {
+                        id: typeBox
                         objectName: "airframeTypeBox_" + index
                         width:  _boxWidth
                         height: ScreenTools.defaultFontPixelHeight * 14
                         color:  qgcPal.window
 
                         property string airframeTypeName:     modelData.name
-                        property bool   airframeTypeSelected: airframeCheckBox.checked
+                        readonly property var _airframes: modelData.airframes.filter(airframe =>
+                            airframe.category === airframePage.categoryFilter)
+                        readonly property bool airframeTypeSelected: _airframes.some(airframe =>
+                            airframe.autostartId === controller.autostartId)
 
                         readonly property real titleHeight: ScreenTools.defaultFontPixelHeight * 1.75
                         readonly property real innerMargin: ScreenTools.defaultFontPixelWidth
@@ -150,8 +193,7 @@ SetupPage {
                             anchors.fill: parent
 
                             onClicked: {
-                                applyButton.primary = true
-                                airframeCheckBox.checked = true
+                                airframePage.selectAirframe(typeBox._airframes[combo.currentIndex])
                             }
                         }
 
@@ -166,7 +208,9 @@ SetupPage {
                             anchors.bottom:     parent.bottom
                             anchors.left:       parent.left
                             anchors.right:      parent.right
-                            color:              airframeCheckBox.checked ? qgcPal.buttonHighlight : qgcPal.windowShade
+                            color:              Qt.lighter(qgcPal.settingsAccent, 1.3)
+                            border.color:       typeBox.airframeTypeSelected ? qgcPal.text : "transparent"
+                            border.width:       typeBox.airframeTypeSelected ? 1 : 0
 
                             Image {
                                 id:                 image
@@ -178,21 +222,7 @@ SetupPage {
                                 fillMode:           Image.PreserveAspectFit
                                 smooth:             true
                                 mipmap:             true
-                                source:             modelData.imageResource
-                            }
-
-                            QGCCheckBox {
-                                // Although this item is invisible we still use it to manage state
-                                id:             airframeCheckBox
-                                checked:        modelData.name === controller.currentAirframeType
-                                buttonGroup: airframeTypeExclusive
-                                visible:        false
-
-                                onCheckedChanged: {
-                                    if (checked && combo.currentIndex !== -1) {
-                                        controller.autostartId = modelData.airframes[combo.currentIndex].autostartId
-                                    }
-                                }
+                                source:             AirframeCatalog.px4Image(modelData.name, modelData.imageResource)
                             }
 
                             QGCComboBox {
@@ -202,20 +232,16 @@ SetupPage {
                                 anchors.bottom:     parent.bottom
                                 anchors.left:       parent.left
                                 anchors.right:      parent.right
-                                model:              modelData.airframes
+                                model:              typeBox._airframes
                                 textRole:           "text"
-
-                                Component.onCompleted: {
-                                    if (airframeCheckBox.checked) {
-                                        currentIndex = controller.currentVehicleIndex
-                                    }
+                                currentIndex: {
+                                    const selectedIndex = typeBox._airframes.findIndex(airframe =>
+                                        airframe.autostartId === controller.autostartId)
+                                    return selectedIndex >= 0 ? selectedIndex : 0
                                 }
 
                                 onActivated: (index) => {
-                                    applyButton.primary = true
-                                    airframeCheckBox.checked = true;
-                                    console.log("combo change", index)
-                                    controller.autostartId = modelData.airframes[index].autostartId
+                                    airframePage.selectAirframe(typeBox._airframes[index])
                                 }
                             }
                         }

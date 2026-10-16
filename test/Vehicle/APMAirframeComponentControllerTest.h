@@ -10,5 +10,7 @@ public:
     APMAirframeComponentControllerTest();
 
 private slots:
+    void _frameClassImagesAndDefaults_data();
+    void _frameClassImagesAndDefaults();
     void _downloadCompleteSlotsRestoreCursor();
 };
