@@ -4,6 +4,7 @@
 #include <QtGui/QFont>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QImage>
+#include <QtGui/QScreen>
 #include <QtGui/QWheelEvent>
 #include <QtQml/QJSValue>
 #include <QtQuick/QQuickItem>
@@ -40,7 +41,24 @@ private slots:
     void _liveFlightData();
     void _dashboardInteractions();
     void _safetyAndUomTelemetry();
+
+private:
+    void _resizeWindow(QSize size);
 };
+
+void CaacFlightDataUITest::_resizeWindow(QSize size)
+{
+#ifdef Q_OS_WIN
+    QVERIFY(_window->screen());
+    const auto available = _window->screen()->availableGeometry();
+    const auto margins = _window->frameMargins();
+    const QSize maximum(available.width() - margins.left() - margins.right(),
+                        available.height() - margins.top() - margins.bottom());
+    size = size.boundedTo(maximum).expandedTo(_window->minimumSize());
+    _window->setPosition(available.topLeft() + QPoint(margins.left(), margins.top()));
+#endif
+    _window->resize(size);
+}
 
 void CaacFlightDataUITest::_toolbarStatusSpacing_data()
 {
@@ -60,7 +78,7 @@ void CaacFlightDataUITest::_toolbarStatusSpacing()
     if (QTest::currentTestFailed()) {
         return;
     }
-    _window->resize(windowWidth, 800);
+    _resizeWindow(QSize(windowWidth, 800));
     auto* label = findVisibleItem(_rootItem, QStringLiteral("caacConnectionStatusLabel"));
     auto* button = findVisibleItem(_rootItem, QStringLiteral("caacConnectionStatusButton"));
     auto* rc = findVisibleItem(_rootItem, QStringLiteral("caacRCRSSIIndicator"));
@@ -103,7 +121,7 @@ void CaacFlightDataUITest::_mapZoomControls()
     if (QTest::currentTestFailed()) {
         return;
     }
-    _window->resize(windowSize);
+    _resizeWindow(windowSize);
     auto* map = findVisibleItem(_rootItem, QStringLiteral("planView_map"));
     auto* zoomIn = findVisibleItem(_rootItem, QStringLiteral("caacMapZoomIn"));
     auto* zoomOut = findVisibleItem(_rootItem, QStringLiteral("caacMapZoomOut"));
