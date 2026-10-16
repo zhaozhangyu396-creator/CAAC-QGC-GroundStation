@@ -1,6 +1,7 @@
 #include <cmath>
 
 #include <QtCore/QJsonDocument>
+#include <QtCore/QRectF>
 #include <QtGui/QImage>
 #include <QtQuick/QQuickItem>
 #include <QtQuick/QQuickWindow>
@@ -21,7 +22,28 @@ class CaacFigureEightUITest : public QmlUITestBase
 
 private slots:
     void _independentTrainingDialog();
+
+private:
+    bool _clickOutsideDialog();
 };
+
+bool CaacFigureEightUITest::_clickOutsideDialog()
+{
+    auto* frame = findVisibleItem(_rootItem, QStringLiteral("popupDialog_frame"));
+    if (!frame) {
+        return false;
+    }
+    const auto margin = frame->property("spacing").toReal();
+    const auto outerFrame = frame->mapRectToScene(frame->boundingRect().adjusted(-margin, -margin, margin, margin));
+    const QRectF windowBounds(0, 0, _window->width() - 1, _window->height() - 1);
+    const QPoint outsideFrame(qRound(outerFrame.left() / 2),
+                              qRound(qBound(windowBounds.top(), outerFrame.center().y(), windowBounds.bottom())));
+    if (outerFrame.left() <= 2 || !windowBounds.contains(outsideFrame) || outerFrame.contains(outsideFrame)) {
+        return false;
+    }
+    QTest::mouseClick(_window, Qt::LeftButton, Qt::NoModifier, outsideFrame);
+    return true;
+}
 
 void CaacFigureEightUITest::_independentTrainingDialog()
 {
@@ -104,6 +126,7 @@ void CaacFigureEightUITest::_independentTrainingDialog()
     QCOMPARE(master->saveToJson(), routeBefore);
 
     const auto scroller = QStringLiteral("popupDialog_contentFlickable");
+    const auto toolsScroller = QStringLiteral("caacEightToolsScroller");
     for (const auto* objectName : {"caacFigureEightALatitude", "caacFigureEightALongitude", "caacFigureEightBLatitude",
                                    "caacFigureEightBLongitude", "caacFigureEightStandardSite"}) {
         QVERIFY(!findItem(_rootItem, QString::fromLatin1(objectName)));
@@ -201,21 +224,16 @@ void CaacFigureEightUITest::_independentTrainingDialog()
     QVERIFY(clickItemFraction(QStringLiteral("caacFigureEightStatus"), 0.5, 0.5));
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacFigureEightPage"), 0));
 
-    auto* frame = findVisibleItem(_rootItem, QStringLiteral("popupDialog_frame"));
-    QVERIFY(frame);
-    const auto frameOrigin = frame->mapToScene(QPointF());
-    QVERIFY(frameOrigin.x() > 0);
-    const QPoint outsideFrame(qRound(frameOrigin.x() / 2), qRound(frameOrigin.y() + frame->height() / 2));
-    QTest::mouseClick(_window, Qt::LeftButton, Qt::NoModifier, outsideFrame);
+    QVERIFY2(_clickOutsideDialog(), "No map click point is inside the window and outside the popup background");
     QTRY_VERIFY_WITH_TIMEOUT(!findVisibleItem(_rootItem, QStringLiteral("caacFigureEightPage"), 0),
                              TestTimeout::mediumMs());
     QVERIFY(controller->viewActive());
     QTRY_VERIFY_WITH_TIMEOUT(workspaceToolsMatch(true), TestTimeout::mediumMs());
     QCOMPARE(master->saveToJson(), routeBefore);
-    QVERIFY(clickButton(QStringLiteral("caacEightClearTrajectoryButton")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacEightClearTrajectoryButton"), toolsScroller));
     QCOMPARE(controller->referencePath(), pathBeforeClose);
     QVERIFY(controller->viewActive());
-    QVERIFY(clickButton(QStringLiteral("caacEightFenceButton")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacEightFenceButton"), toolsScroller));
     pages = findVisibleItem(_rootItem, QStringLiteral("caacFigureEightPage"));
     QVERIFY(pages);
     QCOMPARE(pages->property("currentIndex").toInt(), 4);
@@ -238,17 +256,12 @@ void CaacFigureEightUITest::_independentTrainingDialog()
     QVERIFY(readFence);
     QVERIFY(!readFence->isEnabled());
     QVERIFY(findVisibleItemScrolled(QStringLiteral("caacFigureEightFenceStatus"), scroller));
-    auto* fenceFrame = findVisibleItem(_rootItem, QStringLiteral("popupDialog_frame"));
-    QVERIFY(fenceFrame);
-    const auto fenceOrigin = fenceFrame->mapToScene(QPointF());
-    QVERIFY(fenceOrigin.x() > 0);
-    QTest::mouseClick(_window, Qt::LeftButton, Qt::NoModifier,
-                      QPoint(qRound(fenceOrigin.x() / 2), qRound(fenceOrigin.y() + fenceFrame->height() / 2)));
+    QVERIFY2(_clickOutsideDialog(), "No map click point is inside the window and outside the popup background");
     QTRY_VERIFY_WITH_TIMEOUT(!findVisibleItem(_rootItem, QStringLiteral("caacFigureEightPage"), 0),
                              TestTimeout::mediumMs());
     QVERIFY(controller->viewActive());
     QTRY_VERIFY_WITH_TIMEOUT(workspaceToolsMatch(true), TestTimeout::mediumMs());
-    QVERIFY(clickButton(QStringLiteral("caacEightSiteListButton")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacEightSiteListButton"), toolsScroller));
     pages = findVisibleItem(_rootItem, QStringLiteral("caacFigureEightPage"));
     QVERIFY(pages);
     QCOMPARE(controller->referencePath(), pathBeforeClose);

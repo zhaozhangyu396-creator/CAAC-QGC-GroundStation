@@ -465,7 +465,15 @@ void CaacSimulationUITest::_usbJoystickModeSwitch()
     QTRY_VERIFY_WITH_TIMEOUT(simulation->vehicle() && simulation->vehicle()->isInitialConnectComplete(),
                              TestTimeout::longMs());
     auto* vehicle = simulation->vehicle();
+    QTRY_VERIFY_WITH_TIMEOUT(MultiVehicleManager::instance()->activeVehicle() == vehicle, TestTimeout::mediumMs());
+    QSignalSpy rawChannels(joystick, &Joystick::rawChannelValuesChanged);
+    QVERIFY(rawChannels.isValid());
     manager->setActiveJoystickEnabledForActiveVehicle(true);
+    QTRY_VERIFY_WITH_TIMEOUT(manager->activeJoystickEnabledForActiveVehicle(), TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(joystick->isRunning(), TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(!rawChannels.isEmpty(), TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(simulation->joystickChannels().value(4).toInt(), Joystick::AxisMax,
+                              TestTimeout::mediumMs());
     QTRY_COMPARE_WITH_TIMEOUT(simulation->modeSwitchPosition(), 2, TestTimeout::mediumMs());
     QVERIFY(simulation->modeSwitchAxisAllowed(4));
     for (int axis = 0; axis < 4; ++axis) {
