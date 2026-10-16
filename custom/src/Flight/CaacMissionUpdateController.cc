@@ -50,9 +50,10 @@ bool CaacMissionUpdateController::update(PlanMasterController* plan, CaacSimulat
     auto* vehicle = plan ? plan->managerVehicle() : nullptr;
     if (!vehicle || vehicle != MultiVehicleManager::instance()->activeVehicle() || plan->offline() ||
         !vehicle->isInitialConnectComplete() || !vehicle->armed() ||
-        vehicle->flightMode() != vehicle->missionFlightMode() || !vehicle->supports()->pauseVehicle() ||
-        vehicle->firmwarePlugin()->pauseFlightMode().isEmpty() || plan->syncInProgress() ||
-        plan->property("caacRotationPreviewActive").toBool() ||
+        (vehicle->flightMode() != vehicle->missionFlightMode() &&
+         vehicle->flightMode() != vehicle->firmwarePlugin()->pauseFlightMode()) ||
+        !vehicle->supports()->pauseVehicle() || vehicle->firmwarePlugin()->pauseFlightMode().isEmpty() ||
+        plan->syncInProgress() || plan->property("caacRotationPreviewActive").toBool() ||
         plan->missionController()->readyForSaveState() != VisualMissionItem::ReadyForSave) {
         emit finished(false, tr("The mission or connection changed. No waypoint update was sent."));
         return false;
@@ -61,6 +62,7 @@ bool CaacMissionUpdateController::update(PlanMasterController* plan, CaacSimulat
     _plan = plan;
     _simulation = simulation && simulation->ownsVehicle(vehicle) ? simulation : nullptr;
     _snapshot = plan->saveToJson();
+    _lastTransferError.clear();
     plan->setProperty("caacMissionUpdateActive", true);
     _setStage(Stage::Pausing);
     _timer.start();
@@ -102,7 +104,7 @@ bool CaacMissionUpdateController::_prepareNative()
         } else if (!equal(item->param1(), old->param1()) || !equal(item->param2(), old->param2())) {
             return false;
         }
-        if (item->command() != MAV_CMD_NAV_WAYPOINT &&
+        if (item->command() != MAV_CMD_NAV_WAYPOINT && item->command() != MAV_CMD_NAV_LAND &&
             (!equal(item->param5(), old->param5()) || !equal(item->param6(), old->param6()))) {
             return false;
         }
@@ -146,12 +148,17 @@ void CaacMissionUpdateController::_tick()
             return;
         }
         auto* manager = _vehicle->missionManager();
+        _connections.append(connect(manager, &MissionManager::error, this, [this](int code, const QString& message) {
+            if (_stage == Stage::Uploading) {
+                _lastTransferError = tr("Upload error %1: %2").arg(code).arg(message);
+            }
+        }));
         _connections.append(connect(manager, &MissionManager::sendComplete, this, [this](bool error) {
             if (_stage != Stage::Uploading) {
                 return;
             }
             if (error) {
-                _finish(false, tr("Waypoint upload failed. The mission remains paused."));
+                _uploadFailed();
             } else if (!_simulation) {
                 _uploaded();
             }
@@ -160,11 +167,10 @@ void CaacMissionUpdateController::_tick()
         if (_simulation) {
             _connections.append(connect(_simulation, &CaacSimulationController::missionUploaded, this,
                                         &CaacMissionUpdateController::_uploaded));
-            _connections.append(connect(_simulation, &CaacSimulationController::missionUploadFailed, this, [this]() {
-                _finish(false, tr("Waypoint upload failed. The mission remains paused."));
-            }));
+            _connections.append(connect(_simulation, &CaacSimulationController::missionUploadFailed, this,
+                                        [this]() { _uploadFailed(_simulation ? _simulation->status() : QString()); }));
             if (!_simulation->upload(_plan, true)) {
-                _finish(false, tr("Waypoint upload failed. The mission remains paused."));
+                _uploadFailed(_simulation ? _simulation->status() : QString());
             }
         } else {
             const auto items = _pendingItems;
@@ -172,6 +178,7 @@ void CaacMissionUpdateController::_tick()
             for (auto* item : items) {
                 item->setParent(manager);
             }
+            _plan->missionController()->trackMissionUpload();
             manager->writeMissionItems(items);
         }
     } else if (_stage == Stage::Uploading || _stage == Stage::Restoring) {
@@ -206,6 +213,16 @@ void CaacMissionUpdateController::_uploaded()
     if (!_simulation) {
         _vehicle->setCurrentMissionSequence(_target + offset);
     }
+}
+
+void CaacMissionUpdateController::_uploadFailed(const QString& detail)
+{
+    if (!busy()) {
+        return;
+    }
+    const auto reason = _lastTransferError.isEmpty() ? detail : _lastTransferError;
+    _finish(false, reason.isEmpty() ? tr("Waypoint upload failed. The mission remains paused.")
+                                    : tr("Waypoint upload failed. The mission remains paused.\n%1").arg(reason));
 }
 
 void CaacMissionUpdateController::_finish(bool success, const QString& message)

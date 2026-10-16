@@ -136,7 +136,54 @@ private slots:
     void _testMouseEditing();
     void _homeCenterWindowFocus();
     void _planningUtilities();
+    void _deleteLandingFromContextMenu();
 };
+
+void CaacRouteEditorUITest::_deleteLandingFromContextMenu()
+{
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    QVERIFY(QMetaObject::invokeMethod(_window, "showPlanView"));
+    auto* plan = findVisibleItem(_rootItem, QStringLiteral("mainView_plan"));
+    auto* panel = findVisibleItem(_rootItem, QStringLiteral("caacRouteEditor"));
+    auto* map = findVisibleItem(_rootItem, QStringLiteral("planView_map"));
+    QVERIFY(plan && panel && map);
+    auto* master = plan->property("_planMasterController").value<PlanMasterController*>();
+    auto* editor = panel->property("routeController").value<CaacRouteEditorController*>();
+    QVERIFY(master && editor);
+    auto* mission = master->missionController();
+    mission->setHomePosition(QGeoCoordinate(30, 120, 20));
+    QVERIFY(editor->addWaypoint(QGeoCoordinate(30.001, 120)));
+    auto* landing =
+        qobject_cast<SimpleMissionItem*>(mission->insertSimpleMissionItem(QGeoCoordinate(30.002, 120), 2, true));
+    QVERIFY(landing);
+    landing->setCommand(MAV_CMD_NAV_LAND);
+    landing->altitude()->setRawValue(0);
+    map->setProperty("center", QVariant::fromValue(landing->coordinate()));
+    map->setProperty("zoomLevel", 16.0);
+    auto* dragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_2"));
+    QVERIFY(dragger);
+    auto* indicator = dragger->property("itemIndicator").value<QQuickItem*>();
+    QVERIFY(indicator);
+    const auto position = [&]() {
+        return dragger->mapToScene(indicator->property("anchorPoint").toPointF() +
+                                   QPointF(dragger->property("_touchMarginHorizontal").toDouble(),
+                                           dragger->property("_touchMarginVertical").toDouble()));
+    };
+    const auto center = map->mapToScene(QPointF(map->width() / 2, map->height() / 2));
+    QTRY_VERIFY_WITH_TIMEOUT(QLineF(position(), center).length() < 1, TestTimeout::mediumMs());
+    QTest::mouseClick(_window, Qt::RightButton, Qt::NoModifier, position().toPoint());
+    auto* remove = findVisibleItem(_rootItem, QStringLiteral("caacContextDeleteWaypoint"));
+    QVERIFY(remove && remove->isEnabled());
+    QVERIFY(clickButton(QStringLiteral("caacContextDeleteWaypoint")));
+    QCOMPARE(mission->visualItems()->count(), 2);
+    QCOMPARE(mission->visualItems()->value<SimpleMissionItem*>(1)->command(), int(MAV_CMD_NAV_WAYPOINT));
+    QVERIFY(editor->undo());
+    QCOMPARE(mission->visualItems()->count(), 3);
+    QVERIFY(mission->visualItems()->value<SimpleMissionItem*>(2)->isLandCommand());
+}
 
 void CaacRouteEditorUITest::_testMouseEditing_data()
 {
@@ -528,9 +575,9 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QVERIFY(std::abs(std::remainder(QGCGeo::geodesicAzimuth(homeBeforeRotation, firstAfterRotation) -
                                         QGCGeo::geodesicAzimuth(homeBeforeRotation, firstBeforeRotation) - 90,
                                     360)) < 1e-5);
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), beforeRotation);
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacRedo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacRedo")));
     QVERIFY(master->saveToJson() != beforeRotation);
 
     step("relative point through native controls");
@@ -551,7 +598,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     const int beforeInsert = mission->visualItems()->count();
     QVERIFY(clickButton(QStringLiteral("caacRelativeAdd")));
     QCOMPARE(mission->visualItems()->count(), beforeInsert + 1);
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(mission->visualItems()->count(), beforeInsert);
     relativeDistance->setProperty("focus", false);
     _window->requestActivate();
@@ -559,7 +606,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     _rootItem->forceActiveFocus();
     QTest::keyClick(_window, Qt::Key_Space);
     QTRY_COMPARE_WITH_TIMEOUT(mission->visualItems()->count(), beforeInsert + 1, TestTimeout::mediumMs());
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(mission->visualItems()->count(), beforeInsert);
     const QString relativeScreenshot = qEnvironmentVariable("CAAC_RELATIVE_UI_SCREENSHOT");
     if (!relativeScreenshot.isEmpty() && chinese) {
@@ -605,7 +652,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QCOMPARE(target->altitudeFrame(), targetFrame);
     QCOMPARE(target->command(), targetCommand);
     QCOMPARE(reference->coordinate(), referenceCoordinate);
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), beforeRelativeEdit);
     if (chinese) {
         const auto* rotateButton = findVisibleItem(_rootItem, QStringLiteral("caacGlobalSettingsButton"));
@@ -681,7 +728,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QCOMPARE(dmsPoint->coordinate().latitude(), -0.5);
     QCOMPARE(dmsPoint->missionItem().param1(), 2.5);
     QCOMPARE(dmsPoint->missionItem().param4(), -90);
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), beforeDms);
 
     step("generate template through native controls");
@@ -691,7 +738,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacTemplateSize")));
     QVERIFY(clickButton(QStringLiteral("caacTemplateAdd")));
     QCOMPARE(mission->visualItems()->count(), beforeTemplateCount + 10);
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), beforeTemplate);
 
     step("precise translation through native controls");
@@ -710,7 +757,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QVERIFY(std::abs(std::remainder(QGCGeo::geodesicAzimuth(beforeTranslationHome, mission->plannedHomePosition()) - 45,
                                     360)) < 0.001);
     QVERIFY(master->saveToJson() != beforeTranslation);
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), beforeTranslation);
 
     step("drag entire route in one undo step");
@@ -729,7 +776,7 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, routePress + QPoint(50, 20));
     QTRY_VERIFY_WITH_TIMEOUT(master->saveToJson() != beforeRouteDrag, TestTimeout::mediumMs());
     QCOMPARE(map->property("center").value<QGeoCoordinate>(), mapCenterBeforeDrag);
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), beforeRouteDrag);
     QVERIFY(scrollIntoView(dragToggle, QStringLiteral("caacGlobalSettingsScroller")));
     QVERIFY(clickButton(QStringLiteral("caacRouteDragToggle")));
@@ -1098,7 +1145,7 @@ void CaacRouteEditorUITest::_planningUtilities()
     QVERIFY(scrollIntoView(apply, QStringLiteral("caacGlobalSettingsScroller")));
     QVERIFY(clickButton(QStringLiteral("caacApplyMissionSpeed")));
     QVERIFY(master->saveToJson() != before);
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacUndo"), QStringLiteral("caacMainToolsScroller")));
+    QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), before);
     master->removeAll();
 }

@@ -309,7 +309,7 @@ Item {
         Rectangle {
             width: ScreenTools.defaultFontPixelWidth * 0.35
             height: ScreenTools.defaultFontPixelHeight
-            color: calPalette.settingsAccent
+            color: calPalette.settingsSectionAccent
             radius: width * 0.5
         }
         QGCLabel { text: parent.title; Layout.fillWidth: true }

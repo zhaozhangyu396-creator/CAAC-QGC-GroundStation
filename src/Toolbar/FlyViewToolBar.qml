@@ -19,6 +19,10 @@ Item {
     readonly property real _toolbarScale: _compactToolbar ? 1.15 : 1
     readonly property real _iconExtent: ScreenTools.defaultFontPixelHeight * (_compactToolbar ? 0.85 : 1) * _toolbarScale
     readonly property real _fontPointSize: (_compactToolbar ? ScreenTools.smallFontPointSize : ScreenTools.defaultFontPointSize) * _toolbarScale
+    readonly property real _contentScale: Math.min(1,
+        leftPanel.width / Math.max(1, leftPanelLayout.implicitWidth),
+        flightActionHost.width / Math.max(1, flightActionLayout.implicitWidth),
+        rightPanel.width / Math.max(1, rightIndicators.implicitWidth))
     property alias flightToolStrip: flightActions
     property bool flightSettingsExpanded: false
     signal displayPreFlightChecklist
@@ -95,7 +99,7 @@ Item {
                     id:         leftPanelLayout
                     height:     parent.height
                     spacing:    ScreenTools.defaultFontPixelWidth * (control._compactToolbar ? 0.35 : 2)
-                    scale:      Math.min(1, leftPanel.width / Math.max(1, implicitWidth))
+                    scale:      control._contentScale
                     transformOrigin: Item.Left
 
                     RowLayout {
@@ -135,6 +139,7 @@ Item {
                         Layout.fillHeight:  true
                         toolbarButtonStyle: QGroundControl.corePlugin.directMissionItemEditing
                         toolbarScale: control._toolbarScale
+                        fontPointSize: control._fontPointSize
                         visible: QGroundControl.corePlugin.directMissionItemEditing || !!_activeVehicle
                     }
                 }
@@ -176,7 +181,7 @@ Item {
                     height: parent.height * 0.72
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.right: parent.right
-                    scale: Math.min(1, rightPanel.width / Math.max(1, implicitWidth))
+                    scale: control._contentScale
                     transformOrigin: Item.Right
                     spacing: ScreenTools.defaultFontPixelWidth * (control._compactToolbar ? 1.5 : 1)
                     RowLayout {
@@ -203,18 +208,21 @@ Item {
                         readonly property bool connected: !!control._activeVehicle && !control._communicationLost
                         heightFactor: 0.25
                         _horizontalPadding: ScreenTools.defaultFontPixelWidth * (control._compactToolbar ? 0.6 : 2)
-                        implicitWidth: contentItem.implicitWidth + leftPadding + rightPadding
+                        implicitWidth: control._iconExtent + connectionContents.spacing
+                            + connectionLabel.implicitWidth + leftPadding + rightPadding
                         Layout.minimumWidth: implicitWidth
+                        Layout.preferredWidth: implicitWidth
                         backgroundColor: qgcPal.window
                         text: connected ? qsTr("Connected") : qsTr("Not connected")
                         ToolTip.visible: hovered
                         ToolTip.text: qsTr("Open connection settings")
-                        contentItem: Row {
+                        contentItem: RowLayout {
+                            id: connectionContents
                             spacing: ScreenTools.defaultFontPixelWidth * 0.7
                             Item {
-                                width: control._iconExtent
-                                height: width
-                                anchors.verticalCenter: parent.verticalCenter
+                                Layout.preferredWidth: control._iconExtent
+                                Layout.minimumWidth: Layout.preferredWidth
+                                Layout.preferredHeight: control._iconExtent
                                 QGCColoredImage {
                                     anchors.fill: parent
                                     source: "/InstrumentValueIcons/link.svg"
@@ -244,8 +252,9 @@ Item {
                                 }
                             }
                             QGCLabel {
+                                id: connectionLabel
                                 objectName: "caacConnectionStatusLabel"
-                                anchors.verticalCenter: parent.verticalCenter
+                                Layout.minimumWidth: implicitWidth
                                 text: connectionButton.text
                                 color: qgcPal.text
                                 font.pointSize: control._fontPointSize
@@ -302,13 +311,15 @@ Item {
         }
 
         RowLayout {
+            id: flightActionLayout
             anchors.verticalCenter: parent.verticalCenter
             height: parent.height
-            scale: Math.min(1, parent.width / Math.max(1, implicitWidth))
+            scale: control._contentScale
             transformOrigin: Item.Left
             spacing: ScreenTools.defaultFontPixelWidth * 0.5
             RowLayout {
                 objectName: "caacArmStatusIndicator"
+                Layout.alignment: Qt.AlignVCenter
                 spacing: ScreenTools.defaultFontPixelWidth * 0.35
                 Accessible.name: qsTr("Propeller lock status") + ": " + armStatus.text
                 QGCColoredImage {
@@ -329,6 +340,7 @@ Item {
             }
             QGCButton {
                 objectName: "caacSensorStatusButton"
+                Layout.alignment: Qt.AlignVCenter
                 heightFactor: 0.25
                 pointSize: control._fontPointSize
                 _horizontalPadding: ScreenTools.defaultFontPixelWidth * (control._compactToolbar ? 0.6 : 2)
@@ -341,6 +353,7 @@ Item {
             }
             QGCButton {
                 id: flightSettingsButton
+                Layout.alignment: Qt.AlignVCenter
                 objectName: "caacFlightSettingsButton"
                 text: qsTr("Route flight")
                 checked: control.flightSettingsExpanded
@@ -361,6 +374,7 @@ Item {
             }
             QGCButton {
                 objectName: "caacFigureEightButton"
+                Layout.alignment: Qt.AlignVCenter
                 visible: QGroundControl.corePlugin.directMissionItemEditing
                 text: qsTr("Figure-eight flight")
                 heightFactor: 0.25

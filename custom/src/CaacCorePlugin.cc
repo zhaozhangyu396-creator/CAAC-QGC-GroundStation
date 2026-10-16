@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <limits>
+#include <utility>
 
 #include <QtCore/QApplicationStatic>
 #include <QtCore/QJsonObject>
@@ -14,6 +15,7 @@
 
 #include "AppMessages.h"
 #include "AppSettings.h"
+#include "CaacActivationController.h"
 #include "CaacExamAudio.h"
 #include "CaacFigureEightController.h"
 #include "CaacFlightDistance.h"
@@ -69,6 +71,7 @@ CaacCorePlugin::CaacCorePlugin(QObject* parent)
     : QGCCorePlugin(parent)
 {
     _simulation = new CaacSimulationController(this);
+    _activation = new CaacActivationController(this);
     _figureEight = new CaacFigureEightController(this);
     auto* examAudio = new CaacExamAudio(this);
     connect(_figureEight, &CaacFigureEightController::announcementRequested, examAudio, &CaacExamAudio::play);
@@ -84,6 +87,11 @@ CaacCorePlugin::CaacCorePlugin(QObject* parent)
     const double angle = settings.value(QStringLiteral("CAAC/Planning/snapAngle"), 15.0).toDouble();
     _planningPreferences[QStringLiteral("snapAngle")] =
         std::isfinite(angle) && angle >= 1 && angle <= 90 ? angle : 15.0;
+}
+
+bool CaacCorePlugin::requestApplicationAuthorization(QObject* parent, std::function<void()> onAuthorized)
+{
+    return _activation->showWindow(this, parent, std::move(onAuthorized));
 }
 
 bool CaacCorePlugin::updatePlanningPreferences(const QVariantMap& values)

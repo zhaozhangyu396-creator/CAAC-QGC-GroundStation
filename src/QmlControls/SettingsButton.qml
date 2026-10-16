@@ -50,9 +50,7 @@ Button {
             width: ScreenTools.defaultFontPixelWidth * 0.35
             height: parent.height * 0.6
             radius: width / 2
-            color: qgcPal.window
-            border.color: qgcPal.windowShadeLight
-            border.width: 1
+            color: qgcPal.settingsSectionAccent
             visible: control.vehicleSetupStyle && (control.checked || control.pressed)
         }
     }

@@ -12,6 +12,21 @@ Item {
     height: monitorColumn.height
 
     property bool twoColumn: false
+    property var channelValuesOverride: null
+
+    function updateOverrideValues() {
+        if (channelValuesOverride === null) {
+            return
+        }
+        for (let channel = 0; channel < channelMonitorRepeater.count; ++channel) {
+            const row = channelMonitorRepeater.itemAt(channel)
+            if (row && row.loader.item && channel < channelValuesOverride.length) {
+                row.loader.item.rcValue = Number(channelValuesOverride[channel])
+            }
+        }
+    }
+
+    onChannelValuesOverrideChanged: Qt.callLater(updateOverrideValues)
 
     readonly property int _pwmMin:      800
     readonly property int _pwmMax:      2200
@@ -26,6 +41,7 @@ Item {
         id: channelMonitorDisplayComponent
 
         Item {
+            objectName: "rcChannelMonitorValue_" + channelIndex
             height: ScreenTools.defaultFontPixelHeight
 
             property int    rcValue:    1500
@@ -93,6 +109,7 @@ Item {
 
         Connections {
             target: controller
+            enabled: _root.channelValuesOverride === null
 
             function onChannelValueChanged(channel, rcValue) {
                 if (channelMonitorRepeater.itemAt(channel)) {
@@ -103,7 +120,7 @@ Item {
 
         Repeater {
             id:     channelMonitorRepeater
-            model:  controller.channelCount
+            model:  _root.channelValuesOverride === null ? controller.channelCount : _root.channelValuesOverride.length
 
             RowLayout {
                 // Need this to get to loader from Connections above
@@ -120,6 +137,8 @@ Item {
                     //height:                 ScreenTools.defaultFontPixelHeight
                     //width:                  parent.width - anchors.leftMargin - ScreenTools.defaultFontPixelWidth
                     sourceComponent:        channelMonitorDisplayComponent
+                    property int channelIndex: index
+                    onLoaded: _root.updateOverrideValues()
 
                     property bool mapped:               true
                     readonly property bool reversed:    false

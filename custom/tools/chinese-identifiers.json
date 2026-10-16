@@ -163,5 +163,10 @@
     "context": "QGCCheckBoxSlider",
     "source": "OFF",
     "reason": "用户指定开关内统一显示 ON / OFF 状态标志"
+  },
+  {
+    "context": "Joystick.SettingsGroup.json",
+    "source": "Stick Exponential",
+    "reason": "用户指定摇杆指数统一显示为技术缩写 EXP"
   }
 ]

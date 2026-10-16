@@ -40,7 +40,8 @@ GeoMapItem {
     property real homeTerrainBias: 0
     property real lineWidth: ScreenTools.defaultFontPixelHeight / 5
     // Matches MissionLineView.qml's existing flight-path line color
-    property color lineColor: QGroundControl.globalPalette.mapMissionTrajectory
+    property color lineColor: missionController && missionController.uploadConfirmed
+        ? QGroundControl.globalPalette.colorGreen : QGroundControl.globalPalette.mapMissionTrajectory
     property color collisionColor: "red"
 
     altitudeMode: GeoMapItem.Absolute

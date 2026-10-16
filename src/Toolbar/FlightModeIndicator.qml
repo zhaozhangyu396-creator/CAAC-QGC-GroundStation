@@ -75,7 +75,7 @@ Item {
         enabled: !!control.activeVehicle
         text: control.activeVehicle ? control.activeVehicle.flightMode : qsTr("Flight mode")
         heightFactor: 0.25
-        pointSize: ScreenTools.smallFontPointSize * control.toolbarScale
+        pointSize: control.fontPointSize
         _horizontalPadding: ScreenTools.defaultFontPixelWidth * 0.6
         _iconHeight: ScreenTools.defaultFontPixelHeight * 0.85 * control.toolbarScale
         implicitWidth: contentItem.implicitWidth + leftPadding + rightPadding

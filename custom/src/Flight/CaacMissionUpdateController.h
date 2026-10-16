@@ -45,6 +45,7 @@ private:
     void _tick();
     void _uploaded();
     void _finish(bool success, const QString& message);
+    void _uploadFailed(const QString& detail = {});
     bool _prepareNative();
     void _setStage(Stage stage);
 
@@ -58,4 +59,5 @@ private:
     QTimer _timer;
     QElapsedTimer _elapsed;
     int _target = -1;
+    QString _lastTransferError;
 };

@@ -34,6 +34,9 @@ Column {
     readonly property var routeController: editorController
     property var simulationPreviewSettings: null
     function prepareUpload() { return globalSettings.prepareUpload() }
+    function requestWaypointUpload() {
+        if (root._canTransfer) { updateWaypointsFactory.open() }
+    }
     readonly property var simulationPreviewSegments: {
         void editorController.coordinateItems
         return editorController.simulationPreviewSegments(simulationPreviewSettings || editorController.simulationSettings)
@@ -69,7 +72,8 @@ Column {
                 property var attachedMap: null
                 path: [preview.modelData.coordinate1, preview.modelData.coordinate2]
                 visible: root.visible && root.enabled
-                line.color: QGroundControl.globalPalette.mapMissionTrajectory
+                line.color: root.planMasterController && root.planMasterController.missionController.uploadConfirmed
+                    ? QGroundControl.globalPalette.colorGreen : QGroundControl.globalPalette.mapMissionTrajectory
                 line.width: ScreenTools.defaultFontPixelWidth * 0.3
                 z: QGroundControl.zOrderWaypointLines
                 Component.onDestruction: { if (attachedMap) { attachedMap.removeMapItem(line) } }
@@ -895,7 +899,7 @@ Column {
                     QGCButton {
                         objectName: "caacRemoveWaypoint_" + card.object.sequenceNumber
                         text: qsTr("Delete")
-                        enabled: card.object.command === 16
+                        enabled: card.object.command === 16 || card.object.isLandCommand
                         heightFactor: 0.2
                         onClicked: {
                             waypointPopup.close()
@@ -998,8 +1002,7 @@ Column {
                     text: qsTr("Upload the new waypoint positions? The aircraft will pause, upload, and continue from its previous target waypoint. Cancelling keeps the edits locally.")
                 }
                 onAccepted: {
-                    if (root._managerVehicle === vehicleAtOpen && root.planMasterController === masterAtOpen
-                        && root.prepareUpload()) {
+                    if (root._managerVehicle === vehicleAtOpen && root.planMasterController === masterAtOpen) {
                         missionUpdate.update(masterAtOpen, QGroundControl.corePlugin.simulation)
                     }
                 }
@@ -1206,9 +1209,10 @@ Column {
             if (item && item.sequenceNumber === 0) { globalSettings.saveHomeAutomatically() }
             editorController.endEdit()
             const vehicle = root._managerVehicle
-            if (item && item.command === 16 && root._dragStartCoordinate.isValid
+            if (item && (item.command === 16 || item.command === 21) && root._dragStartCoordinate.isValid
                 && root._dragStartCoordinate.distanceTo(item.coordinate) > 0.01 && vehicle && vehicle.armed
-                && vehicle.flightMode === vehicle.missionFlightMode && !missionUpdate.busy) {
+                && (vehicle.flightMode === vehicle.missionFlightMode || vehicle.flightMode === vehicle.pauseFlightMode)
+                && !missionUpdate.busy) {
                 updateWaypointsFactory.open()
             }
         }

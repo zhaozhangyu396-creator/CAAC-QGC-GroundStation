@@ -83,7 +83,9 @@ Button {
             font.pointSize: control.pointSize
             font.family: control.font.family
             font.weight: fontWeight
-            color: _showHighlight ? qgcPal.buttonHighlightText : (primary ? qgcPal.primaryButtonText : qgcPal.buttonText)
+            color: _showHighlight ? qgcPal.buttonHighlightText
+                : control.settingsMenuStyle ? qgcPal.buttonText
+                : primary ? qgcPal.primaryButtonText : qgcPal.buttonText
             visible: control.text !== ""
         }
     }

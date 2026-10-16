@@ -151,6 +151,10 @@ bool CaacSimulationController::manualControlActive() const
 void CaacSimulationController::_setJoystick(Joystick* joystick)
 {
     disconnect(_joystickChannelsConnection);
+    for (const auto& connection : _joystickConfigurationConnections) {
+        disconnect(connection);
+    }
+    _joystickConfigurationConnections.clear();
     _joystick = joystick;
     _manualInputTime.invalidate();
     _modeMappingSignature.clear();
@@ -158,6 +162,12 @@ void CaacSimulationController::_setJoystick(Joystick* joystick)
     _modeLastPosition = -1;
     _joystickChannels.clear();
     if (joystick) {
+        _joystickConfigurationConnections.append(connect(joystick, &Joystick::axisMappingChanged, this,
+                                                         &CaacSimulationController::modeSwitchConfigurationChanged));
+        for (auto* fact : {joystick->settings()->calibrated(), joystick->settings()->simulationModeSwitchAxis()}) {
+            _joystickConfigurationConnections.append(
+                connect(fact, &Fact::rawValueChanged, this, &CaacSimulationController::modeSwitchConfigurationChanged));
+        }
         _joystickChannelsConnection = connect(
             joystick, &Joystick::rawChannelValuesChanged, this,
             [this, source = QPointer<Joystick>(joystick)](const QVector<int>& channels) {
@@ -168,6 +178,25 @@ void CaacSimulationController::_setJoystick(Joystick* joystick)
             Qt::QueuedConnection);
     }
     emit joystickChannelsChanged();
+    emit modeSwitchConfigurationChanged();
+}
+
+QString CaacSimulationController::modeSwitchUnavailableReason() const
+{
+    if (!_joystick) {
+        return tr("Connect a USB joystick first.");
+    }
+    if (!_joystick->settings()->calibrated()->rawValue().toBool()) {
+        return tr("Complete joystick calibration first.");
+    }
+    const int axis = _joystick->settings()->simulationModeSwitchAxis()->rawValue().toInt();
+    if (axis < 0 || axis >= _joystick->axisCount()) {
+        return tr("Select a mode switch axis channel.");
+    }
+    if (!modeSwitchAxisAllowed(axis)) {
+        return tr("CH%1 is assigned to a control stick. Select an independent switch channel.").arg(axis + 1);
+    }
+    return {};
 }
 
 void CaacSimulationController::_processJoystickChannels(const QVector<int>& channels)
@@ -252,15 +281,17 @@ void CaacSimulationController::_applyJoystickMode(int mode)
     }
     const QList<uint32_t> modes{PX4CustomMode::AUTO_LOITER, PX4CustomMode::STABILIZED, PX4CustomMode::AUTO_MISSION,
                                 PX4CustomMode::AUTO_RTL, PX4CustomMode::AUTO_LAND};
-    if (mode < 0 || mode >= modes.size() || (mode == 2 && (!_missionReady || _engine.state().finished))) {
+    if (mode < 0 || mode >= modes.size() || (mode == 2 && !_missionReady)) {
+        return;
+    }
+    if (mode == 1) {
+        _enterManualControl();
         return;
     }
     _manualInputTime.invalidate();
     _holdAltitude = qQNaN();
     _guidedTarget = {};
-    if (mode != 1) {
-        _engine.pause();
-    }
+    _engine.pause();
     _link->_mavCustomMode = modes[mode];
     _publish();
     emit statusChanged();
@@ -280,6 +311,12 @@ bool CaacSimulationController::beginManualControl()
     if (!manager->activeJoystickEnabledForActiveVehicle()) {
         return false;
     }
+    _enterManualControl();
+    return true;
+}
+
+void CaacSimulationController::_enterManualControl()
+{
     _manualInputTime.invalidate();
     _guidedTarget = {};
     _holdAltitude = qQNaN();
@@ -288,7 +325,6 @@ bool CaacSimulationController::beginManualControl()
     _setStatus(tr("Simulation manual control; waiting for joystick input."));
     _publish();
     emit statusChanged();
-    return true;
 }
 
 void CaacSimulationController::endManualControl()
@@ -342,6 +378,7 @@ bool CaacSimulationController::start(PlanMasterController* plan)
     _guidedTarget = QGeoCoordinate();
     _uploadSent = false;
     _missionReady = false;
+    _hasFlown = false;
     _manualInputTime.invalidate();
     _modeMappingSignature.clear();
     _modeLastPosition = -1;
@@ -418,6 +455,9 @@ bool CaacSimulationController::start(PlanMasterController* plan)
     connect(_link->_missionItemHandler, &MockLinkMissionItemHandler::missionSequenceRequested, this,
             [this](int sequence) {
                 if (_engine.loaded()) {
+                    if (_engine.state().finished) {
+                        _engine.restartMission();
+                    }
                     _engine.jump(sequence);
                 }
             });
@@ -531,6 +571,7 @@ bool CaacSimulationController::upload(PlanMasterController* plan, bool preserveP
             }
         },
         Qt::SingleShotConnection);
+    mission->trackMissionUpload();
     MissionController::sendItemsToVehicle(_vehicle, _uploadPlan->missionController()->visualItems());
     return true;
 }
@@ -707,6 +748,9 @@ void CaacSimulationController::_tick()
                _link->_mavCustomMode == PX4CustomMode::AUTO_MISSION) {
         _guidedTarget = QGeoCoordinate();
         _holdAltitude = qQNaN();
+        if (_missionReady && _engine.state().finished) {
+            _engine.restartMission();
+        }
         _engine.advance(0.1);
         _setStatus(tr("Simulation running · mission item %1").arg(_engine.state().sequence));
         if (_engine.state().finished) {
@@ -743,6 +787,10 @@ void CaacSimulationController::_publish()
         emit missionDetailsChanged();
     }
     const auto state = _engine.state();
+    if (!_hasFlown && state.airborne) {
+        _hasFlown = true;
+        emit statusChanged();
+    }
     const auto system = static_cast<uint8_t>(_link->vehicleId());
     const auto component = static_cast<uint8_t>(MAV_COMP_ID_AUTOPILOT1);
     const auto channel = _link->_outgoingMavlinkChannel;

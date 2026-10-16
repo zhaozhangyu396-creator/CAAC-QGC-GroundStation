@@ -32,6 +32,10 @@ Item {
         const editor = customEditor.editorItem
         return !customEditor.enabled || !editor || typeof editor.prepareUpload !== "function" || editor.prepareUpload()
     }
+    function requestWaypointUpload() {
+        const editor = customEditor.editorItem
+        if (customEditor.enabled && editor) { editor.requestWaypointUpload() }
+    }
     property var  _missionController: planMasterController.missionController
     property real _toolsMargin:       ScreenTools.defaultFontPixelWidth * 0.75
 

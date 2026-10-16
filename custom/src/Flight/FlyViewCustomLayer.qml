@@ -21,7 +21,7 @@ Item {
     property var customOccluders: tools.visible ? [Qt.rect(tools.x, tools.y, tools.width, tools.height)]
         : eightTools.visible ? [Qt.rect(eightTools.x, eightTools.y, eightTools.width, eightTools.height),
             Qt.rect(eightExamControl.x, eightExamControl.y, eightExamControl.width, eightExamControl.height)] : []
-    property alias mapToolsContainer: toolbar
+    property alias mapToolsContainer: mapToolsLayout
 
     readonly property bool _simulationEmergency: _corePlugin.simulation.emergencyMode
     property Component _emergencyDialog: Component { CaacSimulationEmergencyDialog { } }
@@ -62,6 +62,7 @@ Item {
         id: button
         property string toolIcon: "data"
         property string toolImage: ""
+        Layout.alignment: Qt.AlignHCenter
         readonly property real iconSize: ScreenTools.defaultFontPixelHeight * 2.5
         Layout.minimumWidth: Layout.preferredWidth
         Layout.maximumWidth: Layout.preferredWidth
@@ -289,60 +290,78 @@ Item {
             && availableHeight > 0
         spacing: root._margin
 
-        QGCFlickable {
-            id: toolbarScroller
-            objectName: "caacMainToolsScroller"
+        ColumnLayout {
+            id: mainToolsColumn
             Layout.alignment: Qt.AlignTop
             Layout.preferredWidth: toolbar.implicitWidth
-            Layout.preferredHeight: Math.min(toolbar.implicitHeight, tools.availableHeight)
-            Layout.fillHeight: false
-            contentWidth: width
-            contentHeight: toolbar.implicitHeight
-            clip: true
-          ColumnLayout {
-            id: toolbar
-            width: parent.width
+            Layout.minimumWidth: Layout.preferredWidth
+            Layout.maximumWidth: Layout.preferredWidth
             spacing: root._margin * 0.5
-            SquareTool {
-                id: missionButton
-                objectName: "caacMissionDetailsButton"
-                text: qsTr("Mission details")
-                toolIcon: "mission"
-                checkable: true
-                onCheckedChanged: root.selectPanel(this)
-            }
-            SquareTool {
-                id: dataButton
-                objectName: "caacFlightDataButton"
-                text: qsTr("Flight data")
-                checkable: true
-                onCheckedChanged: root.selectPanel(this)
-            }
-            SquareTool {
-                id: mapButton
-                objectName: "caacMapSettingsButton"
-                text: qsTr("Map settings")
-                toolIcon: "map"
-                checkable: true
-                onCheckedChanged: root.selectPanel(this)
-            }
-            SquareTool {
-                objectName: "caacCalculatorButton"
-                text: qsTr("Calculator")
-                toolIcon: "calculator"
-                onClicked: calculatorFactory.open()
-            }
-            SquareTool {
-                id: clearTrajectoryButton
-                objectName: "caacClearTrajectoryButton"
-                text: qsTr("Clear trajectory")
-                toolIcon: "clearTrajectory"
-                enabled: !!root._vehicle
-                onClicked: {
-                    if (root._vehicle) { root._vehicle.trajectoryPoints.clear() }
+            QGCFlickable {
+                id: toolbarScroller
+                objectName: "caacMainToolsScroller"
+                Layout.alignment: Qt.AlignTop
+                Layout.fillWidth: true
+                Layout.minimumWidth: toolbar.implicitWidth
+                Layout.preferredHeight: Math.min(toolbar.implicitHeight, Math.max(0,
+                    tools.availableHeight - mapToolsLayout.implicitHeight - mainToolsColumn.spacing))
+                Layout.fillHeight: false
+                contentWidth: width
+                contentHeight: toolbar.implicitHeight
+                clip: true
+              ColumnLayout {
+                id: toolbar
+                width: parent.width
+                spacing: root._margin * 0.5
+                SquareTool {
+                    id: missionButton
+                    objectName: "caacMissionDetailsButton"
+                    text: qsTr("Mission details")
+                    toolIcon: "mission"
+                    checkable: true
+                    onCheckedChanged: root.selectPanel(this)
                 }
+                SquareTool {
+                    id: dataButton
+                    objectName: "caacFlightDataButton"
+                    text: qsTr("Flight data")
+                    checkable: true
+                    onCheckedChanged: root.selectPanel(this)
+                }
+                SquareTool {
+                    id: mapButton
+                    objectName: "caacMapSettingsButton"
+                    text: qsTr("Map settings")
+                    toolIcon: "map"
+                    checkable: true
+                    onCheckedChanged: root.selectPanel(this)
+                }
+                SquareTool {
+                    objectName: "caacCalculatorButton"
+                    text: qsTr("Calculator")
+                    toolIcon: "calculator"
+                    onClicked: calculatorFactory.open()
+                }
+                SquareTool {
+                    id: clearTrajectoryButton
+                    objectName: "caacClearTrajectoryButton"
+                    text: qsTr("Clear trajectory")
+                    toolIcon: "clearTrajectory"
+                    enabled: !!root._vehicle
+                    onClicked: {
+                        if (root._vehicle) { root._vehicle.trajectoryPoints.clear() }
+                    }
+                }
+              }
             }
-          }
+
+            ColumnLayout {
+                id: mapToolsLayout
+                Layout.fillWidth: true
+                Layout.minimumWidth: toolbar.implicitWidth
+                Layout.preferredWidth: toolbar.implicitWidth
+                spacing: 0
+            }
         }
 
         QGCFlickable {

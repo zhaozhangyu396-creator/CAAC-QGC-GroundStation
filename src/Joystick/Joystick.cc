@@ -1392,7 +1392,10 @@ void Joystick::_setJoystickAxisForAxisFunction(AxisFunction_t axisFunction, int 
         return;
     }
 
-    _axisFunctionToJoystickAxisMap[axisFunction] = joystickAxis;
+    if (_axisFunctionToJoystickAxisMap.value(axisFunction, kJoystickAxisNotAssigned) != joystickAxis) {
+        _axisFunctionToJoystickAxisMap[axisFunction] = joystickAxis;
+        emit axisMappingChanged();
+    }
 }
 
 int Joystick::_getJoystickAxisForAxisFunction(AxisFunction_t axisFunction) const

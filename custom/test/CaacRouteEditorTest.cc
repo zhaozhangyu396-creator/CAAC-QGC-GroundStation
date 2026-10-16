@@ -69,6 +69,13 @@ void CaacRouteEditorTest::_testWaypointLanding()
     landing = model->value<SimpleMissionItem*>(3);
     QVERIFY(landing && landing->isLandCommand());
     QVERIFY(landing->coordinate().distanceTo(second->coordinate()) < 0.01);
+    const auto secondLanding = planController()->saveToJson();
+    QVERIFY(editor.selectWaypoint(landing));
+    QVERIFY(editor.removeCurrentWaypoint());
+    QCOMPARE(model->count(), 3);
+    QVERIFY(!missionController()->property("hasLandItem").toBool());
+    QVERIFY(editor.undo());
+    QCOMPARE(planController()->saveToJson(), secondLanding);
     QVERIFY(editor.undo());
     QCOMPARE(planController()->saveToJson(), firstLanding);
     QVERIFY(editor.undo());

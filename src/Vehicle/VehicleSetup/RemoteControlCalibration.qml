@@ -257,6 +257,7 @@ ColumnLayout {
 
         QGCButton {
             id: cancelButton
+            objectName: "remoteControlCalibrationCancel"
             text: qsTr("Cancel")
             onClicked: controller.cancelButtonClicked()
         }
@@ -269,6 +270,7 @@ ColumnLayout {
 
         QGCButton {
             id: nextButton
+            objectName: "remoteControlCalibrationNext"
             primary: true
             text: qsTr("Calibrate")
 

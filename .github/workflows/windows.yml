@@ -218,6 +218,34 @@ jobs:
           build-dir: ${{ runner.temp }}/build
           build-type: ${{ matrix.build_type }}
 
+      - name: Build CAAC activation issuer
+        if: matrix.variant == 'amd64' && matrix.build_type == 'Release' && github.repository == 'zhaozhangyu396-creator/CAAC-QGC-GroundStation'
+        uses: ./.github/actions/cmake-build
+        with:
+          build-dir: ${{ runner.temp }}/build
+          build-type: Release
+          target: CaacLicenseTool
+
+      - name: Package and verify standalone CAAC issuer
+        if: matrix.variant == 'amd64' && matrix.build_type == 'Release' && github.repository == 'zhaozhangyu396-creator/CAAC-QGC-GroundStation'
+        shell: pwsh
+        env:
+          CAAC_ISSUER_BINARY: ${{ runner.temp }}/build/Release/CaacLicenseTool.exe
+          CAAC_ISSUER_QT: ${{ steps.build-setup.outputs.qt_root_dir }}
+          CAAC_ISSUER_OUTPUT: ${{ runner.temp }}/caac-issuer
+        run: ./deploy/windows/package-caac-license-tool.ps1 -Binary $env:CAAC_ISSUER_BINARY -QtRoot $env:CAAC_ISSUER_QT -OutputDirectory $env:CAAC_ISSUER_OUTPUT
+
+      - name: Upload standalone CAAC issuer
+        if: matrix.variant == 'amd64' && matrix.build_type == 'Release' && github.repository == 'zhaozhangyu396-creator/CAAC-QGC-GroundStation'
+        uses: actions/upload-artifact@v7
+        with:
+          name: CaacLicenseTool-Windows-x64
+          path: |
+            ${{ runner.temp }}/caac-issuer/CaacLicenseTool-Windows-x64.zip
+            ${{ runner.temp }}/caac-issuer/CaacLicenseTool-Windows-x64.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Install Qt symbols for Windows UI diagnostics
         id: caac-qt-symbols
         # Symbols improve crash diagnostics; their availability must not prevent the actual UI regression.
@@ -276,7 +304,7 @@ jobs:
         with:
           build-dir: ${{ runner.temp }}/build
           build-type: ${{ matrix.build_type }}
-          tests-regex: '^(FactGroupTest|Caac.*Test|PX4VehicleConfigUITest|PX4SensorsCalibrationUITest|PX4AirframeSetupUITest)$'
+          tests-regex: '^(FactGroupTest|Caac.*Test|AirframeComponentAirframesTest|APMAirframeComponentControllerTest|PX4VehicleConfigUITest|PX4SensorsCalibrationUITest|PX4AirframeSetupUITest|APMVehicleConfigUITest|APMSensorsCalibrationUITest|APMFreshFlashUITest)$'
           include-labels: 'Unit|Integration'
           parallel: '1'
           junit-output: junit-caac.xml
@@ -293,12 +321,20 @@ jobs:
           artifact-name: test-results-caac-windows-${{ matrix.build_type }}
 
       - name: Verify Executable
-        if: matrix.build_type == 'Release' && matrix.variant != 'arm64-cross'
+        if: matrix.build_type == 'Release' && matrix.variant != 'arm64-cross' && github.repository != 'zhaozhangyu396-creator/CAAC-QGC-GroundStation'
         uses: ./.github/actions/verify-executable
         with:
           binary-path: ${{ runner.temp }}/build/${{ matrix.build_type }}/QGroundControl.exe
           type: exe
           build-dir: ${{ runner.temp }}/build
+
+      - name: Verify CAAC activation gate
+        if: matrix.build_type == 'Release' && matrix.variant != 'arm64-cross' && github.repository == 'zhaozhangyu396-creator/CAAC-QGC-GroundStation'
+        shell: pwsh
+        env:
+          CAAC_VERIFY_BINARY: ${{ runner.temp }}/build/Release/QGroundControl.exe
+          CAAC_VERIFY_REPORT: ${{ runner.temp }}/caac-activation-build.json
+        run: ./deploy/windows/verify-caac-activation.ps1 -Binary $env:CAAC_VERIFY_BINARY -Report $env:CAAC_VERIFY_REPORT
 
       - name: Create Installer
         uses: ./.github/actions/cmake-build
@@ -381,13 +417,22 @@ jobs:
         run: python .github/scripts/windows_installed_path.py
 
       - name: Verify installed executable
-        if: matrix.build_type == 'Release' && matrix.variant != 'arm64-cross'
+        if: matrix.build_type == 'Release' && matrix.variant != 'arm64-cross' && github.repository != 'zhaozhangyu396-creator/CAAC-QGC-GroundStation'
         uses: ./.github/actions/verify-executable
         env:
           PATH: ${{ env.QGC_VERIFY_INSTALLED_PATH || env.PATH }}
         with:
           binary-path: ${{ env.QGC_INSTALL_TEST_BINARY }}
           type: exe
+
+      - name: Verify installed CAAC activation gate
+        if: matrix.build_type == 'Release' && matrix.variant != 'arm64-cross' && github.repository == 'zhaozhangyu396-creator/CAAC-QGC-GroundStation'
+        shell: pwsh
+        env:
+          PATH: ${{ env.QGC_VERIFY_INSTALLED_PATH || env.PATH }}
+          CAAC_VERIFY_BINARY: ${{ env.QGC_INSTALL_TEST_BINARY }}
+          CAAC_VERIFY_REPORT: ${{ runner.temp }}/caac-activation-installed.json
+        run: ./deploy/windows/verify-caac-activation.ps1 -Binary $env:CAAC_VERIFY_BINARY -Report $env:CAAC_VERIFY_REPORT
 
       - name: Uninstall and verify cleanup
         if: matrix.build_type == 'Release' && matrix.variant != 'arm64-cross'
@@ -419,6 +464,7 @@ jobs:
             ${{ runner.temp }}/build/${{ matrix.package }}.exe.build.json
             ${{ runner.temp }}/caac-chinese-audit.json
             ${{ runner.temp }}/caac-installer-chinese-audit.json
+            ${{ runner.temp }}/caac-activation-*.json
             ${{ runner.temp }}/build/_CPack_Packages/**/*.nsi
           if-no-files-found: error
           retention-days: 14

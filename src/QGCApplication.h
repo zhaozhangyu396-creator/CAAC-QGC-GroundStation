@@ -128,6 +128,7 @@ private:
 
     /// Initialize the application for normal application boot. Or in other words we are not going to run unit tests.
     void _initForNormalAppBoot();
+    void _initAuthorizedApp();
 
     QObject *_rootQmlObject();
     bool _rebootMessageDebounced();

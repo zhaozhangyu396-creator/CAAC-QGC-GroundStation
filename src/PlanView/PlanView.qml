@@ -125,12 +125,13 @@ Item {
         }
 
         function upload() {
-            if (_missionController.sendToVehiclePreCheck() === MissionController.SendToVehiclePreCheckStateActiveMission) {
-                QGroundControl.showMessageDialog(_root, qsTr("上传航线"), qsTr("当前航点任务正在执行，请先暂停当前任务，再上传新航线。"))
-                return
-            }
             if (!rightPanel.prepareUpload()) { return }
             if (!checkReadyForSaveUpload(false /* save */)) {
+                return
+            }
+            if (QGroundControl.corePlugin.directMissionItemEditing
+                && _missionController.sendToVehiclePreCheck() === MissionController.SendToVehiclePreCheckStateActiveMission) {
+                rightPanel.requestWaypointUpload()
                 return
             }
             const simulation = QGroundControl.corePlugin.simulation
@@ -414,6 +415,7 @@ Item {
             }
             MissionLineView {
                 objectName: "caacPlanMissionLines"
+                uploadConfirmed: _missionController.uploadConfirmed
                 showSpecialVisual: _missionController.isROIBeginCurrentItem
                 model: _root._figureEightView || rightPanel.simulationPreviewActive
                     ? null : _missionController.simpleFlightPathSegments
@@ -585,7 +587,8 @@ Item {
                         ? QGroundControl.corePlugin.simulation : null
                     readonly property bool previewHome: !_root._figureEightView && vehicle && planningSimulation
                         && planningSimulation.vehicle === vehicle
-                        && !vehicle.airborne && !vehicle.armed && _missionController.plannedHomePosition.isValid
+                        && !planningSimulation.hasFlown && !vehicle.airborne && !vehicle.armed
+                        && _missionController.plannedHomePosition.isValid
                     coordinate: previewHome ? _missionController.plannedHomePosition
                         : vehicle ? vehicle.coordinate : QtPositioning.coordinate()
                     map: editorMap

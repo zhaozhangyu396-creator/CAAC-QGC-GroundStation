@@ -50,6 +50,7 @@ public:
     bool updateMission(const QMap<uint16_t, mavlink_mission_item_int_t>& mission, const QGeoCoordinate& home,
                        const Options& options, QString& error, const QMap<int, WaypointOptions>& waypointOptions);
     bool jump(int sequence);
+    bool restartMission();
     void advance(double seconds);
     void pause();
     bool setHorizontalSpeed(double speed);
@@ -92,4 +93,5 @@ private:
     State _state;
     double _wait = -1;
     bool _returnLanding = false;
+    bool _takeoffAtCurrentPosition = false;
 };

@@ -763,9 +763,7 @@ Rectangle {
         Rectangle {
             width: _defaultTextWidth * 0.35
             height: _defaultTextHeight * 1.2
-            color: qgcPal.window
-            border.color: qgcPal.windowShadeLight
-            border.width: 1
+            color: qgcPal.settingsSectionAccent
             radius: width / 2
         }
         QGCLabel {

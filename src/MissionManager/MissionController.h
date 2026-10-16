@@ -46,10 +46,15 @@ public:
     MissionController(PlanMasterController* masterController, QObject* parent = nullptr);
     ~MissionController();
 
+    bool uploadConfirmed() const { return _uploadConfirmed; }
+
+    void trackMissionUpload();
+
     // Legacy alias kept for source compatibility with external code
     using MissionFlightStatus_t = ::MissionFlightStatus_t;
 
     Q_PROPERTY(QmlObjectListModel*  visualItems                     READ visualItems                    NOTIFY visualItemsReset)
+    Q_PROPERTY(bool uploadConfirmed READ uploadConfirmed NOTIFY uploadConfirmedChanged)
     Q_PROPERTY(QmlObjectTreeModel*  visualItemsTree                 READ visualItemsTree                CONSTANT)                               ///< Tree-structured view of visualItems for TreeView
     Q_PROPERTY(QPersistentModelIndex planFileGroupIndex              READ planFileGroupIndex              CONSTANT)
     Q_PROPERTY(QPersistentModelIndex defaultsGroupIndex              READ defaultsGroupIndex              CONSTANT)
@@ -319,6 +324,7 @@ public:
     static constexpr int kGroupCount       = 6;
 
 signals:
+    void uploadConfirmedChanged();
     void visualItemsReset                   (void);
     void splitSegmentChanged                (void);
     void newItemsFromVehicle                (void);
@@ -379,6 +385,7 @@ private slots:
 
     void _syncTreeRallyPointsReset                    (void);
 private:
+    void _setUploadConfirmed(bool confirmed);
     void                    _init                               (void);
     void                    _setupTreeModel                     (void);
     void                    _recalcSequence                     (void);
@@ -443,6 +450,9 @@ private:
     FlightPathSegmentHashTable  _flightPathSegmentHashTable;
     bool                        _firstItemsFromVehicle =        false;
     bool                        _itemsRequested =               false;
+    bool _uploadConfirmed = false;
+    bool _uploadPending = false;
+    bool _uploadUnchanged = false;
     bool                        _inRecalcSequence =             false;
     MissionFlightStatusCalculator _flightStatusCalc;
     MissionFlightStatus_t       _missionFlightStatus;

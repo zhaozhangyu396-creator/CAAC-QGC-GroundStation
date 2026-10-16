@@ -149,6 +149,7 @@ public:
     DEFINE_QGC_COLOR(toolStripFGColor,              setToolStripFGColor)
     DEFINE_QGC_COLOR(toolStripHoverColor,           setToolStripHoverColor)
     DEFINE_QGC_COLOR(settingsAccent, setSettingsAccent)
+    DEFINE_QGC_COLOR(settingsSectionAccent, setSettingsSectionAccent)
     DEFINE_QGC_COLOR(groupBorder,                   setGroupBorder)
     DEFINE_QGC_COLOR(modifiedParamValue,            setModifiedParamValue)
     DEFINE_QGC_COLOR(photoCaptureButtonColor,       setPhotoCaptureButtonColor)

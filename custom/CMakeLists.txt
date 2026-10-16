@@ -2,6 +2,52 @@ set(QGC_CAAC_BUILD
     TRUE
     PARENT_SCOPE
 )
+
+CPMAddPackage(
+    NAME caac_monocypher
+    URL https://codeload.github.com/LoupVaillant/Monocypher/tar.gz/refs/tags/4.0.2
+    URL_HASH SHA256=bc1ca30b1b2654e4e7daf2492c0d204200e55137f23fda6b7142fd7d523bd6b4
+    DOWNLOAD_ONLY YES
+)
+add_library(CaacEd25519 STATIC ${caac_monocypher_SOURCE_DIR}/src/monocypher.c
+                               ${caac_monocypher_SOURCE_DIR}/src/optional/monocypher-ed25519.c
+)
+target_include_directories(CaacEd25519 SYSTEM PUBLIC ${caac_monocypher_SOURCE_DIR}/src
+                                                     ${caac_monocypher_SOURCE_DIR}/src/optional
+)
+set_target_properties(CaacEd25519 PROPERTIES POSITION_INDEPENDENT_CODE ON)
+add_library(CaacActivationCrypto STATIC src/Activation/CaacActivationCodec.cc src/Activation/CaacActivationCodec.h)
+target_include_directories(CaacActivationCrypto PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/Activation)
+target_link_libraries(CaacActivationCrypto PRIVATE Qt6::Core CaacEd25519)
+set_target_properties(CaacActivationCrypto PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+# The issuer is deliberately excluded from application builds and installer contents.
+add_executable(CaacLicenseTool EXCLUDE_FROM_ALL tools/CaacLicenseTool.cc)
+target_include_directories(CaacLicenseTool PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/Activation)
+target_link_libraries(CaacLicenseTool PRIVATE CaacActivationCrypto Qt6::Core CaacEd25519)
+
+set(CAAC_ACTIVATION_PUBLIC_KEY_HEX "")
+set(_caac_public_key_file ${CMAKE_CURRENT_SOURCE_DIR}/activation/public-key.hex)
+set_property(
+    DIRECTORY
+    APPEND
+    PROPERTY CMAKE_CONFIGURE_DEPENDS ${_caac_public_key_file}
+)
+if(EXISTS ${_caac_public_key_file})
+    file(READ ${_caac_public_key_file} CAAC_ACTIVATION_PUBLIC_KEY_HEX)
+    string(STRIP "${CAAC_ACTIVATION_PUBLIC_KEY_HEX}" CAAC_ACTIVATION_PUBLIC_KEY_HEX)
+    string(LENGTH "${CAAC_ACTIVATION_PUBLIC_KEY_HEX}" _caac_public_key_length)
+    if(NOT _caac_public_key_length EQUAL 64 OR NOT CAAC_ACTIVATION_PUBLIC_KEY_HEX MATCHES "^[0-9a-fA-F]+$")
+        message(FATAL_ERROR "CAAC activation public key must contain exactly 64 hexadecimal characters")
+    endif()
+else()
+    message(STATUS "CAAC activation public key is not configured; normal startup will stay locked")
+endif()
+configure_file(src/Activation/CaacActivationPublicKey.h.in CaacActivationPublicKey.h @ONLY)
+set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/src/Activation/CaacActivationController.cc TARGET_DIRECTORY
+                            ${CMAKE_PROJECT_NAME} PROPERTIES INCLUDE_DIRECTORIES ${CMAKE_CURRENT_BINARY_DIR}
+)
+
 qt_add_library(CaacPlanModule STATIC)
 qgc_configure_target(CaacPlanModule)
 
@@ -52,6 +98,7 @@ qgc_set_qt_resource_alias(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacWaypointPopup.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacWaypointMenu.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacDrawingAids.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Activation/CaacActivationWindow.qml
 )
 qt_add_qml_module(
     CaacPlanModule
@@ -104,6 +151,7 @@ qt_add_qml_module(
               src/PlanView/CaacWaypointPopup.qml
               src/PlanView/CaacWaypointMenu.qml
               src/PlanView/CaacDrawingAids.qml
+              src/Activation/CaacActivationWindow.qml
     NO_PLUGIN
 )
 
@@ -121,6 +169,8 @@ qt_add_resources(
 )
 
 set(CUSTOM_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CaacActivationController.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Activation/CaacActivationController.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CaacCorePlugin.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CaacCorePlugin.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Route/CaacRouteEditorController.h
@@ -161,7 +211,7 @@ qt_add_resources(
     FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/company-logo.svg ${CMAKE_CURRENT_SOURCE_DIR}/assets/company-logo.ico
 )
 set(CUSTOM_LIBRARIES
-    CaacPlanModule
+    CaacPlanModule CaacActivationCrypto
     PARENT_SCOPE
 )
 qt_add_resources(

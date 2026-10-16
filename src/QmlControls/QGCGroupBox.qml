@@ -30,7 +30,7 @@ GroupBox {
             anchors.verticalCenter: parent.verticalCenter
             width: ScreenTools.defaultFontPixelWidth * 0.35
             height: parent.height
-            color: qgcPal.settingsAccent
+            color: qgcPal.settingsSectionAccent
             radius: width / 2
             visible: control.vehicleSetupStyle || control.settingsMenuStyle
         }

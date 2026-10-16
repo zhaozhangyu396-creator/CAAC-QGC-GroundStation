@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 #include <QtCore/QLocale>
 #include <QtCore/QObject>
 #include <QtCore/QUrl>
@@ -68,6 +70,13 @@ public:
 
     virtual void init() { }
     virtual void cleanup() { }
+
+    /// Return true to defer normal startup until the custom authorization window calls onAuthorized.
+    virtual bool requestApplicationAuthorization(QObject*, std::function<void()> onAuthorized)
+    {
+        Q_UNUSED(onAuthorized);
+        return false;
+    }
 
     /// Called at boot after saved link configurations are loaded and before auto-connect links are started
     virtual void linkConfigurationsLoaded(LinkManager* linkManager) { Q_UNUSED(linkManager); }
