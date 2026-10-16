@@ -304,7 +304,7 @@ jobs:
         with:
           build-dir: ${{ runner.temp }}/build
           build-type: ${{ matrix.build_type }}
-          tests-regex: '^(FactGroupTest|Caac.*Test|AirframeComponentAirframesTest|APMAirframeComponentControllerTest|PX4VehicleConfigUITest|PX4SensorsCalibrationUITest|PX4AirframeSetupUITest|APMVehicleConfigUITest|APMSensorsCalibrationUITest|APMFreshFlashUITest)$'
+          tests-regex: '^(FactGroupTest|Caac.*Test|AirframeComponentAirframesTest|APMAirframeComponentControllerTest|(PX4|APM)(VehicleConfig|SensorsCalibration|AirframeSetup|FreshFlash)UITest)$'
           include-labels: 'Unit|Integration'
           parallel: '1'
           junit-output: junit-caac.xml
