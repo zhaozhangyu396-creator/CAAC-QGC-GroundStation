@@ -201,6 +201,7 @@ void MissionController::sendToVehicle(void)
         qCCritical(MissionControllerLog) << "MissionControllerLog::sendToVehicle called while syncInProgress";
     } else {
         qCDebug(MissionControllerLog) << "MissionControllerLog::sendToVehicle";
+        trackMissionUpload();
         if (_visualItems->count() == 1) {
             // This prevents us from sending a possibly bogus home position to the vehicle
             QmlObjectListModel emptyModel;
@@ -208,7 +209,6 @@ void MissionController::sendToVehicle(void)
         } else {
             sendItemsToVehicle(_managerVehicle, _visualItems);
         }
-        setDirty(false);
     }
 }
 
@@ -614,6 +614,8 @@ void MissionController::removeVisualItem(int viIndex)
 
 void MissionController::_setupNewVisualItems(QmlObjectListModel* newItems)
 {
+    _setUploadConfirmed(false);
+    _uploadUnchanged = false;
     QmlObjectListModel* oldItems = _visualItems;
 
     if (oldItems) {
@@ -1696,6 +1698,8 @@ void MissionController::_itemCommandChanged(void)
 
 void MissionController::_managerVehicleChanged(Vehicle* managerVehicle)
 {
+    _setUploadConfirmed(false);
+    _uploadPending = false;
     if (_managerVehicle) {
         _missionManager->disconnect(this);
         _managerVehicle->disconnect(this);
@@ -1970,6 +1974,10 @@ void MissionController::_progressPctChanged(double progressPct)
 
 void MissionController::_visualItemsDirtyChanged(bool dirty)
 {
+    if (dirty) {
+        _setUploadConfirmed(false);
+        _uploadUnchanged = false;
+    }
     // We could connect signal to signal and not need this but this is handy for setting a breakpoint on
     emit dirtyChanged(dirty);
 }
@@ -2001,10 +2009,31 @@ bool MissionController::showPlanFromManagerVehicle (void)
 
 void MissionController::_managerSendComplete(bool error)
 {
+    if (_uploadPending) {
+        _uploadPending = false;
+        _setUploadConfirmed(!error && _uploadUnchanged && containsItems());
+    }
     // Fly view always reloads on send complete
     if (!error && _flyView) {
         showPlanFromManagerVehicle();
+        _setUploadConfirmed(containsItems());
     }
+}
+
+void MissionController::_setUploadConfirmed(bool confirmed)
+{
+    if (_uploadConfirmed != confirmed) {
+        _uploadConfirmed = confirmed;
+        emit uploadConfirmedChanged();
+    }
+}
+
+void MissionController::trackMissionUpload()
+{
+    _setUploadConfirmed(false);
+    setDirty(false);
+    _uploadPending = true;
+    _uploadUnchanged = true;
 }
 
 void MissionController::_managerRemoveAllComplete(bool error)

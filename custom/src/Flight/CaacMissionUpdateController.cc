@@ -178,6 +178,7 @@ void CaacMissionUpdateController::_tick()
             for (auto* item : items) {
                 item->setParent(manager);
             }
+            _plan->missionController()->trackMissionUpload();
             manager->writeMissionItems(items);
         }
     } else if (_stage == Stage::Uploading || _stage == Stage::Restoring) {

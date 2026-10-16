@@ -136,7 +136,54 @@ private slots:
     void _testMouseEditing();
     void _homeCenterWindowFocus();
     void _planningUtilities();
+    void _deleteLandingFromContextMenu();
 };
+
+void CaacRouteEditorUITest::_deleteLandingFromContextMenu()
+{
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    QVERIFY(QMetaObject::invokeMethod(_window, "showPlanView"));
+    auto* plan = findVisibleItem(_rootItem, QStringLiteral("mainView_plan"));
+    auto* panel = findVisibleItem(_rootItem, QStringLiteral("caacRouteEditor"));
+    auto* map = findVisibleItem(_rootItem, QStringLiteral("planView_map"));
+    QVERIFY(plan && panel && map);
+    auto* master = plan->property("_planMasterController").value<PlanMasterController*>();
+    auto* editor = panel->property("routeController").value<CaacRouteEditorController*>();
+    QVERIFY(master && editor);
+    auto* mission = master->missionController();
+    mission->setHomePosition(QGeoCoordinate(30, 120, 20));
+    QVERIFY(editor->addWaypoint(QGeoCoordinate(30.001, 120)));
+    auto* landing =
+        qobject_cast<SimpleMissionItem*>(mission->insertSimpleMissionItem(QGeoCoordinate(30.002, 120), 2, true));
+    QVERIFY(landing);
+    landing->setCommand(MAV_CMD_NAV_LAND);
+    landing->altitude()->setRawValue(0);
+    map->setProperty("center", QVariant::fromValue(landing->coordinate()));
+    map->setProperty("zoomLevel", 16.0);
+    auto* dragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_2"));
+    QVERIFY(dragger);
+    auto* indicator = dragger->property("itemIndicator").value<QQuickItem*>();
+    QVERIFY(indicator);
+    const auto position = [&]() {
+        return dragger->mapToScene(indicator->property("anchorPoint").toPointF() +
+                                   QPointF(dragger->property("_touchMarginHorizontal").toDouble(),
+                                           dragger->property("_touchMarginVertical").toDouble()));
+    };
+    const auto center = map->mapToScene(QPointF(map->width() / 2, map->height() / 2));
+    QTRY_VERIFY_WITH_TIMEOUT(QLineF(position(), center).length() < 1, TestTimeout::mediumMs());
+    QTest::mouseClick(_window, Qt::RightButton, Qt::NoModifier, position().toPoint());
+    auto* remove = findVisibleItem(_rootItem, QStringLiteral("caacContextDeleteWaypoint"));
+    QVERIFY(remove && remove->isEnabled());
+    QVERIFY(clickButton(QStringLiteral("caacContextDeleteWaypoint")));
+    QCOMPARE(mission->visualItems()->count(), 2);
+    QCOMPARE(mission->visualItems()->value<SimpleMissionItem*>(1)->command(), int(MAV_CMD_NAV_WAYPOINT));
+    QVERIFY(editor->undo());
+    QCOMPARE(mission->visualItems()->count(), 3);
+    QVERIFY(mission->visualItems()->value<SimpleMissionItem*>(2)->isLandCommand());
+}
 
 void CaacRouteEditorUITest::_testMouseEditing_data()
 {

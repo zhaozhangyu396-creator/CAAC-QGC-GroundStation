@@ -571,6 +571,7 @@ bool CaacSimulationController::upload(PlanMasterController* plan, bool preserveP
             }
         },
         Qt::SingleShotConnection);
+    mission->trackMissionUpload();
     MissionController::sendItemsToVehicle(_vehicle, _uploadPlan->missionController()->visualItems());
     return true;
 }

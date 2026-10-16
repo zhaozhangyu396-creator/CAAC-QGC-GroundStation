@@ -15,9 +15,52 @@ class CaacMissionUpdateControllerTest : public MissionTest
 {
     Q_OBJECT
 private slots:
+    void _uploadConfirmation_data();
+    void _uploadConfirmation();
     void _update_data();
     void _update();
 };
+
+void CaacMissionUpdateControllerTest::_uploadConfirmation_data()
+{
+    QTest::addColumn<bool>("editDuringUpload");
+    QTest::newRow("acknowledged") << false;
+    QTest::newRow("edited-and-saved-before-ack") << true;
+}
+
+void CaacMissionUpdateControllerTest::_uploadConfirmation()
+{
+    QFETCH(bool, editDuringUpload);
+    QVERIFY(vehicle());
+    QVERIFY(waitForInitialConnect());
+    QTRY_VERIFY_WITH_TIMEOUT(vehicle()->initialPlanRequestComplete(), TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(vehicle()->homePosition().isValid(), TestTimeout::mediumMs());
+    PlanMasterController plan;
+    plan.setFlyView(false);
+    plan.start();
+    QTRY_COMPARE_WITH_TIMEOUT(plan.managerVehicle(), vehicle(), TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(!plan.syncInProgress(), TestTimeout::mediumMs());
+    auto* mission = plan.missionController();
+    mission->removeAll();
+    mission->setHomePosition(QGeoCoordinate(30, 120, 20));
+    auto* waypoint = mission->insertSimpleMissionItem(QGeoCoordinate(30.001, 120), 1, false);
+    QVERIFY(waypoint);
+    mission->setDirty(false);
+    QVERIFY(!mission->uploadConfirmed());
+    QSignalSpy sent(vehicle()->missionManager(), &MissionManager::sendComplete);
+    mission->sendToVehicle();
+    QVERIFY(!mission->uploadConfirmed());
+    if (editDuringUpload) {
+        waypoint->setCoordinate(QGeoCoordinate(30.002, 120));
+        mission->setDirty(false);
+    }
+    QTRY_COMPARE_WITH_TIMEOUT(sent.count(), 1, TestTimeout::longMs());
+    QVERIFY(!sent.last()[0].toBool());
+    QVERIFY(mission->visualItemIndexForObject(waypoint) >= 1);
+    QCOMPARE(mission->uploadConfirmed(), !editDuringUpload);
+    waypoint->setCoordinate(QGeoCoordinate(30.003, 120));
+    QVERIFY(!mission->uploadConfirmed());
+}
 
 void CaacMissionUpdateControllerTest::_update_data()
 {
@@ -57,9 +100,12 @@ void CaacMissionUpdateControllerTest::_update()
     auto* manager = vehicle()->missionManager();
     QSignalSpy transferErrors(manager, &MissionManager::error);
     QSignalSpy sent(manager, &MissionManager::sendComplete);
+    QVERIFY(!missionController()->uploadConfirmed());
     missionController()->sendToVehicle();
+    QVERIFY(!missionController()->uploadConfirmed());
     QTRY_COMPARE_WITH_TIMEOUT(sent.count(), 1, TestTimeout::longMs());
     QVERIFY(!sent.last()[0].toBool());
+    QVERIFY(missionController()->uploadConfirmed());
     vehicle()->setArmed(true, true);
     QTRY_VERIFY_WITH_TIMEOUT(vehicle()->armed(), TestTimeout::mediumMs());
     vehicle()->setFlightMode(vehicle()->missionFlightMode());
@@ -82,6 +128,7 @@ void CaacMissionUpdateControllerTest::_update()
     auto* waypoint = missionController()->visualItems()->value<SimpleMissionItem*>(changedIndex);
     QVERIFY(waypoint);
     waypoint->setCoordinate(QGeoCoordinate(30.0025, 120.0005));
+    QVERIFY(!missionController()->uploadConfirmed());
     if (structuralChange) {
         QVERIFY(missionController()->insertSimpleMissionItem(QGeoCoordinate(30.004, 120), 4, false));
     }
@@ -120,6 +167,7 @@ void CaacMissionUpdateControllerTest::_update()
         verifyExpectedLogMessage();
     }
     QCOMPARE(finished.last()[0].toBool(), !transferFailure && !structuralChange);
+    QCOMPARE(missionController()->uploadConfirmed(), !transferFailure && !structuralChange);
     QVERIFY(!update.busy());
     if (transferFailure || structuralChange) {
         QCOMPARE(vehicle()->flightMode(), vehicle()->firmwarePlugin()->pauseFlightMode());

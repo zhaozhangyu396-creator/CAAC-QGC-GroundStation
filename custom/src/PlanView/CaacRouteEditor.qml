@@ -34,6 +34,9 @@ Column {
     readonly property var routeController: editorController
     property var simulationPreviewSettings: null
     function prepareUpload() { return globalSettings.prepareUpload() }
+    function requestWaypointUpload() {
+        if (root._canTransfer) { updateWaypointsFactory.open() }
+    }
     readonly property var simulationPreviewSegments: {
         void editorController.coordinateItems
         return editorController.simulationPreviewSegments(simulationPreviewSettings || editorController.simulationSettings)
@@ -69,7 +72,8 @@ Column {
                 property var attachedMap: null
                 path: [preview.modelData.coordinate1, preview.modelData.coordinate2]
                 visible: root.visible && root.enabled
-                line.color: QGroundControl.globalPalette.mapMissionTrajectory
+                line.color: root.planMasterController && root.planMasterController.missionController.uploadConfirmed
+                    ? QGroundControl.globalPalette.colorGreen : QGroundControl.globalPalette.mapMissionTrajectory
                 line.width: ScreenTools.defaultFontPixelWidth * 0.3
                 z: QGroundControl.zOrderWaypointLines
                 Component.onDestruction: { if (attachedMap) { attachedMap.removeMapItem(line) } }
@@ -895,7 +899,7 @@ Column {
                     QGCButton {
                         objectName: "caacRemoveWaypoint_" + card.object.sequenceNumber
                         text: qsTr("Delete")
-                        enabled: card.object.command === 16
+                        enabled: card.object.command === 16 || card.object.isLandCommand
                         heightFactor: 0.2
                         onClicked: {
                             waypointPopup.close()

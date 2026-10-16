@@ -19,6 +19,10 @@ Item {
     readonly property real _toolbarScale: _compactToolbar ? 1.15 : 1
     readonly property real _iconExtent: ScreenTools.defaultFontPixelHeight * (_compactToolbar ? 0.85 : 1) * _toolbarScale
     readonly property real _fontPointSize: (_compactToolbar ? ScreenTools.smallFontPointSize : ScreenTools.defaultFontPointSize) * _toolbarScale
+    readonly property real _contentScale: Math.min(1,
+        leftPanel.width / Math.max(1, leftPanelLayout.implicitWidth),
+        flightActionHost.width / Math.max(1, flightActionLayout.implicitWidth),
+        rightPanel.width / Math.max(1, rightIndicators.implicitWidth))
     property alias flightToolStrip: flightActions
     property bool flightSettingsExpanded: false
     signal displayPreFlightChecklist
@@ -95,7 +99,7 @@ Item {
                     id:         leftPanelLayout
                     height:     parent.height
                     spacing:    ScreenTools.defaultFontPixelWidth * (control._compactToolbar ? 0.35 : 2)
-                    scale:      Math.min(1, leftPanel.width / Math.max(1, implicitWidth))
+                    scale:      control._contentScale
                     transformOrigin: Item.Left
 
                     RowLayout {
@@ -135,6 +139,7 @@ Item {
                         Layout.fillHeight:  true
                         toolbarButtonStyle: QGroundControl.corePlugin.directMissionItemEditing
                         toolbarScale: control._toolbarScale
+                        fontPointSize: control._fontPointSize
                         visible: QGroundControl.corePlugin.directMissionItemEditing || !!_activeVehicle
                     }
                 }
@@ -176,7 +181,7 @@ Item {
                     height: parent.height * 0.72
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.right: parent.right
-                    scale: Math.min(1, rightPanel.width / Math.max(1, implicitWidth))
+                    scale: control._contentScale
                     transformOrigin: Item.Right
                     spacing: ScreenTools.defaultFontPixelWidth * (control._compactToolbar ? 1.5 : 1)
                     RowLayout {
@@ -306,13 +311,15 @@ Item {
         }
 
         RowLayout {
+            id: flightActionLayout
             anchors.verticalCenter: parent.verticalCenter
             height: parent.height
-            scale: Math.min(1, parent.width / Math.max(1, implicitWidth))
+            scale: control._contentScale
             transformOrigin: Item.Left
             spacing: ScreenTools.defaultFontPixelWidth * 0.5
             QGCButton {
                 id: flightSettingsButton
+                Layout.alignment: Qt.AlignVCenter
                 objectName: "caacFlightSettingsButton"
                 text: qsTr("Route flight")
                 checked: control.flightSettingsExpanded
@@ -327,6 +334,7 @@ Item {
             }
             RowLayout {
                 objectName: "caacArmStatusIndicator"
+                Layout.alignment: Qt.AlignVCenter
                 spacing: ScreenTools.defaultFontPixelWidth * 0.35
                 Accessible.name: qsTr("Propeller lock status") + ": " + armStatus.text
                 QGCColoredImage {
@@ -347,6 +355,7 @@ Item {
             }
             QGCButton {
                 objectName: "caacSensorStatusButton"
+                Layout.alignment: Qt.AlignVCenter
                 heightFactor: 0.25
                 pointSize: control._fontPointSize
                 _horizontalPadding: ScreenTools.defaultFontPixelWidth * (control._compactToolbar ? 0.6 : 2)

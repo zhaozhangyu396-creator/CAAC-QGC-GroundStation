@@ -1293,8 +1293,9 @@ bool CaacRouteEditorController::removeCurrentWaypoint()
         return false;
     }
     auto* item = currentItem();
-    if (!item || item->command() != MAV_CMD_NAV_WAYPOINT) {
-        return _fail(tr("Only ordinary waypoints can be removed here."));
+    if (!item || (item->command() != MAV_CMD_NAV_WAYPOINT && !item->isLandCommand()) ||
+        _missionController()->visualItemIndexForObject(item) < 1) {
+        return _fail(tr("Select a simple coordinate mission item."));
     }
     beginEdit();
     const auto finish = qScopeGuard([this]() { endEdit(); });

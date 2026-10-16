@@ -83,6 +83,41 @@ void CaacFlightDataUITest::_toolbarStatusSpacing()
     auto* button = findVisibleItem(_rootItem, QStringLiteral("caacConnectionStatusButton"));
     auto* rc = findVisibleItem(_rootItem, QStringLiteral("caacRCRSSIIndicator"));
     QVERIFY(label && button && rc);
+    const auto buttonLabel = [&](const QString& name) -> QQuickItem* {
+        auto* item = findVisibleItem(_rootItem, name);
+        if (!item) {
+            return nullptr;
+        }
+        auto* content = item->property("contentItem").value<QQuickItem*>();
+        if (content) {
+            for (auto* child : content->childItems()) {
+                if (child->property("paintedWidth").isValid() && child->property("text") == item->property("text")) {
+                    return child;
+                }
+            }
+        }
+        return nullptr;
+    };
+    auto* mode = buttonLabel(QStringLiteral("caacFlightModeButton"));
+    auto* route = buttonLabel(QStringLiteral("caacFlightSettingsButton"));
+    auto* sensors = buttonLabel(QStringLiteral("caacSensorStatusButton"));
+    auto* armed = findVisibleItem(_rootItem, QStringLiteral("caacArmStatusValue"));
+    QVERIFY(mode && route && sensors && armed);
+    const auto aligned = [&]() {
+        const qreal pointSize = mode->property("font").value<QFont>().pointSizeF();
+        const auto baseline = [](QQuickItem* item) { return item->mapToScene(QPointF(0, item->baselineOffset())).y(); };
+        const auto scale = [](QQuickItem* item) {
+            return item->mapToScene(QPointF(0, 1)).y() - item->mapToScene(QPointF(0, 0)).y();
+        };
+        for (auto* item : {route, sensors, armed}) {
+            if (!qFuzzyCompare(item->property("font").value<QFont>().pointSizeF(), pointSize) ||
+                qAbs(scale(item) - scale(mode)) > 0.001 || qAbs(baseline(item) - baseline(mode)) > 1.5) {
+                return false;
+            }
+        }
+        return true;
+    };
+    QTRY_VERIFY_WITH_TIMEOUT(aligned(), TestTimeout::shortMs());
     QFont font = label->property("font").value<QFont>();
     font.setPointSizeF(font.pointSizeF() * fontScale);
     QVERIFY(label->setProperty("font", font));

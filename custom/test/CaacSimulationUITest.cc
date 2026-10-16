@@ -101,8 +101,11 @@ void CaacSimulationUITest::_repeatFromLanding()
     QTRY_VERIFY_WITH_TIMEOUT(simulation->vehicle() && simulation->vehicle()->isInitialConnectComplete(),
                              TestTimeout::longMs());
     QSignalSpy uploaded(simulation, &CaacSimulationController::missionUploaded);
+    QVERIFY(!mission->uploadConfirmed());
     QVERIFY(simulation->upload(master));
+    QVERIFY(!mission->uploadConfirmed());
     QTRY_VERIFY_WITH_TIMEOUT(!uploaded.isEmpty(), TestTimeout::longMs());
+    QVERIFY(mission->uploadConfirmed());
     auto* vehicle = simulation->vehicle();
     const auto action = [&](const QString& name) {
         if (!findVisibleItem(_rootItem, QStringLiteral("caacFlightSettingsPanel"), 0) &&
@@ -325,6 +328,22 @@ void CaacMissionUpdateUITest::_updateWaypointsDuringFlight()
     QVERIFY2(finished.last()[0].toBool(), qPrintable(finished.last()[1].toString()));
     QCOMPARE(vehicle->flightMode(), vehicle->missionFlightMode());
     QVERIFY(positionUploaded(landing));
+    QVERIFY(takeoffDraft->setProperty("text", QStringLiteral("2")));
+    QVERIFY(globalSettings->setProperty("simulationInputsEdited", false));
+    waypoint->setCoordinate(QGCGeo::geodesicDestination(waypoint->coordinate(), 90, 5));
+    finished.clear();
+    pausedDuringTransfer = false;
+    QVERIFY(QMetaObject::invokeMethod(master, "upload"));
+    QVERIFY(waitForDialog(QCoreApplication::translate("CaacRouteEditor", "Update waypoints")));
+    QVERIFY(acceptDialog());
+    QTRY_VERIFY_WITH_TIMEOUT(!finished.isEmpty(), TestTimeout::longMs());
+    QVERIFY2(finished.last()[0].toBool(), qPrintable(finished.last()[1].toString()));
+    QVERIFY(pausedDuringTransfer);
+    QCOMPARE(vehicle->flightMode(), vehicle->missionFlightMode());
+    QCOMPARE(manager->currentIndex(), previousTarget);
+    QCOMPARE(simulation->remainingLoops(), previousLoops);
+    QVERIFY(positionUploaded(waypoint));
+    QVERIFY(master->missionController()->uploadConfirmed());
     auto* link = qobject_cast<MockLink*>(vehicle->vehicleLinkManager()->primaryLink().lock().get());
     QVERIFY(link);
     expectLogMessage("API.QGCApplication.AppMessage", QtDebugMsg,
@@ -1358,8 +1377,8 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     QVERIFY(waitForDialog(QStringLiteral("上传航线")));
     QVERIFY(acceptDialog());
     QVERIFY(QMetaObject::invokeMethod(master, "upload"));
-    QVERIFY(waitForDialog(QStringLiteral("上传航线")));
-    QVERIFY(acceptDialog());
+    QVERIFY(waitForDialog(QCoreApplication::translate("CaacRouteEditor", "Update waypoints")));
+    QVERIFY(rejectDialog());
     QCOMPARE(manager->missionItems(), originalAircraftItems);
     QCOMPARE(blockedTransfer.count(), 0);
     QVERIFY(!manager->inProgress());
