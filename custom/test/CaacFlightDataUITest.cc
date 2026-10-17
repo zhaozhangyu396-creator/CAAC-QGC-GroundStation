@@ -194,28 +194,40 @@ void CaacFlightDataUITest::_mapZoomControls()
 void CaacFlightDataUITest::_safetySpeedUnits_data()
 {
     QTest::addColumn<int>("firmwareType");
+    QTest::addColumn<int>("vehicleType");
     QTest::addColumn<QString>("parameterName");
+    QTest::addColumn<QString>("logicalName");
     QTest::addColumn<double>("rawUnitsPerMeterPerSecond");
-    QTest::newRow("px4-meters-per-second") << int(MAV_AUTOPILOT_PX4) << QStringLiteral("MPC_XY_CRUISE") << 1.0;
-    QTest::newRow("apm-centimeters-per-second")
-        << int(MAV_AUTOPILOT_ARDUPILOTMEGA) << QStringLiteral("WPNAV_SPEED") << 100.0;
+    QTest::addColumn<double>("targetMetersPerSecond");
+    QTest::newRow("px4-meters-per-second")
+        << int(MAV_AUTOPILOT_PX4) << int(MAV_TYPE_QUADROTOR) << QStringLiteral("MPC_XY_CRUISE")
+        << QStringLiteral("MPC_XY_CRUISE") << 1.0 << 7.0;
+    QTest::newRow("apm-current-meters-per-second")
+        << int(MAV_AUTOPILOT_ARDUPILOTMEGA) << int(MAV_TYPE_QUADROTOR) << QStringLiteral("WP_SPD")
+        << QStringLiteral("MPC_XY_CRUISE") << 1.0 << 7.0;
+    QTest::newRow("apm-legacy-centimeters-per-second")
+        << int(MAV_AUTOPILOT_ARDUPILOTMEGA) << int(MAV_TYPE_SUBMARINE) << QStringLiteral("PILOT_SPEED_UP")
+        << QStringLiteral("MPC_Z_VEL_MAX_UP") << 100.0 << 3.25;
 }
 
 void CaacFlightDataUITest::_safetySpeedUnits()
 {
     QFETCH(int, firmwareType);
+    QFETCH(int, vehicleType);
     QFETCH(QString, parameterName);
+    QFETCH(QString, logicalName);
     QFETCH(double, rawUnitsPerMeterPerSecond);
+    QFETCH(double, targetMetersPerSecond);
     startUI();
     if (QTest::currentTestFailed()) {
         return;
     }
     Vehicle* vehicle = nullptr;
     auto mock = connectMockLinkAndWaitReady(
-        [firmwareType]() {
+        [firmwareType, vehicleType]() {
             auto* config = new MockConfiguration(QStringLiteral("Safety speed units"));
             config->setFirmwareType(static_cast<MAV_AUTOPILOT>(firmwareType));
-            config->setVehicleType(MAV_TYPE_QUADROTOR);
+            config->setVehicleType(static_cast<MAV_TYPE>(vehicleType));
             config->setSendRadioStatus(false);
             config->setSendStatusText(false);
             return MockLink::startMockLink(config);
@@ -223,9 +235,12 @@ void CaacFlightDataUITest::_safetySpeedUnits()
         vehicle);
     QVERIFY(mock && vehicle);
     const auto disconnect = qScopeGuard([&]() { disconnectMockLink(mock); });
+    QVERIFY(vehicle->parameterManager()->parameterExists(vehicle->defaultComponentId(), parameterName));
     auto* speed = vehicle->parameterManager()->getParameter(vehicle->defaultComponentId(), parameterName);
     QVERIFY(speed);
-    const double initialRaw = 10.0 * rawUnitsPerMeterPerSecond;
+    QCOMPARE(speed->rawUnits(), rawUnitsPerMeterPerSecond == 100.0 ? QStringLiteral("cm/s") : QStringLiteral("m/s"));
+    QVERIFY(speed->enumStrings().isEmpty());
+    const double initialRaw = 4.0 * rawUnitsPerMeterPerSecond;
     if (speed->rawValue().toDouble() != initialRaw) {
         QSignalSpy updated(speed, &Fact::vehicleUpdated);
         speed->setRawValue(initialRaw);
@@ -234,29 +249,34 @@ void CaacFlightDataUITest::_safetySpeedUnits()
     QTRY_COMPARE_WITH_TIMEOUT(speed->rawValue().toDouble(), initialRaw, TestTimeout::mediumMs());
     QVERIFY(clickButton(QStringLiteral("toolbar_qgcLogo")));
     QVERIFY(clickButtonScrolled(QStringLiteral("toolbar_safety"), QStringLiteral("caacSettingsNavigationScroller")));
-    const QString fieldName = QStringLiteral("caacSafety_MPC_XY_CRUISE_value");
+    const QString fieldName = QStringLiteral("caacSafety_") + logicalName + QStringLiteral("_value");
     const QString scroller = QStringLiteral("caacSafetyScroller");
     auto* field = findVisibleItemScrolled(fieldName, scroller);
     QVERIFY(field && field->isEnabled());
-    QTRY_COMPARE_WITH_TIMEOUT(field->property("text").toString().toDouble(), 10.0, TestTimeout::mediumMs());
-    auto* units = findVisibleItem(_rootItem, QStringLiteral("caacSafety_MPC_XY_CRUISE_units"));
+    QTRY_COMPARE_WITH_TIMEOUT(field->property("text").toString().toDouble(), 4.0, TestTimeout::mediumMs());
+    auto* units = findVisibleItem(_rootItem, QStringLiteral("caacSafety_") + logicalName + QStringLiteral("_units"));
     QVERIFY(units);
     QCOMPARE(units->property("text").toString(), QStringLiteral("m/s"));
     const int writes = mock->receivedMavlinkMessageCount(MAVLINK_MSG_ID_PARAM_SET);
     QVERIFY(clickButtonScrolled(fieldName, scroller));
     QTest::keyClick(_window, Qt::Key_A, Qt::ControlModifier);
-    QTest::keyClick(_window, Qt::Key_2);
-    QTest::keyClick(_window, Qt::Key_Period);
-    QTest::keyClick(_window, Qt::Key_7);
-    QTest::keyClick(_window, Qt::Key_5);
+    const QString editedText = QString::number(targetMetersPerSecond);
+    for (const auto character : editedText) {
+        QTest::keyClick(_window, character.toLatin1());
+    }
+    QCOMPARE(field->property("text").toString(), editedText);
     QTest::keyClick(_window, Qt::Key_Tab);
     QCOMPARE(speed->rawValue().toDouble(), initialRaw);
     QCOMPARE(mock->receivedMavlinkMessageCount(MAVLINK_MSG_ID_PARAM_SET), writes);
+    QSignalSpy written(speed, &Fact::vehicleUpdated);
     QVERIFY(clickButtonScrolled(QStringLiteral("caacSafetyConfirm_RTL_RETURN_ALT"), scroller));
-    QTRY_COMPARE_WITH_TIMEOUT(speed->rawValue().toDouble(), 2.75 * rawUnitsPerMeterPerSecond, TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(speed->rawValue().toDouble(), targetMetersPerSecond * rawUnitsPerMeterPerSecond,
+                              TestTimeout::mediumMs());
     QTRY_VERIFY_WITH_TIMEOUT(mock->receivedMavlinkMessageCount(MAVLINK_MSG_ID_PARAM_SET) > writes,
                              TestTimeout::mediumMs());
-    QTRY_COMPARE_WITH_TIMEOUT(field->property("text").toString().toDouble(), 2.75, TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(!written.isEmpty(), TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(field->property("text").toString().toDouble(), targetMetersPerSecond,
+                              TestTimeout::mediumMs());
 }
 
 void CaacFlightDataUITest::_safetyFailsafeEnums_data()
@@ -278,8 +298,11 @@ void CaacFlightDataUITest::_safetyFailsafeEnums()
     const auto restoreLanguage = qScopeGuard([&]() {
         if (language->rawValue() != savedLanguage) {
             qgcApp()->resetRebootMessageDebounce();
+            expectAppMessage(QRegularExpression(
+                QRegularExpression::escape(Fact::tr("Restart application for changes to take effect."))));
             language->setRawValue(savedLanguage);
             (void) acceptDialog(5000);
+            verifyExpectedLogMessage();
         }
     });
     ignoreLogMessage("API.QGCApplication", QtWarningMsg,

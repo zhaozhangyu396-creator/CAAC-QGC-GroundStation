@@ -568,8 +568,10 @@ void CaacPlanningInteractionUITest::_waypointDragRemainsResponsive()
         QVERIFY(!editor->canUndo());
         QTRY_VERIFY_WITH_TIMEOUT(previousDragger.isNull(), TestTimeout::mediumMs());
         waypoint = master->missionController()->visualItems()->value<SimpleMissionItem*>(draggedIndex);
-        dragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_%1").arg(draggedIndex));
-        QVERIFY(waypoint && dragger);
+        QVERIFY(waypoint);
+        QTRY_VERIFY_WITH_TIMEOUT(
+            (dragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_%1").arg(draggedIndex), 0)),
+            TestTimeout::mediumMs());
         QTRY_VERIFY_WITH_TIMEOUT(
             QLineF(dragger->mapToScene(QPointF(dragger->width() / 2, dragger->height() / 2)), center()).length() < 1,
             TestTimeout::mediumMs());
@@ -769,10 +771,13 @@ void CaacPlanningInteractionUITest::_newSettingsPages()
             QVERIFY(clickButton(QStringLiteral("vehicleConfig_backToMenu")));
             QVERIFY(clickButtonScrolled(QStringLiteral("vehicleConfig_offline_Sensors"),
                                         QStringLiteral("vehicleConfig_sidebarFlickable")));
-            auto* calibration = findVisibleItemScrolled(QStringLiteral("sensorsSetup_calibrateAccel"),
+            auto* sensors = findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_inlinePanel"));
+            QVERIFY(sensors);
+            QCOMPARE(sensors->property("sectionId").toString(), QStringLiteral("Orientations"));
+            auto* orientation = findVisibleItemScrolled(QStringLiteral("sensorsSetup_setOrientation"),
                                                         QStringLiteral("sensorsSetup_buttonScroller"));
-            QVERIFY(calibration && !calibration->isEnabled());
-            QVERIFY(findVisibleItem(_rootItem, QStringLiteral("sensorCalibrationPreview")));
+            QVERIFY(orientation && !orientation->isEnabled());
+            QVERIFY(!findVisibleItem(sensors, QStringLiteral("sensorsSetup_inlineWorkflow"), 0));
             QVERIFY(plan->isVisible() && !drawer->isVisible());
             QVERIFY(capture(QStringLiteral("caacVehicleCalibrationInline")));
             QVERIFY(clickButton(QStringLiteral("vehicleConfig_backToMenu")));
@@ -1977,6 +1982,11 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
                              "caacSimLoopsSection", "caacMapEditingSection"}) {
         QVERIFY(findItem(_rootItem, QLatin1String(name)));
     }
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacHomeAltitude"), QStringLiteral("caacGlobalSettingsScroller")));
+    QTest::keyClick(_window, Qt::Key_A, Qt::ControlModifier);
+    QTest::keyClick(_window, Qt::Key_2);
+    QTest::keyClick(_window, Qt::Key_0);
+    QTest::keyClick(_window, Qt::Key_Tab);
     const auto beforeHomeCoordinates = master->saveToJson();
     for (const auto& entry :
          {std::pair<QString, QString>{QStringLiteral("caacHomeLongitude"), QStringLiteral("8.54525860115325")},

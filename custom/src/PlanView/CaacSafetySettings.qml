@@ -44,6 +44,9 @@ Item {
         readonly property string displayUnits: centimetersPerSecond ? "m/s" : fact ? fact.units : ""
         property bool edited: false
         property var draftValue: null
+        onCentimetersPerSecondChanged: {
+            if (value && !edited) { value.text = displayText() }
+        }
         onFactChanged: { edited = false; draftValue = null; if (value) { value.text = displayText() } }
         objectName: "caacSafety_" + definition.names[0]
         Layout.fillWidth: true
@@ -203,13 +206,13 @@ Item {
             SafetySection {
                 title: qsTr("Flight safety settings")
                 definitions: [
-                    {label: qsTr("Return altitude"), names: ["RTL_RETURN_ALT", "RTL_ALT"]},
-                    {label: qsTr("Horizontal speed (route)"), names: ["MPC_XY_CRUISE", "WPNAV_SPEED"]},
-                    {label: qsTr("Ascent speed (route)"), names: ["MPC_Z_V_AUTO_UP", "WPNAV_SPEED_UP"]},
-                    {label: qsTr("Descent speed (route)"), names: ["MPC_Z_V_AUTO_DN", "WPNAV_SPEED_DN"]},
-                    {label: qsTr("Horizontal speed (manual)"), names: ["MPC_VEL_MANUAL", "LOIT_SPEED"]},
-                    {label: qsTr("Ascent speed (manual)"), names: ["MPC_Z_VEL_MAX_UP", "PILOT_SPEED_UP"]},
-                    {label: qsTr("Descent speed (manual)"), names: ["MPC_Z_VEL_MAX_DN", "PILOT_SPEED_DN"]},
+                    {label: qsTr("Return altitude"), names: ["RTL_RETURN_ALT", "RTL_ALT", "RTL_ALT_M"]},
+                    {label: qsTr("Horizontal speed (route)"), names: ["MPC_XY_CRUISE", "WPNAV_SPEED", "WP_SPD"]},
+                    {label: qsTr("Ascent speed (route)"), names: ["MPC_Z_V_AUTO_UP", "WPNAV_SPEED_UP", "WP_SPD_UP"]},
+                    {label: qsTr("Descent speed (route)"), names: ["MPC_Z_V_AUTO_DN", "WPNAV_SPEED_DN", "WP_SPD_DN"]},
+                    {label: qsTr("Horizontal speed (manual)"), names: ["MPC_VEL_MANUAL", "LOIT_SPEED", "LOIT_SPEED_MS"]},
+                    {label: qsTr("Ascent speed (manual)"), names: ["MPC_Z_VEL_MAX_UP", "PILOT_SPEED_UP", "PILOT_SPD_UP"]},
+                    {label: qsTr("Descent speed (manual)"), names: ["MPC_Z_VEL_MAX_DN", "PILOT_SPEED_DN", "PILOT_SPD_DN"]},
                     {label: qsTr("Altitude limit"), names: ["GF_MAX_VER_DIST", "FENCE_ALT_MAX"]},
                     {label: qsTr("Radar detection distance"), names: ["CP_DIST", "AVOID_DIST_MAX"]},
                     {label: qsTr("Obstacle braking distance"), names: ["CP_STOP_DIST", "AVOID_MARGIN"]},

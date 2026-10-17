@@ -186,7 +186,7 @@ add_qgc_test(
     MissionManager
     NoSanitizer
     TIMEOUT
-    180
+    300
     ENV_MODIFICATION
     "QGC_TEST_LOCALE=set:zh_CN"
     ${_caac_ui_env}

@@ -1,4 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800">
+<rect width="800" height="800" rx="28" fill="#090a0f"/>
 <ellipse cx="400.0" cy="402.5" rx="140.0" ry="282.5" fill="#48494d"/>
 <ellipse cx="400.0" cy="259.5" rx="100.0" ry="95.5" fill="#292b30"/>
 <polygon points="263,485 190,535 190,635 296,592" fill="#48494d"/>

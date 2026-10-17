@@ -357,10 +357,18 @@ void VehicleConfigUITestBase::verifyInteractiveTuningChart()
             return false;
         }
         graph->ensurePolished();
-        const QPoint point = graph->mapToScene(graph->property("plotArea").toRectF().center()).toPoint();
-        if (!QRect(QPoint(), _window->size()).contains(point)) {
+        QRectF visiblePlot = graph->mapRectToScene(graph->property("plotArea").toRectF());
+        for (auto* ancestor = graph->parentItem(); ancestor; ancestor = ancestor->parentItem()) {
+            if (ancestor->clip()) {
+                visiblePlot = visiblePlot.intersected(ancestor->mapRectToScene(ancestor->boundingRect()));
+            }
+        }
+        visiblePlot = visiblePlot.intersected(QRectF(QPointF(), _window->size())).adjusted(1, 1, -1, -1);
+        if (visiblePlot.width() <= 1 || visiblePlot.height() <= 1) {
+            chartClickFailure = QStringLiteral("Chart plot is outside the visible viewport");
             return false;
         }
+        const QPoint point = visiblePlot.center().toPoint();
         auto* input = findVisibleItem(graph->parentItem(), QStringLiteral("pidTuning_chartInput"));
         if (!input) {
             chartClickFailure = QStringLiteral("Chart input area is not visible");
