@@ -36,7 +36,7 @@ SetupPage {
             readonly property string accelHelp:     qsTr("For Accelerometer calibration you will need to place your vehicle on all six sides on a perfectly level surface and hold it still in each orientation for a few seconds.")
             readonly property string levelHelp:     qsTr("To level the horizon you need to place the vehicle in its level flight position and press OK.")
 
-            readonly property string statusTextAreaDefaultText: qsTr("Start the individual calibration steps by clicking one of the buttons to the left.")
+            readonly property string statusTextAreaDefaultText: ""
 
             // Used to pass help text to the preCalibrationDialog dialog
             property string preCalibrationDialogHelp
@@ -892,11 +892,14 @@ SetupPage {
                     id:     centerPanel
                     width:  parent.width
                     height: parent.height - y
+                    visible: controller.calibrationActive || controller.showOrientationCalArea || statusTextArea.text.length > 0
 
                     TextArea {
                         id:             statusTextArea
+                        objectName:     "sensorsSetup_statusLog"
                         anchors.fill:   parent
                         readOnly:       true
+                        visible:        !orientationCalArea.visible && text.length > 0
                         text:           statusTextAreaDefaultText
                         color:          qgcPal.text
                         background:     Rectangle { color: qgcPal.windowShade }

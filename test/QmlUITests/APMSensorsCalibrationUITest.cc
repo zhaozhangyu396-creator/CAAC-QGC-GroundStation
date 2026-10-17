@@ -241,6 +241,11 @@ void APMSensorsCalibrationUITest::_testCompassCalibrationStartRejected()
     verifyExpectedLogMessage();  // command failed
     verifyExpectedLogMessage();  // Calibration failed
 
+    auto* statusLog = findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_statusLog"), 3000);
+    QVERIFY2(statusLog, "Calibration failure log is not visible");
+    QVERIFY2(statusLog->property("text").toString().contains(QStringLiteral("Failed to start compass calibration")),
+             "Calibration failure log does not contain the rejected start result");
+
     waitForParamRefreshQuiet(vehicle);
     if (QTest::currentTestFailed()) return;
 
@@ -264,6 +269,9 @@ void APMSensorsCalibrationUITest::_testAccelCalibration()
 
     navigateToAPMSensorsPage();
     if (QTest::currentTestFailed()) return;
+
+    QVERIFY2(!findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_statusLog"), 0),
+             "Idle calibration log panel should be hidden");
 
     QVERIFY2(clickButtonScrolled(QStringLiteral("sensorsSetup_setOrientation"),
                                  QStringLiteral("sensorsSetup_buttonScroller")),

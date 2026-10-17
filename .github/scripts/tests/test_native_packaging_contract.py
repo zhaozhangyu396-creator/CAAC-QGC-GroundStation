@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -252,13 +253,31 @@ include(CreateCPackNSIS)
                 assert "Set install registry entry:" not in final_script
                 assert "显卡兼容模式" in final_script
                 assert "Var Runtime_selected" in final_script
+                uninstall_previous = final_script.index("qgc_uninstall_previous:")
+                install_runtime = final_script.index('Section "运行文件" Runtime')
+                assert uninstall_previous < install_runtime
+                assert final_script.count("qgc_uninstall_previous:") == 1
                 desktop_enabled = final_script.index('StrCpy $INSTALL_DESKTOP "1"')
                 desktop_created = final_script.index(
                     'CreateShortCut "$DESKTOP\\飞虎无人机地面站系统.lnk"'
                 )
                 assert desktop_enabled < desktop_created
                 assert 'SetOutPath "$INSTDIR\\bin"' in final_script[desktop_enabled:desktop_created]
-                assert '"$INSTDIR\\bin\\QGroundControl.exe" 0' in final_script[desktop_created:]
+                icon_source = REPO_ROOT / "deploy/windows/WindowsQGC.ico"
+                icon_digest = hashlib.sha256(icon_source.read_bytes()).hexdigest()
+                icon_name = f"QGroundControl-icon-{icon_digest}.ico"
+                expected_icon = f"$INSTDIR\\bin\\{icon_name}"
+                shortcut_icons = re.findall(
+                    r'CreateShortCut\s+"[^"]+\.lnk"\s+"\$INSTDIR\\bin\\QGroundControl.exe"'
+                    r'\s+"(?:|-swrast)"\s+"([^"]+)"\s+0',
+                    re.sub(r"\\\r?\n", " ", final_script),
+                )
+                assert shortcut_icons == [expected_icon] * 3
+                assert f'Delete "{expected_icon}"' in final_script
+                assert "shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)" in final_script
+                packaged_icons = list((build_dir / "_CPack_Packages").rglob(icon_name))
+                assert len(packaged_icons) == 1
+                assert packaged_icons[0].read_bytes() == icon_source.read_bytes()
         else:
             assert "GPU Safe Mode" in config
             assert "CaacChineseGuiInit" not in config

@@ -130,6 +130,8 @@ void PX4SensorsCalibrationUITest::_navigateToSensorsPanel()
 
     QVERIFY2(findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_calibrateCompass"), 3000),
              "Calibrate Compass button not found after opening Sensors page");
+    QVERIFY2(!findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_statusLog"), 0),
+             "Idle calibration log panel should be hidden");
 
     // The prerequisite-setup message panel ("%1 setup must be completed prior to %2
     // setup.") must not be shown: SYS_AUTOSTART is preserved across the param reset

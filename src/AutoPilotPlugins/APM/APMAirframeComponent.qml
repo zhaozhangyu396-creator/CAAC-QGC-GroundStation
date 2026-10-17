@@ -7,6 +7,8 @@ import QGroundControl
 import QGroundControl.FactControls
 import QGroundControl.Controls
 
+import "qrc:/qml/QGroundControl/Controls/AirframeCatalog.js" as AirframeCatalog
+
 SetupPage {
     id:             airframePage
     objectName:     "apmAirframePage"
@@ -91,6 +93,18 @@ SetupPage {
                 wrapMode:           Text.WordWrap
             }
 
+            QGCLabel {
+                objectName: "apmAirframeMotorNumberingNote"
+                Layout.fillWidth: true
+                visible: mainColumn._frameClasses.some(frame => {
+                    const resource = _frameClass && frame.frameClass === _frameClass.rawValue
+                        ? frame.imageResource : frame.imageResourceDefault
+                    return frame.category === "multirotor" && AirframeCatalog.apmImage(resource) !== resource
+                })
+                text: qsTr("图片中的电机编号适用于 PX4；当前飞控编号以电机页面为准。")
+                wrapMode: Text.WordWrap
+            }
+
             Item {
                 id:             lastSpacer
                 height:         parent.spacerHeight
@@ -158,13 +172,15 @@ SetupPage {
 
                                 Image {
                                     id:                 image
+                                    objectName:         "apmAirframeImage_" + outerRect.frame.name
                                     Layout.fillWidth:   true
                                     Layout.fillHeight:  true
                                     fillMode:           Image.PreserveAspectFit
                                     smooth:             true
                                     antialiasing:       true
                                     sourceSize.width:   width
-                                    source:             outerRect.selected ? outerRect.frame.imageResource : outerRect.frame.imageResourceDefault
+                                    source:             AirframeCatalog.apmImage(outerRect.selected
+                                                            ? outerRect.frame.imageResource : outerRect.frame.imageResourceDefault)
                                 }
 
                                 QGCLabel {

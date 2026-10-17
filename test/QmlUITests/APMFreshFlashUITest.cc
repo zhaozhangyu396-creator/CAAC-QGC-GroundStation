@@ -193,6 +193,17 @@ void APMFreshFlashUITest::_testFreshFlashSetupState()
             QQuickItem* quadBox = findVisibleItem(_rootItem, QStringLiteral("apmAirframeBox_Quad"), 3000);
             QVERIFY2(quadBox, "Quad airframe box not found on Frame page");
             QVERIFY(scrollIntoView(quadBox, QStringLiteral("vehicleSetup_scroller")));
+            const QStringList uploadedFrames = {QStringLiteral("Quad"), QStringLiteral("Hexa")};
+            const QStringList uploadedImages = {QStringLiteral("quadrotor-x"), QStringLiteral("hexarotor-x")};
+            for (qsizetype index = 0; index < uploadedFrames.size(); ++index) {
+                QQuickItem* image = findItem(_rootItem, QStringLiteral("apmAirframeImage_") + uploadedFrames.at(index));
+                QVERIFY(image);
+                QTRY_COMPARE_WITH_TIMEOUT(
+                    image->property("source").toUrl(),
+                    QUrl(QStringLiteral("qrc:/qmlimages/Airframe/Uploaded/%1.svg").arg(uploadedImages.at(index))),
+                    TestTimeout::shortMs());
+                QTRY_COMPARE_WITH_TIMEOUT(image->property("status").toInt(), 1, TestTimeout::shortMs());
+            }
             QVERIFY2(frameClassWriteSpy.isEmpty() && frameTypeWriteSpy.isEmpty(),
                      "Browsing airframe categories must not write frame parameters");
             QCOMPARE(frameClassFact->rawValue(), initialFrameClass);
@@ -216,6 +227,11 @@ void APMFreshFlashUITest::_testFreshFlashSetupState()
             QVERIFY2(QTest::qWaitFor([&] { return frameClassFact->rawValue().toInt() == 1; }, 5000),
                      "FRAME_CLASS never set to Quad after clicking the Quad box");
             QCOMPARE(frameTypeFact->rawValue().toInt(), 1);  // X is the Quad default frame type
+            QQuickItem* selectedQuadImage = findItem(_rootItem, QStringLiteral("apmAirframeImage_Quad"));
+            QVERIFY(selectedQuadImage);
+            QTRY_COMPARE_WITH_TIMEOUT(selectedQuadImage->property("source").toUrl(),
+                                      QUrl(QStringLiteral("qrc:/qmlimages/Airframe/Uploaded/quadrotor-x.svg")),
+                                      TestTimeout::shortMs());
 
             // Dismiss the reboot-required notice before interacting with the UI again
             QVERIFY2(QTest::qWaitFor([&] { return frameClassAckSpy.count() >= 1; }, 5000),

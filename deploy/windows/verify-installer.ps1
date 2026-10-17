@@ -3,7 +3,41 @@ param([Parameter(Mandatory)][ValidateSet('Install', 'Uninstall')][string]$Phase)
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot/read-shortcut.ps1"
 
-function Assert-DesktopShortcut([string]$Binary) {
+function Assert-ApplicationShortcut([string]$ShortcutPath, [string]$Binary, [string]$Arguments, [string]$IconSha256) {
+    if (-not (Test-Path -LiteralPath $Binary -PathType Leaf)) {
+      throw "Shortcut executable missing: $Binary"
+    }
+    if ($IconSha256 -cnotmatch '^[a-f0-9]{64}$') {
+      throw "Invalid company icon SHA-256: $IconSha256"
+    }
+    $iconPath = Join-Path (Split-Path $Binary) "QGroundControl-icon-$IconSha256.ico"
+    if (-not (Test-Path -LiteralPath $iconPath -PathType Leaf)) {
+      throw "Company shortcut icon missing: $iconPath"
+    }
+    if ((Get-FileHash -LiteralPath $iconPath -Algorithm SHA256).Hash.ToLowerInvariant() -cne $IconSha256) {
+      throw "Company shortcut icon checksum mismatch: $iconPath"
+    }
+    if (-not (Test-Path -LiteralPath $ShortcutPath -PathType Leaf)) {
+      throw "Application shortcut not found: $ShortcutPath"
+    }
+    $shortcut = [QgcWindowsShortcut]::Read($ShortcutPath)
+    if (-not [StringComparer]::OrdinalIgnoreCase.Equals($shortcut.TargetPath, $Binary)) {
+      throw "Shortcut target mismatch: $($shortcut.TargetPath)"
+    }
+    if ($shortcut.Arguments -ne $Arguments) {
+      throw "Unexpected shortcut arguments: $($shortcut.Arguments)"
+    }
+    if (-not [StringComparer]::OrdinalIgnoreCase.Equals($shortcut.WorkingDirectory, (Split-Path $Binary))) {
+      throw "Shortcut working directory mismatch: $($shortcut.WorkingDirectory)"
+    }
+    if (-not [StringComparer]::OrdinalIgnoreCase.Equals($shortcut.IconLocation, "$iconPath,0")) {
+      throw "Shortcut icon location mismatch: $($shortcut.IconLocation)"
+    }
+    Write-Host "Verified application shortcut and company icon SHA-256: $ShortcutPath"
+    return $ShortcutPath
+}
+
+function Assert-DesktopShortcut([string]$Binary, [string]$IconSha256) {
     $desktop = [Environment]::GetFolderPath([Environment+SpecialFolder]::CommonDesktopDirectory)
     if ([String]::IsNullOrWhiteSpace($desktop)) {
       throw "Unable to resolve the public desktop directory"
@@ -12,24 +46,14 @@ function Assert-DesktopShortcut([string]$Binary) {
     if (-not (Test-Path -LiteralPath $shortcutPath -PathType Leaf)) {
       throw "Desktop shortcut not found: $shortcutPath"
     }
-    $shortcut = [QgcWindowsShortcut]::Read($shortcutPath)
-    if (-not [StringComparer]::OrdinalIgnoreCase.Equals($shortcut.TargetPath, $Binary)) {
-      throw "Desktop shortcut target mismatch: $($shortcut.TargetPath)"
-    }
-    if ($shortcut.Arguments -ne "") {
-      throw "Unexpected desktop shortcut arguments: $($shortcut.Arguments)"
-    }
-    if (-not [StringComparer]::OrdinalIgnoreCase.Equals($shortcut.WorkingDirectory, (Split-Path $Binary))) {
-      throw "Desktop shortcut working directory mismatch: $($shortcut.WorkingDirectory)"
-    }
-    if (-not [StringComparer]::OrdinalIgnoreCase.Equals($shortcut.IconLocation, "$Binary,0")) {
-      throw "Desktop shortcut does not use the company executable icon: $($shortcut.IconLocation)"
-    }
-    Write-Host "Verified desktop shortcut: $shortcutPath"
-    return $shortcutPath
+    return (Assert-ApplicationShortcut $shortcutPath $Binary "" $IconSha256)
 }
 
 if ($Phase -eq 'Install') {
+    if ($env:CAAC_CHINESE_INSTALLER -eq "true") {
+      $sourceIcon = Join-Path $PSScriptRoot '..\..\custom\assets\company-logo.ico'
+      $companyIconSha256 = (Get-FileHash -LiteralPath $sourceIcon -Algorithm SHA256).Hash.ToLowerInvariant()
+    }
     $installerExe = Get-Item -LiteralPath $env:INSTALLER_PATH
     $oldInstallDir = $env:OLD_INSTALL_DIR
     $installDir = $env:INSTALL_DIR
@@ -41,7 +65,7 @@ if ($Phase -eq 'Install') {
       exit 1
     }
     if ($env:CAAC_CHINESE_INSTALLER -eq "true") {
-      [void](Assert-DesktopShortcut $oldBinary)
+      [void](Assert-DesktopShortcut $oldBinary $companyIconSha256)
     }
     $settingsRoot = [Environment]::GetFolderPath([Environment+SpecialFolder]::ApplicationData)
     if ([String]::IsNullOrWhiteSpace($settingsRoot)) {
@@ -69,8 +93,10 @@ if ($Phase -eq 'Install') {
       exit 1
     }
     if ($env:CAAC_CHINESE_INSTALLER -eq "true") {
-      $desktopShortcut = Assert-DesktopShortcut $binary
+      $desktopShortcut = Assert-DesktopShortcut $binary $companyIconSha256
       "QGC_INSTALL_TEST_DESKTOP_SHORTCUT=$desktopShortcut" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      $installedIcon = Join-Path (Split-Path $binary) "QGroundControl-icon-$companyIconSha256.ico"
+      "QGC_INSTALL_TEST_ICON=$installedIcon" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
       $versionInfo = (Get-Item -LiteralPath $binary).VersionInfo
       if ($versionInfo.ProductName -ne "飞虎无人机地面站系统" -or $versionInfo.FileDescription -ne "飞虎无人机地面站系统") {
         throw "Installed executable branding does not match the company application name"
@@ -146,6 +172,10 @@ if ($Phase -eq 'Install') {
         Write-Error "Start Menu shortcut not found: $shortcut"
         exit 1
       }
+      if ($env:CAAC_CHINESE_INSTALLER -eq "true") {
+        $arguments = if ((Split-Path $shortcut -Leaf) -eq $safeModeName) { "-swrast" } else { "" }
+        [void](Assert-ApplicationShortcut $shortcut $binary $arguments $companyIconSha256)
+      }
     }
     "QGC_INSTALL_TEST_DIR=$installDir" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
     "QGC_INSTALL_TEST_BINARY=$binary" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
@@ -166,6 +196,9 @@ if ($Phase -eq 'Uninstall') {
     if (Test-Path $env:QGC_INSTALL_TEST_BINARY) {
       Write-Error "Installed executable remains after uninstall"
       exit 1
+    }
+    if ($env:QGC_INSTALL_TEST_ICON -and (Test-Path -LiteralPath $env:QGC_INSTALL_TEST_ICON)) {
+      throw "Company shortcut icon remains after uninstall"
     }
     if (Test-Path $env:QGC_INSTALL_TEST_SETTINGS) {
       Write-Error "Application data remains after a normal uninstall"

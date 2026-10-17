@@ -46,7 +46,18 @@ set(CPACK_PACKAGE_EXECUTABLES "")
 set(CPACK_NSIS_INSTALL_ROOT "$PROGRAMFILES64")
 set(CPACK_NSIS_MUI_ICON "${QGC_WINDOWS_ICON_PATH}")
 set(CPACK_NSIS_MUI_UNIICON "${QGC_WINDOWS_ICON_PATH}")
+set(_qgc_nsis_shortcut_icon "$INSTDIR\\bin\\${CMAKE_PROJECT_NAME}.exe")
 if(QGC_CAAC_BUILD)
+    # A new icon resource path avoids Explorer reusing the previous executable icon cache entry.
+    file(SHA256 "${QGC_WINDOWS_ICON_PATH}" _qgc_nsis_icon_sha256)
+    set(_qgc_nsis_icon_filename "${CMAKE_PROJECT_NAME}-icon-${_qgc_nsis_icon_sha256}.ico")
+    install(
+        FILES "${QGC_WINDOWS_ICON_PATH}"
+        DESTINATION bin
+        RENAME "${_qgc_nsis_icon_filename}"
+        COMPONENT Runtime
+    )
+    set(_qgc_nsis_shortcut_icon "$INSTDIR\\bin\\${_qgc_nsis_icon_filename}")
     set(CPACK_COMPONENT_RUNTIME_DISPLAY_NAME "运行文件")
     set(CPACK_COMPONENT_RUNTIME_DESCRIPTION "地面站程序及运行依赖")
     # MUI invokes these callbacks before showing its pages. 2052 is the Windows Simplified Chinese locale.
@@ -238,16 +249,16 @@ set(_qgc_nsis_create_icons
     CreateShortCut \
         "$SMPROGRAMS\$STARTMENU_FOLDER\@QGC_APP_DISPLAY_NAME@.lnk" \
         "$INSTDIR\bin\@CMAKE_PROJECT_NAME@.exe" "" \
-        "$INSTDIR\bin\@CMAKE_PROJECT_NAME@.exe" 0
+        "@_qgc_nsis_shortcut_icon@" 0
     CreateShortCut \
         "$SMPROGRAMS\$STARTMENU_FOLDER\@QGC_APP_DISPLAY_NAME@ (GPU Safe Mode).lnk" \
         "$INSTDIR\bin\@CMAKE_PROJECT_NAME@.exe" "-swrast" \
-        "$INSTDIR\bin\@CMAKE_PROJECT_NAME@.exe" 0
+        "@_qgc_nsis_shortcut_icon@" 0
     !insertmacro QGCDemoteShortCut \
         "$SMPROGRAMS\$STARTMENU_FOLDER\@QGC_APP_DISPLAY_NAME@ (GPU Safe Mode).lnk"
     ${If} $INSTALL_DESKTOP == "1"
         CreateShortCut "$DESKTOP\@QGC_APP_DISPLAY_NAME@.lnk" "$INSTDIR\bin\@CMAKE_PROJECT_NAME@.exe" "" \
-            "$INSTDIR\bin\@CMAKE_PROJECT_NAME@.exe" 0
+            "@_qgc_nsis_shortcut_icon@" 0
     ${EndIf}
 ]=]
 )
@@ -257,6 +268,7 @@ if(QGC_CAAC_BUILD)
         "    StrCpy $INSTALL_DESKTOP \"1\"\n    SetOutPath \"$INSTDIR\\bin\"\n${_qgc_nsis_create_icons}"
     )
     string(REPLACE "GPU Safe Mode" "显卡兼容模式" _qgc_nsis_create_icons "${_qgc_nsis_create_icons}")
+    string(APPEND _qgc_nsis_create_icons "    System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)'\n")
 endif()
 string(CONFIGURE "${_qgc_nsis_create_icons}" CPACK_NSIS_CREATE_ICONS_EXTRA @ONLY)
 
@@ -281,6 +293,9 @@ set(CPACK_NSIS_MODIFY_PATH OFF)
 set(CPACK_NSIS_DISPLAY_NAME "${QGC_APP_DISPLAY_NAME}")
 set(CPACK_NSIS_PACKAGE_NAME "${QGC_APP_DISPLAY_NAME} ${CMAKE_SYSTEM_PROCESSOR} ${CMAKE_PROJECT_VERSION}")
 set(CPACK_NSIS_INSTALLED_ICON_NAME "bin\\${CMAKE_PROJECT_NAME}.exe")
+if(QGC_CAAC_BUILD)
+    set(CPACK_NSIS_INSTALLED_ICON_NAME "bin\\${_qgc_nsis_icon_filename}")
+endif()
 set(CPACK_NSIS_HELP_LINK "https://qgroundcontrol.com/#resources")
 set(CPACK_NSIS_URL_INFO_ABOUT "${CPACK_PACKAGE_HOMEPAGE_URL}")
 set(CPACK_NSIS_CONTACT "${CPACK_PACKAGE_CONTACT}")
@@ -298,6 +313,20 @@ if(QGC_CAAC_BUILD)
     set(_caac_nsis_templates "${CMAKE_BINARY_DIR}/caac-nsis-templates")
     file(MAKE_DIRECTORY "${_caac_nsis_templates}")
     file(READ "${CMAKE_ROOT}/Modules/Internal/CPack/NSIS.template.in" _caac_nsis_template)
+    # CPack emits Runtime files before its Core preinstall hook; remove an old version before either section.
+    string(REPLACE "@CPACK_NSIS_EXTRA_PREINSTALL_COMMANDS@" "" _caac_nsis_template "${_caac_nsis_template}")
+    set(_caac_nsis_upgrade_section
+        [=[
+Section "-卸载旧版本"
+@CPACK_NSIS_EXTRA_PREINSTALL_COMMANDS@
+SectionEnd
+
+@CPACK_NSIS_COMPONENT_SECTIONS@
+]=]
+    )
+    string(REPLACE "@CPACK_NSIS_COMPONENT_SECTIONS@" "${_caac_nsis_upgrade_section}" _caac_nsis_template
+                   "${_caac_nsis_template}"
+    )
     # CPack replaces CPACK_NSIS_DEFINES with its component definitions during packaging.
     string(REPLACE "@CPACK_NSIS_DEFINES@" "${_caac_nsis_gui_callbacks}\n@CPACK_NSIS_DEFINES@" _caac_nsis_template
                    "${_caac_nsis_template}"

@@ -82,3 +82,17 @@ function px4Image(groupName, fallbackUrl, airframe) {
     const name = names[groupName.toLowerCase()]
     return name ? image(name) : fallbackUrl
 }
+
+function apmImage(resourceUrl) {
+    const resource = (resourceUrl || "").toString()
+    const basename = resource.substring(resource.lastIndexOf("/") + 1)
+    const names = {
+        "QuadRotorX.svg": "quadrotor-x", "QuadRotorPlus.svg": "quadrotor-plus", "QuadRotorH.svg": "quadrotor-h",
+        "HexaRotorX.svg": "hexarotor-x", "HexaRotorPlus.svg": "hexarotor-plus",
+        "OctoRotorX.svg": "octorotor-x", "OctoRotorPlus.svg": "octorotor-plus",
+        "OctoRotorXCoaxial.svg": "octorotor-coaxial", "Y6A.svg": "hexarotor-coaxial", "Y6B.svg": "hexarotor-coaxial",
+        "Helicopter.svg": "helicopter", "YPlus.svg": "tricopter-y-plus", "Rover.svg": "rover"
+    }
+    const name = names[basename]
+    return name ? image(name) : resource
+}

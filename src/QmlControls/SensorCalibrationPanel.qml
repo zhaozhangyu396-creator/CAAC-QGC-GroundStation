@@ -283,7 +283,7 @@ Item {
                     Layout.fillWidth: true
                     spacing: root.margins
                     visible: root.additionalControls !== null
-                        || (root.statusText !== "" && (root.calibrationActive || root.progress > 0))
+                        || root.statusText !== ""
 
                     Loader {
                         Layout.fillWidth: true
@@ -291,10 +291,11 @@ Item {
                         enabled: root.calibrationEnabled && !root.calibrationActive && !motorTest.motorsEnabled
                     }
                     QGCLabel {
+                        objectName: "sensorsSetup_statusLog"
                         Layout.fillWidth: true
                         text: root.statusText
                         wrapMode: Text.WordWrap
-                        visible: text !== "" && (root.calibrationActive || root.progress > 0)
+                        visible: text !== ""
                     }
                 }
 

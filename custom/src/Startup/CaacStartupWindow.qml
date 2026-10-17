@@ -4,7 +4,7 @@ import QtQuick.Window
 Window {
     id: root
 
-    width: Math.min(Screen.width * 0.8, textMetrics.height * 62)
+    width: Math.min(Screen.width * 0.8, textMetrics.height * 62) * 0.5
     height: width * 623 / 1107
     x: Screen.virtualX + (Screen.width - width) / 2
     y: Screen.virtualY + (Screen.height - height) / 2

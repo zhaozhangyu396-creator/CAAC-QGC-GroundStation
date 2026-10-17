@@ -403,6 +403,11 @@ jobs:
           "path=$installerPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           "checksum_path=$checksumPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
+      - name: Test CAAC shortcut icon upgrade
+        if: matrix.build_type == 'Release' && matrix.variant == 'amd64' && github.repository == 'zhaozhangyu396-creator/CAAC-QGC-GroundStation'
+        shell: pwsh
+        run: ./custom/tools/test_windows_shortcut.ps1
+
       - name: Install, upgrade, and verify installer
         if: matrix.build_type == 'Release' && matrix.variant != 'arm64-cross'
         shell: pwsh

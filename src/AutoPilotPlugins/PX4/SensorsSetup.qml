@@ -34,7 +34,7 @@ Item {
     readonly property string levelHelp:     qsTr("To level the horizon you need to place the vehicle in its level flight position and leave still.")
     readonly property string airspeedHelp:  qsTr("For Airspeed calibration you will need to keep your airspeed sensor out of any wind and then blow across the sensor. Do not touch the sensor or obstruct any holes during the calibration.")
 
-    readonly property string statusTextAreaDefaultText: qsTr("Start the individual calibration steps by clicking one of the buttons to the left.")
+    readonly property string statusTextAreaDefaultText: ""
 
     // Used to pass what type of calibration is being performed to the preCalibrationDialog
     property string preCalibrationDialogType
@@ -368,9 +368,6 @@ Item {
     property bool _showDownOnlyPreview: _showOrientationPreview &&
         sectionIdFilter === "Gyroscope"
 
-    property bool _showStatusPreview: !controller.calibrationActive &&
-        (sectionIdFilter === "Level Horizon" || sectionIdFilter === "Airspeed")
-
     SensorCalibrationPanel {
         id: caacPanel
         anchors.fill: parent
@@ -550,13 +547,14 @@ Item {
         Item {
             Layout.fillWidth:   true
             Layout.fillHeight:  true
-            visible:            controller.calibrationActive || _showOrientationPreview || _showStatusPreview
+            visible:            controller.calibrationActive || _showOrientationPreview || statusTextArea.text.length > 0
 
             TextArea {
                 id:             statusTextArea
+                objectName:     "sensorsSetup_statusLog"
                 anchors.fill:   parent
                 readOnly:       true
-                visible:        !orientationCalArea.visible
+                visible:        !orientationCalArea.visible && text.length > 0
                 text:           statusTextAreaDefaultText
                 color:          qgcPal.text
                 background: Rectangle { color: qgcPal.windowShade }
@@ -565,7 +563,7 @@ Item {
             Rectangle {
                 id:         orientationCalArea
                 anchors.fill: parent
-                visible:    controller.showOrientationCalArea || _showOrientationPreview
+                visible:    controller.showOrientationCalArea || (_showOrientationPreview && statusTextArea.text.length === 0)
                 color:      qgcPal.windowShade
 
                 QGCLabel {
