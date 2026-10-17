@@ -17,9 +17,7 @@ class QQmlApplicationEngine;
 class QQuickWindow;
 class QGCImageProvider;
 class QGCApplication;
-#ifdef QGC_CAAC_SIMULATION
 class CaacStartupController;
-#endif
 class QEvent;
 class QPostEventList;
 class QMetaMethod;
@@ -132,9 +130,7 @@ private:
     /// Initialize the application for normal application boot. Or in other words we are not going to run unit tests.
     void _initForNormalAppBoot();
     void _initAuthorizedApp();
-#ifdef QGC_CAAC_SIMULATION
     void _continueStartup(int stage);
-#endif
 
     QObject *_rootQmlObject();
     bool _rebootMessageDebounced();
@@ -151,10 +147,9 @@ private:
     QTimer _missingParamsDelayedDisplayTimer;                               ///< Timer use to delay missing fact display
     QList<QPair<int,QString>> _missingParams;                               ///< List of missing parameter component id:name
 
-#ifdef QGC_CAAC_SIMULATION
+    // Static plugins also include this header without custom build definitions; keep the layout identical.
     CaacStartupController* _startup = nullptr;
     bool _startupClosing = false;
-#endif
     QQmlApplicationEngine *_qmlAppEngine = nullptr;
     bool _settingsUpgraded = false;    ///< true: Settings format has been upgrade to new version
     QQuickWindow *_mainRootWindow = nullptr;
