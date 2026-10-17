@@ -70,7 +70,11 @@ void PX4VehicleConfigUITest::_testNarrowParameterControls()
         [&](QPointer<MockLink>, Vehicle* vehicle) {
             const QSize savedSize = _window->size();
             const auto restoreSize = qScopeGuard([this, savedSize] { _window->resize(savedSize); });
-            _window->resize(1000, 800);
+            const QMargins frame = _window->frameMargins();
+            const int availableHeight =
+                _window->screen() ? _window->screen()->availableGeometry().height() - frame.top() - frame.bottom()
+                                  : 800;
+            _window->resize(1000, qMin(800, availableHeight));
             QTRY_COMPARE_WITH_TIMEOUT(_window->width(), 1000, TestTimeout::shortMs());
 
             navigateToConfigureView();
@@ -118,9 +122,23 @@ void PX4VehicleConfigUITest::_testNarrowParameterControls()
                     return control->width() >= minimumWidth && control->height() >= metrics.height() &&
                            bounds.left() >= -1 && bounds.right() <= viewport->width() + 1;
                 };
-                QTRY_VERIFY2_WITH_TIMEOUT(fitsViewport(),
-                                          qPrintable(name + QStringLiteral(" control is clipped or too narrow")),
-                                          TestTimeout::shortMs());
+                const auto failureDetails = [&] {
+                    const QRectF bounds = control->mapRectToItem(viewport, control->boundingRect());
+                    return QStringLiteral(
+                               "%1 control is clipped or too narrow: viewport=%2, control=%3x%4, "
+                               "minimum=%5x%6, bounds=(%7,%8)-(%9,%10)")
+                        .arg(name)
+                        .arg(viewport->width())
+                        .arg(control->width())
+                        .arg(control->height())
+                        .arg(minimumWidth)
+                        .arg(metrics.height())
+                        .arg(bounds.left())
+                        .arg(bounds.top())
+                        .arg(bounds.right())
+                        .arg(bounds.bottom());
+                };
+                QTRY_VERIFY2_WITH_TIMEOUT(fitsViewport(), qPrintable(failureDetails()), TestTimeout::shortMs());
                 QCOMPARE(viewport->property("contentX").toReal(), 0.0);
             }
 

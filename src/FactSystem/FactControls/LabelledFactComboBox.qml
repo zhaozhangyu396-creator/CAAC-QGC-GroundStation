@@ -41,11 +41,10 @@ GridLayout {
     FactComboBox {
         id:                     _comboBox
         Layout.fillWidth: control._stacked
-        Layout.preferredWidth:  control._stacked ? control.width : comboBoxPreferredWidth
+        Layout.preferredWidth:  comboBoxPreferredWidth
         Layout.minimumWidth: control._responsive ? 0 : -1
-        Layout.maximumWidth: control._responsive
-            ? Math.max(0, control._stacked ? control.width : control.width * 0.6)
-            : Number.POSITIVE_INFINITY
+        Layout.maximumWidth: control._responsive && !control._stacked
+            ? Math.max(0, control.width * 0.6) : Number.POSITIVE_INFINITY
         sizeToContents:         true
 
         onActivated: (index) => { parent.activated(index) }
