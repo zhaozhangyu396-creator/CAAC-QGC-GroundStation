@@ -40,6 +40,10 @@
 #include "VideoManager.h"
 #include "qgc_version.h"
 
+#ifdef QGC_CAAC_SIMULATION
+#include "CaacStartupController.h"
+#endif
+
 #ifndef QGC_NO_SERIAL_LINK
 #include "SerialLink.h"
 #endif
@@ -260,9 +264,71 @@ void QGCApplication::_initAuthorizedApp()
         const bool qmlRootLoaded = _initQmlRootWindow();
         _bootTestPassed = videoInitialized && qmlRootLoaded;
     } else if (!_runningUnitTests) {
+#ifdef QGC_CAAC_SIMULATION
+        _startup = new CaacStartupController(this);
+        connect(_startup, &CaacStartupController::closeRequested, this, [this]() {
+            _startupClosing = true;
+            quit();
+        });
+        if (!_startup->show()) {
+            _startupClosing = true;
+            QTimer::singleShot(0, this, &QCoreApplication::quit);
+            return;
+        }
+        QTimer::singleShot(0, this, [this]() { _continueStartup(0); });
+#else
         _initForNormalAppBoot();
+#endif
     }
 }
+
+#ifdef QGC_CAAC_SIMULATION
+void QGCApplication::_continueStartup(int stage)
+{
+    if (!_startup || _startupClosing || _startup->failed()) {
+        return;
+    }
+    switch (stage) {
+        case 0:
+            (void) _initVideo();
+            _startup->setStage(CaacStartupController::Stage::Interface);
+            break;
+        case 1:
+            if (!_initQmlRootWindow()) {
+                _startup->fail(tr("主界面加载失败，请关闭后重新启动。"));
+                return;
+            }
+            connect(mainRootWindow(), &QQuickWindow::sceneGraphError, _startup,
+                    [this](QQuickWindow::SceneGraphError, const QString& message) {
+                        _startup->fail(tr("图形系统初始化失败：%1").arg(message));
+                    });
+            _startup->setStage(CaacStartupController::Stage::VideoBackend);
+            break;
+        case 2:
+            if (!VideoManager::instance()->waitForVideoBackendReady()) {
+                _startup->fail(tr("视频系统初始化失败，请关闭后重新启动。"));
+                return;
+            }
+            if (_startupClosing) {
+                return;
+            }
+            _startup->markBackendReady();
+            _startup->setStage(CaacStartupController::Stage::Services);
+            break;
+        case 3:
+            _initForNormalAppBoot();
+            _startup->setStage(CaacStartupController::Stage::FirstFrame);
+            _startup->markServicesReady();
+            connect(mainRootWindow(), &QQuickWindow::frameSwapped, _startup, &CaacStartupController::markMainFrameReady,
+                    Qt::ConnectionType(Qt::QueuedConnection | Qt::SingleShotConnection));
+            mainRootWindow()->update();
+            return;
+        default:
+            return;
+    }
+    QTimer::singleShot(0, this, [this, stage]() { _continueStartup(stage + 1); });
+}
+#endif
 
 bool QGCApplication::_initVideo()
 {
@@ -287,6 +353,11 @@ bool QGCApplication::_initQmlRootWindow()
     MAVLinkProtocol::instance()->init();
     MultiVehicleManager::instance()->init();
     _qmlAppEngine = QGCCorePlugin::instance()->createQmlApplicationEngine(this);
+#ifdef QGC_CAAC_SIMULATION
+    if (_startup) {
+        _qmlAppEngine->setInitialProperties({{QStringLiteral("startup"), QVariant::fromValue(_startup)}});
+    }
+#endif
     QObject::connect(_qmlAppEngine, &QQmlApplicationEngine::objectCreationFailed, this, QCoreApplication::quit,
                      Qt::QueuedConnection);
 
@@ -306,9 +377,16 @@ bool QGCApplication::_initQmlRootWindow()
 
 void QGCApplication::_initForNormalAppBoot()
 {
-    (void) _initVideo();
-
-    (void) _initQmlRootWindow();
+#ifdef QGC_CAAC_SIMULATION
+    if (!_startup) {
+#endif
+        (void) _initVideo();
+        if (!_initQmlRootWindow()) {
+            return;
+        }
+#ifdef QGC_CAAC_SIMULATION
+    }
+#endif
 
     AudioOutput::instance()->init(SettingsManager::instance()->appSettings()->audioVolume(),
                                   SettingsManager::instance()->appSettings()->audioMuted());
@@ -647,6 +725,12 @@ QT_WARNING_POP
 bool QGCApplication::event(QEvent* e)
 {
     if (e->type() == QEvent::Quit) {
+#ifdef QGC_CAAC_SIMULATION
+        if (_startup && !_startup->finished()) {
+            _startupClosing = true;
+            return QGuiApplication::event(e);
+        }
+#endif
         if (!_mainRootWindow) {
             return QGuiApplication::event(e);
         }
@@ -678,6 +762,11 @@ QGCImageProvider* QGCApplication::qgcImageProvider()
 
 void QGCApplication::shutdown()
 {
+#ifdef QGC_CAAC_SIMULATION
+    if (_startup) {
+        _startup->close();
+    }
+#endif
     GPSManager::instance()->shutdown();
     qCDebug(QGCApplicationLog) << "Exit";
 
@@ -693,6 +782,10 @@ void QGCApplication::shutdown()
     }
 
     QGCCorePlugin::instance()->cleanup();
+#ifdef QGC_CAAC_SIMULATION
+    delete _startup;
+    _startup = nullptr;
+#endif
 
     if (_runningUnitTests || _simpleBootTest) {
         const QSettings settings;

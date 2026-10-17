@@ -32,11 +32,13 @@ SetupPage {
             Component.onCompleted: controller.start()
 
             additionalSetupComponent: ColumnLayout {
+                Layout.minimumWidth: remoteControlCalibration.vehicleSetupStyle ? 0 : -1
                 spacing: ScreenTools.defaultFontPixelHeight / 2
 
                 ColumnLayout {
                     id: switchSettings
                     Layout.fillWidth: true
+                    Layout.minimumWidth: remoteControlCalibration.vehicleSetupStyle ? 0 : -1
 
                     Repeater {
                         model: QGroundControl.multiVehicleManager.activeVehicle.px4Firmware ?
@@ -46,6 +48,8 @@ SetupPage {
                                     0
 
                         LabelledFactComboBox {
+                            objectName: "radioAdditionalChannel_" + modelData
+                            Layout.fillWidth: true
                             label: fact.shortDescription
                             fact: controller.getParameterFact(-1, modelData)
                             indexModel: false

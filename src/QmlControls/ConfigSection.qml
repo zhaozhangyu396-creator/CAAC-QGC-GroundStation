@@ -7,6 +7,7 @@ import QGroundControl.Controls
 ColumnLayout {
     id: control
     spacing: ScreenTools.defaultFontPixelHeight / 3
+    Layout.minimumWidth: vehicleSetupStyle ? 0 : -1
 
     default property alias contentItem: _controlsColumn.data
 
@@ -65,6 +66,7 @@ ColumnLayout {
             ColumnLayout {
                 id: _controlsColumn
                 Layout.fillWidth: true
+                Layout.minimumWidth: control.vehicleSetupStyle ? 0 : -1
                 spacing: ScreenTools.defaultFontPixelHeight / 2
             }
         }

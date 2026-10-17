@@ -25,11 +25,14 @@ Rectangle {
     property var    sliderMin:          undefined ///< explicit slider minimum, overrides fact.userMin/min
     property var    sliderMax:          undefined ///< explicit slider maximum, overrides fact.userMax/max
     property color  backgroundColor:    _ftfsBackgroundColor
+    readonly property bool vehicleSetupStyle: ScreenTools.isVehicleSetupItem(control)
 
     signal enableCheckboxClicked
 
     id:             control
+    objectName:     fact ? "factTextFieldSlider_" + fact.name : ""
     implicitHeight: mainLayout.implicitHeight
+    Layout.minimumWidth: vehicleSetupStyle ? 0 : -1
     color:          backgroundColor
     radius:         ScreenTools.defaultBorderRadius
 
@@ -73,12 +76,18 @@ Rectangle {
         width:      parent.width
         spacing:    0
 
-        RowLayout {
-            spacing: ScreenTools.defaultFontPixelWidth
+        GridLayout {
+            Layout.fillWidth: true
+            Layout.minimumWidth: control.vehicleSetupStyle ? 0 : -1
+            columns: control.vehicleSetupStyle && width < ScreenTools.defaultFontPixelWidth * 40 ? 1 : 2
+            columnSpacing: ScreenTools.defaultFontPixelWidth
+            rowSpacing: ScreenTools.defaultFontPixelHeight * 0.25
 
             QGCCheckBox {
                 id:                 enableCheckbox
                 Layout.fillWidth:   visible
+                Layout.minimumWidth: control.vehicleSetupStyle ? 0 : -1
+                wrapMode:           control.vehicleSetupStyle ? Text.WordWrap : Text.NoWrap
                 text:               control.label
                 visible:            control.showEnableCheckbox
 
@@ -87,7 +96,8 @@ Rectangle {
 
             LabelledFactTextField {
                 id:                 factTextField
-                Layout.fillWidth:   !control.showEnableCheckbox
+                objectName:          control.objectName + "_value"
+                Layout.fillWidth:   !control.showEnableCheckbox || control.vehicleSetupStyle
                 label:              control.showEnableCheckbox ? "" : control.label
                 fact:               control.fact
                 enabled:            !control.showEnableCheckbox || enableCheckbox.checked
@@ -108,6 +118,7 @@ Rectangle {
 
             QGCSlider {
                 id:                 slider
+                objectName:         control.objectName + "_slider"
                 Layout.fillWidth:   true
                 from:               control._sliderMin
                 to:                 control._sliderMax

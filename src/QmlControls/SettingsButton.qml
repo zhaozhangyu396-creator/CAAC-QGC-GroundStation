@@ -23,6 +23,7 @@ Button {
     property bool expandable: false
     property bool expanded:   false
     property bool outlined:   false
+    property bool preserveIconColors: false
 
     signal toggleExpand()
 
@@ -59,10 +60,22 @@ Button {
         spacing: ScreenTools.defaultFontPixelWidth
 
         QGCColoredImage {
-            source: control.icon.source
+            visible: !control.preserveIconColors
+            source: visible ? control.icon.source : ""
             color:  control.icon.color
             width:  ScreenTools.defaultFontPixelHeight
             height: ScreenTools.defaultFontPixelHeight
+        }
+
+        Image {
+            visible: control.preserveIconColors
+            source: visible ? control.icon.source : ""
+            Layout.preferredWidth: ScreenTools.defaultFontPixelHeight
+            Layout.preferredHeight: ScreenTools.defaultFontPixelHeight
+            sourceSize.width: width
+            sourceSize.height: height
+            fillMode: Image.PreserveAspectFit
+            mipmap: true
         }
 
         QGCLabel {

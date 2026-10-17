@@ -404,6 +404,7 @@ Item {
             ColumnLayout {
                 spacing: ScreenTools.defaultFontPixelHeight / 2
                 SettingsActionButton {
+                    id: gyroCalibrationButton
                     text: qsTr("Calibrate Gyroscope")
                     visible: _root.sectionVisible("Gyroscope")
                     onClicked: {
@@ -411,10 +412,24 @@ Item {
                         _startCalibration("gyro", gyroHelp, qsTr("Calibrate Gyro"))
                     }
                 }
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: ScreenTools.defaultFontPixelHeight * 0.06
+                    color: qgcPal.groupBorder
+                    visible: gyroCalibrationButton.visible && airspeedCalibrationButton.visible
+                }
                 SettingsActionButton {
+                    id: airspeedCalibrationButton
                     text: qsTr("Calibrate Airspeed")
                     visible: _root.sectionVisible("Airspeed")
                     onClicked: _startCalibration("airspeed", airspeedHelp, qsTr("Calibrate Airspeed"))
+                }
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: ScreenTools.defaultFontPixelHeight * 0.06
+                    color: qgcPal.groupBorder
+                    visible: _root.orientationsButtonVisible()
+                        && (gyroCalibrationButton.visible || airspeedCalibrationButton.visible)
                 }
                 SettingsActionButton {
                     text: qsTr("Factory Reset")

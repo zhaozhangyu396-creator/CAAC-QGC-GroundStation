@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Layouts
 
 import QGroundControl
 import QGroundControl.Controls
@@ -8,9 +9,12 @@ RadioButton {
     id:             control
     font.family:    ScreenTools.normalFontFamily
     font.pointSize: ScreenTools.defaultFontPointSize
+    Layout.fillWidth: vehicleSetupStyle
+    Layout.minimumWidth: vehicleSetupStyle ? 0 : -1
 
+    readonly property bool vehicleSetupStyle: ScreenTools.isVehicleSetupItem(control)
     property color  textColor:  qgcPal.text
-    property int    wrapMode:   Text.NoWrap
+    property int    wrapMode:   vehicleSetupStyle ? Text.WordWrap : Text.NoWrap
     property bool   _noText:    text === ""
 
     QGCPalette { id:qgcPal; colorGroupEnabled: enabled }

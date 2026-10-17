@@ -22197,7 +22197,7 @@ Click 'Ok' to upload the Plan anyway.</source>
       <location filename="../src/AutoPilotPlugins/PX4/SensorsSetup.qml" line="222"/>
       <location filename="../src/AutoPilotPlugins/PX4/SensorsSetup.qml" line="277"/>
       <source>Autopilot Orientation</source>
-      <translation>自动驾驶方向</translation>
+      <translation>飞控安装方向</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/PX4/SensorsSetup.qml" line="231"/>

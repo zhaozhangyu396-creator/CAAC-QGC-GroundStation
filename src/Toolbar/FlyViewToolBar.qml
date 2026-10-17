@@ -377,11 +377,13 @@ Item {
                 Layout.alignment: Qt.AlignVCenter
                 visible: QGroundControl.corePlugin.directMissionItemEditing
                 text: qsTr("Figure-eight flight")
+                checked: QGroundControl.corePlugin.directMissionItemEditing
+                    && !!QGroundControl.corePlugin.figureEight && QGroundControl.corePlugin.figureEight.viewActive
                 heightFactor: 0.25
                 pointSize: control._fontPointSize
                 _horizontalPadding: ScreenTools.defaultFontPixelWidth * (control._compactToolbar ? 0.6 : 2)
                 implicitWidth: contentItem.implicitWidth + leftPadding + rightPadding
-                backgroundColor: qgcPal.window
+                backgroundColor: checked ? qgcPal.colorGreen : qgcPal.window
                 textColor: qgcPal.text
                 onClicked: {
                     if (QGroundControl.corePlugin.directMissionItemEditing) {

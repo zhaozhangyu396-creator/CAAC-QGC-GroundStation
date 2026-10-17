@@ -18,6 +18,7 @@ import CAAC.Plan
 ApplicationWindow {
     id:         mainWindow
     visible:    true
+    opacity:    startup && !startup.finished ? 0 : 1
     title:      QGroundControl.appName
     // The special casing for android prevents white bars from showing up on the edges of the screen with newer android versions
     flags:      Qt.Window | (ScreenTools.isAndroid ? Qt.ExpandedClientAreaHint | Qt.NoTitleBarBackgroundHint : 0)
@@ -30,9 +31,22 @@ ApplicationWindow {
     leftPadding:   0
     rightPadding:  0
 
+    property QtObject startup: null
+
     Component.onCompleted: {
-        // Start the sequence of first run prompt(s)
-        firstRunPromptManager.nextPrompt()
+        if (!startup) {
+            firstRunPromptManager.nextPrompt()
+        }
+    }
+
+    Connections {
+        target: mainWindow.startup
+        function onFinishedChanged() {
+            if (mainWindow.startup.finished) {
+                mainWindow.requestActivate()
+                firstRunPromptManager.nextPrompt()
+            }
+        }
     }
 
     /// Saves main window position and size and re-opens it in the same position and size next time

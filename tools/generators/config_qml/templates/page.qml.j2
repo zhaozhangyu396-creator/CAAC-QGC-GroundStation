@@ -14,7 +14,8 @@ SetupPage {
         id: pageComponent
 
         Item {
-            width: Math.max(availableWidth, outerColumn.width)
+            width: configPage.vehicleSetupStyle ? Math.max(0, availableWidth)
+                : Math.max(availableWidth, outerColumn.width)
             height: outerColumn.height
 
             {{ controller_type }} {
@@ -106,6 +107,7 @@ SetupPage {
 
             ColumnLayout {
                 id: outerColumn
+                width: configPage.vehicleSetupStyle ? parent.width : implicitWidth
                 spacing: _margins * 1.25
                 anchors.left: parent.left
                 anchors.leftMargin: Math.min((parent.width - width) / 2, _maxLeftMargin)

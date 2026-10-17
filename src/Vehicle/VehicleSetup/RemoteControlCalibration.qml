@@ -332,6 +332,8 @@ ColumnLayout {
         Loader {
             id: additionalSetupLoader
             Layout.alignment: Qt.AlignTop
+            Layout.fillWidth: root.vehicleSetupStyle
+            Layout.minimumWidth: root.vehicleSetupStyle ? 0 : -1
             sourceComponent: additionalSetupComponent
         }
 

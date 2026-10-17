@@ -11,6 +11,7 @@ AbstractButton   {
     padding:    0
 
     readonly property bool settingsMenuStyle: ScreenTools.isSettingsMenuItem(control)
+    readonly property bool vehicleSetupStyle: ScreenTools.isVehicleSetupItem(control)
     property bool _showBorder:      settingsMenuStyle || qgcPal.globalTheme === QGCPalette.Light
     property int  _sliderInset:     2
     property bool _showHighlight:   enabled && (pressed || checked)
@@ -24,8 +25,9 @@ AbstractButton   {
         QGCLabel {
             id:             label
             anchors.left:   parent.left
-            width: control.settingsMenuStyle ? Math.max(0, parent.width - indicator.width - ScreenTools.defaultFontPixelWidth) : implicitWidth
-            wrapMode: control.settingsMenuStyle ? Text.WordWrap : Text.NoWrap
+            width: control.settingsMenuStyle || control.vehicleSetupStyle
+                ? Math.max(0, parent.width - indicator.width - ScreenTools.defaultFontPixelWidth) : implicitWidth
+            wrapMode: control.settingsMenuStyle || control.vehicleSetupStyle ? Text.WordWrap : Text.NoWrap
             text:           visible ? control.text : "X"
             visible:        control.text !== ""
         }

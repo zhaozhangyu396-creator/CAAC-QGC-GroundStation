@@ -49,7 +49,7 @@ public:
         if (type == UrlString && url.scheme() == QStringLiteral("qrc") &&
             (url.path() == QStringLiteral("/res/QGCLogoFull.svg") ||
              url.path() == QStringLiteral("/res/QGCLogoWhite.svg"))) {
-            return QUrl(QStringLiteral("qrc:/CAAC/Brand/company-logo.svg"));
+            return QUrl(QStringLiteral("qrc:/CAAC/Brand/company-logo.png"));
         }
         if (type == UrlString && url.scheme() == QStringLiteral("qrc") &&
             url.path() == QStringLiteral("/res/qgroundcontrol.ico")) {

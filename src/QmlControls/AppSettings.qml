@@ -304,6 +304,7 @@ Rectangle {
                         objectName:    "settingsButton_" + (model.nameKey ?? pageName)
                         text:          pageName
                         icon.source:   pageIconUrl
+                        preserveIconColors: pageIconUrl === "qrc:/res/QGCLogoWhite.svg"
                         expandable:    hasMultipleSections
                         expanded:      isExpanded
                         outlined:      settingsView.embedded

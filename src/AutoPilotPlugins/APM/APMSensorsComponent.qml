@@ -11,6 +11,12 @@ SetupPage {
     id:             sensorsPage
     pageComponent:  sensorsPageComponent
 
+    component SensorSectionDivider: Rectangle {
+        width: parent.width
+        height: ScreenTools.defaultFontPixelHeight * 0.06
+        color: QGroundControl.globalPalette.groupBorder
+    }
+
     Component {
         id:             sensorsPageComponent
 
@@ -743,6 +749,8 @@ SetupPage {
                         sourceComponent: orientationSettingsComponent
                     }
 
+                    SensorSectionDivider { }
+
                     IndicatorButton {
                         objectName:     "sensorsSetup_calibrateAccel"
                         width:          buttonColumn.width
@@ -753,6 +761,8 @@ SetupPage {
                             showOrientationSettings(_calTypeAccel)
                         }
                     }
+
+                    SensorSectionDivider { }
 
                     IndicatorButton {
                         objectName:     "sensorsSetup_calibrateCompass"
@@ -768,6 +778,8 @@ SetupPage {
                             }
                         }
                     }
+
+                    SensorSectionDivider { }
 
                     QGCButton {
                         width:  buttonColumn.width
@@ -787,7 +799,12 @@ SetupPage {
                         }
                     }
 
+                    SensorSectionDivider {
+                        visible: gyroCalibrationButton.visible
+                    }
+
                     QGCButton {
+                        id:         gyroCalibrationButton
                         width:      buttonColumn.width
                         text:       qsTr("Gyro")
                         visible:    globals.activeVehicle && (globals.activeVehicle.multiRotor | globals.activeVehicle.rover | globals.activeVehicle.sub)
@@ -796,6 +813,8 @@ SetupPage {
                                                                  Dialog.Cancel | Dialog.Ok,
                                                                  function() { controller.calibrateGyro() })
                     }
+
+                    SensorSectionDivider { }
 
                     QGCButton {
                         width:      buttonColumn.width
@@ -810,7 +829,12 @@ SetupPage {
                         readonly property string _calibratePressureText:    globals.activeVehicle.fixedWing ? qsTr("Baro/Airspeed") : qsTr("Pressure")
                     }
 
+                    SensorSectionDivider {
+                        visible: compassMotButton.visible
+                    }
+
                     QGCButton {
+                        id:         compassMotButton
                         width:      buttonColumn.width
                         text:       qsTr("CompassMot")
                         visible:    globals.activeVehicle ? globals.activeVehicle.supports.motorInterference : false

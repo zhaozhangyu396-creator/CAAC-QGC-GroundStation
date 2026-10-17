@@ -63,7 +63,8 @@ QGCPopupDialog {
     QGCPalette { id: palette; colorGroupEnabled: true }
 
     ColumnLayout {
-        width: Math.min(root.maxContentAvailableWidth, ScreenTools.defaultFontPixelWidth * 92)
+        id: dialogLayout
+        width: Math.min(root.maxContentAvailableWidth, ScreenTools.defaultFontPixelWidth * 92) * 0.8
         spacing: ScreenTools.defaultFontPixelHeight * 0.5
 
         RowLayout {
@@ -84,7 +85,7 @@ QGCPopupDialog {
         CaacFigureEightIllustration {
             objectName: "caacFigureEightPreview"
             Layout.alignment: Qt.AlignHCenter
-            Layout.preferredWidth: Math.min(root.maxContentAvailableWidth, ScreenTools.defaultFontPixelHeight * 24)
+            Layout.preferredWidth: Math.min(dialogLayout.width, ScreenTools.defaultFontPixelHeight * 24)
             Layout.preferredHeight: Layout.preferredWidth * 327 / 480
         }
 
@@ -361,11 +362,6 @@ QGCPopupDialog {
                     text: qsTr("启用训练速度提醒")
                     checked: !!root.limitsDraft.speedEnabled
                     onClicked: root.editLimit("speedEnabled", checked)
-                }
-                QGCLabel {
-                    Layout.fillWidth: true
-                    wrapMode: Text.WordWrap
-                    text: qsTr("180 秒、0.3–3 米/秒来自参考视频，仅作训练提醒，默认关闭；不是已核实的 CAAC 统一判定限值。")
                 }
                 RowLayout {
                     QGCButton {

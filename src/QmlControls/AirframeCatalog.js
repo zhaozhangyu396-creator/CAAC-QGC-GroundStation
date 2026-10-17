@@ -55,7 +55,18 @@ function models(category) {
     })
 }
 
-function px4Image(groupName, fallbackUrl) {
+function px4Image(groupName, fallbackUrl, airframe) {
+    if (groupName.toLowerCase() === "simulation" && airframe) {
+        if (airframe.category === "multirotor") {
+            return image("quadrotor-x")
+        }
+        if (airframe.category === "fixedwing") {
+            return image("standard-plane")
+        }
+        if (airframe.category === "vtol") {
+            return image(airframe.text.toLowerCase().includes("tailsitter") ? "vtol-tailsitter" : "standard-vtol")
+        }
+    }
     const names = {
         "airship": "airship", "autogyro": "autogyro", "balloon": "balloon",
         "dodecarotor cox": "dodecarotor-coaxial", "flying wing": "flying-wing",

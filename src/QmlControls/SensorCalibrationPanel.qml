@@ -94,6 +94,12 @@ Item {
         fontWeight: Font.Bold
     }
 
+    component SectionDivider: Rectangle {
+        Layout.fillWidth: true
+        implicitHeight: ScreenTools.defaultFontPixelHeight * 0.06
+        color: calPalette.groupBorder
+    }
+
     ColumnLayout {
         anchors.fill: parent
         spacing: root.margins
@@ -170,6 +176,10 @@ Item {
                     }
                 }
 
+                SectionDivider {
+                    visible: accelSection.visible && orientationSection.visible
+                }
+
                 ColumnLayout {
                     id: accelSection
                     visible: root.accelAvailable
@@ -202,6 +212,10 @@ Item {
                     }
                 }
 
+                SectionDivider {
+                    visible: levelSection.visible && (orientationSection.visible || accelSection.visible)
+                }
+
                 ColumnLayout {
                     id: levelSection
                     visible: root.levelAvailable
@@ -220,6 +234,11 @@ Item {
                         enabled: root.levelEnabled && root.calibrationEnabled && !root.calibrationActive && !motorTest.motorsEnabled
                         onClicked: { root.currentType = "level"; root.startLevel() }
                     }
+                }
+
+                SectionDivider {
+                    visible: compassSection.visible
+                        && (orientationSection.visible || accelSection.visible || levelSection.visible)
                 }
 
                 ColumnLayout {
@@ -253,6 +272,12 @@ Item {
                     }
                 }
 
+                SectionDivider {
+                    visible: extraSection.visible && extraSection.implicitHeight > 0
+                        && (orientationSection.visible || accelSection.visible
+                            || levelSection.visible || compassSection.visible)
+                }
+
                 ColumnLayout {
                     id: extraSection
                     Layout.fillWidth: true
@@ -271,6 +296,11 @@ Item {
                         wrapMode: Text.WordWrap
                         visible: text !== "" && (root.calibrationActive || root.progress > 0)
                     }
+                }
+
+                SectionDivider {
+                    visible: orientationSection.visible || accelSection.visible || levelSection.visible
+                        || compassSection.visible || (extraSection.visible && extraSection.implicitHeight > 0)
                 }
 
                 ColumnLayout {

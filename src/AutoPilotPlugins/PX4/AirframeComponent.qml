@@ -214,6 +214,7 @@ SetupPage {
 
                             Image {
                                 id:                 image
+                                objectName:         "airframeImage_" + modelData.name
                                 anchors.margins:    innerMargin
                                 anchors.top:        parent.top
                                 anchors.bottom:     combo.top
@@ -222,7 +223,8 @@ SetupPage {
                                 fillMode:           Image.PreserveAspectFit
                                 smooth:             true
                                 mipmap:             true
-                                source:             AirframeCatalog.px4Image(modelData.name, modelData.imageResource)
+                                source:             AirframeCatalog.px4Image(modelData.name, modelData.imageResource,
+                                                        typeBox._airframes[combo.currentIndex])
                             }
 
                             QGCComboBox {

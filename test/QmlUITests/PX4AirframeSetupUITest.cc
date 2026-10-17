@@ -156,6 +156,53 @@ void PX4AirframeSetupUITest::_testNavigateToAirframe()
             QCOMPARE(autoconfig->rawValue(), originalAutoconfig);
             QCOMPARE(autostartWrites.count(), 0);
             QCOMPARE(autoconfigWrites.count(), 0);
+
+            // Simulation contains different vehicle classes; its picture must follow the filtered model and selection.
+            struct SimulationCategory
+            {
+                QString category;
+                QList<int> ids;
+                QStringList images;
+            };
+            const SimulationCategory simulationCategories[] = {
+                {QStringLiteral("multirotor"),
+                 {1001, 1100},
+                 {QStringLiteral("quadrotor-x"), QStringLiteral("quadrotor-x")}},
+                {QStringLiteral("fixedwing"), {1101}, {QStringLiteral("standard-plane")}},
+                {QStringLiteral("vtol"),
+                 {1102, 1103},
+                 {QStringLiteral("vtol-tailsitter"), QStringLiteral("standard-vtol")}},
+            };
+            for (const auto& simulation : simulationCategories) {
+                QVERIFY(clickButtonScrolled(QStringLiteral("airframeCategory_back"),
+                                            QStringLiteral("vehicleSetup_scroller")));
+                QVERIFY(clickButtonScrolled(QStringLiteral("airframeCategory_%1").arg(simulation.category),
+                                            QStringLiteral("vehicleSetup_scroller")));
+                QQuickItem* combo = findVisibleItemScrolled(QStringLiteral("SimulationComboBox"),
+                                                            QStringLiteral("vehicleSetup_scroller"));
+                QVERIFY(combo);
+                const QVariant modelValue = combo->property("model");
+                const QVariantList model = modelValue.metaType() == QMetaType::fromType<QJSValue>()
+                                               ? modelValue.value<QJSValue>().toVariant().toList()
+                                               : modelValue.toList();
+                QCOMPARE(model.count(), simulation.ids.count());
+                QQuickItem* image = findItem(_rootItem, QStringLiteral("airframeImage_Simulation"));
+                QVERIFY(image);
+                for (int index = 0; index < model.count(); ++index) {
+                    const QObject* airframe = model.at(index).value<QObject*>();
+                    QVERIFY(airframe);
+                    QCOMPARE(airframe->property("category").toString(), simulation.category);
+                    QCOMPARE(airframe->property("autostartId").toInt(), simulation.ids.at(index));
+                    combo->forceActiveFocus();
+                    QTest::keyClick(_window, index == 0 ? Qt::Key_Home : Qt::Key_End);
+                    QTRY_COMPARE_WITH_TIMEOUT(combo->property("currentIndex").toInt(), index, TestTimeout::shortMs());
+                    const QUrl expectedImage(
+                        QStringLiteral("qrc:/qmlimages/Airframe/Uploaded/%1.svg").arg(simulation.images.at(index)));
+                    QTRY_COMPARE_WITH_TIMEOUT(image->property("source").toUrl(), expectedImage, TestTimeout::shortMs());
+                }
+            }
+            QCOMPARE(autostartWrites.count(), 0);
+            QCOMPARE(autoconfigWrites.count(), 0);
         });
 }
 

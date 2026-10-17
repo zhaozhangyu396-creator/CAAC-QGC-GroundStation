@@ -3,6 +3,7 @@ target_sources(
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/CaacRouteEditorTest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacActivationControllerTest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacActivationUITest.cc
+            ${CMAKE_CURRENT_SOURCE_DIR}/CaacStartupUITest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacMissionUpdateControllerTest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacRouteEditorUITest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacFlightDistanceTest.cc
@@ -49,6 +50,22 @@ add_qgc_test(
 if(WIN32)
     set_property(
         TEST CaacActivationUITest
+        APPEND
+        PROPERTY ENVIRONMENT_MODIFICATION "QT_QPA_PLATFORM=set:windows"
+    )
+endif()
+add_qgc_test(
+    CaacStartupUITest
+    LABELS
+    Integration
+    Utilities
+    NoSanitizer
+    TIMEOUT
+    60
+)
+if(WIN32)
+    set_property(
+        TEST CaacStartupUITest
         APPEND
         PROPERTY ENVIRONMENT_MODIFICATION "QT_QPA_PLATFORM=set:windows"
     )

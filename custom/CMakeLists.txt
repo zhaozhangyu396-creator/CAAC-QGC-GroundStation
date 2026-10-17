@@ -171,6 +171,8 @@ qt_add_resources(
 set(CUSTOM_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CaacActivationController.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Activation/CaacActivationController.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CaacStartupController.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Startup/CaacStartupController.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CaacCorePlugin.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CaacCorePlugin.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Route/CaacRouteEditorController.h
@@ -205,10 +207,23 @@ set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/assets/company-logo.svg 
 set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/assets/company-logo.ico PROPERTIES QT_RESOURCE_ALIAS
                                                                                            "company-logo.ico"
 )
+set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/assets/company-logo.png PROPERTIES QT_RESOURCE_ALIAS
+                                                                                           "company-logo.png"
+)
+set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/assets/startup-background.png
+                            PROPERTIES QT_RESOURCE_ALIAS "startup-background.png"
+)
 qt_add_resources(
     ${CMAKE_PROJECT_NAME} caac_company_brand
     PREFIX "/CAAC/Brand"
     FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/company-logo.svg ${CMAKE_CURRENT_SOURCE_DIR}/assets/company-logo.ico
+          ${CMAKE_CURRENT_SOURCE_DIR}/assets/company-logo.png ${CMAKE_CURRENT_SOURCE_DIR}/assets/startup-background.png
+)
+qt_add_resources(
+    ${CMAKE_PROJECT_NAME} caac_startup
+    PREFIX "/CAAC/Startup"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/src/Startup"
+    FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/Startup/CaacStartupWindow.qml
 )
 set(CUSTOM_LIBRARIES
     CaacPlanModule CaacActivationCrypto

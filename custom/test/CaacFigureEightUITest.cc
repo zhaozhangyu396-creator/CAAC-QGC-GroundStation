@@ -94,8 +94,13 @@ void CaacFigureEightUITest::_independentTrainingDialog()
     auto* eightButton = findVisibleItem(_rootItem, QStringLiteral("caacFigureEightButton"));
     QVERIFY(routeButton && eightButton);
     QVERIFY(eightButton->mapToScene(QPointF()).x() > routeButton->mapToScene(QPointF()).x());
+    QVERIFY(!eightButton->property("checked").toBool());
     QVERIFY(clickButton(QStringLiteral("caacFigureEightButton")));
     QVERIFY(controller->viewActive());
+    QTRY_VERIFY_WITH_TIMEOUT(eightButton->property("checked").toBool(), TestTimeout::mediumMs());
+    QVERIFY(!routeButton->property("checked").toBool());
+    const auto selectedBackground = eightButton->property("backgroundColor");
+    const auto selectedRadius = eightButton->property("backRadius");
     QTRY_VERIFY_WITH_TIMEOUT(workspaceToolsMatch(true), TestTimeout::mediumMs());
     QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacFigureEightPage"), 0));
     auto* examTimer = findVisibleItem(_rootItem, QStringLiteral("caacEightExamTimer"));
@@ -327,6 +332,10 @@ void CaacFigureEightUITest::_independentTrainingDialog()
     }
     QVERIFY(clickButton(QStringLiteral("caacFlightSettingsButton")));
     QVERIFY(!controller->viewActive());
+    QTRY_VERIFY_WITH_TIMEOUT(routeButton->property("checked").toBool(), TestTimeout::mediumMs());
+    QVERIFY(!eightButton->property("checked").toBool());
+    QCOMPARE(routeButton->property("backgroundColor"), selectedBackground);
+    QCOMPARE(routeButton->property("backRadius"), selectedRadius);
     QTRY_VERIFY_WITH_TIMEOUT(workspaceToolsMatch(false), TestTimeout::mediumMs());
     QTRY_VERIFY_WITH_TIMEOUT(!reference->property("visible").toBool(), TestTimeout::mediumMs());
     QVERIFY(!outerFence->property("visible").toBool());

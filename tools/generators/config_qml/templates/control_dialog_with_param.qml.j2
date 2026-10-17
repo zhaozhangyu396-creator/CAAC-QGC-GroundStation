@@ -6,9 +6,13 @@
 {{ indent }}    id: {{ comp_id }}
 {{ indent }}    {{ dialog_component }} { }
 {{ indent }}}
-{{ indent }}RowLayout {
+{{ indent }}GridLayout {
 {{ indent }}    Layout.fillWidth: true
-{{ indent }}    spacing: ScreenTools.defaultFontPixelWidth
+{{ indent }}    Layout.minimumWidth: configPage.vehicleSetupStyle ? 0 : -1
+{{ indent }}    columns: configPage.vehicleSetupStyle && width < ScreenTools.defaultFontPixelWidth * 40
+{{ indent }}        ? 1 : {{ 2 if button_after else 3 }}
+{{ indent }}    columnSpacing: ScreenTools.defaultFontPixelWidth
+{{ indent }}    rowSpacing: ScreenTools.defaultFontPixelHeight * 0.25
 {% if button_after %}
 {{ textfield_qml }}
 {{ ri }}QGCButton {
@@ -22,6 +26,8 @@
 {{ ri }}QGCLabel {
 {{ ri }}    text: {{ label_qtr }}
 {{ ri }}    Layout.fillWidth: true
+{{ ri }}    Layout.minimumWidth: configPage.vehicleSetupStyle ? 0 : -1
+{{ ri }}    wrapMode: configPage.vehicleSetupStyle ? Text.WordWrap : Text.NoWrap
 {{ ri }}}
 {{ ri }}QGCButton {
 {{ ri }}    text: {{ button_text }}
@@ -31,6 +37,8 @@
 {% endif %}
 {{ ri }}}
 {{ ri }}FactTextField {
+{{ ri }}    Layout.fillWidth: configPage.vehicleSetupStyle
+{{ ri }}    Layout.minimumWidth: configPage.vehicleSetupStyle ? 0 : -1
 {{ ri }}    fact: {{ fact_ref }}
 {% if enable_when %}
 {{ ri }}    enabled: {{ enable_when }}

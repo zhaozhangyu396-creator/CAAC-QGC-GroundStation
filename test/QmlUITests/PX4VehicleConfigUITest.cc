@@ -2,16 +2,139 @@
 
 #include <QtCore/QPointer>
 #include <QtCore/QScopeGuard>
+#include <QtGui/QFont>
+#include <QtGui/QFontMetricsF>
 #include <QtGui/QScreen>
 #include <QtQuick/QQuickItem>
 #include <QtQuick/QQuickWindow>
 #include <QtTest/QTest>
 
+#include "Fact.h"
 #include "MockLink.h"
+#include "ParameterManager.h"
 #include "QGCCorePlugin.h"
 #include "Vehicle.h"
 
 UT_REGISTER_TEST(PX4VehicleConfigUITest, TestLabel::Integration)
+
+#ifdef QGC_CUSTOM_BUILD
+namespace {
+
+QQuickItem* findFactControl(QQuickItem* root, const Fact* fact)
+{
+    if (!root->isVisible()) {
+        return nullptr;
+    }
+    if ((root->inherits("QQuickControl") || root->inherits("QQuickTextInput")) &&
+        root->property("fact").value<Fact*>() == fact) {
+        return root;
+    }
+    for (QQuickItem* child : root->childItems()) {
+        if (QQuickItem* control = findFactControl(child, fact)) {
+            return control;
+        }
+    }
+    return nullptr;
+}
+
+}  // namespace
+
+void PX4VehicleConfigUITest::_testNarrowParameterControls_data()
+{
+    QTest::addColumn<QString>("componentName");
+    QTest::addColumn<QStringList>("parameterNames");
+
+    QTest::newRow("safety") << QStringLiteral("Safety")
+                            << QStringList{QStringLiteral("COM_LOW_BAT_ACT"), QStringLiteral("BAT_LOW_THR"),
+                                           QStringLiteral("BAT_CRIT_THR"), QStringLiteral("BAT_EMERGEN_THR"),
+                                           QStringLiteral("CP_DIST")};
+    QTest::newRow("battery") << QStringLiteral("Power")
+                             << QStringList{QStringLiteral("BAT1_SOURCE"), QStringLiteral("BAT1_N_CELLS"),
+                                            QStringLiteral("BAT1_CAPACITY"), QStringLiteral("BAT1_V_EMPTY"),
+                                            QStringLiteral("BAT1_V_CHARGED")};
+    QTest::newRow("additional-channels") << QStringLiteral("Radio")
+                                         << QStringList{
+                                                QStringLiteral("RC_MAP_AUX1"),   QStringLiteral("RC_MAP_AUX2"),
+                                                QStringLiteral("RC_MAP_PARAM1"), QStringLiteral("RC_MAP_PARAM2"),
+                                                QStringLiteral("RC_MAP_PARAM3"), QStringLiteral("RC_MAP_PAY_SW")};
+}
+
+void PX4VehicleConfigUITest::_testNarrowParameterControls()
+{
+    QFETCH(QString, componentName);
+    QFETCH(QStringList, parameterNames);
+    QVERIFY(!parameterNames.isEmpty());
+
+    runWithMockLink(
+        [] { return MockLink::startPX4MockLink(); },
+        [&](QPointer<MockLink>, Vehicle* vehicle) {
+            const QSize savedSize = _window->size();
+            const auto restoreSize = qScopeGuard([this, savedSize] { _window->resize(savedSize); });
+            _window->resize(1000, 800);
+            QTRY_COMPARE_WITH_TIMEOUT(_window->width(), 1000, TestTimeout::shortMs());
+
+            navigateToConfigureView();
+            if (QTest::currentTestFailed()) {
+                return;
+            }
+            QQuickItem* config = findVisibleItem(_rootItem, QStringLiteral("vehicleConfig_root"));
+            QVERIFY(config);
+            QVERIFY(config->property("embedded").toBool());
+            QVERIFY(clickSidebarButton(QStringLiteral("vehicleConfig_comp_") + componentName));
+            if (QTest::currentTestFailed()) {
+                return;
+            }
+            QQuickItem* loader = findVisibleItem(config, QStringLiteral("vehicleConfig_panelLoader"));
+            QVERIFY(loader);
+            QQuickItem* panel = loader->property("item").value<QQuickItem*>();
+            QVERIFY(panel);
+            QQuickItem* viewport = findVisibleItem(panel, QStringLiteral("vehicleSetup_scroller"));
+            QVERIFY(viewport);
+            QTRY_VERIFY_WITH_TIMEOUT(viewport->width() > 0 && viewport->width() < _window->width() / 2,
+                                     TestTimeout::shortMs());
+
+            QQuickItem* firstControl = nullptr;
+            ParameterManager* parameters = vehicle->parameterManager();
+            QVERIFY(parameters);
+            for (const QString& name : parameterNames) {
+                QVERIFY2(parameters->parameterExists(ParameterManager::defaultComponentId, name), qPrintable(name));
+                Fact* fact = parameters->getParameter(ParameterManager::defaultComponentId, name);
+                QVERIFY2(fact, qPrintable(name));
+                QQuickItem* control = nullptr;
+                QTRY_VERIFY2_WITH_TIMEOUT((control = findFactControl(panel, fact)) != nullptr, qPrintable(name),
+                                          TestTimeout::shortMs());
+                if (!firstControl) {
+                    firstControl = control;
+                }
+                const QFontMetricsF metrics(control->property("font").value<QFont>());
+                const qreal minimumWidth = metrics.horizontalAdvance(QStringLiteral("0000")) +
+                                           control->property("leftPadding").toReal() +
+                                           control->property("rightPadding").toReal();
+                const auto fitsViewport = [&] {
+                    for (QQuickItem* ancestor = control; ancestor; ancestor = ancestor->parentItem()) {
+                        ancestor->ensurePolished();
+                    }
+                    const QRectF bounds = control->mapRectToItem(viewport, control->boundingRect());
+                    return control->width() >= minimumWidth && control->height() >= metrics.height() &&
+                           bounds.left() >= -1 && bounds.right() <= viewport->width() + 1;
+                };
+                QTRY_VERIFY2_WITH_TIMEOUT(fitsViewport(),
+                                          qPrintable(name + QStringLiteral(" control is clipped or too narrow")),
+                                          TestTimeout::shortMs());
+                QCOMPARE(viewport->property("contentX").toReal(), 0.0);
+            }
+
+            // Capture the affected controls using only vertical scrolling; horizontal scrolling must not hide clipping.
+            QVERIFY(firstControl);
+            const qreal currentY = viewport->property("contentY").toReal();
+            const qreal targetY = firstControl->mapToItem(viewport, QPointF()).y() + currentY;
+            const qreal maximumY = qMax(0.0, viewport->property("contentHeight").toReal() - viewport->height());
+            viewport->setProperty("contentY", qBound(0.0, targetY, maximumY));
+            QCOMPARE(viewport->property("contentX").toReal(), 0.0);
+            verifyPanelContentVisible(QStringLiteral("Narrow_") + componentName);
+        });
+}
+#endif
 
 void PX4VehicleConfigUITest::_testNavigateVehicleConfig()
 {

@@ -139,7 +139,8 @@ def _render_dialog_button(
     _v = _vis_expr(ctrl.showWhen, ctrl.optional, ctrl.param, fact_ref)
     if _v:
         qml = (
-            f"{indent}ColumnLayout {{\n{indent}    visible: {_v}\n"
+            f"{indent}ColumnLayout {{\n{indent}    Layout.fillWidth: true\n"
+            f"{indent}    visible: {_v}\n"
             + "\n".join(f"    {line}" for line in qml.splitlines())
             + f"\n{indent}}}"
         )
