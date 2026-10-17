@@ -34,18 +34,24 @@ Rectangle {
     property bool _commingFromRIDSettings: false
     property int  _selectedPageIndex: -1
     property int  _selectedSectionIndex: -1
-    property var  _expandedPages: ({})  // pageIndex -> bool
-    property int  _expandedRevision: 0  // bumped to trigger re-evaluation
+    property var  _expandedPages: ({})
+    property var  _expandedSearchPages: ({})
     property string _searchQuery: ""
+    on_SearchQueryChanged: _expandedSearchPages = ({})
 
     function _setExpanded(pageIndex, value) {
-        _expandedPages[pageIndex] = value
-        _expandedRevision++
+        const searching = _searchQuery.trim() !== ""
+        const states = Object.assign({}, searching ? _expandedSearchPages : _expandedPages)
+        states[pageIndex] = value
+        if (searching) {
+            _expandedSearchPages = states
+        } else {
+            _expandedPages = states
+        }
     }
 
     function _isExpanded(pageIndex) {
-        void _expandedRevision  // create binding dependency
-        return !!_expandedPages[pageIndex]
+        return _searchQuery.trim() !== "" ? _expandedSearchPages[pageIndex] !== false : _expandedPages[pageIndex] === true
     }
 
     function _pageSections(entry) {
@@ -268,7 +274,8 @@ Rectangle {
                     property bool hasMultipleSections: visiblePageSections.length > 1
                     property bool isSearching: settingsView._searchQuery.trim() !== ""
                     property bool matchesSearch: pageAvailable && settingsView._pageMatchesSearch(index)
-                    property bool isExpanded: hasMultipleSections && (isSearching ? matchesSearch : settingsView._isExpanded(index))
+                    property bool isExpanded: hasMultipleSections && (!isSearching || matchesSearch)
+                                              && settingsView._isExpanded(index)
 
                     onPageSectionsChanged: {
                         let sections = pageSections ?? []
@@ -312,28 +319,17 @@ Rectangle {
                         visible:       pageName !== "Divider" && pageAvailable
 
                         onClicked: {
-                            if (mainWindow.allowViewSwitch()) {
-                                settingsView._navigateTo(index, -1)
-                                if (hasMultipleSections) {
-                                    // Toggle expand/collapse when re-clicking the same page
-                                    if (isSelected && isExpanded) {
-                                        settingsView._setExpanded(index, false)
-                                    } else if (!isExpanded) {
-                                        settingsView._setExpanded(index, true)
-                                    }
-                                }
+                            if (!mainWindow.allowViewSwitch()) { return }
+                            const wasSelected = isSelected
+                            const wasExpanded = isExpanded
+                            settingsView._navigateTo(index, -1)
+                            if (hasMultipleSections) {
+                                settingsView._setExpanded(index, !wasSelected || !wasExpanded)
                             }
                         }
 
                         onToggleExpand: {
-                            if (!mainWindow.allowViewSwitch()) {
-                                return
-                            }
-                            var expanding = !isExpanded
-                            settingsView._setExpanded(index, expanding)
-                            if (!expanding && isSelected) {
-                                settingsView._navigateTo(index, -1)
-                            }
+                            settingsView._setExpanded(index, !isExpanded)
                         }
                     }
 
@@ -343,6 +339,7 @@ Rectangle {
 
                         Button {
                             id:             sectionBtn
+                            objectName: "settingsSection_" + (pageColumn.model.nameKey ?? pageColumn.pageName) + "_" + sectionIndex
                             Layout.fillWidth: true
                             padding:        ScreenTools.defaultFontPixelWidth * 0.75
                             topPadding:     settingsView.embedded ? ScreenTools.defaultFontPixelHeight * 0.5 : padding

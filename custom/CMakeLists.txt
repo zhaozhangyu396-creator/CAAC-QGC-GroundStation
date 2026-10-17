@@ -82,6 +82,7 @@ qgc_set_qt_resource_alias(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacConnectionSettings.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacRIDSettings.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacSafetySettings.qml
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacFailsafeEnumTranslations.js
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacBatteryProtection.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacGeoFenceSettings.qml
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PlanView/CaacUOMSettings.qml
@@ -135,6 +136,7 @@ qt_add_qml_module(
               src/PlanView/CaacConnectionSettings.qml
               src/PlanView/CaacRIDSettings.qml
               src/PlanView/CaacSafetySettings.qml
+              src/PlanView/CaacFailsafeEnumTranslations.js
               src/PlanView/CaacBatteryProtection.qml
               src/PlanView/CaacGeoFenceSettings.qml
               src/PlanView/CaacUOMSettings.qml

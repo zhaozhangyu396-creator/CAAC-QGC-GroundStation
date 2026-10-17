@@ -9,6 +9,7 @@ import QGroundControl.FactControls
 
 Item {
     id:         _root
+    objectName: "parameterEditor_root"
 
     property Fact   _editorDialogFact: Fact { }
     property int    _rowHeight:         ScreenTools.defaultFontPixelHeight * 2
@@ -16,11 +17,25 @@ Item {
     property bool   _searchFilter:      searchText.text.trim() != "" || controller.showModifiedOnly || controller.showFavoritesOnly  ///< true: showing results of search
     property var    _searchResults      ///< List of parameter names from search results
     property var    _activeVehicle:     QGroundControl.multiVehicleManager.activeVehicle
-    property bool   _showRCToParam:     _activeVehicle.px4Firmware
+    property bool   _showRCToParam:     _activeVehicle ? _activeVehicle.px4Firmware : false
     property var    _appSettings:       QGroundControl.settingsManager.appSettings
     property var    _controller:        controller
     property var    _favorites:         controller.favoriteParameterNames
     property real   _margins:           ScreenTools.defaultFontPixelHeight / 2
+    readonly property bool _compactLayout: width < ScreenTools.defaultFontPixelWidth * 80
+    readonly property var _categoryChoices: _choices(controller.categories)
+    readonly property var _groupChoices: _choices(controller.currentCategory ? controller.currentCategory.groups : null)
+
+    function _choices(objects) {
+        const choices = []
+        if (objects) {
+            for (let index = 0; index < objects.count; index++) {
+                const object = objects.get(index)
+                choices.push({text: object.name, object: object})
+            }
+        }
+        return choices
+    }
 
     ParameterEditorController {
         id: controller
@@ -39,6 +54,13 @@ Item {
 
     QGCMenu {
         id:                 toolsMenu
+        QGCMenuItem {
+            text: qsTr("Hide read-only")
+            visible: _root._compactLayout
+            checkable: true
+            checked: controller.hideReadOnly
+            onTriggered: controller.hideReadOnly = checked
+        }
         QGCMenuItem {
             text:           qsTr("Refresh")
             onTriggered:	controller.refresh()
@@ -143,36 +165,39 @@ Item {
         }
     }
 
-    RowLayout {
+    GridLayout {
         id:             header
         anchors.left:   parent.left
         anchors.right:  parent.right
+        columns:        _root._compactLayout ? 3 : 4
+        columnSpacing:  ScreenTools.defaultFontPixelWidth
+        rowSpacing:     _margins / 2
 
-        RowLayout {
-            Layout.alignment:   Qt.AlignLeft
-            spacing:            ScreenTools.defaultFontPixelWidth
+        QGCTextField {
+            id:                     searchText
+            objectName:             "parameterEditor_search"
+            Layout.fillWidth:       true
+            Layout.minimumWidth:    0
+            placeholderText:        qsTr("Search")
+            onDisplayTextChanged:   controller.searchText = displayText
+        }
 
-            QGCTextField {
-                id:                     searchText
-                placeholderText:        qsTr("Search")
-                onDisplayTextChanged:   controller.searchText = displayText
-            }
-
-            QGCButton {
-                text: qsTr("Clear")
-                onClicked: {
-                    if(ScreenTools.isMobile) {
-                        Qt.inputMethod.hide();
-                    }
-                    clearTimer.start()
+        QGCButton {
+            objectName: "parameterEditor_clearSearch"
+            text: qsTr("Clear")
+            onClicked: {
+                if(ScreenTools.isMobile) {
+                    Qt.inputMethod.hide();
                 }
+                clearTimer.start()
             }
+        }
 
-            QGCCheckBox {
-                text:       qsTr("Hide read-only")
-                checked:    controller.hideReadOnly
-                onClicked:  controller.hideReadOnly = checked
-            }
+        QGCCheckBox {
+            text:       qsTr("Hide read-only")
+            visible:    !_root._compactLayout
+            checked:    controller.hideReadOnly
+            onClicked:  controller.hideReadOnly = checked
         }
 
         QGCButton {
@@ -190,9 +215,9 @@ Item {
         anchors.top:        header.bottom
         anchors.topMargin:  _margins
 
-        QGCTabButton { text: qsTr("Full List") }
-        QGCTabButton { text: qsTr("Modified") }
-        QGCTabButton { text: qsTr("Favorites") }
+        QGCTabButton { objectName: "parameterEditor_fullListTab"; text: qsTr("Full List"); Layout.minimumWidth: 0 }
+        QGCTabButton { objectName: "parameterEditor_modifiedTab"; text: qsTr("Modified"); Layout.minimumWidth: 0 }
+        QGCTabButton { objectName: "parameterEditor_favoritesTab"; text: qsTr("Favorites"); Layout.minimumWidth: 0 }
 
         onCurrentIndexChanged: {
             controller.showModifiedOnly  = (currentIndex === 1)
@@ -200,9 +225,52 @@ Item {
         }
     }
 
+    GridLayout {
+        id: compactSelectors
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: tabBar.bottom
+        anchors.topMargin: _margins
+        columns: 4
+        columnSpacing: ScreenTools.defaultFontPixelWidth
+        rowSpacing: _margins
+        visible: _root._compactLayout && !_searchFilter
+
+        QGCLabel {
+            text: qsTr("Category")
+        }
+
+        QGCComboBox {
+            objectName: "parameterEditor_categorySelector"
+            Layout.fillWidth: true
+            Layout.minimumWidth: 0
+            font.pointSize: ScreenTools.defaultFontPointSize
+            textRole: "text"
+            model: _root._categoryChoices
+            currentIndex: _root._categoryChoices.findIndex(choice => choice.object === controller.currentCategory)
+            onActivated: index => controller.currentCategory = model[index].object
+        }
+
+        QGCLabel {
+            text: qsTr("Group")
+        }
+
+        QGCComboBox {
+            objectName: "parameterEditor_groupSelector"
+            Layout.fillWidth: true
+            Layout.minimumWidth: 0
+            font.pointSize: ScreenTools.defaultFontPointSize
+            textRole: "text"
+            model: _root._groupChoices
+            currentIndex: _root._groupChoices.findIndex(choice => choice.object === controller.currentGroup)
+            onActivated: index => controller.currentGroup = model[index].object
+        }
+    }
+
     /// Group buttons
     QGCFlickable {
         id :                groupScroll
+        objectName:         "parameterEditor_categoryTree"
         width:              ScreenTools.defaultFontPixelWidth * 25
         anchors.top:        tabBar.bottom
         anchors.topMargin:  _margins
@@ -211,7 +279,7 @@ Item {
         pixelAligned:       true
         contentHeight:      groupedViewCategoryColumn.height
         flickableDirection: Flickable.VerticalFlick
-        visible:            !_searchFilter
+        visible:            !_searchFilter && !_root._compactLayout
 
         ColumnLayout {
             id:             groupedViewCategoryColumn
@@ -267,7 +335,7 @@ Item {
         id:                 headerView
         anchors.left:       tableView.left
         anchors.right:      tableView.right
-        anchors.top:        tabBar.bottom
+        anchors.top:        compactSelectors.visible ? compactSelectors.bottom : tabBar.bottom
         anchors.topMargin:  _margins
         syncView:           tableView
         clip:               true
@@ -324,16 +392,40 @@ Item {
 
     TableView {
         id:                 tableView
-        anchors.leftMargin: ScreenTools.defaultFontPixelWidth
+        objectName:         "parameterEditor_table"
+        anchors.leftMargin: _searchFilter || _root._compactLayout ? 0 : ScreenTools.defaultFontPixelWidth
         anchors.top:        headerView.bottom
         anchors.bottom:     parent.bottom
-        anchors.left:       _searchFilter ? parent.left : groupScroll.right
+        anchors.left:       _searchFilter || _root._compactLayout ? parent.left : groupScroll.right
         anchors.right:      parent.right
         columnSpacing:      0
         rowSpacing:         0
         model:              controller.parameters
-        contentWidth:       width
+        columnWidthProvider: column => {
+            const favoriteWidth = Math.max(ScreenTools.implicitCheckBoxHeight + ScreenTools.defaultFontPixelWidth,
+                                           ScreenTools.defaultFontPixelHeight * 2.5)
+            if (column === 0) { return favoriteWidth }
+            if (_root._compactLayout && (column === 1 || column === 2)) {
+                const availableWidth = Math.max(1, tableView.width - favoriteWidth)
+                const nameWidth = Math.floor(availableWidth * 0.56)
+                return column === 1 ? nameWidth : availableWidth - nameWidth
+            }
+            return ScreenTools.defaultFontPixelWidth * (column === 1 ? 22 : column === 2 ? 26 : 48)
+        }
+        bottomMargin:       horizontalScrollBar.visible ? horizontalScrollBar.height : 0
         clip:               true
+
+        ScrollBar.horizontal: ScrollBar {
+            id: horizontalScrollBar
+            objectName: "parameterEditor_horizontalScrollBar"
+            policy: ScrollBar.AlwaysOn
+            visible: tableView.contentWidth > tableView.width
+            active: visible
+        }
+
+        ScrollBar.vertical: ScrollBar {
+            policy: ScrollBar.AsNeeded
+        }
 
         // Qt is supposed to adjust column widths automatically when larger widths come into view.
         // But it doesn't work. So we have to do it force a layout manually when we scroll.
@@ -344,18 +436,20 @@ Item {
             onTriggered:    tableView.forceLayout()
         }
 
+        onWidthChanged: forceLayoutTimer.start()
         onTopRowChanged: forceLayoutTimer.start()
+        onLeftColumnChanged: forceLayoutTimer.start()
         onModelChanged: {
             positionViewAtRow(0, TableView.AlignLeft | TableView.AlignTop)
             forceLayoutTimer.start()
         }
 
         delegate: Rectangle {
-            implicitWidth:  column === 0 ? ScreenTools.implicitCheckBoxHeight + ScreenTools.defaultFontPixelWidth
-                                         : column === 1 ? nameRow.implicitWidth + ScreenTools.defaultFontPixelWidth
-                                         : column === 2 ? ScreenTools.defaultFontPixelWidth * 16
-                                                        : label.contentWidth + ScreenTools.defaultFontPixelWidth
-            implicitHeight: label.contentHeight + ScreenTools.defaultFontPixelHeight * 0.5
+            objectName: "parameterEditor_cell_" + row + "_" + column
+            implicitWidth:  tableView.columnWidthProvider(column)
+            implicitHeight: Math.max(ScreenTools.implicitCheckBoxHeight,
+                                     column === 1 ? nameLabel.implicitHeight : label.implicitHeight)
+                            + ScreenTools.defaultFontPixelHeight * 0.5
             color:          row % 2 === 0 ? "transparent" : qgcPal.windowShade
             clip:           true
 
@@ -385,6 +479,7 @@ Item {
             }
 
             QGCCheckBox {
+                objectName:             "parameterEditor_favorite_" + fact.name
                 visible:                column === 0
                 anchors.centerIn:       parent
                 checked:                _root._favorites.indexOf(fact.name) >= 0
@@ -392,43 +487,44 @@ Item {
                 onClicked:              controller.toggleFavorite(fact.name)
             }
 
-            Row {
-                id:                     nameRow
+            QGCLabel {
+                id:                     nameLabel
                 visible:                column === 1
                 anchors.left:           parent.left
                 anchors.leftMargin:     ScreenTools.defaultFontPixelWidth / 2
+                anchors.right:          parent.right
+                anchors.rightMargin:    ScreenTools.defaultFontPixelWidth / 2
+                                        + (lockIcon.visible ? lockIcon.width + ScreenTools.defaultFontPixelWidth / 3 : 0)
                 anchors.verticalCenter: parent.verticalCenter
-                spacing:               lockIcon.visible ? ScreenTools.defaultFontPixelWidth / 3 : 0
+                text:                   column === 1 ? display : ""
+                wrapMode:               Text.Wrap
+            }
 
-                QGCLabel {
-                    text:               column === 1 ? display : ""
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-
-                QGCColoredImage {
-                    id:                 lockIcon
-                    visible:            fact.readOnly
-                    source:             "qrc:/InstrumentValueIcons/lock-closed.svg"
-                    color:              qgcPal.text
-                    width:              ScreenTools.defaultFontPixelHeight * 0.8
-                    height:             width
-                    sourceSize.width:   width
-                    anchors.verticalCenter: parent.verticalCenter
-                }
+            QGCColoredImage {
+                id:                 lockIcon
+                visible:            column === 1 && fact.readOnly
+                source:             "qrc:/InstrumentValueIcons/lock-closed.svg"
+                color:              qgcPal.text
+                width:              ScreenTools.defaultFontPixelHeight * 0.8
+                height:             width
+                sourceSize.width:   width
+                anchors.right:      parent.right
+                anchors.rightMargin: ScreenTools.defaultFontPixelWidth / 2
+                anchors.verticalCenter: parent.verticalCenter
             }
 
             QGCLabel {
                 id:                 label
+                objectName:         "parameterEditor_valueText_" + fact.name + "_" + column
                 visible:            column !== 0 && column !== 1
                 anchors.left:       parent.left
                 anchors.leftMargin: ScreenTools.defaultFontPixelWidth / 2
                 anchors.verticalCenter: parent.verticalCenter
-                width:              column == 2 ? ScreenTools.defaultFontPixelWidth * 15 : implicitWidth
+                width:              parent.width - ScreenTools.defaultFontPixelWidth
                 text:               column == 2 ? col1String() : display
                 color:              column == 2 && fact.defaultValueAvailable && !fact.valueEqualsDefault ? qgcPal.modifiedParamValue : qgcPal.text
                 font.bold:          column == 2 && fact.defaultValueAvailable && !fact.valueEqualsDefault
-                maximumLineCount:   1
-                elide:              column == 2 ? Text.ElideRight : Text.ElideNone
+                wrapMode:           Text.Wrap
 
                 function col1String() {
                     if (fact.enumStrings.length === 0) {
@@ -442,6 +538,7 @@ Item {
             }
 
             QGCMouseArea {
+                objectName: "parameterEditor_edit_" + fact.name + "_" + column
                 anchors.fill: parent
                 visible:      column !== 0
                 onClicked: mouse => {
@@ -451,4 +548,17 @@ Item {
             }
         }
     }
+
+    Rectangle {
+        objectName: "parameterEditor_tableFrame"
+        anchors.left: tableView.left
+        anchors.right: tableView.right
+        anchors.top: headerView.top
+        anchors.bottom: tableView.bottom
+        color: "transparent"
+        border.color: qgcPal.groupBorder
+        border.width: 1
+        z: 2
+    }
+
 }

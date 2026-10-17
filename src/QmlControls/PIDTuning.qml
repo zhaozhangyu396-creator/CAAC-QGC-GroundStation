@@ -71,12 +71,42 @@ GridLayout {
         for (var i = 0; i < chart.seriesList.length; ++i) {
             chart.seriesList[i].clear()
         }
-        _xAxis.min = 0
-        _xAxis.max = 0
-        _yAxis.min = 0
-        _yAxis.max = 0
+        chart.setAxisRange(_xAxis, -chartDisplaySec, 0)
+        chart.setAxisRange(_yAxis, -5, 5)
+        chart.followLatest = true
         _msecs = 0
         _last_t = 0
+    }
+
+    function restoreLiveView() {
+        const newest = _msecs / 1000
+        let minimum = Number.POSITIVE_INFINITY
+        let maximum = Number.NEGATIVE_INFINITY
+        for (let index = 0; index < chart.seriesList.length; ++index) {
+            const series = chart.seriesList[index]
+            for (let i = series.count - 1; i >= 0; --i) {
+                const point = series.at(i)
+                if (point.x < newest - chartDisplaySec) { break }
+                if (isFinite(point.y)) {
+                    minimum = Math.min(minimum, point.y)
+                    maximum = Math.max(maximum, point.y)
+                }
+            }
+        }
+        if (!isFinite(minimum) || !isFinite(maximum)) { minimum = -5; maximum = 5 }
+        const padding = Math.max(_tickSeparation, (maximum - minimum) * 0.1)
+        chart.setAxisRange(_xAxis, newest - chartDisplaySec, newest)
+        chart.setAxisRange(_yAxis, minimum - padding, maximum + padding)
+        chart.followLatest = true
+    }
+
+    function toggleGraphRecording() {
+        dataTimer.running = !dataTimer.running
+        _last_t = 0
+        if (showAutoModeChange && autoModeChange.checked && globals.activeVehicle) {
+            globals.activeVehicle.flightMode = dataTimer.running
+                ? globals.activeVehicle.stabilizedFlightMode : globals.activeVehicle.pauseFlightMode
+        }
     }
 
     // Save the current set of tuning values so we can reset to them
@@ -103,14 +133,14 @@ GridLayout {
             // pointer to the series that is only cleared during the next
             // updatePolish() pass. Destroying the series before that pass
             // causes a SIGSEGV in QGraphsView::updatePolish(). The series is
-            // parented to chart so it is freed when the chart is destroyed.
+            // parented to the view so it is freed when the view is destroyed.
             // GPU/graph resources are released by removeSeries().
             chart.removeSeries(chart.seriesList[0])
         }
         var legendItems = []
         axis[_currentAxis].plot.forEach(function(e, idx) {
             var color = _seriesColors[idx % _seriesColors.length]
-            var series = lineSeriesComponent.createObject(chart, {name: e.name, color: color})
+            var series = lineSeriesComponent.createObject(chart.graphView, {name: e.name, color: color})
             chart.addSeries(series)
             legendItems.push({name: e.name, color: color})
         })
@@ -129,7 +159,9 @@ GridLayout {
         saveTuningParamValues()
     }
 
-    Component.onDestruction: globals.activeVehicle.setPIDTuningTelemetryMode(Vehicle.ModeDisabled)
+    Component.onDestruction: {
+        if (globals.activeVehicle) { globals.activeVehicle.setPIDTuningTelemetryMode(Vehicle.ModeDisabled) }
+    }
     on_CurrentAxisChanged: axisIndexChanged()
 
     Timer {
@@ -139,8 +171,9 @@ GridLayout {
         repeat:     true
 
         onTriggered: {
-            _xAxis.max = _msecs / 1000
-            _xAxis.min = _msecs / 1000 - chartDisplaySec
+            if (chart.followLatest) {
+                chart.setAxisRange(_xAxis, _msecs / 1000 - chartDisplaySec, _msecs / 1000)
+            }
 
             var firstPoint = _msecs == 0
 
@@ -149,12 +182,13 @@ GridLayout {
                 var value = axis[_currentAxis].plot[i].value
                 if (!isNaN(value)) {
                     chart.seriesList[i].append(_msecs/1000, value)
-                    if (firstPoint) {
-                        _yAxis.min = value
-                        _yAxis.max = value
-                    } else {
-                        adjustYAxisMin(_yAxis, value)
-                        adjustYAxisMax(_yAxis, value)
+                    if (chart.followLatest) {
+                        if (firstPoint && i === 0) {
+                            chart.setAxisRange(_yAxis, value - _tickSeparation, value + _tickSeparation)
+                        } else {
+                            adjustYAxisMin(_yAxis, value)
+                            adjustYAxisMax(_yAxis, value)
+                        }
                     }
                     // limit history
                     var minSec = _msecs/1000 - 3*60
@@ -191,7 +225,7 @@ GridLayout {
             anchors.horizontalCenter: parent.horizontalCenter
         }
 
-        GraphsView {
+        PIDTuningChart {
             id:                     chart
             width:                  pidLayout.vehicleSetupStyle ? availableWidth
                                         : Math.max(_minChartWidth, availableWidth - rightPanel.width - parent.spacing - _margins)
@@ -200,6 +234,12 @@ GridLayout {
 
             property real _minChartWidth:   ScreenTools.defaultFontPixelWidth * 40
             property real _minChartHeight:  ScreenTools.defaultFontPixelHeight * 15
+            title: _chartTitle
+            legendModel: _legendModel
+            running: dataTimer.running
+            onClearRequested: resetGraphs()
+            onToggleRunningRequested: toggleGraphRecording()
+            onRestoreRequested: restoreLiveView()
 
             theme: GraphsTheme {
                 colorScheme:            qgcPal.globalTheme === QGCPalette.Light ? GraphsTheme.ColorScheme.Light : GraphsTheme.ColorScheme.Dark
@@ -215,7 +255,8 @@ GridLayout {
                 id:                     xAxis
                 min:                    0
                 max:                    0
-                labelFormat:            "%.1f"
+                tickInterval:           chart.xTickInterval
+                labelFormat:            "%." + chart.timeDecimals + "f"
                 titleText:              ScreenTools.isShortScreen ? "" : qsTr("sec")
                 titleFont.pointSize:    ScreenTools.defaultFontPointSize
                 titleFont.family:       ScreenTools.normalFontFamily
@@ -226,46 +267,11 @@ GridLayout {
                 min:                    0
                 max:                    10
                 titleText:              unit
-                tickInterval:           _tickSeparation
+                tickInterval:           chart.yTickInterval
                 titleFont.pointSize:    ScreenTools.defaultFontPointSize
                 titleFont.family:       ScreenTools.normalFontFamily
             }
 
-            // enable mouse dragging
-            MouseArea {
-                property var _startPoint: undefined
-                property double _scaling: 0
-                anchors.fill: parent
-                onPressed: (mouse) => {
-                    _startPoint = Qt.point(mouse.x, mouse.y)
-                    if (chart.seriesList.length > 0) {
-                        var start = chart.seriesList[0].dataPointCoordinatesAt(_startPoint.x, _startPoint.y)
-                        var next = chart.seriesList[0].dataPointCoordinatesAt(mouse.x+1, mouse.y+1)
-                        _scaling = next.x - start.x
-                    }
-                }
-                onWheel: (wheel) => {
-                    if (wheel.angleDelta.y > 0)
-                        chartDisplaySec /= 1.2
-                    else
-                        chartDisplaySec *= 1.2
-                    _xAxis.min = _xAxis.max - chartDisplaySec
-                }
-                onPositionChanged: (mouse) => {
-                    if(_startPoint != undefined) {
-                        dataTimer.running = false
-                        var cp = Qt.point(mouse.x, mouse.y)
-                        var dx = (cp.x - _startPoint.x) * _scaling
-                        _startPoint = cp
-                        _xAxis.max -= dx
-                        _xAxis.min -= dx
-                    }
-                }
-
-                onReleased: {
-                    _startPoint = undefined
-                }
-            }
         }
 
         Row {
@@ -300,19 +306,15 @@ GridLayout {
                 spacing: _margins
 
                 QGCButton {
+                    objectName: "pidTuning_clear"
                     text:       qsTr("Clear")
                     onClicked:  resetGraphs()
                 }
 
                 QGCButton {
+                    objectName: "pidTuning_toggle"
                     text:       dataTimer.running ? qsTr("Stop") : qsTr("Start")
-                    onClicked: {
-                        dataTimer.running = !dataTimer.running
-                        _last_t = 0
-                        if (showAutoModeChange && autoModeChange.checked) {
-                            globals.activeVehicle.flightMode = dataTimer.running ? globals.activeVehicle.stabilizedFlightMode : globals.activeVehicle.pauseFlightMode
-                        }
-                    }
+                    onClicked: toggleGraphRecording()
                 }
                 Connections {
                     target: globals.activeVehicle

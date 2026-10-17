@@ -150,6 +150,16 @@
       <source>Frame</source>
       <translation>机架</translation>
     </message>
+    <message>
+      <location filename="../src/AutoPilotPlugins/APM/APMAirframeComponent.qml"/>
+      <source>图片中的电机编号适用于 PX4；当前飞控编号以电机页面为准。</source>
+      <translation>图片中的电机编号适用于 PX4；当前飞控编号以电机页面为准。</translation>
+    </message>
+    <message>
+      <location filename="../src/AutoPilotPlugins/APM/APMAirframeComponent.qml"/>
+      <source>当前固件未提供此类机架。</source>
+      <translation>当前固件未提供此类机架。</translation>
+    </message>
   </context>
   <context>
     <name>APMAirframeComponentController</name>
@@ -1382,7 +1392,7 @@
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMESCComponent.qml" line="139"/>
       <source>WARNING: Remove props prior to calibration!</source>
-      <translation>警告：校准前移除道具！</translation>
+      <translation>警告：校准前请拆下螺旋桨！</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMESCComponent.qml" line="147"/>
@@ -1412,7 +1422,7 @@
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMESCComponent.qml" line="157"/>
       <source>- The arming tone will be played (if the vehicle has a buzzer attached)</source>
-      <translation>- 将播放布防音（如果无人机附有蜂鸣器）</translation>
+      <translation>- 将播放解锁音（如果无人机附有蜂鸣器）</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMESCComponent.qml" line="158"/>
@@ -1874,7 +1884,7 @@
       <location filename="../src/AutoPilotPlugins/APM/APMFlightSafetyComponent.cc" line="24"/>
       <location filename="../src/AutoPilotPlugins/APM/APMFlightSafetyComponent.cc" line="26"/>
       <source>Configure Return to Launch, geofence, and arming checks.</source>
-      <translation>配置返回启动、地理围栏和布防检查。</translation>
+      <translation>配置返回启动、地理围栏和解锁检查。</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMFlightSafetyComponent.h" line="26"/>
@@ -1969,12 +1979,12 @@
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMFlightSafetyComponentSub.qml" line="230"/>
       <source>Skip Arming Checks</source>
-      <translation>跳过布防检查</translation>
+      <translation>跳过解锁检查</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMFlightSafetyComponentSub.qml" line="245"/>
       <source>Warning: Turning off arming checks can lead to loss of Vehicle control.</source>
-      <translation>警告：关闭布防检查可能会导致无人机失去控制。</translation>
+      <translation>警告：关闭解锁检查可能会导致无人机失去控制。</translation>
     </message>
   </context>
   <context>
@@ -2760,7 +2770,7 @@
       <location filename="../src/AutoPilotPlugins/APM/APMSafetyComponent.cc" line="24"/>
       <location filename="../src/AutoPilotPlugins/APM/APMSafetyComponent.cc" line="26"/>
       <source>Configure Return to Launch, geofence, and arming checks.</source>
-      <translation>配置返回启动、地理围栏和布防检查。</translation>
+      <translation>配置返回启动、地理围栏和解锁检查。</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSafetyComponent.h" line="26"/>
@@ -2959,7 +2969,7 @@
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="472"/>
       <source>Autopilot Rotation:</source>
-      <translation>飞控方向：</translation>
+      <translation>飞控安装方向：</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="489"/>
@@ -3044,12 +3054,12 @@
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="641"/>
       <source>Disconnect your props, flip them over and rotate them one position around the frame. </source>
-      <translation>拆下螺旋桨，翻个面，然后以机架为中心把它们串动一个位置装好。 </translation>
+      <translation>拆下螺旋桨，将桨叶翻面，再沿机架依次错开一个电机位置重新安装。 </translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="642"/>
       <source>In this configuration they should push the copter down into the ground when the throttle is raised.</source>
-      <translation>在这种装配下，推油门时，飞行器会被推向地面。</translation>
+      <translation>这样安装后，增加油门时产生的推力应朝向地面，将飞机向下压。</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="649"/>
@@ -3118,7 +3128,7 @@ Click Ok to start calibration.</source>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="715"/>
       <source>Level Horizon</source>
-      <translation>校平地平线</translation>
+      <translation>水平校准</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="719"/>
@@ -3143,7 +3153,7 @@ Click Ok to start calibration.</source>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="749"/>
       <source>Pressure</source>
-      <translation>气压</translation>
+      <translation>气压计</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="754"/>
@@ -3200,6 +3210,16 @@ Click Ok to start calibration.</source>
       <source>Lat: %1 Lon: %2</source>
       <extracomment>%1 is latitude, %2 is longitude</extracomment>
       <translation>纬度：%1 经度：%2</translation>
+    </message>
+    <message>
+      <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.cc"/>
+      <source>Gyroscope</source>
+      <translation>陀螺仪</translation>
+    </message>
+    <message>
+      <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.cc"/>
+      <source>飞控朝向</source>
+      <translation>飞控朝向</translation>
     </message>
   </context>
   <context>
@@ -3310,6 +3330,11 @@ Click Ok to start calibration.</source>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponentController.cc" line="595"/>
       <source>Continue rotating...</source>
       <translation>继续旋转...</translation>
+    </message>
+    <message>
+      <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponentController.cc"/>
+      <source>Cancellation was not confirmed. Wait for the vehicle calibration status.</source>
+      <translation>尚未确认取消校准，请等待飞控返回校准状态。</translation>
     </message>
   </context>
   <context>
@@ -4577,7 +4602,7 @@ Please place your vehicle in water, click the button, and wait. Note that the th
     <message>
       <location filename="../src/Vehicle/Autotune.cpp" line="90"/>
       <source>Wait for disarm</source>
-      <translation>等待撤防</translation>
+      <translation>等待上锁</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/Autotune.cpp" line="93"/>
@@ -10557,7 +10582,7 @@ VTOL</source>
     <message>
       <location filename="../src/FlyView/GuidedActionsController.qml" line="29"/>
       <source>Disarm (MV)</source>
-      <translation>解除解锁（MV）</translation>
+      <translation>上锁（MV）</translation>
     </message>
     <message>
       <location filename="../src/FlyView/GuidedActionsController.qml" line="30"/>
@@ -13373,7 +13398,7 @@ VTOL</source>
     <message>
       <location filename="../src/MAVLink/QGCMAVLink.cc" line="364"/>
       <source>Pre-Arm Check</source>
-      <translation>布防前检查</translation>
+      <translation>解锁前检查</translation>
     </message>
     <message>
       <location filename="../src/MAVLink/QGCMAVLink.cc" line="365"/>
@@ -16415,6 +16440,49 @@ Is this really what you want?</source>
     </message>
   </context>
   <context>
+    <name>PIDTuningChart</name>
+    <message>
+      <location filename="../src/QmlControls/PIDTuningChart.qml"/>
+      <source>Double-click to enlarge. Drag to pan; scroll to zoom.</source>
+      <translation>双击放大，拖动平移，滚轮缩放。</translation>
+    </message>
+    <message>
+      <location filename="../src/QmlControls/PIDTuningChart.qml"/>
+      <source>Chart opened in a separate window.</source>
+      <translation>图表已在独立窗口打开。</translation>
+    </message>
+    <message>
+      <location filename="../src/QmlControls/PIDTuningChart.qml"/>
+      <source>Restore live view</source>
+      <translation>恢复实时跟随</translation>
+    </message>
+    <message>
+      <location filename="../src/QmlControls/PIDTuningChart.qml"/>
+      <source>Clear</source>
+      <translation>清除</translation>
+    </message>
+    <message>
+      <location filename="../src/QmlControls/PIDTuningChart.qml"/>
+      <source>Stop</source>
+      <translation>停止</translation>
+    </message>
+    <message>
+      <location filename="../src/QmlControls/PIDTuningChart.qml"/>
+      <source>Start</source>
+      <translation>开始</translation>
+    </message>
+    <message>
+      <location filename="../src/QmlControls/PIDTuningChart.qml"/>
+      <source>Close</source>
+      <translation>关闭</translation>
+    </message>
+    <message>
+      <location filename="../src/QmlControls/PIDTuningChart.qml"/>
+      <source>Drag to pan; scroll to zoom. Double-click to restore live view.</source>
+      <translation>拖动平移，滚轮缩放，双击恢复实时跟随。</translation>
+    </message>
+  </context>
+  <context>
     <name>PX4AutoPilotPlugin</name>
     <message>
       <location filename="../src/AutoPilotPlugins/PX4/PX4AutoPilotPlugin.cc" line="167"/>
@@ -18264,6 +18332,16 @@ Note that this will also completely reset everything, including UAVCAN nodes, al
       <source>Select Ok to reboot vehicle.</source>
       <translation>点击“确定”重新启动飞机。</translation>
     </message>
+    <message>
+      <location filename="../src/QmlControls/ParameterEditor.qml"/>
+      <source>Category</source>
+      <translation>分类</translation>
+    </message>
+    <message>
+      <location filename="../src/QmlControls/ParameterEditor.qml"/>
+      <source>Group</source>
+      <translation>分组</translation>
+    </message>
   </context>
   <context>
     <name>ParameterEditorController</name>
@@ -18409,7 +18487,7 @@ Note that this will also completely reset everything, including UAVCAN nodes, al
     <message>
       <location filename="../src/QmlControls/ParameterEditorController.cc" line="63"/>
       <source>Fav</source>
-      <translation>最爱</translation>
+      <translation>收藏</translation>
     </message>
     <message>
       <location filename="../src/QmlControls/ParameterEditorController.cc" line="64"/>
@@ -21444,7 +21522,7 @@ Click 'Ok' to upload the Plan anyway.</source>
     <message>
       <location filename="../src/Toolbar/RemoteIDIndicatorPage.qml" line="95"/>
       <source>ARM STATUS</source>
-      <translation>布防状态</translation>
+      <translation>解锁状态</translation>
     </message>
     <message>
       <location filename="../src/Toolbar/RemoteIDIndicatorPage.qml" line="119"/>
@@ -22046,6 +22124,11 @@ Click 'Ok' to upload the Plan anyway.</source>
       <source>Reset failed</source>
       <translation>重置失败</translation>
     </message>
+    <message>
+      <location filename="../src/AutoPilotPlugins/PX4/SensorsComponentController.cc"/>
+      <source>Cancellation was not confirmed. Wait for the vehicle calibration status.</source>
+      <translation>尚未确认取消校准，请等待飞控返回校准状态。</translation>
+    </message>
   </context>
   <context>
     <name>SensorsComponentSummary</name>
@@ -22300,6 +22383,11 @@ ROTATION_NONE indicates component points in direction of flight.</source>
       <location filename="../src/AutoPilotPlugins/PX4/SensorsSetup.qml" line="546"/>
       <source>Hold Still</source>
       <translation>保持静止</translation>
+    </message>
+    <message>
+      <location filename="../src/AutoPilotPlugins/PX4/SensorsSetup.qml"/>
+      <source>Calibration complete</source>
+      <translation>校准完成</translation>
     </message>
   </context>
   <context>
@@ -24489,7 +24577,7 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
       <location filename="../src/Vehicle/VehicleSetup/VehicleConfigView.qml" line="26"/>
       <source>This operation cannot be performed while the vehicle is armed.</source>
-      <translation>当无人机布防时，无法执行此操作。</translation>
+      <translation>当无人机解锁时，无法执行此操作。</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/VehicleConfigView.qml" line="30"/>
@@ -24559,7 +24647,7 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
       <location filename="../src/Vehicle/VehicleSetup/VehicleConfigView.qml" line="298"/>
       <source>Parameter download was skipped because the vehicle is armed. Configuration pages will be available after parameters are downloaded.</source>
-      <translation>由于无人机已布防，参数下载被跳过。下载参数后即可使用配置页面。</translation>
+      <translation>由于无人机已解锁，参数下载被跳过。下载参数后即可使用配置页面。</translation>
     </message>
     <message>
       <source>无人机设置</source>
@@ -27856,6 +27944,26 @@ altitude</source>
       <source>电机测试</source>
       <translation>电机测试</translation>
     </message>
+    <message>
+      <location filename="../src/QmlControls/SensorCalibrationPanel.qml"/>
+      <source>Cancel</source>
+      <translation>取消</translation>
+    </message>
+    <message>
+      <location filename="../src/QmlControls/SensorCalibrationPanel.qml"/>
+      <source>Close</source>
+      <translation>关闭</translation>
+    </message>
+    <message>
+      <location filename="../src/QmlControls/SensorCalibrationPanel.qml"/>
+      <source>飞控朝向</source>
+      <translation>飞控朝向</translation>
+    </message>
+    <message>
+      <location filename="../src/QmlControls/SensorCalibrationPanel.qml"/>
+      <source>默认朝向</source>
+      <translation>默认朝向</translation>
+    </message>
   </context>
   <context>
     <name>CaacSimulationController</name>
@@ -28332,4 +28440,172 @@ altitude</source>
         <translation>无法保存激活信息，请检查写入权限后重试。</translation>
     </message>
 </context>
+  <context>
+    <name>CaacSafetyFailsafeEnums</name>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Disabled/NoAction</source>
+      <translation>禁用／无动作</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>RTL</source>
+      <translation>返航</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>RTL or Continue with Mission in Auto Mode (Deprecated in 4.0+-see FS_OPTIONS)</source>
+      <translation>返航或自动继续任务（4.0+弃用，见 FS_OPTIONS）</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>SmartRTL or RTL</source>
+      <translation>智能返航或返航</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>SmartRTL or Land</source>
+      <translation>智能返航或降落</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Land (4.0+ Only)</source>
+      <translation>降落（仅4.0+）</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Disabled</source>
+      <translation>禁用</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Enabled always RTL</source>
+      <translation>始终返航</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Enabled Continue with Mission in Auto Mode (Deprecated in 4.0+)</source>
+      <translation>自动继续任务（4.0+弃用）</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Enabled always Land</source>
+      <translation>始终降落</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Enabled always SmartRTL or RTL</source>
+      <translation>始终智能返航或返航</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Enabled always SmartRTL or Land</source>
+      <translation>始终智能返航或降落</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>RTL or Continue with Mission in Auto Mode (Removed in 4.0+-see FS_OPTIONS)</source>
+      <translation>返航或自动继续任务（4.0+移除，见 FS_OPTIONS）</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Enabled Continue with Mission in Auto Mode (Removed in 4.0+)</source>
+      <translation>自动继续任务（4.0+已移除）</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Land</source>
+      <translation>降落</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Auto DO_LAND_START or RTL</source>
+      <translation>自动任务降落或返航</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Enabled Auto DO_LAND_START or RTL</source>
+      <translation>启用：自动任务降落或返航</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Enabled always Brake or Land</source>
+      <translation>始终制动或降落</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Brake or Land</source>
+      <translation>制动或降落</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Auto DO_LAND_START/DO_RETURN_PATH_START or RTL</source>
+      <translation>自动任务降落／返航路径或返航</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Enabled Auto DO_LAND_START/DO_RETURN_PATH_START or RTL</source>
+      <translation>启用：自动任务降落／返航路径或返航</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Enabled</source>
+      <translation>启用</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Enabled Continue with Mission in Auto</source>
+      <translation>自动模式继续任务</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Warn only</source>
+      <translation>仅警告</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Disarm</source>
+      <translation>上锁</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Enter depth hold mode</source>
+      <translation>进入定深模式</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Enter surface mode</source>
+      <translation>进入上浮模式</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Force effective control inputs to trim positions and prevent arming</source>
+      <translation>控制输入回中并禁止解锁</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Surface and hold on surface on failsafe</source>
+      <translation>故障时上浮并保持水面</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Hold mode</source>
+      <translation>保持模式</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Return mode</source>
+      <translation>返航模式</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Land mode</source>
+      <translation>降落模式</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Terminate</source>
+      <translation>终止飞行</translation>
+    </message>
+  </context>
 </TS>

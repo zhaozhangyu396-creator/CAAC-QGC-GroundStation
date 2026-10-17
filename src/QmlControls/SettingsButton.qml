@@ -98,6 +98,7 @@ Button {
             rotation:   control.expanded ? 90 : 0
 
             MouseArea {
+                objectName: control.objectName + "_expandToggle"
                 anchors.fill: parent
                 anchors.margins: -ScreenTools.defaultFontPixelWidth
                 onClicked: control.toggleExpand()

@@ -8,6 +8,8 @@ import QGroundControl.Controls
 
 Item {
     id: root
+    implicitHeight: Math.max(ScreenTools.defaultFontPixelHeight * 8, width * 0.55)
+        + poseGrid.implicitHeight + spacing
 
     required property var sideStates
     required property var sideVisible
@@ -69,12 +71,14 @@ Item {
             }
         }
 
-        RowLayout {
+        GridLayout {
+            id: poseGrid
             Layout.fillWidth: true
-            Layout.preferredHeight: Math.min(root.height * 0.38, ScreenTools.defaultFontPixelHeight * 6)
-            Layout.minimumHeight: Layout.preferredHeight
-            Layout.maximumHeight: Layout.preferredHeight
-            spacing: root.spacing
+            Layout.fillHeight: false
+            columns: root.width < ScreenTools.defaultFontPixelWidth * 24 ? 2
+                : root.width < ScreenTools.defaultFontPixelWidth * 60 ? 3 : 6
+            columnSpacing: root.spacing
+            rowSpacing: root.spacing
 
             Repeater {
                 model: root.sides
@@ -89,8 +93,9 @@ Item {
                     objectName: root.indicatorPrefix + modelData.key
                     visible: root.sideVisible[index]
                     Layout.fillWidth: true
+                    Layout.minimumWidth: 0
                     Layout.preferredWidth: 1
-                    Layout.fillHeight: true
+                    Layout.preferredHeight: ScreenTools.defaultFontPixelHeight * 6
                     color: calPalette.windowShade
                     radius: ScreenTools.defaultBorderRadius
                     border.width: root.selectedSide === index ? 2 : 1

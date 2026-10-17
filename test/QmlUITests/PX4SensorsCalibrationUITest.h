@@ -30,11 +30,12 @@ private:
     void _navigateToSensorsPanel();
 
     /// Verify all six pose indicators are visible and in the given SideCalState.
-    void _verifyAllPosesState(int expectedState, const char *context);
+    void _verifyAllPosesState(int expectedState, const char* context);
 
     /// Expected setup-complete states for the Sensors buttons in the config sidebar
-    struct SensorsSetupStates {
-        bool sensorsComplete;       ///< Top-level Sensors component button
+    struct SensorsSetupStates
+    {
+        bool sensorsComplete;  ///< Top-level Sensors component button
         bool compassComplete;
         bool gyroscopeComplete;
         bool accelerometerComplete;
@@ -45,13 +46,13 @@ private:
     /// Verify the setup-complete state shown by the top-level Sensors component
     /// button and the Compass, Accelerometer and Level Horizon section buttons.
     /// Incomplete buttons show the orange config-required indicator.
-    void _verifySensorsSetupStates(const SensorsSetupStates &expected, const char *context);
+    void _verifySensorsSetupStates(const SensorsSetupStates& expected, const char* context);
 
-    /// Click the given calibrate button and accept the pre-calibration dialog.
-    void _startCalibration(const QString &calibrateButtonObjectName);
+    /// Click the selected section's calibrate button and confirm its preparation instructions.
+    void _startCalibration(const QString& calibrateButtonObjectName);
 
     /// Shared cancel-mid-calibration flow: select the sensor section, start the
     /// given calibration, put one side in progress, cancel and verify the UI
     /// returns to the idle state.
-    void _runCalibrationCancelTest(const QString &sectionObjectName, const QString &calibrateButtonObjectName);
+    void _runCalibrationCancelTest(const QString& sectionObjectName, const QString& calibrateButtonObjectName);
 };

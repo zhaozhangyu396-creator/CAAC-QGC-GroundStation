@@ -666,7 +666,9 @@ def render_factslider(
     # Wrap in SettingsGroupLayout for consistent bordered look
     lines.append(f"{indent}SettingsGroupLayout {{")
     lines.append(f"{indent}    Layout.fillWidth: true")
-    lines.append(f"{indent}    Layout.minimumWidth: ScreenTools.defaultFontPixelWidth * 60")
+    lines.append(
+        f"{indent}    Layout.minimumWidth: vehicleSetupStyle ? 0 : ScreenTools.defaultFontPixelWidth * 60"
+    )
     if label:
         lines.append(f"{indent}    heading: {qml_tr(label, tr_context)}")
     if description:

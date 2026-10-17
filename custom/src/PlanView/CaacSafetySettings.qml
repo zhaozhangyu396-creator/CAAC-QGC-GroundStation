@@ -8,6 +8,8 @@ import QGroundControl
 import QGroundControl.Controls
 import QGroundControl.FactControls
 
+import "CaacFailsafeEnumTranslations.js" as FailsafeEnums
+
 Item {
     id: root
     objectName: "caacSafetySettings"
@@ -37,20 +39,47 @@ Item {
         id: row
         required property var definition
         readonly property var fact: root.parameter(definition.names)
+        readonly property bool centimetersPerSecond: !!fact && fact.enumStrings.length === 0
+            && fact.units.toLowerCase() === "cm/s"
+        readonly property string displayUnits: centimetersPerSecond ? "m/s" : fact ? fact.units : ""
         property bool edited: false
         property var draftValue: null
-        onFactChanged: { edited = false; draftValue = null; if (value) { value.text = fact ? fact.valueString : "" } }
+        onFactChanged: { edited = false; draftValue = null; if (value) { value.text = displayText() } }
         objectName: "caacSafety_" + definition.names[0]
         Layout.fillWidth: true
+        function displayText() {
+            if (!fact) { return "" }
+            if (!centimetersPerSecond) { return fact.valueString }
+            const decimals = Math.min(12, Math.max(2, fact.decimalPlaces + 2))
+            return Number((Number(fact.value) / 100).toFixed(decimals)).toString()
+        }
+        function parameterValue() {
+            if (!centimetersPerSecond || typeof draftValue !== "string" || draftValue.trim() === "") {
+                return draftValue
+            }
+            const numeric = Number(draftValue)
+            return Number.isFinite(numeric) ? Number((numeric * 100).toPrecision(15)).toString() : draftValue
+        }
         function validate() {
             if (!edited || !fact) { return true }
-            const error = fact.validate(draftValue, false)
+            const candidate = parameterValue()
+            let error = fact.validate(candidate, false)
+            if (error.length && centimetersPerSecond && Number.isFinite(Number(candidate))
+                    && (Number(candidate) < Number(fact.min) || Number(candidate) > Number(fact.max))) {
+                error = qsTranslate("FactMetaData", "Value must be within %1 and %2")
+                    .arg(Number((Number(fact.min) / 100).toPrecision(15)))
+                    .arg(Number((Number(fact.max) / 100).toPrecision(15))) + " m/s"
+            }
             if (error.length) { value.showValidationError(error); return false }
             value.clearValidationError()
             return true
         }
         function write() {
-            if (edited && fact && root.ready) { fact.value = draftValue; edited = false }
+            if (edited && fact && root.ready) {
+                fact.value = parameterValue()
+                edited = false
+                value.text = displayText()
+            }
         }
         QGCLabel { text: row.definition.label; Layout.preferredWidth: root.width * 0.46; wrapMode: Text.WordWrap }
         QGCTextField {
@@ -60,23 +89,54 @@ Item {
             Layout.minimumWidth: 0
             enabled: !!row.fact
             visible: !row.fact || row.fact.enumStrings.length === 0
-            text: row.fact ? row.fact.valueString : ""
+            text: row.displayText()
             placeholderText: qsTr("Unavailable")
             onTextEdited: { row.edited = true; row.draftValue = text }
         }
         QGCComboBox {
+            id: choice
             objectName: row.objectName + "_choice"
             Layout.fillWidth: true
             Layout.minimumWidth: 0
             visible: !!row.fact && row.fact.enumStrings.length > 0
             model: row.fact ? row.fact.enumStrings : []
             currentIndex: row.fact ? row.fact.enumIndex : -1
+            textTransform: (text) => row.fact ? FailsafeEnums.displayString(row.fact.name, text) : text
+            QGCPalette { id: choicePalette; colorGroupEnabled: choice.enabled }
+            contentItem: QGCLabel {
+                objectName: row.objectName + "_choiceText"
+                text: choice.displayString(choice.currentText)
+                font: choice.font
+                color: choicePalette.buttonText
+                wrapMode: Text.WordWrap
+            }
+            delegate: ItemDelegate {
+                id: option
+                required property int index
+                required property string modelData
+                objectName: row.objectName + "_option_" + option.index
+                width: choice._popupWidth
+                implicitHeight: Math.max(option.contentItem.implicitHeight + option.topPadding + option.bottomPadding,
+                                         ScreenTools.defaultFontPixelHeight * 1.75)
+                highlighted: choice.highlightedIndex === option.index
+                contentItem: QGCLabel {
+                    objectName: option.objectName + "_text"
+                    text: choice.displayString(option.modelData)
+                    font: choice.font
+                    color: choice.currentIndex === option.index ? choicePalette.buttonHighlightText : choicePalette.buttonText
+                    wrapMode: Text.WordWrap
+                }
+                background: Rectangle {
+                    color: choice.currentIndex === option.index ? choicePalette.buttonHighlight : choicePalette.button
+                }
+            }
             onActivated: (index) => { row.edited = true; row.draftValue = row.fact.enumValues[index] }
         }
-        QGCLabel { text: row.fact ? row.fact.units : "" }
+        QGCLabel { objectName: row.objectName + "_units"; text: row.displayUnits }
         Connections {
             target: row.fact
-            function onValueChanged() { if (!row.edited) { value.text = row.fact.valueString } }
+            function onValueChanged() { if (!row.edited) { value.text = row.displayText() } }
+            function onCookedValuesChanged() { if (!row.edited) { value.text = row.displayText() } }
         }
     }
     component SafetySection: ColumnLayout {

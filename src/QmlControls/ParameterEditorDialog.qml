@@ -9,6 +9,7 @@ import QGroundControl.FactControls
 
 QGCPopupDialog {
     id:         root
+    objectName: "parameterEditor_dialog"
     title:      fact.componentId > 0 ? fact.name : qsTr("Value Editor")
 
     buttons:    _readOnlyDisplay ? Dialog.Close : (Dialog.Save | Dialog.Cancel)
@@ -97,6 +98,7 @@ QGCPopupDialog {
 
             QGCTextField {
                 id:                 valueField
+                objectName:          "parameterEditor_valueField"
                 width:              _editFieldWidth
                 unitsLabel:         fact.units
                 showUnits:          fact.units != ""

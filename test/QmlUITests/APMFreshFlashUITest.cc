@@ -1,10 +1,10 @@
 #include "APMFreshFlashUITest.h"
 
 #include <QtCore/QPointer>
-#include <QtQuick/QQuickItem>
-#include <QtQuick/QQuickWindow>
 #include <QtGui/QColor>
 #include <QtQml/QQmlProperty>
+#include <QtQuick/QQuickItem>
+#include <QtQuick/QQuickWindow>
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
@@ -12,6 +12,7 @@
 #include "Fact.h"
 #include "MockLink.h"
 #include "ParameterManager.h"
+#include "QGCCorePlugin.h"
 #include "Vehicle.h"
 #include "VehicleComponent.h"
 
@@ -25,23 +26,26 @@ void APMFreshFlashUITest::init()
     VehicleConfigUITestBase::init();
 }
 
-void APMFreshFlashUITest::_verifyFramePrereq(const QString &compObjectName, bool expectPrereqShown)
+void APMFreshFlashUITest::_verifyFramePrereq(const QString& compObjectName, bool expectPrereqShown)
 {
-    QQuickItem *compBtn = clickSidebarButton(compObjectName);
-    if (QTest::currentTestFailed()) return;
+    QQuickItem* compBtn = clickSidebarButton(compObjectName);
+    if (QTest::currentTestFailed())
+        return;
     QVERIFY2(compBtn, qPrintable(QStringLiteral("Component button not found: %1").arg(compObjectName)));
 
-    QQuickItem *messagePanel = findVisibleItem(_rootItem, QStringLiteral("vehicleConfig_messagePanel"), expectPrereqShown ? 3000 : 0);
+    QQuickItem* messagePanel =
+        findVisibleItem(_rootItem, QStringLiteral("vehicleConfig_messagePanel"), expectPrereqShown ? 3000 : 0);
     if (expectPrereqShown) {
         QVERIFY2(messagePanel,
                  qPrintable(QStringLiteral("Frame prerequisite message panel not shown for: %1").arg(compObjectName)));
     } else {
-        QVERIFY2(!messagePanel,
-                 qPrintable(QStringLiteral("Prerequisite message panel unexpectedly shown for: %1").arg(compObjectName)));
+        QVERIFY2(
+            !messagePanel,
+            qPrintable(QStringLiteral("Prerequisite message panel unexpectedly shown for: %1").arg(compObjectName)));
     }
 }
 
-void APMFreshFlashUITest::_verifySetupIndicator(const QString &compObjectName, bool expectSetupComplete)
+void APMFreshFlashUITest::_verifySetupIndicator(const QString& compObjectName, bool expectSetupComplete)
 {
     if (findVisibleItem(_rootItem, QStringLiteral("vehicleConfig_backToMenu"), 0)) {
         QVERIFY2(clickButton(QStringLiteral("vehicleConfig_backToMenu")),
@@ -52,9 +56,11 @@ void APMFreshFlashUITest::_verifySetupIndicator(const QString &compObjectName, b
     QVERIFY2(compBtn, qPrintable(QStringLiteral("Component button not found: %1").arg(compObjectName)));
 
     // The property drives the visual: wait for it to settle first
-    QVERIFY2(QTest::qWaitFor([&] { return compBtn && (compBtn->property("setupComplete").toBool() == expectSetupComplete); }, 5000),
+    QVERIFY2(QTest::qWaitFor(
+                 [&] { return compBtn && (compBtn->property("setupComplete").toBool() == expectSetupComplete); }, 5000),
              qPrintable(QStringLiteral("%1 setupComplete property never became %2")
-                            .arg(compObjectName).arg(expectSetupComplete ? "true" : "false")));
+                            .arg(compObjectName)
+                            .arg(expectSetupComplete ? "true" : "false")));
 
     // Embedded directories keep neutral icons; standalone setup retains the status color.
     const QColor iconColor = QQmlProperty::read(compBtn, QStringLiteral("icon.color")).value<QColor>();
@@ -72,7 +78,8 @@ void APMFreshFlashUITest::_verifySetupIndicator(const QString &compObjectName, b
 void APMFreshFlashUITest::_testFreshFlashSetupState()
 {
     // Fresh-flash vehicles must show the setup-incomplete app message on connect
-    expectAppMessage(QRegularExpression(QStringLiteral("Configuration tasks remain before this vehicle is ready to fly")));
+    expectAppMessage(
+        QRegularExpression(QStringLiteral("Configuration tasks remain before this vehicle is ready to fly")));
     runWithMockLink(
         [] { return MockLink::startAPMArduCopterMockLink(MockConfiguration::OptionAPMStartFreshParams); },
         [&](QPointer<MockLink> mockLink, Vehicle* vehicle) {
@@ -278,10 +285,17 @@ void APMFreshFlashUITest::_testFreshFlashSetupState()
             clickSidebarButton(QStringLiteral("vehicleConfig_comp_Sensors"));
             if (QTest::currentTestFailed())
                 return;
+            selectAPMSensorSection(QStringLiteral("Accelerometer"));
+            if (QTest::currentTestFailed())
+                return;
             QVERIFY2(findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_calibrateAccel"), 5000),
                      "sensorsSetup_calibrateAccel not found after opening Sensors page");
-            QVERIFY2(findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_calibrateCompass"), 3000),
-                     "sensorsSetup_calibrateCompass not found after opening Sensors page");
+            if (QGCCorePlugin::instance()->directMissionItemEditing()) {
+                QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_calibrateCompass"), 0));
+            } else {
+                QVERIFY2(findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_calibrateCompass"), 3000),
+                         "sensorsSetup_calibrateCompass not found after opening Sensors page");
+            }
 
             runAPMFullAccelCal();
             if (QTest::currentTestFailed())

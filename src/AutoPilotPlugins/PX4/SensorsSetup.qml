@@ -115,12 +115,14 @@ Item {
     property bool orientationExpanded: false
     property bool orientationRebootRequired: false
     property bool _showBoardOrientation: true
+    property bool _inlinePreparationActive: false
+    property bool _inlineCompassResultVisible: false
 
     function showOrientationSettings(showBoardOrientation, showRebootMessage) {
         _showBoardOrientation = showBoardOrientation
         orientationRebootRequired = showRebootMessage
         if (QGroundControl.corePlugin.directMissionItemEditing) {
-            caacPanel.focusOrientation()
+            caacPanel.orientationExpanded = true
         } else {
             orientationExpanded = true
         }
@@ -133,15 +135,22 @@ Item {
         statusLog:                  statusTextArea
         progressBar:                progressBar
         orientationCalAreaHelpText: orientationCalAreaHelpText
+        inlineCalibration:          QGroundControl.corePlugin.directMissionItemEditing
 
         onResetStatusTextArea: statusLog.text = statusTextAreaDefaultText
 
         onMagCalComplete: {
-            _root.showOrientationSettings(false, true)
+            if (QGroundControl.corePlugin.directMissionItemEditing) {
+                _root._showBoardOrientation = false
+                _root.orientationRebootRequired = true
+                _root._inlineCompassResultVisible = true
+            } else {
+                _root.showOrientationSettings(false, true)
+            }
         }
 
         onWaitingForCancelChanged: {
-            if (controller.waitingForCancel) {
+            if (controller.waitingForCancel && !QGroundControl.corePlugin.directMissionItemEditing) {
                 waitForCancelDialogFactory.open()
             }
         }
@@ -195,19 +204,7 @@ Item {
         QGCPopupDialog {
             buttons: Dialog.Cancel | Dialog.Ok
 
-            onAccepted: {
-                if (preCalibrationDialogType == "gyro") {
-                    controller.calibrateGyro()
-                } else if (preCalibrationDialogType == "accel") {
-                    controller.calibrateAccel()
-                } else if (preCalibrationDialogType == "level") {
-                    controller.calibrateLevel()
-                } else if (preCalibrationDialogType == "compass") {
-                    controller.calibrateCompass()
-                } else if (preCalibrationDialogType == "airspeed") {
-                    controller.calibrateAirspeed()
-                }
-            }
+            onAccepted: _root._confirmCalibration()
 
             ColumnLayout {
                 spacing: ScreenTools.defaultFontPixelHeight
@@ -250,6 +247,38 @@ Item {
                         text:       qsTr("Click Ok to start calibration.")
                     }
                 }
+            }
+        }
+    }
+
+    Component {
+        id: preparationControlsComponent
+
+        ColumnLayout {
+            visible: !_sensorsHaveFixedOrientation
+                && (preCalibrationDialogType === "accel" || preCalibrationDialogType === "compass")
+            spacing: ScreenTools.defaultFontPixelHeight / 2
+
+            QGCLabel {
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                text: qsTr("Set autopilot orientation before calibrating.")
+            }
+            QGCLabel {
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                text: qsTr("Autopilot Orientation")
+            }
+            FactComboBox {
+                objectName: "sensorsSetup_preparationBoardOrientation"
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                fact: sens_board_rot
+            }
+            QGCLabel {
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                text: qsTr("ROTATION_NONE indicates component points in direction of flight.")
             }
         }
     }
@@ -326,7 +355,16 @@ Item {
     // Completed (green) side indicators are only meaningful for the sensor that was
     // just calibrated. Return them to the neutral idle state when the preview switches
     // to a different sensor.
-    onSectionIdFilterChanged: controller.resetSidesToIdle()
+    onSectionIdFilterChanged: {
+        controller.resetSidesToIdle()
+        _inlinePreparationActive = false
+        _inlineCompassResultVisible = false
+        if (QGroundControl.corePlugin.directMissionItemEditing && !controller.calibrationActive) {
+            progressBar.value = 0
+            orientationCalAreaHelpText.text = ""
+            statusTextArea.text = statusTextAreaDefaultText
+        }
+    }
 
     // Section IDs are untranslated — compare with raw literals.
     function sectionVisible(sectionId) {
@@ -351,7 +389,33 @@ Item {
     function _startCalibration(type, help, title) {
         preCalibrationDialogType = type
         preCalibrationDialogHelp = help
-        preCalibrationDialogFactory.open({ title: title })
+        if (QGroundControl.corePlugin.directMissionItemEditing) {
+            caacPanel.currentType = type
+            _inlineCompassResultVisible = false
+            _inlinePreparationActive = true
+            _showBoardOrientation = true
+            controller.resetSidesToIdle()
+            progressBar.value = 0
+            orientationCalAreaHelpText.text = ""
+            statusTextArea.text = statusTextAreaDefaultText
+        } else {
+            preCalibrationDialogFactory.open({ title: title })
+        }
+    }
+
+    function _confirmCalibration() {
+        _inlinePreparationActive = false
+        if (preCalibrationDialogType === "gyro") {
+            controller.calibrateGyro()
+        } else if (preCalibrationDialogType === "accel") {
+            controller.calibrateAccel()
+        } else if (preCalibrationDialogType === "level") {
+            controller.calibrateLevel()
+        } else if (preCalibrationDialogType === "compass") {
+            controller.calibrateCompass()
+        } else if (preCalibrationDialogType === "airspeed") {
+            controller.calibrateAirspeed()
+        }
     }
 
     // Mag calibration requires the vehicle to be rotated while a side is calibrating
@@ -373,6 +437,20 @@ Item {
         anchors.fill: parent
         visible: QGroundControl.corePlugin.directMissionItemEditing
         calibrationActive: controller.calibrationActive
+        preparationActive: _root._inlinePreparationActive
+        preparationText: preCalibrationDialogHelp
+        preparationControls: !_sensorsHaveFixedOrientation
+            && (preCalibrationDialogType === "accel" || preCalibrationDialogType === "compass")
+            ? preparationControlsComponent : null
+        resultVisible: _root._inlineCompassResultVisible
+            && (_root.sectionIdFilter === "" || _root.sectionIdFilter === "Compass")
+        resultTitle: qsTr("Calibration complete")
+        resultControls: orientationControlsComponent
+        waitingText: controller.waitingForCancel
+            ? qsTr("Waiting for Vehicle to response to Cancel. This may take a few seconds.") : ""
+        cancelEnabled: controller.calibrationActive && !controller.waitingForCancel
+        orientationPreviewVisible: caacPanel.currentType === "accel" || caacPanel.currentType === "compass"
+            || caacPanel.currentType === "gyro"
         orientationAvailable: orientationsButtonVisible() || _root.orientationRebootRequired
         orientationControls: orientationControlsComponent
         compassAvailable: sectionVisible("Compass")
@@ -396,14 +474,20 @@ Item {
         onStartAccel: _startCalibration("accel", accelHelp, qsTr("Calibrate Accelerometer"))
         onStartLevel: _startCalibration("level", levelHelp, qsTr("Level Horizon"))
         onStartCompass: _startCalibration("compass", compassHelp, qsTr("Calibrate Compass"))
+        onConfirmPreparation: _root._confirmCalibration()
+        onDismissPreparation: _root._inlinePreparationActive = false
+        onAcknowledgeResult: _root._inlineCompassResultVisible = false
         onCancel: controller.cancelCalibration()
         additionalControls: Component {
             ColumnLayout {
                 spacing: ScreenTools.defaultFontPixelHeight / 2
                 SettingsActionButton {
                     id: gyroCalibrationButton
+                    objectName: "sensorsSetup_calibrateGyro"
                     text: qsTr("Calibrate Gyroscope")
                     visible: _root.sectionVisible("Gyroscope")
+                        && (_root.sectionIdFilter === "" || _root.sectionIdFilter === "Gyroscope")
+                    enabled: !controller.calibrationActive && !_root._inlinePreparationActive
                     onClicked: {
                         caacPanel.currentType = "gyro"
                         _startCalibration("gyro", gyroHelp, qsTr("Calibrate Gyro"))
@@ -417,20 +501,27 @@ Item {
                 }
                 SettingsActionButton {
                     id: airspeedCalibrationButton
+                    objectName: "sensorsSetup_calibrateAirspeed"
                     text: qsTr("Calibrate Airspeed")
                     visible: _root.sectionVisible("Airspeed")
+                        && (_root.sectionIdFilter === "" || _root.sectionIdFilter === "Airspeed")
+                    enabled: !controller.calibrationActive && !_root._inlinePreparationActive
                     onClicked: _startCalibration("airspeed", airspeedHelp, qsTr("Calibrate Airspeed"))
                 }
                 Rectangle {
                     Layout.fillWidth: true
                     implicitHeight: ScreenTools.defaultFontPixelHeight * 0.06
                     color: qgcPal.groupBorder
-                    visible: _root.orientationsButtonVisible()
+                    visible: factoryResetButton.visible
                         && (gyroCalibrationButton.visible || airspeedCalibrationButton.visible)
                 }
                 SettingsActionButton {
+                    id: factoryResetButton
+                    objectName: "sensorsSetup_factoryReset"
                     text: qsTr("Factory Reset")
                     visible: _root.orientationsButtonVisible()
+                        && (_root.sectionIdFilter === "" || _root.sectionIdFilter === "Orientations")
+                    enabled: !controller.calibrationActive && !_root._inlinePreparationActive
                     onClicked: controller.resetFactoryParameters()
                 }
             }

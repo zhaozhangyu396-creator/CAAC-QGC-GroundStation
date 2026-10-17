@@ -12,6 +12,7 @@
 #include <QtQuick/QQuickWindow>
 #include <QtTest/QSignalSpy>
 
+#include "AppSettings.h"
 #include "CaacCorePlugin.h"
 #include "CaacFlightDistance.h"
 #include "Fact.h"
@@ -20,6 +21,7 @@
 #include "MockLink.h"
 #include "ParameterManager.h"
 #include "PlanMasterController.h"
+#include "QGCApplication.h"
 #include "QGCGeo.h"
 #include "QGCMapEngineManager.h"
 #include "QmlUITestBase.h"
@@ -41,6 +43,10 @@ private slots:
     void _liveFlightData();
     void _dashboardInteractions();
     void _safetyAndUomTelemetry();
+    void _safetySpeedUnits_data();
+    void _safetySpeedUnits();
+    void _safetyFailsafeEnums_data();
+    void _safetyFailsafeEnums();
 
 private:
     void _resizeWindow(QSize size);
@@ -183,6 +189,183 @@ void CaacFlightDataUITest::_mapZoomControls()
     QTRY_COMPARE_WITH_TIMEOUT(map->property("zoomLevel").toReal(), zoom + 1, TestTimeout::shortMs());
     QVERIFY(clickButton(QStringLiteral("caacMapZoomOut")));
     QTRY_COMPARE_WITH_TIMEOUT(map->property("zoomLevel").toReal(), zoom, TestTimeout::shortMs());
+}
+
+void CaacFlightDataUITest::_safetySpeedUnits_data()
+{
+    QTest::addColumn<int>("firmwareType");
+    QTest::addColumn<QString>("parameterName");
+    QTest::addColumn<double>("rawUnitsPerMeterPerSecond");
+    QTest::newRow("px4-meters-per-second") << int(MAV_AUTOPILOT_PX4) << QStringLiteral("MPC_XY_CRUISE") << 1.0;
+    QTest::newRow("apm-centimeters-per-second")
+        << int(MAV_AUTOPILOT_ARDUPILOTMEGA) << QStringLiteral("WPNAV_SPEED") << 100.0;
+}
+
+void CaacFlightDataUITest::_safetySpeedUnits()
+{
+    QFETCH(int, firmwareType);
+    QFETCH(QString, parameterName);
+    QFETCH(double, rawUnitsPerMeterPerSecond);
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    Vehicle* vehicle = nullptr;
+    auto mock = connectMockLinkAndWaitReady(
+        [firmwareType]() {
+            auto* config = new MockConfiguration(QStringLiteral("Safety speed units"));
+            config->setFirmwareType(static_cast<MAV_AUTOPILOT>(firmwareType));
+            config->setVehicleType(MAV_TYPE_QUADROTOR);
+            config->setSendRadioStatus(false);
+            config->setSendStatusText(false);
+            return MockLink::startMockLink(config);
+        },
+        vehicle);
+    QVERIFY(mock && vehicle);
+    const auto disconnect = qScopeGuard([&]() { disconnectMockLink(mock); });
+    auto* speed = vehicle->parameterManager()->getParameter(vehicle->defaultComponentId(), parameterName);
+    QVERIFY(speed);
+    const double initialRaw = 10.0 * rawUnitsPerMeterPerSecond;
+    if (speed->rawValue().toDouble() != initialRaw) {
+        QSignalSpy updated(speed, &Fact::vehicleUpdated);
+        speed->setRawValue(initialRaw);
+        QTRY_VERIFY_WITH_TIMEOUT(!updated.isEmpty(), TestTimeout::mediumMs());
+    }
+    QTRY_COMPARE_WITH_TIMEOUT(speed->rawValue().toDouble(), initialRaw, TestTimeout::mediumMs());
+    QVERIFY(clickButton(QStringLiteral("toolbar_qgcLogo")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("toolbar_safety"), QStringLiteral("caacSettingsNavigationScroller")));
+    const QString fieldName = QStringLiteral("caacSafety_MPC_XY_CRUISE_value");
+    const QString scroller = QStringLiteral("caacSafetyScroller");
+    auto* field = findVisibleItemScrolled(fieldName, scroller);
+    QVERIFY(field && field->isEnabled());
+    QTRY_COMPARE_WITH_TIMEOUT(field->property("text").toString().toDouble(), 10.0, TestTimeout::mediumMs());
+    auto* units = findVisibleItem(_rootItem, QStringLiteral("caacSafety_MPC_XY_CRUISE_units"));
+    QVERIFY(units);
+    QCOMPARE(units->property("text").toString(), QStringLiteral("m/s"));
+    const int writes = mock->receivedMavlinkMessageCount(MAVLINK_MSG_ID_PARAM_SET);
+    QVERIFY(clickButtonScrolled(fieldName, scroller));
+    QTest::keyClick(_window, Qt::Key_A, Qt::ControlModifier);
+    QTest::keyClick(_window, Qt::Key_2);
+    QTest::keyClick(_window, Qt::Key_Period);
+    QTest::keyClick(_window, Qt::Key_7);
+    QTest::keyClick(_window, Qt::Key_5);
+    QTest::keyClick(_window, Qt::Key_Tab);
+    QCOMPARE(speed->rawValue().toDouble(), initialRaw);
+    QCOMPARE(mock->receivedMavlinkMessageCount(MAVLINK_MSG_ID_PARAM_SET), writes);
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacSafetyConfirm_RTL_RETURN_ALT"), scroller));
+    QTRY_COMPARE_WITH_TIMEOUT(speed->rawValue().toDouble(), 2.75 * rawUnitsPerMeterPerSecond, TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(mock->receivedMavlinkMessageCount(MAVLINK_MSG_ID_PARAM_SET) > writes,
+                             TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(field->property("text").toString().toDouble(), 2.75, TestTimeout::mediumMs());
+}
+
+void CaacFlightDataUITest::_safetyFailsafeEnums_data()
+{
+    QTest::addColumn<int>("firmwareType");
+    QTest::newRow("px4") << int(MAV_AUTOPILOT_PX4);
+    QTest::newRow("apm") << int(MAV_AUTOPILOT_ARDUPILOTMEGA);
+}
+
+void CaacFlightDataUITest::_safetyFailsafeEnums()
+{
+    QFETCH(int, firmwareType);
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    auto* language = SettingsManager::instance()->appSettings()->qLocaleLanguage();
+    const QVariant savedLanguage = language->rawValue();
+    const auto restoreLanguage = qScopeGuard([&]() {
+        if (language->rawValue() != savedLanguage) {
+            qgcApp()->resetRebootMessageDebounce();
+            language->setRawValue(savedLanguage);
+            (void) acceptDialog(5000);
+        }
+    });
+    ignoreLogMessage("API.QGCApplication", QtWarningMsg,
+                     QRegularExpression(QStringLiteral("Qt lib localization for .* is not present")));
+    ignoreLogMessage("API.QGCApplication", QtWarningMsg,
+                     QRegularExpression(QStringLiteral("Error loading source localization for .*")));
+    ignoreLogMessage("API.QGCApplication", QtWarningMsg,
+                     QRegularExpression(QStringLiteral("Error loading json localization for .*")));
+    if (language->rawValue().toInt() != QLocale::Chinese) {
+        qgcApp()->resetRebootMessageDebounce();
+        expectAppMessage(QRegularExpression(
+            QRegularExpression::escape(Fact::tr("Restart application for changes to take effect."))));
+        language->setRawValue(QLocale::Chinese);
+        QVERIFY(acceptDialog(5000));
+        verifyExpectedLogMessage();
+    }
+    Vehicle* vehicle = nullptr;
+    auto mock = connectMockLinkAndWaitReady(
+        [firmwareType]() {
+            auto* config = new MockConfiguration(QStringLiteral("Chinese failsafe choices"));
+            config->setFirmwareType(static_cast<MAV_AUTOPILOT>(firmwareType));
+            config->setVehicleType(MAV_TYPE_QUADROTOR);
+            config->setSendStatusText(false);
+            return MockLink::startMockLink(config);
+        },
+        vehicle);
+    QVERIFY(mock && vehicle);
+    const auto disconnect = qScopeGuard([&]() { disconnectMockLink(mock); });
+    _resizeWindow(QSize(1000, 800));
+    QVERIFY(clickButton(QStringLiteral("toolbar_qgcLogo")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("toolbar_safety"), QStringLiteral("caacSettingsNavigationScroller")));
+    const int writes = mock->receivedMavlinkMessageCount(MAVLINK_MSG_ID_PARAM_SET);
+    const QString scroller = QStringLiteral("caacSafetyScroller");
+    const QRegularExpression chinese(QStringLiteral("[\\x{3400}-\\x{9fff}]"));
+    for (const QString& logicalName : {QStringLiteral("NAV_RCL_ACT"), QStringLiteral("NAV_DLL_ACT")}) {
+        const QString prefix = QStringLiteral("caacSafety_") + logicalName;
+        auto* combo = findVisibleItemScrolled(prefix + QStringLiteral("_choice"), scroller);
+        QVERIFY(combo && combo->isEnabled());
+        auto* row = combo->parentItem();
+        while (row && row->objectName() != prefix) {
+            row = row->parentItem();
+        }
+        QVERIFY(row);
+        auto* fact = row->property("fact").value<Fact*>();
+        QVERIFY(fact);
+        const auto originalStrings = fact->enumStrings();
+        const auto originalValues = fact->enumValues();
+        const QVariant originalValue = fact->rawValue();
+        QCOMPARE(combo->property("count").toInt(), originalStrings.size());
+        QStringList translated;
+        for (int index = 0; index < originalStrings.size(); ++index) {
+            QVariant display;
+            QVERIFY(QMetaObject::invokeMethod(combo, "displayString", Q_RETURN_ARG(QVariant, display),
+                                              Q_ARG(QVariant, originalStrings.at(index))));
+            const QString text = display.toString();
+            QVERIFY2(chinese.match(text).hasMatch(), qPrintable(originalStrings.at(index) + " -> " + text));
+            translated.append(text);
+        }
+        auto* selectedText = findItem(combo, prefix + QStringLiteral("_choiceText"));
+        QVERIFY(selectedText);
+        QTRY_COMPARE_WITH_TIMEOUT(selectedText->property("text").toString(), translated.at(fact->enumIndex()),
+                                  TestTimeout::shortMs());
+        QTRY_VERIFY_WITH_TIMEOUT(selectedText->height() + 1 >= selectedText->implicitHeight(), TestTimeout::shortMs());
+        QVERIFY(clickButtonScrolled(prefix + QStringLiteral("_choice"), scroller));
+        auto* popup = combo->property("popup").value<QObject*>();
+        QVERIFY(popup);
+        QTRY_VERIFY_WITH_TIMEOUT(popup->property("opened").toBool(), TestTimeout::shortMs());
+        auto* list = popup->property("contentItem").value<QQuickItem*>();
+        QVERIFY(list);
+        for (int index = 0; index < translated.size(); ++index) {
+            QVERIFY(QMetaObject::invokeMethod(list, "positionViewAtIndex", Q_ARG(int, index), Q_ARG(int, 0)));
+            const QString optionName = prefix + QStringLiteral("_option_%1_text").arg(index);
+            QTRY_VERIFY_WITH_TIMEOUT(findItem(list, optionName), TestTimeout::shortMs());
+            auto* text = findItem(list, optionName);
+            QCOMPARE(text->property("text").toString(), translated.at(index));
+            QTRY_VERIFY_WITH_TIMEOUT(text->height() + 1 >= text->implicitHeight(), TestTimeout::shortMs());
+            QTRY_VERIFY_WITH_TIMEOUT(text->property("paintedWidth").toReal() <= text->width() + 1,
+                                     TestTimeout::shortMs());
+        }
+        QTest::keyClick(_window, Qt::Key_Escape);
+        QTRY_VERIFY_WITH_TIMEOUT(!popup->property("opened").toBool(), TestTimeout::shortMs());
+        QCOMPARE(fact->enumStrings(), originalStrings);
+        QCOMPARE(fact->enumValues(), originalValues);
+        QCOMPARE(fact->rawValue(), originalValue);
+    }
+    QCOMPARE(mock->receivedMavlinkMessageCount(MAVLINK_MSG_ID_PARAM_SET), writes);
 }
 
 void CaacFlightDataUITest::_safetyAndUomTelemetry()

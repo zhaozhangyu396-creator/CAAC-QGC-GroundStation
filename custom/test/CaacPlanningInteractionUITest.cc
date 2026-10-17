@@ -62,6 +62,7 @@ private slots:
     void _calculatorUI();
     void _preferencesUI();
     void _newSettingsPages();
+    void _applicationSettingsCollapse();
     void _calibrationAndSwitchSettings();
     void _waypointDragRemainsResponsive_data();
     void _waypointDragRemainsResponsive();
@@ -70,6 +71,62 @@ private slots:
     void _homeAltitudeAutoSave();
     void _batteryAndFenceSettings();
 };
+
+void CaacPlanningInteractionUITest::_applicationSettingsCollapse()
+{
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    QVERIFY(clickButton(QStringLiteral("toolbar_qgcLogo")));
+    QVERIFY(
+        clickButtonScrolled(QStringLiteral("toolbar_viewSettings"), QStringLiteral("caacSettingsNavigationScroller")));
+    auto* settings = findVisibleItem(_rootItem, QStringLiteral("appSettings_root"));
+    auto* general = findVisibleItem(settings, QStringLiteral("settingsButton_General"));
+    auto* loader = findItem(settings, QStringLiteral("settings_rightPanel"));
+    QVERIFY(settings && general && loader);
+    const QString scroller = QStringLiteral("settings_buttonList");
+    const QString arrow = QStringLiteral("settingsButton_General_expandToggle");
+    if (general->property("expanded").toBool()) {
+        QVERIFY(clickButtonScrolled(arrow, scroller));
+    }
+    QTRY_VERIFY_WITH_TIMEOUT(!general->property("expanded").toBool(), TestTimeout::shortMs());
+    QVERIFY(clickButtonScrolled(arrow, scroller));
+    QTRY_VERIFY_WITH_TIMEOUT(general->property("expanded").toBool(), TestTimeout::shortMs());
+    auto* section = findVisibleItem(settings, QStringLiteral("settingsSection_General_0"));
+    QVERIFY(section);
+    auto* sectionText = section->property("contentItem").value<QQuickItem*>();
+    QVERIFY(sectionText);
+    const QString searchText = sectionText->property("text").toString();
+    QVERIFY(clickButtonScrolled(QStringLiteral("settingsSection_General_0"), scroller));
+    const QPointer<QQuickItem> page = loader->property("item").value<QQuickItem*>();
+    QVERIFY(page);
+    const QVariant selectedSection = settings->property("_selectedSectionIndex");
+    QCOMPARE(selectedSection.toInt(), 0);
+    QVERIFY(clickButton(QStringLiteral("settings_backToMenu")));
+    QVERIFY(clickButtonScrolled(arrow, scroller));
+    QTRY_VERIFY_WITH_TIMEOUT(!general->property("expanded").toBool(), TestTimeout::shortMs());
+    QVERIFY(!findVisibleItem(settings, QStringLiteral("settingsSection_General_0"), 0));
+    QCOMPARE(loader->property("item").value<QQuickItem*>(), page.data());
+    QCOMPARE(settings->property("_selectedSectionIndex"), selectedSection);
+    QVERIFY(clickButtonScrolled(arrow, scroller));
+    QTRY_VERIFY_WITH_TIMEOUT(general->property("expanded").toBool(), TestTimeout::shortMs());
+    QVERIFY(clickButtonScrolled(arrow, scroller));
+    QTRY_VERIFY_WITH_TIMEOUT(!general->property("expanded").toBool(), TestTimeout::shortMs());
+    QCOMPARE(loader->property("item").value<QQuickItem*>(), page.data());
+    QCOMPARE(settings->property("_selectedSectionIndex"), selectedSection);
+    auto* search = findVisibleItem(settings, QStringLiteral("settings_searchField"));
+    QVERIFY(search && !searchText.isEmpty());
+    QVERIFY(search->setProperty("text", searchText));
+    QTRY_VERIFY_WITH_TIMEOUT(general->property("expanded").toBool(), TestTimeout::shortMs());
+    QVERIFY(clickButtonScrolled(arrow, scroller));
+    QTRY_VERIFY_WITH_TIMEOUT(!general->property("expanded").toBool(), TestTimeout::shortMs());
+    QVERIFY(!findVisibleItem(settings, QStringLiteral("settingsSection_General_0"), 0));
+    QVERIFY(search->setProperty("text", QString()));
+    QTRY_VERIFY_WITH_TIMEOUT(!general->property("expanded").toBool(), TestTimeout::shortMs());
+    QCOMPARE(loader->property("item").value<QQuickItem*>(), page.data());
+    QCOMPARE(settings->property("_selectedSectionIndex"), selectedSection);
+}
 
 void CaacPlanningInteractionUITest::_calibrationAndSwitchSettings()
 {

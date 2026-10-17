@@ -16,8 +16,10 @@ public:
 private slots:
     void _testNavigateVehicleConfig();
     void _testDisconnectWithPIDTuningOpen();
+    void _testInteractiveTuningChart();
     void _testSidebarDividers();
 #ifdef QGC_CUSTOM_BUILD
+    void _testNarrowParameterEditor();
     void _testNarrowParameterControls_data();
     void _testNarrowParameterControls();
 #endif
@@ -25,6 +27,6 @@ private slots:
 private:
     /// Click each axis button in \a axisNames in order, waiting for a polish
     /// pass between each click.  Used by _testDisconnectWithPIDTuningOpen().
-    void _cycleAxisButtons(const QStringList &axisNames);
+    void _cycleAxisButtons(const QStringList& axisNames);
     void _selectTuningPage(const QString& tabObjectName, int pageIndex);
 };

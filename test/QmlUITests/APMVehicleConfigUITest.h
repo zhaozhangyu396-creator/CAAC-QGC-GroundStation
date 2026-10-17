@@ -1,8 +1,8 @@
 #pragma once
 
-#include "VehicleConfigUITestBase.h"
-
 #include <functional>
+
+#include "VehicleConfigUITestBase.h"
 
 class MockLink;
 
@@ -19,6 +19,14 @@ protected slots:
     void init() override;
 
 private slots:
+#ifdef QGC_CUSTOM_BUILD
+    void _testNarrowParameterEditor();
+    void _testSidebarComponentCollapse();
+    void _testNarrowEscCalibration();
+    void _testNarrowTuningControls_data();
+    void _testNarrowTuningControls();
+#endif
+    void _testInteractiveTuningChart();
     void _testArduCopter();
     void _testArduPlane();
     void _testArduSub();
@@ -28,6 +36,5 @@ private:
     /// Shared implementation: connect a MockLink via \a factory, navigate to
     /// the Configure view, and click through every vehicle component.
     /// \a vehicleName is used only in QVERIFY2 failure messages.
-    void _runNavigateVehicleConfig(const std::function<MockLink *()> &factory,
-                                   const QString &vehicleName);
+    void _runNavigateVehicleConfig(const std::function<MockLink*()>& factory, const QString& vehicleName);
 };

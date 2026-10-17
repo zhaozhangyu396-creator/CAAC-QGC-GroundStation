@@ -8,8 +8,10 @@ import QGroundControl.Controls
 
 ColumnLayout {
     id:     root
+    Layout.minimumWidth: vehicleSetupStyle ? 0 : -1
 
     required property var controller
+    readonly property bool vehicleSetupStyle: ScreenTools.isVehicleSetupItem(root)
 
     property Fact _ch7Opt:  controller.getParameterFact(-1, "RC7_OPTION")
     property Fact _ch8Opt:  controller.getParameterFact(-1, "RC8_OPTION")
@@ -57,19 +59,41 @@ ColumnLayout {
     Connections { target: _ch11Opt; function onValueChanged() { calcAutoTuneChannel() } }
     Connections { target: _ch12Opt; function onValueChanged() { calcAutoTuneChannel() } }
 
-    LabelledComboBox {
-        Layout.fillWidth:       true
-        comboBoxPreferredWidth: ScreenTools.defaultFontPixelWidth * 30
-        label:                  qsTr("Channel for AutoTune switch:")
-        model:                  [qsTr("None"), qsTr("Channel 7"), qsTr("Channel 8"), qsTr("Channel 9"), qsTr("Channel 10"), qsTr("Channel 11"), qsTr("Channel 12")]
-        currentIndex:           _autoTuneSwitchChannelIndex
+    GridLayout {
+        id: channelRow
+        Layout.fillWidth: true
+        Layout.minimumWidth: root.vehicleSetupStyle ? 0 : -1
+        columns: _stacked ? 1 : 2
+        columnSpacing: ScreenTools.defaultFontPixelWidth
+        rowSpacing: ScreenTools.defaultFontPixelHeight * 0.25
+        readonly property bool _stacked: root.vehicleSetupStyle
+            && width < ScreenTools.defaultFontPixelWidth * 40
 
-        onActivated: (index) => {
-            let channel = index
-            if (channel > 0) {
-                channel += 6
+        QGCLabel {
+            Layout.fillWidth: true
+            Layout.minimumWidth: root.vehicleSetupStyle ? 0 : implicitWidth
+            text: qsTr("Channel for AutoTune switch:")
+            wrapMode: root.vehicleSetupStyle ? Text.WordWrap : Text.NoWrap
+        }
+
+        QGCComboBox {
+            objectName: "apmAutoTuneChannelComboBox"
+            Layout.fillWidth: channelRow._stacked
+            Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 30
+            Layout.minimumWidth: root.vehicleSetupStyle ? 0 : -1
+            Layout.maximumWidth: root.vehicleSetupStyle && !channelRow._stacked
+                ? Math.max(0, channelRow.width * 0.6) : Number.POSITIVE_INFINITY
+            sizeToContents: true
+            model: [qsTr("None"), qsTr("Channel 7"), qsTr("Channel 8"), qsTr("Channel 9"), qsTr("Channel 10"), qsTr("Channel 11"), qsTr("Channel 12")]
+            currentIndex: root._autoTuneSwitchChannelIndex
+
+            onActivated: (index) => {
+                let channel = index
+                if (channel > 0) {
+                    channel += 6
+                }
+                root.setChannelAutoTuneOption(channel)
             }
-            setChannelAutoTuneOption(channel)
         }
     }
 }

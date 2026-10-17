@@ -16,14 +16,14 @@ Rectangle {
     property string _offlinePageTitle: ""
     readonly property var _offlineFunctions: [
         ["AirframeComponent", "Airframe", "/qmlimages/AirframeComponentIcon.png"],
-        ["PX4TuningComponent", "PID Tuning", "/qmlimages/TuningComponentIcon.png"],
         ["SensorsComponent", "Sensors", "/qmlimages/SensorsComponentIcon.png"],
-        ["SafetyComponent", "Safety", "/qmlimages/SafetyComponentIcon.png"],
-        ["JoystickComponent", "Joystick", "/qmlimages/Joystick.png"],
-        ["MotorComponent", "Motors", "/qmlimages/MotorComponentIcon.svg"],
-        ["PowerComponent", "Power", "/qmlimages/Battery.svg"],
         ["PX4RadioComponent", "Radio", "/qmlimages/RadioComponentIcon.png"],
         ["FlightModesComponent", "Flight Modes", "/qmlimages/FlightModesComponentIcon.png"],
+        ["MotorComponent", "Motors", "/qmlimages/MotorComponentIcon.svg"],
+        ["PowerComponent", "Power", "/qmlimages/Battery.svg"],
+        ["SafetyComponent", "Safety", "/qmlimages/SafetyComponentIcon.png"],
+        ["PX4TuningComponent", "PID Tuning", "/qmlimages/TuningComponentIcon.png"],
+        ["JoystickComponent", "Joystick", "/qmlimages/Joystick.png"],
         ["PX4FlightBehavior", "Flight Behavior", "/qmlimages/TuningComponentIcon.png"],
         ["VehicleConfigView", "Parameters", "/qmlimages/subMenuButtonImage.png"]
     ]
@@ -71,15 +71,18 @@ Rectangle {
     property string _selectedSpecial:        ""     // "summary", "parameters", "firmware", "opticalflow"
     property bool   _showingPrereqMessage:   false  // Panel area shows prerequisite message instead of selected component
     property var    _expandedComponents:     ({})
-    property int    _expandedRevision:       0
+    property var    _expandedSearchComponents: ({})
     property string _searchQuery:            ""
+
+    on_SearchQueryChanged: _expandedSearchComponents = ({})
 
     function _orderedComponents() {
         if (!_fullParameterVehicleAvailable) { return [] }
         const components = _activeVehicle.autopilotPlugin.vehicleComponents
-        const order = ["AirframeComponent", "APMAirframeComponent", "PX4TuningComponent", "SensorsComponent",
-            "SafetyComponent", "JoystickComponent", "MotorComponent", "ActuatorComponent", "PowerComponent",
-            "PX4RadioComponent", "FlightModesComponent", "PX4FlightBehavior"]
+        const order = ["AirframeComponent", "APMAirframeComponent", "SensorsComponent", "APMSensorsComponent",
+            "PX4RadioComponent", "APMRadioComponent", "APMESCComponent", "FlightModesComponent", "APMFlightModesComponent",
+            "APMServoComponent", "ActuatorComponent", "MotorComponent", "APMMotorComponent", "PowerComponent", "APMPowerComponent",
+            "SafetyComponent", "APMFailsafesComponent", "PX4TuningComponent", "JoystickComponent", "PX4FlightBehavior"]
         const entries = components.map((component, index) => ({component: component, componentIndex: index}))
         if (_caacStyle) {
             entries.sort((left, right) => {
@@ -92,13 +95,21 @@ Rectangle {
     }
 
     function _setExpanded(compIndex, value) {
-        _expandedComponents[compIndex] = value
-        _expandedRevision++
+        const searching = _searchQuery.trim() !== ""
+        const states = Object.assign({}, searching ? _expandedSearchComponents : _expandedComponents)
+        states[compIndex] = value
+        if (searching) {
+            _expandedSearchComponents = states
+        } else {
+            _expandedComponents = states
+        }
     }
 
     function _isExpanded(compIndex) {
-        void _expandedRevision
-        return !!_expandedComponents[compIndex]
+        if (_searchQuery.trim() !== "") {
+            return _expandedSearchComponents[compIndex] !== false
+        }
+        return _expandedComponents[compIndex] === true
     }
 
     /// Translated display name for a section ID. JSON-driven components translate via the JSON
@@ -529,7 +540,8 @@ Rectangle {
                         property bool   hasSections:    compSectionIds.length > 1
                         property bool   isSearching:    vehicleConfigView._searchQuery.trim() !== ""
                         property bool   matchesSearch:  comp ? vehicleConfigView._componentMatchesSearch(comp) : false
-                        property bool   isExpanded:     hasSections && (isSearching ? matchesSearch : vehicleConfigView._isExpanded(componentIndex))
+                        property bool   isExpanded:     hasSections && (!isSearching || matchesSearch)
+                                                        && vehicleConfigView._isExpanded(componentIndex)
 
                         visible: vehicleConfigView._componentVisible(comp)
 
@@ -545,23 +557,19 @@ Rectangle {
                             outlined:           vehicleConfigView.embedded
 
                             onClicked: {
+                                if (compColumn.hasSections && compColumn.isSelected) {
+                                    vehicleConfigView._setExpanded(compColumn.componentIndex, !compColumn.isExpanded)
+                                    return
+                                }
+                                if (!mainWindow.allowViewSwitch()) { return }
                                 vehicleConfigView._navigateToComponent(compColumn.componentIndex, -1)
                                 if (compColumn.hasSections) {
-                                    if (compColumn.isSelected && compColumn.isExpanded) {
-                                        vehicleConfigView._setExpanded(compColumn.componentIndex, false)
-                                    } else if (!compColumn.isExpanded) {
-                                        vehicleConfigView._setExpanded(compColumn.componentIndex, true)
-                                    }
+                                    vehicleConfigView._setExpanded(compColumn.componentIndex, true)
                                 }
                             }
 
                             onToggleExpand: {
-                                if (!mainWindow.allowViewSwitch()) return
-                                var expanding = !compColumn.isExpanded
-                                vehicleConfigView._setExpanded(compColumn.componentIndex, expanding)
-                                if (!expanding && compColumn.isSelected) {
-                                    vehicleConfigView._navigateToComponent(compColumn.componentIndex, -1)
-                                }
+                                vehicleConfigView._setExpanded(compColumn.componentIndex, !compColumn.isExpanded)
                             }
                         }
 

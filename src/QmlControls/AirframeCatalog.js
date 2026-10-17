@@ -88,6 +88,8 @@ function apmImage(resourceUrl) {
     const basename = resource.substring(resource.lastIndexOf("/") + 1)
     const names = {
         "QuadRotorX.svg": "quadrotor-x", "QuadRotorPlus.svg": "quadrotor-plus", "QuadRotorH.svg": "quadrotor-h",
+        "QuadRotorWide.svg": "quadrotor-v-wide", "QuadRotorVTail.svg": "quadrotor-v-tail",
+        "QuadRotorATail.svg": "quadrotor-a-tail", "OctoRotorPlusCoaxial.svg": "octaquad-plus",
         "HexaRotorX.svg": "hexarotor-x", "HexaRotorPlus.svg": "hexarotor-plus",
         "OctoRotorX.svg": "octorotor-x", "OctoRotorPlus.svg": "octorotor-plus",
         "OctoRotorXCoaxial.svg": "octorotor-coaxial", "Y6A.svg": "hexarotor-coaxial", "Y6B.svg": "hexarotor-coaxial",

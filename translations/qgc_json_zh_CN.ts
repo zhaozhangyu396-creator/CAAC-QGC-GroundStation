@@ -349,7 +349,7 @@
       <extracomment>.groups[MAVLink Actions].keywords[3]</extracomment>
       <location filename="../src/AppSettings/pages/FlyView.SettingsUI.json"/>
       <source>disarm</source>
-      <translation>解除解锁</translation>
+      <translation>上锁</translation>
     </message>
     <message>
       <extracomment>.groups[Virtual Joystick].heading</extracomment>
@@ -2324,7 +2324,7 @@
       <extracomment>.groups[Settings].keywords[4]</extracomment>
       <location filename="../src/AppSettings/pages/Video.SettingsUI.json"/>
       <source>disable when disarmed</source>
-      <translation>撤防时禁用</translation>
+      <translation>上锁时禁用</translation>
     </message>
     <message>
       <extracomment>.groups[Settings].keywords[5]</extracomment>
@@ -3041,7 +3041,7 @@
       <extracomment>.sections[Other Failsafe Options].controls[1].options[1].label</extracomment>
       <location filename="../src/AutoPilotPlugins/APM/VehicleConfig/APMFailsafes.VehicleConfig.json"/>
       <source>Hold and Disarm</source>
-      <translation>保持并解除解锁</translation>
+      <translation>保持并上锁</translation>
     </message>
   </context>
   <context>
@@ -3332,7 +3332,7 @@
       <extracomment>.sections[Arming Checks].controls[0].label</extracomment>
       <location filename="../src/AutoPilotPlugins/APM/VehicleConfig/APMFlightSafety.VehicleConfig.json"/>
       <source>Warning: Skipping arming checks can lead to loss of Vehicle control.</source>
-      <translation>警告：跳过布防检查可能会导致无人机失去控制。</translation>
+      <translation>警告：跳过解锁检查可能会导致无人机失去控制。</translation>
     </message>
     <message>
       <extracomment>.sections[Arming Checks].controls[1].label</extracomment>
@@ -3344,7 +3344,7 @@
       <extracomment>.sections[Arming Checks].controls[2].label</extracomment>
       <location filename="../src/AutoPilotPlugins/APM/VehicleConfig/APMFlightSafety.VehicleConfig.json"/>
       <source>Skip arming checks</source>
-      <translation>跳过布防检查</translation>
+      <translation>跳过解锁检查</translation>
     </message>
   </context>
   <context>
@@ -3551,13 +3551,13 @@
       <extracomment>.sections[Options].controls[0].label</extracomment>
       <location filename="../src/AutoPilotPlugins/APM/VehicleConfig/APMLogging.VehicleConfig.json"/>
       <source>Log while disarmed</source>
-      <translation>撤防时记录</translation>
+      <translation>上锁时记录</translation>
     </message>
     <message>
       <extracomment>.sections[Options].controls[1].label</extracomment>
       <location filename="../src/AutoPilotPlugins/APM/VehicleConfig/APMLogging.VehicleConfig.json"/>
       <source>Rotate log file on disarm/rearm</source>
-      <translation>轮换撤防/重新布防日志文件</translation>
+      <translation>轮换上锁/重新解锁日志文件</translation>
     </message>
     <message>
       <extracomment>.sections[Options].controls[2].label</extracomment>
@@ -3827,7 +3827,7 @@
       <extracomment>.sections[AutoTune].controls[2].label</extracomment>
       <location filename="../src/AutoPilotPlugins/APM/VehicleConfig/APMTuningCopter.VehicleConfig.json"/>
       <source>Aggressiveness</source>
-      <translation>攻击性</translation>
+      <translation>自动调谐强度</translation>
     </message>
     <message>
       <extracomment>.sections[AutoTune].controls[3].label</extracomment>
@@ -4409,7 +4409,7 @@
       <extracomment>.sections[Land Mode Settings].keywords[2]</extracomment>
       <location filename="../src/AutoPilotPlugins/PX4/VehicleConfig/Safety.VehicleConfig.json"/>
       <source>disarm</source>
-      <translation>解除解锁</translation>
+      <translation>上锁</translation>
     </message>
     <message>
       <extracomment>.sections[Land Mode Settings].keywords[3]</extracomment>
@@ -4427,7 +4427,7 @@
       <extracomment>.sections[Land Mode Settings].controls[1].label</extracomment>
       <location filename="../src/AutoPilotPlugins/PX4/VehicleConfig/Safety.VehicleConfig.json"/>
       <source>Disarm after</source>
-      <translation>解除解锁后</translation>
+      <translation>上锁后</translation>
     </message>
   </context>
   <context>
@@ -7329,13 +7329,13 @@
       <extracomment>.QGC.MetaData.Facts[enforceChecklist].shortDesc</extracomment>
       <location filename="../src/Settings/App.SettingsGroup.json"/>
       <source>Prevents the vehicle from arming until all preflight checklist items pass.</source>
-      <translation>防止无人机布防，直至所有飞行前检查表项目均通过。</translation>
+      <translation>防止无人机解锁，直至所有飞行前检查表项目均通过。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[enforceChecklist].longDesc</extracomment>
       <location filename="../src/Settings/App.SettingsGroup.json"/>
       <source>If this option is enabled the preflight checklist must pass before arming.</source>
-      <translation>如果启用此选项，则在布防前必须通过飞行前检查表。</translation>
+      <translation>如果启用此选项，则在解锁前必须通过飞行前检查表。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[enforceChecklist].label</extracomment>
@@ -8417,20 +8417,20 @@
       <extracomment>.QGC.MetaData.Facts[allowForceArm].shortDesc</extracomment>
       <location filename="../src/Settings/FlyView.SettingsGroup.json"/>
       <source>Show a Force Arm button in the main status indicator. Force arming bypasses pre-arm checks. Use with caution.</source>
-      <translation>在主状态指示器中显示强制布防按钮。强制布防绕过预布防检查。谨慎使用。</translation>
+      <translation>在主状态指示器中显示强制解锁按钮。强制解锁绕过解锁前检查。谨慎使用。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[allowForceArm].label</extracomment>
       <location filename="../src/Settings/FlyView.SettingsGroup.json"/>
       <source>Allow Force Arm</source>
-      <translation>允许强制布防</translation>
+      <translation>允许强制解锁</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[allowForceArm].keywords</extracomment>
       <translatorcomment>Only use english comma ',' to separate strings</translatorcomment>
       <location filename="../src/Settings/FlyView.SettingsGroup.json"/>
       <source>force arm,arming,pre-arm</source>
-      <translation>强制布防,布防,预布防</translation>
+      <translation>强制解锁,解锁,解锁前</translation>
     </message>
   </context>
   <context>
@@ -8944,7 +8944,7 @@
       <extracomment>.QGC.MetaData.Facts[telemetrySaveNotArmed].longDesc</extracomment>
       <location filename="../src/Settings/Mavlink.SettingsGroup.json"/>
       <source>If this option is enabled a telemetry log will be saved even if vehicle was never armed.</source>
-      <translation>如果启用此选项，即使无人机从未布防，也会保存遥测日志。</translation>
+      <translation>如果启用此选项，即使无人机从未解锁，也会保存遥测日志。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[telemetrySaveNotArmed].label</extracomment>
@@ -9113,13 +9113,13 @@
       <extracomment>.QGC.MetaData.Facts[noInitialDownloadWhenArmed].longDesc</extracomment>
       <location filename="../src/Settings/Mavlink.SettingsGroup.json"/>
       <source>When enabled, parameter and mission plan downloads are skipped when connecting to a vehicle that is already armed. This prevents bandwidth-heavy transfers from disrupting an active flight.</source>
-      <translation>启用后，当连接到已布防的无人机时，将跳过参数和任务计划下载。这可以防止占用大量带宽的传输中断正在运行的航班。</translation>
+      <translation>启用后，当连接到已解锁的无人机时，将跳过参数和任务计划下载。这可以防止占用大量带宽的传输中断正在运行的航班。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[noInitialDownloadWhenArmed].label</extracomment>
       <location filename="../src/Settings/Mavlink.SettingsGroup.json"/>
       <source>Skip param/plan download if vehicle is armed on connect</source>
-      <translation>如果无人机在连接时已布防，则跳过参数/计划下载</translation>
+      <translation>如果无人机在连接时已解锁，则跳过参数/计划下载</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[noInitialDownloadWhenArmed].keywords</extracomment>
@@ -10596,26 +10596,26 @@
       <extracomment>.QGC.MetaData.Facts[disableWhenDisarmed].shortDesc</extracomment>
       <location filename="../src/Settings/Video.SettingsGroup.json"/>
       <source>Disables the video stream when the vehicle is disarmed to save bandwidth.</source>
-      <translation>当无人机撤防时禁用视频流以节省带宽。</translation>
+      <translation>当无人机上锁时禁用视频流以节省带宽。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[disableWhenDisarmed].longDesc</extracomment>
       <location filename="../src/Settings/Video.SettingsGroup.json"/>
       <source>Disables the video stream when the vehicle is disarmed. Any active recording is also stopped.</source>
-      <translation>当无人机撤防时禁用视频流。任何活动录制也会停止。</translation>
+      <translation>当无人机上锁时禁用视频流。任何活动录制也会停止。</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[disableWhenDisarmed].label</extracomment>
       <location filename="../src/Settings/Video.SettingsGroup.json"/>
       <source>Disable Video Stream When Disarmed</source>
-      <translation>撤防时禁用视频流</translation>
+      <translation>上锁时禁用视频流</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[disableWhenDisarmed].keywords</extracomment>
       <translatorcomment>Only use english comma ',' to separate strings</translatorcomment>
       <location filename="../src/Settings/Video.SettingsGroup.json"/>
       <source>disable when disarmed</source>
-      <translation>撤防时禁用</translation>
+      <translation>上锁时禁用</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[lowLatencyMode].shortDesc</extracomment>

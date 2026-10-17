@@ -76,6 +76,48 @@ SetupPage {
             property bool   _doSimpleAccelCal:              false
             property var    _gcsPosition:                    QGroundControl.positionManager.gcsPosition
             property var    _mapPosition:                    QGroundControl.flightMapPosition
+            readonly property bool _inlineCalibration: QGroundControl.corePlugin.directMissionItemEditing
+            property bool _inlinePreparationActive: false
+            property string _inlinePreparationType: ""
+            property string _inlinePreparationHelp: ""
+            property string _inlineResultType: ""
+            property string _inlineMessage: ""
+
+            function sectionVisible(sectionId) {
+                if (sectionId === "Gyroscope") {
+                    return globals.activeVehicle && (globals.activeVehicle.multiRotor
+                        || globals.activeVehicle.rover || globals.activeVehicle.sub)
+                }
+                if (sectionId === "CompassMot") {
+                    return globals.activeVehicle && globals.activeVehicle.supports.motorInterference
+                }
+                return true
+            }
+
+            function prepareInlineCalibration(type, help) {
+                if (!_canConfigure || !_calibrationButtonsEnabled) { return }
+                _inlineResultType = ""
+                _inlineMessage = ""
+                _inlinePreparationType = type
+                _inlinePreparationHelp = help
+                _inlinePreparationActive = true
+                caacPanel.currentType = type
+            }
+
+            function confirmInlineCalibration() {
+                if (!_canConfigure || !_calibrationButtonsEnabled) { return }
+                if (_orientationSettingsExpanded && _orientationSettingsCalType !== _calTypeSet) {
+                    if (caacPanel.preparationItem) { caacPanel.preparationItem.confirmCalibration() }
+                    return
+                }
+                _inlinePreparationActive = false
+                switch (_inlinePreparationType) {
+                case "level": controller.levelHorizon(); break
+                case "gyro": controller.calibrateGyro(); break
+                case "pressure": controller.calibratePressure(); break
+                case "compassmot": controller.calibrateMotorInterference(); break
+                }
+            }
 
             function showOrientationSettings(calType) {
                 if (!_canConfigure || !_calibrationButtonsEnabled) {
@@ -86,6 +128,9 @@ SetupPage {
                     return
                 }
                 _orientationSettingsExpanded = false
+                _inlinePreparationActive = false
+                _inlineResultType = ""
+                _inlineMessage = ""
                 _doSimpleAccelCal = false
                 _orientationSettingsCalType = calType
                 _orientationSettingsShowCompass = calType !== _calTypeAccel
@@ -99,6 +144,23 @@ SetupPage {
             on_CanConfigureChanged: {
                 if (!_canConfigure) {
                     _orientationSettingsExpanded = false
+                }
+            }
+
+            Connections {
+                target: sensorsPage
+                function onSectionIdFilterChanged() {
+                    if (_inlineCalibration && !controller.calibrationActive) {
+                        _inlinePreparationActive = false
+                        _inlinePreparationType = ""
+                        _inlinePreparationHelp = ""
+                        _orientationSettingsExpanded = false
+                        _inlineResultType = ""
+                        _inlineMessage = ""
+                        statusTextArea.text = statusTextAreaDefaultText
+                        orientationCalAreaHelpText.text = ""
+                        progressBar.value = 0
+                    }
                 }
             }
 
@@ -139,6 +201,7 @@ SetupPage {
 
             APMSensorsComponentController {
                 id:                         controller
+                inlineCalibration:          _inlineCalibration
                 statusLog:                  statusTextArea
                 progressBar:                progressBar
                 nextButton:                 nextButton
@@ -150,12 +213,18 @@ SetupPage {
                 onResetStatusTextArea: statusLog.text = statusTextAreaDefaultText
 
                 onWaitingForCancelChanged: {
-                    if (controller.waitingForCancel) {
+                    if (controller.waitingForCancel && !_inlineCalibration) {
                         waitForCancelDialogFactory.open()
                     }
                 }
 
                 onCalibrationComplete: (calType) => {
+                    if (_inlineCalibration) {
+                        _singleCompassSettingsComponentShowPriority = true
+                        _inlineResultType = calType === MAVLink.CalibrationMag ? "compass"
+                            : calType === MAVLink.CalibrationAccel ? "accel" : "other"
+                        return
+                    }
                     switch (calType) {
                     case MAVLink.CalibrationMag:
                         _singleCompassSettingsComponentShowPriority = true
@@ -642,7 +711,7 @@ SetupPage {
                     QGCButton {
                         objectName: "sensorsSetup_confirmOrientationCalibration"
                         width: parent.width
-                        visible: _orientationSettingsCalType !== _calTypeSet
+                        visible: !_inlineCalibration && _orientationSettingsCalType !== _calTypeSet
                         text: qsTr("开始校准")
                         onClicked: orientationSettingsColumn.confirmCalibration()
                     }
@@ -650,6 +719,7 @@ SetupPage {
                     QGCButton {
                         objectName: "sensorsSetup_closeOrientationSettings"
                         width: parent.width
+                        visible: !_inlineCalibration
                         text: _orientationSettingsCalType === _calTypeSet ? qsTr("Close") : qsTr("Cancel")
                         onClicked: _orientationSettingsExpanded = false
                     }
@@ -716,9 +786,135 @@ SetupPage {
                 }
             }
 
+            SensorCalibrationPanel {
+                id: caacPanel
+                anchors.fill: parent
+                visible: _inlineCalibration
+                sectionId: sensorsPage.sectionIdFilter
+                calibrationActive: controller.calibrationActive
+                calibrationEnabled: _canConfigure && _calibrationButtonsEnabled
+                accelComplete: !accelCalNeeded
+                compassComplete: !compassCalNeeded
+                levelEnabled: !controller.accelSetupNeeded
+                persistentActions: true
+                motorTestAvailable: false
+                nextEnabled: nextButton.enabled
+                cancelEnabled: cancelButton.enabled
+                cancelObjectName: "sensorsSetup_cancelButton"
+                progress: progressBar.value
+                orientationPreviewVisible: controller.showOrientationCalArea || !controller.calibrationActive
+                helpText: orientationCalAreaHelpText.text
+                statusText: _inlineMessage !== "" ? _inlineMessage : statusTextArea.text
+                waitingText: controller.waitingForCancel
+                    ? qsTr("Waiting for Vehicle to response to Cancel. This may take a few seconds.") : ""
+                orientationControls: orientationSettingsComponent
+                preparationActive: _inlinePreparationActive
+                    || (_orientationSettingsExpanded && _orientationSettingsCalType !== _calTypeSet)
+                preparationText: _inlinePreparationActive ? _inlinePreparationHelp : ""
+                preparationControls: _orientationSettingsExpanded && _orientationSettingsCalType !== _calTypeSet
+                    ? orientationSettingsComponent : null
+                confirmObjectName: "sensorsSetup_confirmOrientationCalibration"
+                closeObjectName: "sensorsSetup_closeOrientationSettings"
+                resultVisible: _inlineResultType !== ""
+                resultTitle: qsTr("Calibration complete")
+                resultText: _inlineResultType === "accel" || _inlineResultType === "compass"
+                    ? qsTr("YOU MUST REBOOT YOUR VEHICLE AFTER EACH CALIBRATION.") : ""
+                resultObjectName: _inlineResultType === "compass" ? "sensorsSetup_compassCalibrationResult"
+                    : "sensorsSetup_calibrationResult"
+                resultControls: _inlineResultType === "compass" ? inlineCompassResults : null
+                sideStates: [sideCalState(controller.orientationCalDownSideDone, controller.orientationCalDownSideInProgress),
+                    sideCalState(controller.orientationCalLeftSideDone, controller.orientationCalLeftSideInProgress),
+                    sideCalState(controller.orientationCalRightSideDone, controller.orientationCalRightSideInProgress),
+                    sideCalState(controller.orientationCalNoseDownSideDone, controller.orientationCalNoseDownSideInProgress),
+                    sideCalState(controller.orientationCalTailDownSideDone, controller.orientationCalTailDownSideInProgress),
+                    sideCalState(controller.orientationCalUpsideDownSideDone, controller.orientationCalUpsideDownSideInProgress)]
+                sideVisible: [controller.orientationCalDownSideVisible, controller.orientationCalLeftSideVisible,
+                    controller.orientationCalRightSideVisible, controller.orientationCalNoseDownSideVisible,
+                    controller.orientationCalTailDownSideVisible, controller.orientationCalUpsideDownSideVisible]
+                sideRotating: [controller.orientationCalDownSideRotate, controller.orientationCalLeftSideRotate,
+                    controller.orientationCalRightSideRotate, controller.orientationCalNoseDownSideRotate,
+                    controller.orientationCalTailDownSideRotate, controller.orientationCalUpsideDownSideRotate]
+                onSetOrientation: showOrientationSettings(_calTypeSet)
+                onStartAccel: showOrientationSettings(_calTypeAccel)
+                onStartCompass: {
+                    if (controller.accelSetupNeeded) {
+                        _inlineMessage = qsTr("Accelerometer must be calibrated prior to Compass.")
+                    } else {
+                        showOrientationSettings(_calTypeCompass)
+                    }
+                }
+                onStartLevel: prepareInlineCalibration("level", levelHelp)
+                onNext: controller.nextClicked()
+                onCancel: controller.cancelCalibration()
+                onConfirmPreparation: confirmInlineCalibration()
+                onDismissPreparation: {
+                    _inlinePreparationActive = false
+                    _orientationSettingsExpanded = false
+                }
+                onAcknowledgeResult: _inlineResultType = ""
+                additionalControls: Component {
+                    ColumnLayout {
+                        spacing: ScreenTools.defaultFontPixelHeight / 2
+                        SettingsActionButton {
+                            objectName: "sensorsSetup_calibrateGyro"
+                            Layout.fillWidth: true
+                            text: qsTr("Gyro")
+                            visible: caacPanel.matchesSection("Gyroscope") && sectionVisible("Gyroscope")
+                            onClicked: prepareInlineCalibration("gyro", gyroHelp)
+                        }
+                        SettingsActionButton {
+                            objectName: "sensorsSetup_calibratePressure"
+                            Layout.fillWidth: true
+                            text: globals.activeVehicle && globals.activeVehicle.fixedWing ? qsTr("Baro/Airspeed") : qsTr("Pressure")
+                            visible: caacPanel.matchesSection("Pressure")
+                            onClicked: prepareInlineCalibration("pressure",
+                                qsTr("Pressure calibration will set the %1 to zero at the current pressure reading. %2")
+                                    .arg(globals.activeVehicle && globals.activeVehicle.sub ? qsTr("depth") : qsTr("altitude"))
+                                    .arg(globals.activeVehicle && globals.activeVehicle.fixedWing
+                                        ? qsTr("To calibrate the airspeed sensor shield it from the wind. Do not touch the sensor or obstruct any holes during the calibration.") : ""))
+                        }
+                        SettingsActionButton {
+                            objectName: "sensorsSetup_calibrateCompassMot"
+                            Layout.fillWidth: true
+                            text: qsTr("CompassMot")
+                            visible: caacPanel.matchesSection("CompassMot") && sectionVisible("CompassMot")
+                            onClicked: prepareInlineCalibration("compassmot",
+                                qsTr("This is recommended for vehicles that have only an internal compass and on vehicles where there is significant interference on the compass from the motors, power wires, etc. ")
+                                + qsTr("CompassMot only works well if you have a battery current monitor because the magnetic interference is linear with current drawn. ")
+                                + qsTr("It is technically possible to set-up CompassMot using throttle but this is not recommended.")
+                                + "\n\n" + qsTr("Disconnect your props, flip them over and rotate them one position around the frame. ")
+                                + qsTr("In this configuration they should push the copter down into the ground when the throttle is raised.")
+                                + "\n\n" + qsTr("Secure the copter (perhaps with tape) so that it does not move.")
+                                + "\n\n" + qsTr("Turn on your transmitter and keep throttle at zero."))
+                        }
+                    }
+                }
+            }
+
+            Component {
+                id: inlineCompassResults
+                Column {
+                    width: parent ? parent.width : 0
+                    spacing: ScreenTools.defaultFontPixelHeight
+                    Repeater {
+                        model: 3
+                        delegate: singleCompassOnboardResultsComponent
+                    }
+                    QGCLabel {
+                        width: parent.width
+                        wrapMode: Text.WordWrap
+                        text: qsTr("Shown in the indicator bars is the quality of the calibration for each compass.\n\n")
+                            + qsTr("- Green indicates a well functioning compass.\n")
+                            + qsTr("- Yellow indicates a questionable compass or calibration.\n")
+                            + qsTr("- Red indicates a compass which should not be used.\n\n")
+                    }
+                }
+            }
+
             QGCFlickable {
                 id:             buttonFlickable
                 objectName:     "sensorsSetup_buttonScroller"
+                visible:        !_inlineCalibration
                 anchors.left:   parent.left
                 anchors.top:    parent.top
                 anchors.bottom: parent.bottom
@@ -744,7 +940,7 @@ SetupPage {
                     Loader {
                         id: orientationSettingsLoader
                         width: parent.width
-                        active: _orientationSettingsExpanded
+                        active: !_inlineCalibration && _orientationSettingsExpanded
                         visible: active
                         sourceComponent: orientationSettingsComponent
                     }
@@ -872,7 +1068,7 @@ SetupPage {
 
             /// Right column - cal area
             Column {
-                visible:            !_orientationSettingsExpanded
+                visible:            !_inlineCalibration && !_orientationSettingsExpanded
                 anchors.leftMargin: _orientationSettingsExpanded ? 0 : _margins
                 anchors.top:        parent.top
                 anchors.bottom:     parent.bottom

@@ -18,7 +18,8 @@ SetupPage {
         id: escPageComponent
 
         ColumnLayout {
-            width: availableWidth
+            id: escContent
+            width: escPage.availableWidth
             spacing: _margins
 
             // ESC Configuration properties - supports both MOT_* (Copter/Rover/Sub) and Q_M_* (QuadPlane) prefixes
@@ -56,13 +57,20 @@ SetupPage {
             QGCPalette { id: qgcPal; colorGroupEnabled: true }
 
             QGCGroupBox {
+                id: configurationGroup
+                objectName: "esc_configurationGroup"
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                Layout.maximumWidth: escContent.width
                 title: qsTr("Configuration")
                 visible: _motPwmTypeAvailable
 
                 ColumnLayout {
+                    width: configurationGroup.availableWidth
                     spacing: _margins
 
                     LabelledFactComboBox {
+                        Layout.fillWidth: true
                         label: qsTr("Output type")
                         fact: _motPwmType
                         indexModel: false
@@ -70,11 +78,15 @@ SetupPage {
                     }
 
                     QGCLabel {
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        wrapMode: Text.WordWrap
                         text: _restartRequired
                         font.pointSize: ScreenTools.smallFontPointSize
                     }
 
                     LabelledFactTextField {
+                        Layout.fillWidth: true
                         label: qsTr("Output PWM min")
                         fact: _motPwmMin
                         textFieldPreferredWidth: _fieldWidth
@@ -82,6 +94,7 @@ SetupPage {
                     }
 
                     LabelledFactTextField {
+                        Layout.fillWidth: true
                         label: qsTr("Output PWM max")
                         fact: _motPwmMax
                         textFieldPreferredWidth: _fieldWidth
@@ -89,6 +102,7 @@ SetupPage {
                     }
 
                     LabelledFactTextField {
+                        Layout.fillWidth: true
                         label: qsTr("Spin when armed")
                         fact: _motSpinArm
                         textFieldPreferredWidth: _fieldWidth
@@ -96,6 +110,7 @@ SetupPage {
                     }
 
                     LabelledFactTextField {
+                        Layout.fillWidth: true
                         label: qsTr("Spin minimum")
                         fact: _motSpinMin
                         textFieldPreferredWidth: _fieldWidth
@@ -103,6 +118,7 @@ SetupPage {
                     }
 
                     LabelledFactTextField {
+                        Layout.fillWidth: true
                         label: qsTr("Spin maximum")
                         fact: _motSpinMax
                         textFieldPreferredWidth: _fieldWidth
@@ -111,6 +127,7 @@ SetupPage {
 
                     // DShot settings - visible when a DShot protocol is selected
                     LabelledFactComboBox {
+                        Layout.fillWidth: true
                         label: qsTr("DShot ESC type")
                         fact: _servoDshotEsc
                         indexModel: false
@@ -119,6 +136,7 @@ SetupPage {
                     }
 
                     LabelledFactComboBox {
+                        Layout.fillWidth: true
                         label: qsTr("DShot output rate")
                         fact: _servoDshotRate
                         indexModel: false
@@ -129,37 +147,101 @@ SetupPage {
             }
 
             QGCGroupBox {
+                id: calibrationGroup
+                objectName: "esc_calibrationGroup"
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                Layout.maximumWidth: escContent.width
                 title: qsTr("Calibration")
                 visible: _escCalibrationAvailable
 
                 ColumnLayout {
+                    width: calibrationGroup.availableWidth
                     spacing: _margins
 
                     QGCLabel {
+                        objectName: "esc_calibrationWarning"
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        wrapMode: Text.WordWrap
                         text: qsTr("WARNING: Remove props prior to calibration!")
                         color: qgcPal.warningText
                     }
 
-                    RowLayout {
-                        spacing: _margins
+                    GridLayout {
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        columns: width < ScreenTools.defaultFontPixelWidth * 50 ? 1 : 2
+                        columnSpacing: _margins
+                        rowSpacing: _margins
 
                         QGCButton {
+                            objectName: "esc_calibrateButton"
+                            Layout.alignment: Qt.AlignTop
                             text: qsTr("Calibrate")
                             enabled: _escCalibration && _escCalibration.rawValue === 0
                             onClicked: if(_escCalibration) _escCalibration.rawValue = 3
                         }
 
                         ColumnLayout {
+                            objectName: "esc_calibrationInstructions"
+                            Layout.fillWidth: true
+                            Layout.minimumWidth: 0
                             enabled: _escCalibration && _escCalibration.rawValue === 3
-                            QGCLabel { text: _escCalibration ? (_escCalibration.rawValue === 3 ? qsTr("Now perform these steps:") : qsTr("Click Calibrate to start, then:")) : "" }
-                            QGCLabel { text: qsTr("- Disconnect USB and battery so flight controller powers down") }
-                            QGCLabel { text: qsTr("- Connect the battery") }
-                            QGCLabel { text: qsTr("- The arming tone will be played (if the vehicle has a buzzer attached)") }
-                            QGCLabel { text: qsTr("- If using a flight controller with a safety button press it until it displays solid red") }
-                            QGCLabel { text: qsTr("- You will hear a musical tone then two beeps") }
-                            QGCLabel { text: qsTr("- A few seconds later you should hear a number of beeps (one for each battery cell you're using)") }
-                            QGCLabel { text: qsTr("- And finally a single long beep indicating the end points have been set and the ESC is calibrated") }
-                            QGCLabel { text: qsTr("- Disconnect the battery and power up again normally") }
+                            QGCLabel {
+                                Layout.fillWidth: true
+                                Layout.minimumWidth: 0
+                                wrapMode: Text.WordWrap
+                                text: _escCalibration ? (_escCalibration.rawValue === 3 ? qsTr("Now perform these steps:") : qsTr("Click Calibrate to start, then:")) : ""
+                            }
+                            QGCLabel {
+                                Layout.fillWidth: true
+                                Layout.minimumWidth: 0
+                                wrapMode: Text.WordWrap
+                                text: qsTr("- Disconnect USB and battery so flight controller powers down")
+                            }
+                            QGCLabel {
+                                Layout.fillWidth: true
+                                Layout.minimumWidth: 0
+                                wrapMode: Text.WordWrap
+                                text: qsTr("- Connect the battery")
+                            }
+                            QGCLabel {
+                                Layout.fillWidth: true
+                                Layout.minimumWidth: 0
+                                wrapMode: Text.WordWrap
+                                text: qsTr("- The arming tone will be played (if the vehicle has a buzzer attached)")
+                            }
+                            QGCLabel {
+                                Layout.fillWidth: true
+                                Layout.minimumWidth: 0
+                                wrapMode: Text.WordWrap
+                                text: qsTr("- If using a flight controller with a safety button press it until it displays solid red")
+                            }
+                            QGCLabel {
+                                Layout.fillWidth: true
+                                Layout.minimumWidth: 0
+                                wrapMode: Text.WordWrap
+                                text: qsTr("- You will hear a musical tone then two beeps")
+                            }
+                            QGCLabel {
+                                Layout.fillWidth: true
+                                Layout.minimumWidth: 0
+                                wrapMode: Text.WordWrap
+                                text: qsTr("- A few seconds later you should hear a number of beeps (one for each battery cell you're using)")
+                            }
+                            QGCLabel {
+                                Layout.fillWidth: true
+                                Layout.minimumWidth: 0
+                                wrapMode: Text.WordWrap
+                                text: qsTr("- And finally a single long beep indicating the end points have been set and the ESC is calibrated")
+                            }
+                            QGCLabel {
+                                Layout.fillWidth: true
+                                Layout.minimumWidth: 0
+                                wrapMode: Text.WordWrap
+                                text: qsTr("- Disconnect the battery and power up again normally")
+                            }
                         }
                     }
                 }

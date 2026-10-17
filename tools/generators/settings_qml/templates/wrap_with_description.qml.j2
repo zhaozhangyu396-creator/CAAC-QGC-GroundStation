@@ -1,5 +1,6 @@
 {{ indent }}ColumnLayout {
 {{ indent }}    Layout.fillWidth: true
+{{ indent }}    Layout.minimumWidth: 0
 {{ indent }}    spacing: ScreenTools.defaultFontPixelHeight / 4
 {{ indent }}    visible: {{ vis_expr }}
 
@@ -7,6 +8,7 @@
 
 {{ indent }}    QGCLabel {
 {{ indent }}        Layout.fillWidth: true
+{{ indent }}        Layout.minimumWidth: 0
 {{ indent }}        text: {{ fact_ref }}.shortDescription
 {{ indent }}        visible: text !== ""
 {{ indent }}        font.pointSize: ScreenTools.smallFontPointSize

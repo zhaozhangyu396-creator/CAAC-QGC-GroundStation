@@ -38,6 +38,12 @@ ColumnLayout {
         }
     }
 
+    function stopTesting() {
+        if (motorsEnabled) { runMotor(-1, 0) }
+        safetyCheck.checked = false
+        resetSliders()
+    }
+
     onCanTestChanged: if (!canTest) { safetyCheck.checked = false; resetSliders() }
     onVehicleChanged: { safetyCheck.checked = false; resetSliders() }
 

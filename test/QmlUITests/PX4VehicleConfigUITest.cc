@@ -39,6 +39,22 @@ QQuickItem* findFactControl(QQuickItem* root, const Fact* fact)
 
 }  // namespace
 
+void PX4VehicleConfigUITest::_testNarrowParameterEditor()
+{
+    runWithMockLink([] { return MockLink::startPX4MockLink(); },
+                    [&](QPointer<MockLink>, Vehicle* vehicle) {
+                        navigateToConfigureView();
+                        if (QTest::currentTestFailed()) {
+                            return;
+                        }
+                        verifyVehicleSetupMenuOrder(vehicle);
+                        if (QTest::currentTestFailed()) {
+                            return;
+                        }
+                        verifyNarrowParameterEditor(vehicle, QStringLiteral("COM_DL_LOSS_T"));
+                    });
+}
+
 void PX4VehicleConfigUITest::_testNarrowParameterControls_data()
 {
     QTest::addColumn<QString>("componentName");
@@ -214,9 +230,14 @@ void PX4VehicleConfigUITest::_selectTuningPage(const QString& tabObjectName, int
     if (menu) {
         QVERIFY(scrollIntoView(menu, QStringLiteral("vehicleSetup_scroller")));
         QVERIFY(clickButton(QStringLiteral("pidTuning_sectionMenu")));
+        auto* popup = menu->property("popup").value<QObject*>();
+        QVERIFY(popup);
+        QTRY_VERIFY_WITH_TIMEOUT(popup->property("opened").toBool(), TestTimeout::shortMs());
         QTest::keyClick(_window, Qt::Key_Home);
+        QTRY_COMPARE_WITH_TIMEOUT(menu->property("highlightedIndex").toInt(), 0, TestTimeout::shortMs());
         for (int index = 0; index < pageIndex; ++index) {
             QTest::keyClick(_window, Qt::Key_Down);
+            QTRY_COMPARE_WITH_TIMEOUT(menu->property("highlightedIndex").toInt(), index + 1, TestTimeout::shortMs());
         }
         QTest::keyClick(_window, Qt::Key_Return);
         const auto selectedPageIndex = [this]() {
@@ -324,4 +345,24 @@ void PX4VehicleConfigUITest::_testDisconnectWithPIDTuningOpen()
     }
 
     });
+}
+
+void PX4VehicleConfigUITest::_testInteractiveTuningChart()
+{
+    runWithMockLink([] { return MockLink::startPX4MockLink(); },
+                    [&](QPointer<MockLink>, Vehicle*) {
+                        navigateToConfigureView();
+                        if (QTest::currentTestFailed()) {
+                            return;
+                        }
+                        QVERIFY(clickSidebarButton(QStringLiteral("vehicleConfig_comp_PIDTuning")));
+                        if (QTest::currentTestFailed()) {
+                            return;
+                        }
+                        _selectTuningPage(QStringLiteral("pidTuning_tab_RateController"), 0);
+                        if (QTest::currentTestFailed()) {
+                            return;
+                        }
+                        verifyInteractiveTuningChart();
+                    });
 }
