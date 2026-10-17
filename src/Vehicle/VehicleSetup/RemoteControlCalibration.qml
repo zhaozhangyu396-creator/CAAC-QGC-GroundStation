@@ -319,6 +319,9 @@ ColumnLayout {
     GridLayout {
         columns: root.vehicleSetupStyle ? 1 : 3
         Layout.fillWidth: true
+        Layout.minimumWidth: root.vehicleSetupStyle ? 0 : -1
+        Layout.maximumWidth: root.vehicleSetupStyle ? root.width : Number.POSITIVE_INFINITY
+        Layout.alignment: root.vehicleSetupStyle ? Qt.AlignLeft : 0
         rowSpacing: ScreenTools.defaultFontPixelHeight
         columnSpacing: ScreenTools.defaultFontPixelHeight
 
