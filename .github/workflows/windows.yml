@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - 'Stable*'
+      - codex/caac-eight-flight-installer-20261017
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
     paths-ignore:
@@ -61,7 +62,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build_type: ['${{ inputs.build_type || ''Release'' }}']
+        build_type: >-
+          ${{ fromJSON(
+            github.event_name == 'push' && github.ref == 'refs/heads/codex/caac-eight-flight-installer-20261017'
+            && '["Release","RelWithDebInfo"]'
+            || format('["{0}"]', inputs.build_type || 'Release')
+          ) }}
         variant: [amd64, arm64, arm64-cross]
         include:
           - variant: amd64
@@ -291,7 +297,7 @@ jobs:
           build-dir: ${{ runner.temp }}/build
           junit-file: junit-portable.xml
           output-file: portable-output.txt
-          artifact-name: test-results-portable-windows
+          artifact-name: test-results-portable-windows-${{ matrix.build_type }}
 
       - name: Run CAAC waypoint editor tests
         id: caac
