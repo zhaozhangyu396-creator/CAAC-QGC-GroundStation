@@ -6,6 +6,7 @@
 #include <QtCore/QDir>
 #include <QtCore/QRegularExpression>
 #include <QtCore/QTimer>
+#include <QtGui/QScreen>
 #include <QtQuick/QQuickItem>
 #include <QtQuick/QQuickItemGrabResult>
 #include <QtQuick/QQuickWindow>
@@ -443,8 +444,15 @@ void VehiclePeripheralSetupUITest::_settings()
             QCOMPARE(returnSettings->property("title").toString(), QStringLiteral("返航设置"));
             _capture(prefix + QStringLiteral("safety-return"));
             const QSize originalSize = _window->size();
-            _window->resize(1000, 1000);
-            QTRY_COMPARE_WITH_TIMEOUT(_window->contentItem()->height(), 1000.0, TestTimeout::shortMs());
+            const QMargins frame = _window->frameMargins();
+            const int availableHeight =
+                _window->screen() ? _window->screen()->availableGeometry().height() - frame.top() - frame.bottom()
+                                  : 1000;
+            const QSize expandedSize(1000, qMin(1000, availableHeight));
+            _window->resize(expandedSize);
+            QTRY_COMPARE_WITH_TIMEOUT(_window->size(), expandedSize, TestTimeout::shortMs());
+            QTRY_COMPARE_WITH_TIMEOUT(_window->contentItem()->height(), qreal(expandedSize.height()),
+                                      TestTimeout::shortMs());
             for (const QString& logicalName : {QStringLiteral("NAV_RCL_ACT"), QStringLiteral("NAV_DLL_ACT")}) {
                 const QString rowName = QStringLiteral("caacSafety_") + logicalName;
                 auto* choice = findVisibleItemScrolled(rowName + QStringLiteral("_choice"), safetyScroller);

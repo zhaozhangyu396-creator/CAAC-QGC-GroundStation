@@ -47,7 +47,7 @@ void APMVehicleConfigUITest::_testSidebarComponentCollapse()
                         }
                         const QString buttonName =
                             QStringLiteral("vehicleConfig_comp_") +
-                            QCoreApplication::translate("APMFlightSafetyComponent", "Flight Safety").remove(' ');
+                            QCoreApplication::translate("APMSensorsComponent", "Sensors").remove(' ');
                         QQuickItem* button = clickSidebarButton(buttonName);
                         QVERIFY(button);
                         QQuickItem* config = findVisibleItem(_rootItem, QStringLiteral("vehicleConfig_root"));
@@ -62,7 +62,7 @@ void APMVehicleConfigUITest::_testSidebarComponentCollapse()
                             QVERIFY(clickButton(QStringLiteral("vehicleConfig_backToMenu")));
                         }
                         QVERIFY(scrollIntoView(button, QStringLiteral("vehicleConfig_sidebarFlickable")));
-                        const QString sectionName = QStringLiteral("vehicleConfig_section_ReturntoLaunch");
+                        const QString sectionName = QStringLiteral("vehicleConfig_section_Accelerometer");
                         QTRY_VERIFY_WITH_TIMEOUT(findVisibleItem(config, sectionName, 0), TestTimeout::shortMs());
                         const auto verifyPagePreserved = [&] {
                             QCOMPARE(loader->property("item").value<QQuickItem*>(), panel.data());
@@ -91,7 +91,7 @@ void APMVehicleConfigUITest::_testSidebarComponentCollapse()
 
                         QQuickItem* search = findVisibleItem(config, QStringLiteral("vehicleConfig_searchField"));
                         QVERIFY(search);
-                        QVERIFY(search->setProperty("text", QStringLiteral("arming")));
+                        QVERIFY(search->setProperty("text", QStringLiteral("accelerometer")));
                         QTRY_VERIFY_WITH_TIMEOUT(button->property("expanded").toBool(), TestTimeout::shortMs());
                         QVERIFY(scrollIntoView(button, QStringLiteral("vehicleConfig_sidebarFlickable")));
                         QVERIFY(clickButton(buttonName + QStringLiteral("_expandToggle")));
