@@ -17,6 +17,7 @@ class QQmlApplicationEngine;
 class QQuickWindow;
 class QGCImageProvider;
 class QGCApplication;
+class Vehicle;
 class CaacStartupController;
 class QEvent;
 class QPostEventList;
@@ -112,6 +113,8 @@ public slots:
     /// Show modal application message to the user about the need for a reboot. Multiple messages will be supressed if they occur
     /// one after the other.
     void showRebootAppMessage(const QString &message, const QString &title = QString());
+
+    void showVehicleRebootMessage(Vehicle* vehicle);
 
     QGCImageProvider *qgcImageProvider();
 

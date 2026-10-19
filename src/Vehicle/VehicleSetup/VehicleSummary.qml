@@ -26,6 +26,7 @@ Rectangle {
     }
 
     QGCFlickable {
+        objectName: "vehicleSummaryScroller"
         clip:               true
         anchors.fill:       parent
         contentHeight:      summaryColumn.height
@@ -57,6 +58,22 @@ Rectangle {
                 columnSpacing:  _summaryBoxSpace
                 rowSpacing:     ScreenTools.defaultFontPixelHeight
 
+                Rectangle {
+                    objectName: "dualAntennaSummaryCard"
+                    Layout.fillWidth: true
+                    implicitWidth: _minSummaryW
+                    implicitHeight: dualAntenna.implicitHeight + _margins * 2
+                    color: qgcPal.windowShade
+                    radius: ScreenTools.defaultBorderRadius
+                    visible: QGroundControl.corePlugin.directMissionItemEditing
+                    DualAntennaSummary {
+                        id: dualAntenna
+                        x: _margins
+                        y: _margins
+                        width: parent.width - _margins * 2
+                    }
+                }
+
                 Repeater {
                     model: QGroundControl.multiVehicleManager.activeVehicle ? QGroundControl.multiVehicleManager.activeVehicle.autopilotPlugin.vehicleComponents : undefined
 
@@ -69,6 +86,8 @@ Rectangle {
                         radius: ScreenTools.defaultFontPixelHeight / 4
                         color: qgcPal.windowShade
                         visible: modelData.summaryQmlSource.toString() !== ""
+                            && (!QGroundControl.corePlugin.directMissionItemEditing
+                                || ["APMFailsafesComponent", "APMFlightSafetyComponent"].indexOf(modelData.toString().split("(")[0]) < 0)
                         border.width: 1
                         border.color: Qt.rgba(qgcPal.text.r, qgcPal.text.g, qgcPal.text.b, 0.1)
 
@@ -113,8 +132,8 @@ Rectangle {
                             Loader {
                                 id: summaryLoader
                                 Layout.fillWidth: true
-                                Layout.preferredWidth: item ? item.implicitWidth : 0
-                                Layout.preferredHeight: item ? item.implicitHeight : 0
+                                Layout.preferredWidth: item ? (item as Item).implicitWidth : 0
+                                Layout.preferredHeight: item ? (item as Item).implicitHeight : 0
                                 source: modelData.summaryQmlSource
 
                                 property var vehicleComponent: modelData

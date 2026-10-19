@@ -20,8 +20,13 @@ Item {
     property bool orientationAvailable: true
     property bool orientationExpanded: !vehicle
     property bool compassAvailable: true
+    property bool compassMotionGuidance: false
+    property real compassAttitudeUpdateTime: 0
     property bool accelAvailable: true
     property bool levelAvailable: true
+    property bool pressureAvailable: false
+    property string pressureHelpText: ""
+    property bool compassMotAvailable: false
     property bool levelEnabled: true
     property bool accelComplete: false
     property bool compassComplete: false
@@ -58,12 +63,14 @@ Item {
         || sectionId === "Compass" || sectionId === "Gyroscope"
     readonly property bool _workflowVisible: preparationActive || calibrationActive || resultVisible
         || statusText !== "" || helpText !== "" || waitingText !== ""
-        || (orientationPreviewVisible && _previewSection) || persistentActions
+        || (orientationPreviewVisible && _previewSection) || (persistentActions && currentType === "accel")
 
     signal startAccel()
     signal setOrientation()
     signal startLevel()
     signal startCompass()
+    signal startPressure()
+    signal startCompassMot()
     signal next()
     signal cancel()
     signal confirmPreparation()
@@ -121,15 +128,20 @@ Item {
     QGCFlickable {
         id: scroller
         objectName: "sensorsSetup_buttonScroller"
-        anchors.fill: parent
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: Math.min(root.height, sections.implicitHeight)
         contentWidth: width
-        contentHeight: sections.height
+        contentHeight: sections.implicitHeight
         flickableDirection: Flickable.VerticalFlick
         clip: true
+        onContentHeightChanged: returnToBounds()
 
         ColumnLayout {
             id: sections
             width: scroller.width
+            height: implicitHeight
             spacing: root.margins
 
             ColumnLayout {
@@ -219,9 +231,50 @@ Item {
                 }
             }
 
+            ColumnLayout {
+                visible: root.pressureAvailable && root.matchesSection("Pressure")
+                Layout.fillWidth: true
+                spacing: root.margins
+                SectionTitle { title: qsTr("Calibrate Barometer") }
+                QGCLabel {
+                    Layout.fillWidth: true
+                    text: root.pressureHelpText
+                    wrapMode: Text.WordWrap
+                }
+                SettingsActionButton {
+                    objectName: "sensorsSetup_calibratePressure"
+                    Layout.fillWidth: true
+                    text: qsTr("Start Calibration")
+                    enabled: root.calibrationEnabled && !root.calibrationActive && !root.preparationActive
+                        && !motorTest.motorsEnabled
+                    onClicked: { root.currentType = "pressure"; root.startPressure() }
+                }
+            }
+
+            ColumnLayout {
+                visible: root.compassMotAvailable && root.matchesSection("CompassMot")
+                Layout.fillWidth: true
+                spacing: root.margins
+                SectionTitle { title: qsTr("Compass Motor Interference Calibration") }
+                QGCLabel {
+                    Layout.fillWidth: true
+                    text: qsTr("Measure compass interference from the motors. Review the setup instructions before starting calibration.")
+                    wrapMode: Text.WordWrap
+                }
+                SettingsActionButton {
+                    objectName: "sensorsSetup_calibrateCompassMot"
+                    Layout.fillWidth: true
+                    text: qsTr("Start Calibration")
+                    enabled: root.calibrationEnabled && !root.calibrationActive && !root.preparationActive
+                        && !motorTest.motorsEnabled
+                    onClicked: { root.currentType = "compassmot"; root.startCompassMot() }
+                }
+            }
+
             Loader {
                 Layout.fillWidth: true
-                visible: item && item.implicitHeight > 0
+                Layout.preferredHeight: item ? item.implicitHeight : 0
+                visible: root.additionalControls !== null
                 sourceComponent: root.additionalControls
                 enabled: root.calibrationEnabled && !root.calibrationActive && !root.preparationActive && !motorTest.motorsEnabled
             }
@@ -273,17 +326,22 @@ Item {
                     wrapMode: Text.WordWrap
                     visible: text !== "" && !root.preparationActive
                 }
+                QGCLabel {
+                    Layout.fillWidth: true
+                    visible: root.currentType === "compass" && (root.calibrationActive || root.resultVisible)
+                    text: qsTr("飞控总体进度 %1%").arg(Math.round(root.progress * 100))
+                }
                 ProgressBar {
                     objectName: "sensorsSetup_progressBar"
                     Layout.fillWidth: true
                     value: root.progress
-                    visible: root.calibrationActive || root.persistentActions || root.resultVisible || root.progress > 0
+                    visible: root.calibrationActive || root.resultVisible || root.progress > 0
                 }
                 SettingsActionButton {
                     objectName: "sensorsSetup_nextButton"
                     Layout.fillWidth: true
-                    text: qsTr("确认当前姿态")
-                    visible: root.nextEnabled || root.persistentActions
+                    text: root.currentType === "compassmot" ? qsTr("Finish Calibration") : qsTr("确认当前姿态")
+                    visible: root.nextEnabled || (root.persistentActions && root.currentType === "accel")
                     enabled: root.nextEnabled && root.waitingText === ""
                     onClicked: root.next()
                 }
@@ -291,17 +349,32 @@ Item {
                     objectName: root.cancelObjectName
                     Layout.fillWidth: true
                     text: qsTr("取消校准")
-                    visible: root.calibrationActive || root.persistentActions
+                    visible: root.calibrationActive || (root.persistentActions && root.currentType === "accel")
                     enabled: root.cancelEnabled && root.waitingText === ""
                     onClicked: root.cancel()
+                }
+                QGCLabel {
+                    Layout.fillWidth: true
+                    visible: root.currentType === "compass" && root.orientationPreviewVisible
+                    text: root.compassMotionGuidance
+                        ? qsTr("按六个姿态分别绕竖直轴转动一周。分面进度表示姿态转动完成度；罗盘校准结果以飞控反馈为准。")
+                        : qsTr("按动图转动无人机，各面进度由飞控反馈更新。")
+                    wrapMode: Text.WordWrap
                 }
                 SensorCalibrationPreview {
                     objectName: "sensorCalibrationPreview"
                     Layout.fillWidth: true
                     Layout.preferredHeight: implicitHeight
                     visible: root.orientationPreviewVisible && root._previewSection && !root.preparationActive
+                    compassMode: root.currentType === "compass"
+                    motionGuidance: root.compassMotionGuidance
+                    calibrationActive: root.calibrationActive
+                    overallProgress: root.progress
+                    attitudeUpdateTime: root.compassAttitudeUpdateTime
+                    vehicle: root.vehicle
                     sideStates: root.sideStates
-                    sideVisible: root.calibrationActive ? root.sideVisible
+                    sideVisible: root.currentType === "compass" && root.compassMotionGuidance ? root.allSides
+                        : root.calibrationActive ? root.sideVisible
                         : root.currentType === "gyro" ? [true, false, false, false, false, false] : root.allSides
                     sideRotating: root.sideRotating
                 }

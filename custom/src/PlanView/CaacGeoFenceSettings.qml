@@ -13,9 +13,11 @@ ColumnLayout {
     id: root
     objectName: "caacGeoFenceSettings"
     required property var actionFact
+    property var enabledFact: null
     readonly property var master: globals.planMasterControllerPlanView
     readonly property var controller: master ? master.geoFenceController : null
     readonly property var vehicle: QGroundControl.multiVehicleManager.activeVehicle
+    readonly property FencePreview previewMap: previewLoader.item as FencePreview
     readonly property bool transferReady: !!controller && !!vehicle && controller.supported && !controller.syncInProgress
     property bool drawing: false
     property int previousAction: 1
@@ -24,7 +26,7 @@ ColumnLayout {
     QGCPalette { id: palette }
 
     function fitPreview() {
-        const map = previewLoader.item
+        const map = root.previewMap
         if (!controller || !map || !map.mapReady) { return }
         const coordinates = []
         for (let i = 0; i < controller.polygons.count; ++i) {
@@ -41,7 +43,7 @@ ColumnLayout {
         map.fitCoordinates(coordinates)
     }
     function drawFence() {
-        const map = previewLoader.item
+        const map = root.previewMap
         if (!controller || !map || !map.mapReady) { return }
         drawing = true
         mainWindow.caacFenceVisible = true
@@ -69,9 +71,13 @@ ColumnLayout {
             objectName: "caacFenceEnabled"
             Layout.fillWidth: true
             text: qsTr("围栏开关")
-            enabled: !!root.actionFact && !!root.vehicle && !root.vehicle.armed
-            Binding on checked { value: !!root.actionFact && Number(root.actionFact.rawValue) !== 0 }
+            enabled: (!!root.enabledFact || !!root.actionFact) && !!root.vehicle && !root.vehicle.armed
+            Binding on checked {
+                value: root.enabledFact ? Number(root.enabledFact.rawValue) !== 0
+                    : !!root.actionFact && Number(root.actionFact.rawValue) !== 0
+            }
             onClicked: {
+                if (root.enabledFact) { root.enabledFact.rawValue = checked ? 1 : 0; return }
                 if (!root.actionFact) { return }
                 if (checked) {
                     const values = root.actionFact.enumValues.map(value => Number(value))
@@ -99,7 +105,7 @@ ColumnLayout {
             objectName: "caacFenceDraw"
             text: qsTr("绘制电子围栏")
             Layout.fillWidth: true
-            enabled: !!root.controller && !root.controller.syncInProgress && !!previewLoader.item && previewLoader.item.mapReady
+            enabled: !!root.controller && !root.controller.syncInProgress && !!root.previewMap && root.previewMap.mapReady
             onClicked: root.drawFence()
         }
         QGCButton {
@@ -128,8 +134,8 @@ ColumnLayout {
             objectName: "caacFenceCenterMainMap"
             text: qsTr("主地图定位到此位置")
             _horizontalPadding: ScreenTools.defaultFontPixelWidth * 0.5
-            enabled: !!root.controller && root.controller.containsItems && !!previewLoader.item
-            onClicked: mainWindow.centerPlanMap(previewLoader.item.center, previewLoader.item.zoomLevel)
+            enabled: !!root.controller && root.controller.containsItems && !!root.previewMap
+            onClicked: mainWindow.centerPlanMap(root.previewMap.center, root.previewMap.zoomLevel)
         }
     }
     Rectangle {

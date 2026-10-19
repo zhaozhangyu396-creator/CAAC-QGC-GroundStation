@@ -316,10 +316,19 @@ Item {
                 }
 
                 FactComboBox {
+                    id: boardOrientation
                     objectName: "sensorsSetup_boardOrientation"
                     Layout.fillWidth: true
                     Layout.minimumWidth: 0
                     fact: sens_board_rot
+                    deferred: true
+                }
+                SettingsActionButton {
+                    objectName: "sensorsSetup_saveBoardOrientation"
+                    Layout.fillWidth: true
+                    text: qsTr("Confirm and Save")
+                    enabled: boardOrientation.modified
+                    onClicked: boardOrientation.applyPendingValue()
                 }
             }
 
@@ -340,10 +349,19 @@ Item {
                     }
 
                     FactComboBox {
+                        id: magOrientation
                         objectName: "sensorsSetup_magOrientation_" + index
                         Layout.fillWidth: true
                         Layout.minimumWidth: 0
                         fact: parent.calMagRotFact
+                        deferred: true
+                    }
+                    SettingsActionButton {
+                        objectName: "sensorsSetup_saveMagOrientation_" + index
+                        Layout.fillWidth: true
+                        text: qsTr("Confirm and Save")
+                        enabled: magOrientation.modified
+                        onClicked: magOrientation.applyPendingValue()
                     }
                 }
             }
@@ -398,6 +416,9 @@ Item {
             progressBar.value = 0
             orientationCalAreaHelpText.text = ""
             statusTextArea.text = statusTextAreaDefaultText
+            if (type === "accel" || type === "compass") {
+                _confirmCalibration()
+            }
         } else {
             preCalibrationDialogFactory.open({ title: title })
         }

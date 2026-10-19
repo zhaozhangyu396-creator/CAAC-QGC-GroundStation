@@ -241,6 +241,12 @@ qt_add_resources(
           ${CMAKE_CURRENT_SOURCE_DIR}/assets/calibration/pose-04.png
           ${CMAKE_CURRENT_SOURCE_DIR}/assets/calibration/pose-05.png
           ${CMAKE_CURRENT_SOURCE_DIR}/assets/calibration/pose-06.png
+          ${CMAKE_CURRENT_SOURCE_DIR}/assets/calibration/pose-01-rotation.gif
+          ${CMAKE_CURRENT_SOURCE_DIR}/assets/calibration/pose-02-rotation.gif
+          ${CMAKE_CURRENT_SOURCE_DIR}/assets/calibration/pose-03-rotation.gif
+          ${CMAKE_CURRENT_SOURCE_DIR}/assets/calibration/pose-04-rotation.gif
+          ${CMAKE_CURRENT_SOURCE_DIR}/assets/calibration/pose-05-rotation.gif
+          ${CMAKE_CURRENT_SOURCE_DIR}/assets/calibration/pose-06-rotation.gif
 )
 qt_add_resources(
     ${CMAKE_PROJECT_NAME} caac_exam_audio

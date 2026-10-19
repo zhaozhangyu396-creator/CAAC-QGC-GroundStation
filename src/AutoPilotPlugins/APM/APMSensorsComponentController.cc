@@ -1,5 +1,6 @@
 #include "APMSensorsComponentController.h"
 
+#include <QtCore/QDateTime>
 #include <QtCore/QVariant>
 
 #include "APMAutoPilotPlugin.h"
@@ -38,8 +39,16 @@ APMSensorsComponentController::APMSensorsComponentController(QObject* parent)
     if (_vehicle) {
         connect(_vehicle, &Vehicle::mavCommandResult, this, [this](int, int, int command, int result, int) {
             if (_inlineCalibration && _waitingForCancel && command == MAV_CMD_PREFLIGHT_CALIBRATION &&
+                result == MAV_RESULT_CANCELLED) {
+                _stopCalibration(StopCalibrationCancelled);
+                return;
+            }
+            if (_inlineCalibration && _waitingForCancel && command == MAV_CMD_PREFLIGHT_CALIBRATION &&
                 result != MAV_RESULT_ACCEPTED && result != MAV_RESULT_IN_PROGRESS) {
                 _appendStatusLog(tr("Cancellation was not confirmed. Wait for the vehicle calibration status."));
+                _waitingForCancel = false;
+                emit waitingForCancelChanged();
+                _cancelButton->setEnabled(calibrationActive());
             }
         });
     }
@@ -342,7 +351,7 @@ void APMSensorsComponentController::calibrateAccel(bool doSimpleAccelCal)
     }
     _vehicle->vehicleLinkManager()->setCommunicationLostEnabled(false);
     _startVisualCalibration();
-    _cancelButton->setEnabled(false);
+    _cancelButton->setEnabled(_inlineCalibration);
     (void) _orientationCalAreaHelpText->setProperty(
         "text", tr("Hold still in the current orientation and press Next when ready"));
 
@@ -391,7 +400,8 @@ void APMSensorsComponentController::calibrateMotorInterference()
     _startLogCalibration();
     _appendStatusLog(tr("Raise the throttle slowly to between 50% ~ 75% (the props will spin!) for 5 ~ 10 seconds."));
     _appendStatusLog(tr("Quickly bring the throttle back down to zero"));
-    _appendStatusLog(tr("Press the Next button to complete the calibration"));
+    _appendStatusLog(_inlineCalibration ? tr("Return the throttle to zero, then select Finish Calibration.")
+                                        : tr("Press the Next button to complete the calibration"));
     _vehicle->startCalibration(_calTypeInProgress);
 }
 
@@ -477,6 +487,9 @@ void APMSensorsComponentController::_hideAllCalAreas()
 
 void APMSensorsComponentController::cancelCalibration()
 {
+    if (!_vehicle || !calibrationActive() || _waitingForCancel) {
+        return;
+    }
     _cancelButton->setEnabled(false);
 
     if (_calTypeInProgress == QGCMAVLink::CalibrationMag) {
@@ -718,7 +731,7 @@ bool APMSensorsComponentController::_handleCmdLongAccelcalVehiclePos(const mavli
             _stopCalibration(StopCalibrationSuccess);
             break;
         case ACCELCAL_VEHICLE_POS_FAILED:
-            _stopCalibration(StopCalibrationFailed);
+            _stopCalibration(_waitingForCancel ? StopCalibrationCancelled : StopCalibrationFailed);
             break;
         case ACCELCAL_VEHICLE_POS_ENUM_END:
         default:
@@ -750,11 +763,18 @@ void APMSensorsComponentController::_mavlinkMessageReceived(LinkInterface* link,
 {
     Q_UNUSED(link);
 
-    if (message.sysid != _vehicle->id()) {
+    if (!_vehicle || message.sysid != _vehicle->id()) {
         return;
     }
 
     switch (message.msgid) {
+        case MAVLINK_MSG_ID_ATTITUDE:
+        case MAVLINK_MSG_ID_ATTITUDE_QUATERNION:
+            if (message.compid == _vehicle->compId()) {
+                _attitudeUpdateTime = QDateTime::currentMSecsSinceEpoch();
+                emit attitudeUpdated();
+            }
+            break;
         case MAVLINK_MSG_ID_COMMAND_ACK:
             _handleCommandAck(message);
             break;

@@ -654,7 +654,7 @@
     <message>
       <location filename="../src/AnalyzeView/LogViewer/APMDataFlash/APMDataFlashLogParser.cc" line="145"/>
       <source>Barometer</source>
-      <translation>晴雨表</translation>
+      <translation>气压计</translation>
     </message>
     <message>
       <location filename="../src/AnalyzeView/LogViewer/APMDataFlash/APMDataFlashLogParser.cc" line="146"/>
@@ -1699,7 +1699,7 @@
     <message>
       <location filename="../src/FirmwarePlugin/APM/APMFlightModeIndicator.qml" line="11"/>
       <source>Return to Launch</source>
-      <translation>返回启动页面</translation>
+      <translation>返航设置</translation>
     </message>
     <message>
       <location filename="../src/FirmwarePlugin/APM/APMFlightModeIndicator.qml" line="28"/>
@@ -2781,6 +2781,10 @@
   <context>
     <name>APMSensorsComponent</name>
     <message>
+      <source>Confirm and Save</source>
+      <translation>确认保存</translation>
+    </message>
+    <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="24"/>
       <source>If mounted in the direction of flight, select None.</source>
       <translation>如果安装与飞行方向一致, 请选择 "None"。</translation>
@@ -2944,17 +2948,17 @@
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="374"/>
       <source>Priority 1</source>
-      <translation>優先級別 1</translation>
+      <translation>优先级别 1</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="374"/>
       <source>Priority 2</source>
-      <translation>優先級別 2</translation>
+      <translation>优先级别 2</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="374"/>
       <source>Priority 3</source>
-      <translation>優先級別 3</translation>
+      <translation>优先级别 3</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="374"/>
@@ -2989,27 +2993,27 @@
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="541"/>
       <source>Fast compass calibration given vehicle position and yaw. This </source>
-      <translation>给定无人机位置和偏航的快速罗盘校准。这个</translation>
+      <translation>根据无人机的位置和航向进行快速罗盘校准。此方法</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="542"/>
       <source>results in zero diagonal and off-diagonal elements, so is only </source>
-      <translation>结果为零对角线和非对角线元素，因此仅</translation>
+      <translation>会将校准矩阵的对角和非对角元素置零，因此</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="543"/>
       <source>suitable for vehicles where the field is close to spherical. It is </source>
-      <translation>适合于场接近球形的无人机。它是</translation>
+      <translation>仅适用于磁场分布接近球形的情况。该方法适合</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="544"/>
       <source>useful for large vehicles where moving the vehicle to calibrate it </source>
-      <translation>对于移动无人机进行校准的大型无人机很有用</translation>
+      <translation>大型、难以搬动进行多姿态校准的无人机。</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="545"/>
       <source>is difficult. Point the vehicle North before using it.</source>
-      <translation>很难。使用前将无人机指向北方。</translation>
+      <translation>使用前，请将机头指向正北。</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponent.qml" line="558"/>
@@ -3225,6 +3229,10 @@ Click Ok to start calibration.</source>
   <context>
     <name>APMSensorsComponentController</name>
     <message>
+      <source>Return the throttle to zero, then select Finish Calibration.</source>
+      <translation>将油门降至零，然后点击“结束校准”。</translation>
+    </message>
+    <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponentController.cc" line="153"/>
       <source>Calibration complete</source>
       <translation>校准完毕</translation>
@@ -3363,7 +3371,7 @@ Click Ok to start calibration.</source>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponentSummary.qml" line="89"/>
       <source>Barometer(s):</source>
-      <translation>晴雨表：</translation>
+      <translation>气压计：</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponentSummary.qml" line="90"/>
@@ -12245,7 +12253,7 @@ VTOL</source>
     <message>
       <location filename="../src/AnalyzeView/LogViewer/APMDataFlash/LogViewerDataFlashParser.cc" line="114"/>
       <source>Barometer</source>
-      <translation>晴雨表</translation>
+      <translation>气压计</translation>
     </message>
     <message>
       <location filename="../src/AnalyzeView/LogViewer/APMDataFlash/LogViewerDataFlashParser.cc" line="115"/>
@@ -19578,6 +19586,14 @@ Click 'Ok' to upload the Plan anyway.</source>
   <context>
     <name>QGCApplication</name>
     <message>
+      <source>Vehicle reboot required for changes to take effect. Select OK to reboot the flight controller now.</source>
+      <translation>需要重启飞控才能使更改生效。点击“确定”立即重启飞控，或点击“取消”稍后重启。</translation>
+    </message>
+    <message>
+      <source>Notice</source>
+      <translation>提示</translation>
+    </message>
+    <message>
       <location filename="../src/QGCApplication.cc" line="332"/>
       <source>The current user does not have the correct permissions to access serial devices. You should also remove modemmanager since it also interferes.&lt;br/&gt;&lt;br/&gt;If you are using Ubuntu, execute the following commands to fix these issues:&lt;br/&gt;&lt;pre&gt;sudo usermod -a -G dialout $USER&lt;br/&gt;sudo apt-get remove modemmanager&lt;/pre&gt;</source>
       <translation>当前用户没有访问串口设备的权限。modemmanager 服务也会干扰串口，应将其移除。&lt;br/&gt;&lt;br/&gt;Ubuntu 用户可以执行以下命令修复：&lt;br/&gt;&lt;pre&gt;sudo usermod -a -G dialout $USER&lt;br/&gt;sudo apt-get remove modemmanager&lt;/pre&gt;</translation>
@@ -22215,6 +22231,10 @@ Click 'Ok' to upload the Plan anyway.</source>
   </context>
   <context>
     <name>SensorsSetup</name>
+    <message>
+      <source>Confirm and Save</source>
+      <translation>确认保存</translation>
+    </message>
     <message>
       <location filename="../src/AutoPilotPlugins/PX4/SensorsSetup.qml" line="28"/>
       <location filename="../src/AutoPilotPlugins/PX4/SensorsSetup.qml" line="29"/>
@@ -27893,6 +27913,22 @@ altitude</source>
   <context>
     <name>SensorCalibrationPanel</name>
     <message>
+      <source>Finish Calibration</source>
+      <translation>结束校准</translation>
+    </message>
+    <message>
+      <source>Measure compass interference from the motors. Review the setup instructions before starting calibration.</source>
+      <translation>测量电机工作时对罗盘产生的磁干扰。开始前请阅读并完成准备步骤。</translation>
+    </message>
+    <message>
+      <source>Compass Motor Interference Calibration</source>
+      <translation>罗盘电机干扰校准</translation>
+    </message>
+    <message>
+      <source>Calibrate Barometer</source>
+      <translation>校准气压计</translation>
+    </message>
+    <message>
       <source>飞控校准</source>
       <translation>飞控校准</translation>
     </message>
@@ -28455,7 +28491,7 @@ altitude</source>
     <message>
       <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
       <source>RTL or Continue with Mission in Auto Mode (Deprecated in 4.0+-see FS_OPTIONS)</source>
-      <translation>返航或自动继续任务（4.0+弃用，见 FS_OPTIONS）</translation>
+      <translation>自动模式继续任务，否则返航</translation>
     </message>
     <message>
       <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
@@ -28470,7 +28506,7 @@ altitude</source>
     <message>
       <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
       <source>Land (4.0+ Only)</source>
-      <translation>降落（仅4.0+）</translation>
+      <translation>降落</translation>
     </message>
     <message>
       <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
@@ -28485,7 +28521,7 @@ altitude</source>
     <message>
       <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
       <source>Enabled Continue with Mission in Auto Mode (Deprecated in 4.0+)</source>
-      <translation>自动继续任务（4.0+弃用）</translation>
+      <translation>自动模式继续任务</translation>
     </message>
     <message>
       <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
@@ -28505,12 +28541,12 @@ altitude</source>
     <message>
       <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
       <source>RTL or Continue with Mission in Auto Mode (Removed in 4.0+-see FS_OPTIONS)</source>
-      <translation>返航或自动继续任务（4.0+移除，见 FS_OPTIONS）</translation>
+      <translation>自动模式继续任务，否则返航</translation>
     </message>
     <message>
       <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
       <source>Enabled Continue with Mission in Auto Mode (Removed in 4.0+)</source>
-      <translation>自动继续任务（4.0+已移除）</translation>
+      <translation>自动模式继续任务</translation>
     </message>
     <message>
       <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
@@ -28520,12 +28556,12 @@ altitude</source>
     <message>
       <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
       <source>Auto DO_LAND_START or RTL</source>
-      <translation>自动任务降落或返航</translation>
+      <translation>任务降落或返航</translation>
     </message>
     <message>
       <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
       <source>Enabled Auto DO_LAND_START or RTL</source>
-      <translation>启用：自动任务降落或返航</translation>
+      <translation>任务降落或返航</translation>
     </message>
     <message>
       <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
@@ -28540,12 +28576,12 @@ altitude</source>
     <message>
       <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
       <source>Auto DO_LAND_START/DO_RETURN_PATH_START or RTL</source>
-      <translation>自动任务降落／返航路径或返航</translation>
+      <translation>任务降落／返航路径或返航</translation>
     </message>
     <message>
       <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
       <source>Enabled Auto DO_LAND_START/DO_RETURN_PATH_START or RTL</source>
-      <translation>启用：自动任务降落／返航路径或返航</translation>
+      <translation>任务降落／返航路径或返航</translation>
     </message>
     <message>
       <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
@@ -28607,5 +28643,25 @@ altitude</source>
       <source>Terminate</source>
       <translation>终止飞行</translation>
     </message>
-  </context>
+      <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>EnabledNoFailsafe</source>
+      <translation>忽略失联遥控输入，不触发保护动作</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>Heartbeat</source>
+      <translation>心跳超时触发</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>HeartbeatAndREMRSSI</source>
+      <translation>心跳超时或远端信号丢失时触发</translation>
+    </message>
+    <message>
+      <location filename="../custom/src/PlanView/CaacFailsafeEnumTranslations.js"/>
+      <source>HeartbeatAndAUTO</source>
+      <translation>仅自动模式下心跳超时触发</translation>
+    </message>
+</context>
 </TS>

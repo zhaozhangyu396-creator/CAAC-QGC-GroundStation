@@ -8,6 +8,8 @@ target_sources(
             ${CMAKE_CURRENT_SOURCE_DIR}/QmlUITestBase.h
             ${CMAKE_CURRENT_SOURCE_DIR}/VehicleConfigUITestBase.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/VehicleConfigUITestBase.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/VehiclePeripheralSetupUITest.cc
+            ${CMAKE_CURRENT_SOURCE_DIR}/VehiclePeripheralSetupUITest.h
             ${CMAKE_CURRENT_SOURCE_DIR}/TopLevelViewsTest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/TopLevelViewsTest.h
             ${CMAKE_CURRENT_SOURCE_DIR}/PX4VehicleConfigUITest.cc
@@ -89,6 +91,16 @@ add_qgc_test(
 )
 add_qgc_test(PX4SensorsCalibrationUITest LABELS Integration NoSanitizer TIMEOUT 180)
 add_qgc_test(APMSensorsCalibrationUITest LABELS Integration NoSanitizer TIMEOUT 240)
+add_qgc_test(
+    VehiclePeripheralSetupUITest
+    LABELS
+    Integration
+    NoSanitizer
+    TIMEOUT
+    180
+    ENV_MODIFICATION
+    "QGC_TEST_LOCALE=set:zh_CN"
+)
 add_qgc_test(APMFreshFlashUITest LABELS Integration NoSanitizer TIMEOUT 180)
 add_qgc_test(
     PX4AirframeSetupUITest
@@ -101,8 +113,15 @@ add_qgc_test(
 )
 if(WIN32)
     # Native Windows fonts are required for the setup pages' geometry and mouse interactions.
-    foreach(_setup_test PX4VehicleConfigUITest PX4SensorsCalibrationUITest PX4AirframeSetupUITest
-                        APMVehicleConfigUITest APMSensorsCalibrationUITest APMFreshFlashUITest
+    foreach(
+        _setup_test
+        PX4VehicleConfigUITest
+        PX4SensorsCalibrationUITest
+        PX4AirframeSetupUITest
+        APMVehicleConfigUITest
+        APMSensorsCalibrationUITest
+        APMFreshFlashUITest
+        VehiclePeripheralSetupUITest
     )
         set_property(
             TEST ${_setup_test}

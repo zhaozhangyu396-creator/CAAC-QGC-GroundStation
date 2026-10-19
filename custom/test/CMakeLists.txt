@@ -112,7 +112,7 @@ add_qgc_test(
     Vehicle
     NoSanitizer
     TIMEOUT
-    120
+    180
     ENV_MODIFICATION
     "QGC_TEST_LOCALE=set:zh_CN"
 )

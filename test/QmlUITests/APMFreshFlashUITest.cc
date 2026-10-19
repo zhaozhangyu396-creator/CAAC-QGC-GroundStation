@@ -243,7 +243,7 @@ void APMFreshFlashUITest::_testFreshFlashSetupState()
             // Dismiss the reboot-required notice before interacting with the UI again
             QVERIFY2(QTest::qWaitFor([&] { return frameClassAckSpy.count() >= 1; }, 5000),
                      "FRAME_CLASS write never acked by the vehicle");
-            QVERIFY2(acceptDialog(5000), "Reboot-required notice never shown");
+            QVERIFY2(rejectDialog(5000), "Reboot-required notice never shown");
             verifyExpectedLogMessage();
             if (QTest::currentTestFailed())
                 return;

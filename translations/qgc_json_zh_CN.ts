@@ -3050,7 +3050,7 @@
       <extracomment>.sections[Return to Launch].title, .sections[Return to Launch].title</extracomment>
       <location filename="../src/AutoPilotPlugins/APM/VehicleConfig/APMFlightSafety.VehicleConfig.json"/>
       <source>Return to Launch</source>
-      <translation>返回启动页面</translation>
+      <translation>返航设置</translation>
     </message>
     <message>
       <extracomment>.sections[Return to Launch].keywords[0], .sections[Return to Launch].keywords[0]</extracomment>
@@ -4313,7 +4313,7 @@
       <extracomment>.sections[Return to launch settings].title</extracomment>
       <location filename="../src/AutoPilotPlugins/PX4/VehicleConfig/Safety.VehicleConfig.json"/>
       <source>Return to launch settings</source>
-      <translation>返回启动设置</translation>
+      <translation>返航设置</translation>
     </message>
     <message>
       <extracomment>.sections[Return to launch settings].keywords[0]</extracomment>

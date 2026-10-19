@@ -187,9 +187,12 @@ void MockLinkPX4Calibration::_sideTick()
 /// Mag side: rotation phase with per-tick progress messages.
 void MockLinkPX4Calibration::_magSideTick()
 {
-    if (_sideTickCount < kTicksPerSide) {
+    // Leave time for the animated UI to render intermediate progress before completion.
+    constexpr int kRotationTicksPerSide = 20;
+    if (_sideTickCount < kRotationTicksPerSide) {
         // Same progress calculation as PX4 mag_calibration_worker()
-        const unsigned progress = (_doneCount() * 100 / kSideCount) + ((100 / kSideCount) * _sideTickCount / kTicksPerSide);
+        const unsigned progress =
+            (_doneCount() * 100 / kSideCount) + ((100 / kSideCount) * _sideTickCount / kRotationTicksPerSide);
         _mockLink->sendStatusTextMessage(MAV_SEVERITY_INFO, QStringLiteral("[cal] %1 side calibration: progress <%2>").arg(QLatin1String(kSideNames[_activeSide])).arg(progress));
         return;
     }

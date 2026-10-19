@@ -263,6 +263,34 @@ ApplicationWindow {
         _showMessageDialogWorker(mainWindow, dialogTitle, dialogText)
     }
 
+    function _showVehicleRebootDialog(dialogTitle, dialogText, vehicle) {
+        const dialog = vehicleRebootDialogComponent.createObject(mainWindow, {
+            title: dialogTitle, text: dialogText, requestedVehicle: vehicle
+        })
+        dialog.open()
+    }
+
+    Component {
+        id: vehicleRebootDialogComponent
+        QGCSimpleMessageDialog {
+            objectName: "vehicleRebootConfirmation"
+            property var requestedVehicle
+            readonly property bool canReboot: requestedVehicle && requestedVehicle === globals.activeVehicle
+                && !requestedVehicle.armed && !requestedVehicle.airborne
+                && !requestedVehicle.parameterManager.pendingWrites
+                && !requestedVehicle.vehicleLinkManager.communicationLost
+            buttons: Dialog.Ok | Dialog.Cancel
+            acceptButtonEnabled: canReboot
+            acceptFunction: function() {
+                if (canReboot) {
+                    requestedVehicle.rebootVehicle()
+                } else {
+                    preventClose = true
+                }
+            }
+        }
+    }
+
     Connections {
         target: QGroundControl
 

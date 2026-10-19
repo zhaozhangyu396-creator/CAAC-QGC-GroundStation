@@ -253,21 +253,9 @@ void PX4SensorsCalibrationUITest::_startCalibration(const QString& calibrateButt
              qPrintable(QStringLiteral("Failed to click calibrate button: %1").arg(calibrateButtonObjectName)));
 
     if (QGCCorePlugin::instance()->directMissionItemEditing()) {
-        auto* workflow = findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_inlineWorkflow"));
-        QVERIFY(workflow);
-        QVERIFY(findVisibleItem(workflow, QStringLiteral("sensorsSetup_inlinePreparation")));
-        auto* boardOrientation = findVisibleItem(workflow, QStringLiteral("sensorsSetup_preparationBoardOrientation"));
-        QVERIFY(boardOrientation);
-        QCOMPARE(boardOrientation->property("fact").value<Fact*>(),
-                 vehicle->parameterManager()->getParameter(ParameterManager::defaultComponentId,
-                                                           QStringLiteral("SENS_BOARD_ROT")));
-        QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("popupDialog_frame"), 0));
-        QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("popupDialog_acceptButton"), 0));
-        QVERIFY(!hasCalibrationAck(false));
-        QVERIFY2(clickButtonScrolled(QStringLiteral("sensorsSetup_confirmCalibration"),
-                                     QStringLiteral("sensorsSetup_buttonScroller")),
-                 "Failed to confirm calibration inside the selected sensor section");
         QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_inlinePreparation"), 0));
+        QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_preparationBoardOrientation"), 0));
+        QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("popupDialog_frame"), 0));
     } else {
         QVERIFY2(findVisibleItem(_rootItem, QStringLiteral("popupDialog_acceptButton"), 3000),
                  "Pre-calibration dialog Ok button not found");
@@ -317,8 +305,7 @@ void PX4SensorsCalibrationUITest::_testMagCalibration()
                                         QStringLiteral("sensorsSetup_buttonScroller")));
             QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_orientationControls"), 0));
 
-            // Select the Compass section: the idle orientation preview appears with all
-            // six poses in the neutral Idle state
+            // Compass shows the uploaded rotation animations and independent face progress.
             clickSidebarButton(QStringLiteral("vehicleConfig_section_Compass"));
             if (QTest::currentTestFailed())
                 return;
@@ -332,16 +319,11 @@ void PX4SensorsCalibrationUITest::_testMagCalibration()
             }
 
             if (auto* preview = findVisibleItem(_rootItem, QStringLiteral("sensorCalibrationPreview"), 0)) {
-                auto* large = findVisibleItem(preview, QStringLiteral("sensorCalibrationLargePreview"));
-                QVERIFY(large);
-                QTRY_VERIFY_WITH_TIMEOUT(large->width() > 0 && large->height() > 0, TestTimeout::shortMs());
-                QTRY_COMPARE_WITH_TIMEOUT(large->property("status").toInt(), 1, TestTimeout::mediumMs());
-                const auto largeBounds = large->mapRectToItem(preview, large->boundingRect());
-                QVERIFY(largeBounds.left() >= -1);
-                QVERIFY(largeBounds.top() >= -1);
-                QVERIFY(largeBounds.right() <= preview->width() + 1);
-                QVERIFY(largeBounds.bottom() <= preview->height() + 1);
-                for (const PoseInfo& info : kPoses) {
+                QVERIFY(preview->property("compassMode").toBool());
+                QVERIFY(!preview->property("motionGuidance").toBool());
+                QVERIFY(!findVisibleItem(preview, QStringLiteral("sensorCalibrationLargePreview"), 0));
+                for (int index = 0; index < MockLinkPX4Calibration::kSideCount; ++index) {
+                    const PoseInfo& info = kPoses[index];
                     auto* side = findVisibleItem(preview, QLatin1String(info.objectName));
                     QVERIFY(side);
                     QVERIFY(side->width() > 0);
@@ -351,21 +333,20 @@ void PX4SensorsCalibrationUITest::_testMagCalibration()
                     QVERIFY(sideBounds.top() >= -1);
                     QVERIFY(sideBounds.right() <= preview->width() + 1);
                     QVERIFY(sideBounds.bottom() <= preview->height() + 1);
-                    QVERIFY(side->property("imageSource").toString().endsWith(QLatin1String(poseImage(info, false))));
-                    QVERIFY(clickButtonScrolled(QLatin1String(info.objectName),
-                                                QStringLiteral("sensorsSetup_buttonScroller")));
-                    QTRY_VERIFY_WITH_TIMEOUT(
-                        large->property("source").toUrl().toString().endsWith(QLatin1String(poseImage(info, false))),
-                        TestTimeout::shortMs());
-                    QTRY_COMPARE_WITH_TIMEOUT(large->property("status").toInt(), 1, TestTimeout::mediumMs());
+                    auto* animation =
+                        findVisibleItem(preview, QStringLiteral("sensorCalibrationPoseImage_%1").arg(index));
+                    QVERIFY(animation);
+                    QTRY_COMPARE_WITH_TIMEOUT(animation->property("status").toInt(), 1, 3000);
+                    QVERIFY(animation->property("frameCount").toInt() > 1);
+                    QVERIFY(animation->property("playing").toBool());
+                    const int initialFrame = animation->property("currentFrame").toInt();
+                    QTRY_VERIFY_WITH_TIMEOUT(animation->property("currentFrame").toInt() != initialFrame, 1000);
+                    QVERIFY(animation->property("source").toUrl().toString().endsWith(QStringLiteral("-rotation.gif")));
+                    auto* faceProgress = findVisibleItem(
+                        side, QStringLiteral("sensorCalibrationFaceProgress_%1").arg(side->property("index").toInt()));
+                    QVERIFY(faceProgress);
+                    QCOMPARE(faceProgress->property("value").toDouble(), 0.0);
                 }
-                QVERIFY(clickButtonScrolled(QStringLiteral("sensorsCal_leftSide"),
-                                            QStringLiteral("sensorsSetup_buttonScroller")));
-                QTRY_VERIFY_WITH_TIMEOUT(
-                    large->property("source").toUrl().toString().endsWith(QLatin1String(poseImage(kPoses[4], false))),
-                    3000);
-                QVERIFY(clickButtonScrolled(QStringLiteral("sensorsCal_downSide"),
-                                            QStringLiteral("sensorsSetup_buttonScroller")));
                 if (const auto path = qgetenv("CAAC_CALIBRATION_UI_PREVIEW"); !path.isEmpty()) {
                     const auto capture = preview->grabToImage();
                     QVERIFY(capture);
@@ -417,10 +398,18 @@ void PX4SensorsCalibrationUITest::_testMagCalibration()
                 // Orientation detected: the side goes InProgress with the rotate animation
                 QVERIFY2(waitForCalState(side, SensorsComponentController::SideCalStateInProgress, 5000),
                          qPrintable(QStringLiteral("Side never went in-progress: %1").arg(sideName)));
+                const QString rotationImage =
+                    QGCCorePlugin::instance()->directMissionItemEditing()
+                        ? QString::fromLatin1(info.customImage)
+                              .replace(QStringLiteral(".png"), QStringLiteral("-rotation.gif"))
+                        : QString::fromLatin1(poseImage(info, true));
                 if (auto* large = findVisibleItem(_rootItem, QStringLiteral("sensorCalibrationLargePreview"), 0)) {
-                    QTRY_VERIFY_WITH_TIMEOUT(
-                        large->property("source").toUrl().toString().endsWith(QLatin1String(poseImage(info, true))),
-                        3000);
+                    QTRY_VERIFY_WITH_TIMEOUT(large->property("source").toUrl().toString().endsWith(rotationImage),
+                                             3000);
+                }
+                if (QGCCorePlugin::instance()->directMissionItemEditing()) {
+                    QTRY_VERIFY_WITH_TIMEOUT(side->property("faceProgress").toDouble() > 0.0, 1500);
+                    QVERIFY(side->property("faceProgress").toDouble() < 1.0);
                 }
                 QCOMPARE(side->property("calInProgressText").toString(),
                          QGCCorePlugin::instance()->directMissionItemEditing() ? QStringLiteral("旋转")
@@ -436,7 +425,7 @@ void PX4SensorsCalibrationUITest::_testMagCalibration()
                         QVERIFY(capture->saveToFile(QString::fromUtf8(path)));
                     }
                 }
-                QVERIFY2(side->property("imageSource").toString().endsWith(QLatin1String(poseImage(info, true))),
+                QVERIFY2(side->property("imageSource").toString().endsWith(rotationImage),
                          qPrintable(QStringLiteral("Wrong rotate image for %1: %2")
                                         .arg(sideName, side->property("imageSource").toString())));
 
@@ -444,6 +433,9 @@ void PX4SensorsCalibrationUITest::_testMagCalibration()
                 QVERIFY2(waitForCalState(side, SensorsComponentController::SideCalStateCompleted, 5000),
                          qPrintable(QStringLiteral("Side never completed: %1").arg(sideName)));
 
+                if (QGCCorePlugin::instance()->directMissionItemEditing()) {
+                    QCOMPARE(side->property("faceProgress").toDouble(), 1.0);
+                }
                 sidesDone++;
 
                 // Progress bar must move forward with each side and stay within the

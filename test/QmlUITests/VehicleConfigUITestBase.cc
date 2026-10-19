@@ -791,26 +791,17 @@ void VehicleConfigUITestBase::runAPMFullAccelCal()
     selectAPMSensorSection(QStringLiteral("Accelerometer"));
     if (QTest::currentTestFailed())
         return;
-    // APM requires accel cal before compass can be run.
-    // Expand the orientation controls and explicitly start the full calibration.
     QVERIFY2(clickButtonScrolled(QStringLiteral("sensorsSetup_calibrateAccel"),
                                  QStringLiteral("sensorsSetup_buttonScroller")),
              "Failed to click Accelerometer button");
     if (QGCCorePlugin::instance()->directMissionItemEditing()) {
-        QVERIFY(findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_inlinePreparation"), 3000));
+        QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_inlinePreparation"), 0));
+        QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_boardOrientation"), 0));
         QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("popupDialog_frame"), 0));
-        QQuickItem* boardOrientation = findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_boardOrientation"));
-        QVERIFY(boardOrientation);
-        Vehicle* activeVehicle = MultiVehicleManager::instance()->activeVehicle();
-        QVERIFY(activeVehicle);
-        QCOMPARE(boardOrientation->property("fact").value<Fact*>(),
-                 activeVehicle->parameterManager()->getParameter(ParameterManager::defaultComponentId,
-                                                                 QStringLiteral("AHRS_ORIENTATION")));
+    } else {
+        QVERIFY(clickButtonScrolled(QStringLiteral("sensorsSetup_confirmOrientationCalibration"),
+                                    QStringLiteral("sensorsSetup_buttonScroller")));
     }
-
-    QVERIFY2(clickButtonScrolled(QStringLiteral("sensorsSetup_confirmOrientationCalibration"),
-                                 QStringLiteral("sensorsSetup_buttonScroller")),
-             "Failed to confirm inline accel calibration");
 
     // MockLink will now drive the 6-pose ACCELCAL_VEHICLE_POS handshake.
     // For each pose the orientation cal area becomes visible with the relevant
@@ -927,13 +918,12 @@ void VehicleConfigUITestBase::runAPMCompassCal()
                                  QStringLiteral("sensorsSetup_buttonScroller")),
              "Failed to click Compass button");
     if (QGCCorePlugin::instance()->directMissionItemEditing()) {
-        QVERIFY(findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_inlinePreparation"), 3000));
+        QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_inlinePreparation"), 0));
         QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("popupDialog_frame"), 0));
+    } else {
+        QVERIFY(clickButtonScrolled(QStringLiteral("sensorsSetup_confirmOrientationCalibration"),
+                                    QStringLiteral("sensorsSetup_buttonScroller")));
     }
-
-    QVERIFY2(clickButtonScrolled(QStringLiteral("sensorsSetup_confirmOrientationCalibration"),
-                                 QStringLiteral("sensorsSetup_buttonScroller")),
-             "Failed to confirm inline compass calibration");
 
     // MockLink sends MAG_CAL_PROGRESS 0→100 at ~10Hz
     QPointer<QQuickItem> progressBar = findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_progressBar"), 2000);
@@ -1009,7 +999,6 @@ void VehicleConfigUITestBase::verifyVehicleSetupMenuOrder(Vehicle* vehicle)
     appendComponent("MotorComponent");
     appendKnownComponent(AutoPilotPlugin::KnownPowerVehicleComponent);
     appendComponent("SafetyComponent");
-    appendComponent("APMFailsafesComponent");
     QVERIFY(expectedComponents.size() >= 5);
     QVERIFY(renderedComponents.size() >= expectedComponents.size());
     for (int index = 0; index < expectedComponents.size(); ++index) {

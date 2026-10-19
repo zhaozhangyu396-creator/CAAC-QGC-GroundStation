@@ -18,6 +18,7 @@ class APMSensorsComponentController : public FactPanelController
     Q_OBJECT
     QML_ELEMENT
     Q_PROPERTY(bool inlineCalibration MEMBER _inlineCalibration)
+    Q_PROPERTY(qint64 attitudeUpdateTime READ attitudeUpdateTime NOTIFY attitudeUpdated)
     Q_PROPERTY(QQuickItem* statusLog MEMBER _statusLog)
     Q_PROPERTY(QQuickItem* progressBar MEMBER _progressBar)
 
@@ -110,6 +111,8 @@ public:
     bool compassSetupNeeded() const;
     bool accelSetupNeeded() const;
 
+    qint64 attitudeUpdateTime() const { return _attitudeUpdateTime; }
+
     bool compass1CalSucceeded() const { return _rgCompassCalSucceeded[0]; }
 
     bool compass2CalSucceeded() const { return _rgCompassCalSucceeded[1]; }
@@ -134,6 +137,7 @@ signals:
     void resetStatusTextArea();
     void waitingForCancelChanged();
     void calibrationActiveChanged();
+    void attitudeUpdated();
     void setupNeededChanged();
     void calibrationComplete(QGCMAVLink::CalibrationType calType);
     void compass1CalSucceededChanged(bool compass1CalSucceeded);
@@ -184,6 +188,7 @@ private:
 
     QQuickItem* _statusLog = nullptr;
     QQuickItem* _progressBar = nullptr;
+    qint64 _attitudeUpdateTime = 0;
     QQuickItem* _nextButton = nullptr;
     QQuickItem* _cancelButton = nullptr;
     QQuickItem* _orientationCalAreaHelpText = nullptr;

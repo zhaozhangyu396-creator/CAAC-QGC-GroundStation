@@ -14,11 +14,19 @@ Rectangle {
     property bool _embeddedPageOpened: false
     readonly property real navigationWidth: Math.max(ScreenTools.defaultFontPixelWidth * 22, buttonColumn.implicitWidth) + _horizontalMargin * 2
     property string _offlinePageTitle: ""
+    readonly property var _peripheralPages: [
+        {key: "gps", label: qsTr("GPS 设置"), icon: "/InstrumentValueIcons/globe.svg"},
+        {key: "radar", label: qsTr("雷达设置"), icon: "/qmlimages/SensorsComponentIcon.png"},
+        {key: "trim", label: qsTr("飞控微调"), icon: "/qmlimages/TuningComponentIcon.png"}
+    ]
     readonly property var _offlineFunctions: [
         ["AirframeComponent", "Airframe", "/qmlimages/AirframeComponentIcon.png"],
         ["SensorsComponent", "Sensors", "/qmlimages/SensorsComponentIcon.png"],
         ["PX4RadioComponent", "Radio", "/qmlimages/RadioComponentIcon.png"],
         ["FlightModesComponent", "Flight Modes", "/qmlimages/FlightModesComponentIcon.png"],
+        ["Peripheral", "gps", "/InstrumentValueIcons/globe.svg"],
+        ["Peripheral", "radar", "/qmlimages/SensorsComponentIcon.png"],
+        ["Peripheral", "trim", "/qmlimages/TuningComponentIcon.png"],
         ["MotorComponent", "Motors", "/qmlimages/MotorComponentIcon.svg"],
         ["PowerComponent", "Power", "/qmlimages/Battery.svg"],
         ["SafetyComponent", "Safety", "/qmlimages/SafetyComponentIcon.png"],
@@ -33,6 +41,7 @@ Rectangle {
     }
 
     function showOfflinePage(entry) {
+        if (entry[0] === "Peripheral") { showPeripheralPage(entry[1]); return }
         if (!mainWindow.allowViewSwitch()) { return }
         _embeddedPageOpened = true
         _selectedComponentIndex = -1
@@ -42,6 +51,15 @@ Rectangle {
         _messagePanelText = qsTr("请连接 PX4 飞控并完成参数读取后再设置此项。")
         panelLoader.setSourceComponent(entry[1] === "Airframe" ? airframeCatalogComponent
             : entry[1] === "Sensors" ? offlineSensorsComponent : messagePanelComponent)
+    }
+
+    function showPeripheralPage(key) {
+        if (!mainWindow.allowViewSwitch()) { return }
+        _embeddedPageOpened = true
+        _selectedSpecial = key
+        _selectedComponentIndex = -1
+        _selectedSectionIndex = -1
+        panelLoader.setSourceComponent(peripheralPageComponent)
     }
 
     // This need to block click event leakage to underlying map.
@@ -90,6 +108,10 @@ Rectangle {
                 const rightOrder = order.indexOf(right.component.toString().split("(")[0])
                 return (leftOrder < 0 ? order.length : leftOrder) - (rightOrder < 0 ? order.length : rightOrder)
             })
+            const flightModes = entries.findIndex(entry =>
+                ["FlightModesComponent", "APMFlightModesComponent"].indexOf(entry.component.toString().split("(")[0]) >= 0)
+            const insertion = flightModes >= 0 ? flightModes + 1 : Math.min(3, entries.length)
+            entries.splice(insertion, 0, ..._peripheralPages.map(page => ({component: null, componentIndex: -1, page: page})))
         }
         return entries
     }
@@ -198,7 +220,13 @@ Rectangle {
         return className === "AirframeComponent" || className === "APMAirframeComponent"
     }
 
+    function _isMergedSafetyComponent(component) {
+        return _caacStyle && !!component && ["APMFailsafesComponent", "APMFlightSafetyComponent"].indexOf(
+            component.toString().split("(")[0]) >= 0
+    }
+
     function _componentVisible(component) {
+        if (_isMergedSafetyComponent(component)) { return false }
         if (!component || (component.setupSource.toString() === "" && !(_caacStyle && _isAirframeComponent(component)))) {
             return false
         }
@@ -254,6 +282,11 @@ Rectangle {
         var components = _activeVehicle.autopilotPlugin.vehicleComponents
         if (compIndex < 0 || compIndex >= components.length) return
         var vehicleComponent = components[compIndex]
+
+        if (_isMergedSafetyComponent(vehicleComponent)) {
+            mainWindow.caacSettingsPage = "Safety"
+            return
+        }
 
         _selectedSpecial = ""
 
@@ -449,6 +482,11 @@ Rectangle {
         }
     }
 
+    Component {
+        id: peripheralPageComponent
+        VehiclePeripheralSetup { page: vehicleConfigView._selectedSpecial }
+    }
+
     ColumnLayout {
         id:                 leftPanel
         width:              embedded ? parent.width - _horizontalMargin * 2
@@ -536,27 +574,37 @@ Rectangle {
                         property var    comp:           modelData.component
                         property string compName:       comp ? comp.name : ""
                         property var    compSectionIds: comp ? comp.sectionIds : []
-                        property bool   isSelected:     vehicleConfigView._selectedComponentIndex === componentIndex && vehicleConfigView._selectedSpecial === ""
+                        property bool   isSelected:     modelData.page ? vehicleConfigView._selectedSpecial === modelData.page.key
+                            : vehicleConfigView._selectedComponentIndex === componentIndex && vehicleConfigView._selectedSpecial === ""
                         property bool   hasSections:    compSectionIds.length > 1
                         property bool   isSearching:    vehicleConfigView._searchQuery.trim() !== ""
                         property bool   matchesSearch:  comp ? vehicleConfigView._componentMatchesSearch(comp) : false
                         property bool   isExpanded:     hasSections && (!isSearching || matchesSearch)
                                                         && vehicleConfigView._isExpanded(componentIndex)
 
-                        visible: vehicleConfigView._componentVisible(comp)
+                        visible: modelData.page ? vehicleConfigView._searchQuery.trim() === ""
+                            || modelData.page.label.toLowerCase().indexOf(vehicleConfigView._searchQuery.trim().toLowerCase()) >= 0
+                            : vehicleConfigView._componentVisible(comp)
 
                         ConfigButton {
                             Layout.fillWidth:   true
-                            objectName:         "vehicleConfig_comp_" + compColumn.compName.replace(/ /g, "")
-                            icon.source:        compColumn.comp ? compColumn.comp.iconResource : ""
+                            objectName:         compColumn.modelData.page ? "vehicleConfig_" + compColumn.modelData.page.key
+                                : "vehicleConfig_comp_" + compColumn.compName.replace(/ /g, "")
+                            icon.source:        compColumn.modelData.page ? compColumn.modelData.page.icon
+                                : compColumn.comp ? compColumn.comp.iconResource : ""
                             setupComplete:      compColumn.comp ? compColumn.comp.setupComplete : true
-                            text:               ScreenTools.vehicleComponentName(compColumn.comp)
+                            text:               compColumn.modelData.page ? compColumn.modelData.page.label
+                                : ScreenTools.vehicleComponentName(compColumn.comp)
                             expandable:         compColumn.hasSections
                             expanded:           compColumn.isExpanded
                             checked:            compColumn.isSelected && vehicleConfigView._selectedSectionIndex === -1
                             outlined:           vehicleConfigView.embedded
 
                             onClicked: {
+                                if (compColumn.modelData.page) {
+                                    vehicleConfigView.showPeripheralPage(compColumn.modelData.page.key)
+                                    return
+                                }
                                 if (compColumn.hasSections && compColumn.isSelected) {
                                     vehicleConfigView._setExpanded(compColumn.componentIndex, !compColumn.isExpanded)
                                     return
@@ -669,9 +717,12 @@ Rectangle {
                         ? vehicleConfigView._offlineFunctions : []
                     ConfigButton {
                         required property var modelData
-                        objectName: "vehicleConfig_offline_" + modelData[1].replace(/ /g, "")
+                        objectName: modelData[0] === "Peripheral" ? "vehicleConfig_" + modelData[1]
+                            : "vehicleConfig_offline_" + modelData[1].replace(/ /g, "")
                         Layout.fillWidth: true
-                        text: qsTranslate(modelData[0], modelData[1])
+                        text: modelData[0] === "Peripheral"
+                            ? vehicleConfigView._peripheralPages.find(page => page.key === modelData[1]).label
+                            : qsTranslate(modelData[0], modelData[1])
                         icon.source: modelData[2]
                         setupComplete: false
                         outlined: vehicleConfigView.embedded

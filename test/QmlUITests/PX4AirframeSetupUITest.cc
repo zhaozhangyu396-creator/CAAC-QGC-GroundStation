@@ -368,7 +368,7 @@ void PX4AirframeSetupUITest::_testApplyAirframe()
 
     // By now the SYS_AUTOSTART write has happened, so the reboot-required
     // notice must have been shown — dismiss and verify it.
-    QVERIFY2(acceptDialog(5000), "Vehicle reboot-required notice never shown");
+    QVERIFY2(rejectDialog(5000), "Vehicle reboot-required notice never shown");
     verifyExpectedLogMessage();
     });
 }

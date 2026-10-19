@@ -7,6 +7,8 @@ target_sources(
     ${CMAKE_PROJECT_NAME}
     PRIVATE ColoredSvgImageProvider.cc
             ColoredSvgImageProvider.h
+            CompassHeadingController.cc
+            CompassHeadingController.h
             FactValueGrid.cc
             FactValueGrid.h
             FlightPathSegment.cc
@@ -181,9 +183,15 @@ qt_add_qml_module(
               SettingsActionButton.qml
               SettingsFormRow.qml
               SelectableControl.qml
+              CompassRotation.js
               SensorCalibrationPreview.qml
               SensorCalibrationPanel.qml
               SensorCalibrationMotorTest.qml
+              DualAntennaSummary.qml
+              GpsAntennaPositionPreview.qml
+              GpsHeadingCompensationPreview.qml
+              PeripheralParameterSection.qml
+              VehiclePeripheralSetup.qml
               SettingsButton.qml
               SettingsGroupLayout.qml
               SetupPage.qml

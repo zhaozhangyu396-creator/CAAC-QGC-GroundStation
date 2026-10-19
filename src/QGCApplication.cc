@@ -522,7 +522,7 @@ void QGCApplication::showCriticalVehicleMessage(const QString& message)
 
 void QGCApplication::showAppMessage(const QString& message, const QString& title)
 {
-    const QString dialogTitle = title.isEmpty() ? applicationName() : title;
+    const QString dialogTitle = title.isEmpty() ? tr("Notice") : title;
 
     if (runningUnitTests()) {
         // Logged under QGCAppMessageLog so tests can assert expected dialogs via
@@ -566,6 +566,27 @@ void QGCApplication::showRebootAppMessage(const QString& message, const QString&
     }
 
     showAppMessage(message, title);
+}
+
+void QGCApplication::showVehicleRebootMessage(Vehicle* vehicle)
+{
+    if (!vehicle || _rebootMessageDebounced()) {
+        return;
+    }
+
+    const QString title = tr("Notice");
+    const QString message =
+        tr("Vehicle reboot required for changes to take effect. Select OK to reboot the flight controller now.");
+    QObject* const root = _rootQmlObject();
+    if (!root || (runningUnitTests() && !_uiTestMode)) {
+        showAppMessage(message, title);
+        return;
+    }
+    if (runningUnitTests()) {
+        qCDebug(QGCAppMessageLog) << "showAppMessage:" << title << "-" << message;
+    }
+    QMetaObject::invokeMethod(root, "_showVehicleRebootDialog", Q_ARG(QVariant, title), Q_ARG(QVariant, message),
+                              Q_ARG(QVariant, QVariant::fromValue(vehicle)));
 }
 
 void QGCApplication::_showDelayedAppMessages()

@@ -17,9 +17,12 @@ class VehicleDistanceSensorFactGroup : public FactGroup
     Q_PROPERTY(Fact *rotationPitch270   READ rotationPitch270   CONSTANT)
     Q_PROPERTY(Fact *minDistance        READ minDistance        CONSTANT)
     Q_PROPERTY(Fact *maxDistance        READ maxDistance        CONSTANT)
+    Q_PROPERTY(qint64 downwardUpdateTime READ downwardUpdateTime NOTIFY downwardUpdateTimeChanged)
 
 public:
     explicit VehicleDistanceSensorFactGroup(QObject *parent = nullptr);
+
+    qint64 downwardUpdateTime() const;
 
     Fact *rotationNone() { return &_rotationNoneFact; }
     Fact *rotationYaw45() { return &_rotationYaw45Fact; }
@@ -37,7 +40,11 @@ public:
     // Overrides from FactGroup
     void handleMessage(Vehicle *vehicle, const mavlink_message_t &message) final;
 
+signals:
+    void downwardUpdateTimeChanged();
+
 private:
+    qint64 _downwardUpdateTime = 0;
     Fact _rotationNoneFact = Fact(0, QStringLiteral("rotationNone"), FactMetaData::valueTypeDouble);
     Fact _rotationYaw45Fact = Fact(0, QStringLiteral("rotationYaw45"), FactMetaData::valueTypeDouble);
     Fact _rotationYaw90Fact = Fact(0, QStringLiteral("rotationYaw90"), FactMetaData::valueTypeDouble);

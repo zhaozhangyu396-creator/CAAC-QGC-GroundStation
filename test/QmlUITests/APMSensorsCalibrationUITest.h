@@ -31,4 +31,5 @@ private slots:
     void _testCompassCalibrationIgnoresStaleFailedReports();
     void _testCompassCalibrationStartRejected();
     void _testAccelCalibration();
+    void _testAccelCalibrationCancel();
 };

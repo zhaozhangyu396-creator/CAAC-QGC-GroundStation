@@ -1,5 +1,7 @@
 #include "VehicleDistanceSensorFactGroup.h"
 
+#include <QtCore/QDateTime>
+
 #include "MAVLinkLib.h"
 #include "Vehicle.h"
 
@@ -20,6 +22,11 @@ VehicleDistanceSensorFactGroup::VehicleDistanceSensorFactGroup(QObject *parent)
     _addFact(&_maxDistanceFact);
 }
 
+qint64 VehicleDistanceSensorFactGroup::downwardUpdateTime() const
+{
+    return _downwardUpdateTime;
+}
+
 void VehicleDistanceSensorFactGroup::handleMessage(Vehicle *vehicle, const mavlink_message_t &message)
 {
     Q_UNUSED(vehicle);
@@ -30,6 +37,15 @@ void VehicleDistanceSensorFactGroup::handleMessage(Vehicle *vehicle, const mavli
 
     mavlink_distance_sensor_t distanceSensor{};
     mavlink_msg_distance_sensor_decode(&message, &distanceSensor);
+
+    if (distanceSensor.orientation == MAV_SENSOR_ROTATION_PITCH_270) {
+        const bool valid = distanceSensor.signal_quality != 1 &&
+                           distanceSensor.max_distance > distanceSensor.min_distance &&
+                           distanceSensor.current_distance >= distanceSensor.min_distance &&
+                           distanceSensor.current_distance <= distanceSensor.max_distance;
+        _downwardUpdateTime = valid ? QDateTime::currentMSecsSinceEpoch() : 0;
+        emit downwardUpdateTimeChanged();
+    }
 
     struct orientation2Fact_s {
         const MAV_SENSOR_ORIENTATION orientation;

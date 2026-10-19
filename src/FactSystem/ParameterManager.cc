@@ -35,12 +35,14 @@ QGC_LOGGING_CATEGORY(ParameterManagerVerbose1Log, "FactSystem.ParameterManager:v
 QGC_LOGGING_CATEGORY(ParameterManagerVerbose2Log, "FactSystem.ParameterManager:verbose2")
 QGC_LOGGING_CATEGORY(ParameterManagerDebugCacheFailureLog, "FactSystem.ParameterManager:debugCacheFailure") // Turn on to debug parameter cache crc misses
 
-ParameterManager::ParameterManager(Vehicle *vehicle)
+ParameterManager::ParameterManager(Vehicle* vehicle)
     : QObject(vehicle)
     , _vehicle(vehicle)
-    , _logReplay(!vehicle->vehicleLinkManager()->primaryLink().expired() && vehicle->vehicleLinkManager()->primaryLink().lock()->isLogReplay())
+    , _logReplay(!vehicle->vehicleLinkManager()->primaryLink().expired() &&
+                 vehicle->vehicleLinkManager()->primaryLink().lock()->isLogReplay())
     , _disableAllRetries(_logReplay)
-    , _waitForParamValueAckMs(QGC::runningUnitTests() ? 50 : kWaitForParamValueAckMs)
+    , _waitForParamValueAckMs(
+          QGC::runningUnitTests() && (!qgcApp() || !qgcApp()->qmlAppEngine()) ? 50 : kWaitForParamValueAckMs)
     , _tryftp(vehicle->apmFirmware() || vehicle->px4Firmware())
 {
     qCDebug(ParameterManagerLog) << this;
@@ -541,13 +543,14 @@ void ParameterManager::_factRawValueUpdated(const QVariant &rawValue)
         return;
     }
 
-    if (fact->vehicleRebootRequired()) {
-        _vehicle->setRebootRequired();
-        QGC::showRebootAppMessage(tr(
-            "Vehicle reboot required for changes to take effect. Use the power indicator in the toolbar to reboot."));
-    }
-
     _mavlinkParamSet(fact->componentId(), fact->name(), fact->type(), rawValue);
+
+    if (fact->vehicleRebootRequired() && _vehicle) {
+        _vehicle->setRebootRequired();
+        if (qgcApp()) {
+            qgcApp()->showVehicleRebootMessage(_vehicle);
+        }
+    }
 }
 
 void ParameterManager::_ftpDownloadComplete(const QString &fileName, const QString &errorMsg)
@@ -1593,7 +1596,10 @@ void ParameterManager::_loadOfflineEditingParams()
         }
 
         const QStringList paramData = line.split("\t");
-        Q_ASSERT(paramData.count() == 5);
+        if (paramData.count() != 5) {
+            qCWarning(ParameterManagerLog) << "Invalid offline parameter record";
+            continue;
+        }
 
         const int offlineDefaultComponentId = paramData.at(1).toInt();
         _vehicle->setOfflineEditingDefaultComponentId(offlineDefaultComponentId);

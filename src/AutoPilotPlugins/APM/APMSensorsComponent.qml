@@ -119,6 +119,22 @@ SetupPage {
                 }
             }
 
+            function startInlineSensorCalibration(type) {
+                if (!_canConfigure || !_calibrationButtonsEnabled) { return }
+                _inlinePreparationActive = false
+                _orientationSettingsExpanded = false
+                _inlineResultType = ""
+                _inlineMessage = ""
+                caacPanel.currentType = type
+                if (type === "accel") {
+                    controller.calibrateAccel(_doSimpleAccelCal)
+                } else if (type === "compass") {
+                    controller.calibrateCompass()
+                } else if (type === "pressure") {
+                    controller.calibratePressure()
+                }
+            }
+
             function showOrientationSettings(calType) {
                 if (!_canConfigure || !_calibrationButtonsEnabled) {
                     return
@@ -485,9 +501,19 @@ SetupPage {
                             QGCLabel { text: qsTr("Orientation:") }
 
                             FactComboBox {
+                                id: compassOrientation
                                 width:      parent.width
                                 indexModel: false
                                 fact:       sensorParams.rgCompassRotFact[index]
+                                deferred: _inlineCalibration
+                            }
+                            SettingsActionButton {
+                                objectName: "sensorsSetup_saveCompassOrientation_" + index
+                                width: parent.width
+                                visible: _inlineCalibration
+                                text: qsTr("Confirm and Save")
+                                enabled: compassOrientation.modified && _canConfigure
+                                onClicked: compassOrientation.applyPendingValue()
                             }
                         }
                     }
@@ -562,10 +588,20 @@ SetupPage {
                         QGCLabel { text: qsTr("Autopilot Rotation:") }
 
                         FactComboBox {
+                            id: boardOrientation
                             objectName: "sensorsSetup_boardOrientation"
                             width:      parent.width
                             indexModel: false
                             fact:       boardRot
+                            deferred: _inlineCalibration
+                        }
+                        SettingsActionButton {
+                            objectName: "sensorsSetup_saveBoardOrientation"
+                            width: parent.width
+                            visible: _inlineCalibration
+                            text: qsTr("Confirm and Save")
+                            enabled: boardOrientation.modified && _canConfigure
+                            onClicked: boardOrientation.applyPendingValue()
                         }
                     }
 
@@ -796,13 +832,22 @@ SetupPage {
                 accelComplete: !accelCalNeeded
                 compassComplete: !compassCalNeeded
                 levelEnabled: !controller.accelSetupNeeded
+                pressureAvailable: true
+                compassMotAvailable: sectionVisible("CompassMot")
+                pressureHelpText: qsTr("Pressure calibration will set the %1 to zero at the current pressure reading. %2")
+                    .arg(globals.activeVehicle && globals.activeVehicle.sub ? qsTr("depth") : qsTr("altitude"))
+                    .arg(globals.activeVehicle && globals.activeVehicle.fixedWing
+                        ? qsTr("To calibrate the airspeed sensor shield it from the wind. Do not touch the sensor or obstruct any holes during the calibration.") : "")
                 persistentActions: true
                 motorTestAvailable: false
                 nextEnabled: nextButton.enabled
                 cancelEnabled: cancelButton.enabled
                 cancelObjectName: "sensorsSetup_cancelButton"
                 progress: progressBar.value
-                orientationPreviewVisible: controller.showOrientationCalArea || !controller.calibrationActive
+                compassMotionGuidance: true
+                compassAttitudeUpdateTime: controller.attitudeUpdateTime
+                orientationPreviewVisible: caacPanel.currentType === "compass"
+                    || controller.showOrientationCalArea || !controller.calibrationActive
                 helpText: orientationCalAreaHelpText.text
                 statusText: _inlineMessage !== "" ? _inlineMessage : statusTextArea.text
                 waitingText: controller.waitingForCancel
@@ -835,15 +880,24 @@ SetupPage {
                     controller.orientationCalRightSideRotate, controller.orientationCalNoseDownSideRotate,
                     controller.orientationCalTailDownSideRotate, controller.orientationCalUpsideDownSideRotate]
                 onSetOrientation: showOrientationSettings(_calTypeSet)
-                onStartAccel: showOrientationSettings(_calTypeAccel)
+                onStartAccel: startInlineSensorCalibration("accel")
                 onStartCompass: {
                     if (controller.accelSetupNeeded) {
                         _inlineMessage = qsTr("Accelerometer must be calibrated prior to Compass.")
                     } else {
-                        showOrientationSettings(_calTypeCompass)
+                        startInlineSensorCalibration("compass")
                     }
                 }
                 onStartLevel: prepareInlineCalibration("level", levelHelp)
+                onStartPressure: startInlineSensorCalibration("pressure")
+                onStartCompassMot: prepareInlineCalibration("compassmot",
+                    qsTr("This is recommended for vehicles that have only an internal compass and on vehicles where there is significant interference on the compass from the motors, power wires, etc. ")
+                    + qsTr("CompassMot only works well if you have a battery current monitor because the magnetic interference is linear with current drawn. ")
+                    + qsTr("It is technically possible to set-up CompassMot using throttle but this is not recommended.")
+                    + "\n\n" + qsTr("Disconnect your props, flip them over and rotate them one position around the frame. ")
+                    + qsTr("In this configuration they should push the copter down into the ground when the throttle is raised.")
+                    + "\n\n" + qsTr("Secure the copter (perhaps with tape) so that it does not move.")
+                    + "\n\n" + qsTr("Turn on your transmitter and keep throttle at zero."))
                 onNext: controller.nextClicked()
                 onCancel: controller.cancelCalibration()
                 onConfirmPreparation: confirmInlineCalibration()
@@ -861,31 +915,6 @@ SetupPage {
                             text: qsTr("Gyro")
                             visible: caacPanel.matchesSection("Gyroscope") && sectionVisible("Gyroscope")
                             onClicked: prepareInlineCalibration("gyro", gyroHelp)
-                        }
-                        SettingsActionButton {
-                            objectName: "sensorsSetup_calibratePressure"
-                            Layout.fillWidth: true
-                            text: globals.activeVehicle && globals.activeVehicle.fixedWing ? qsTr("Baro/Airspeed") : qsTr("Pressure")
-                            visible: caacPanel.matchesSection("Pressure")
-                            onClicked: prepareInlineCalibration("pressure",
-                                qsTr("Pressure calibration will set the %1 to zero at the current pressure reading. %2")
-                                    .arg(globals.activeVehicle && globals.activeVehicle.sub ? qsTr("depth") : qsTr("altitude"))
-                                    .arg(globals.activeVehicle && globals.activeVehicle.fixedWing
-                                        ? qsTr("To calibrate the airspeed sensor shield it from the wind. Do not touch the sensor or obstruct any holes during the calibration.") : ""))
-                        }
-                        SettingsActionButton {
-                            objectName: "sensorsSetup_calibrateCompassMot"
-                            Layout.fillWidth: true
-                            text: qsTr("CompassMot")
-                            visible: caacPanel.matchesSection("CompassMot") && sectionVisible("CompassMot")
-                            onClicked: prepareInlineCalibration("compassmot",
-                                qsTr("This is recommended for vehicles that have only an internal compass and on vehicles where there is significant interference on the compass from the motors, power wires, etc. ")
-                                + qsTr("CompassMot only works well if you have a battery current monitor because the magnetic interference is linear with current drawn. ")
-                                + qsTr("It is technically possible to set-up CompassMot using throttle but this is not recommended.")
-                                + "\n\n" + qsTr("Disconnect your props, flip them over and rotate them one position around the frame. ")
-                                + qsTr("In this configuration they should push the copter down into the ground when the throttle is raised.")
-                                + "\n\n" + qsTr("Secure the copter (perhaps with tape) so that it does not move.")
-                                + "\n\n" + qsTr("Turn on your transmitter and keep throttle at zero."))
                         }
                     }
                 }

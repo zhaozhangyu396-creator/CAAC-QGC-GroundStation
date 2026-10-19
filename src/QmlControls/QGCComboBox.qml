@@ -29,6 +29,8 @@ T.ComboBox {
     rightPadding: padding + (control.mirrored || !indicator || !indicator.visible ? 0 : indicator.width)
 
     property real _popupWidth: width
+    readonly property real _windowWidth: Window.width
+    readonly property real _windowHeight: Window.height
     property real _largestTextWidth: 0
     property bool _onCompleted: false
     property bool _showBorder: qgcPal.globalTheme === QGCPalette.Light
@@ -94,6 +96,14 @@ T.ComboBox {
 
         background: Rectangle {
             color: control.currentIndex === index ? qgcPal.buttonHighlight : qgcPal.button
+            Rectangle {
+                anchors.bottom: parent.bottom
+                width: parent.width
+                height: 1
+                visible: index < control.count - 1
+                color: qgcPal.text
+                opacity: 0.35
+            }
         }
 
         highlighted: control.highlightedIndex === index
@@ -133,7 +143,7 @@ T.ComboBox {
     }
 
     popup: T.Popup {
-        x: Math.max(-_controlPos.x, Math.min(control.width - _popupWidth, control.Window.width - _controlPos.x - _popupWidth))
+        x: Math.max(-_controlPos.x, Math.min(control.width - _popupWidth, control._windowWidth - _controlPos.x - _popupWidth))
         y: _openAbove ? -height : control.height
         width: _popupWidth
         height: Math.min(contentItem.implicitHeight, _openAbove ? _spaceAbove : _spaceBelow)
@@ -141,7 +151,7 @@ T.ComboBox {
         bottomMargin: 6
 
         readonly property point _controlPos:    control.mapToItem(null, 0, 0)
-        readonly property real  _spaceBelow:    Math.max(0, control.Window.height - _controlPos.y - control.height - bottomMargin)
+        readonly property real  _spaceBelow:    Math.max(0, control._windowHeight - _controlPos.y - control.height - bottomMargin)
         readonly property real  _spaceAbove:    Math.max(0, _controlPos.y - topMargin)
         readonly property bool  _openAbove:     contentItem.implicitHeight > _spaceBelow && _spaceAbove > _spaceBelow
 

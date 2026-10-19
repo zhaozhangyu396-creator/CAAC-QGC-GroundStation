@@ -17,8 +17,10 @@
 #include "CaacFlightDistance.h"
 #include "Fact.h"
 #include "FlightMapSettings.h"
+#include "MAVLinkProtocol.h"
 #include "MissionController.h"
 #include "MockLink.h"
+#include "MultiVehicleManager.h"
 #include "ParameterManager.h"
 #include "PlanMasterController.h"
 #include "QGCApplication.h"
@@ -36,6 +38,7 @@ class CaacFlightDataUITest : public QmlUITestBase
     Q_OBJECT
 
 private slots:
+    void _vehicleRebootConfirmation();
     void _toolbarStatusSpacing_data();
     void _toolbarStatusSpacing();
     void _mapZoomControls_data();
@@ -269,7 +272,7 @@ void CaacFlightDataUITest::_safetySpeedUnits()
     QCOMPARE(speed->rawValue().toDouble(), initialRaw);
     QCOMPARE(mock->receivedMavlinkMessageCount(MAVLINK_MSG_ID_PARAM_SET), writes);
     QSignalSpy written(speed, &Fact::vehicleUpdated);
-    QVERIFY(clickButtonScrolled(QStringLiteral("caacSafetyConfirm_RTL_RETURN_ALT"), scroller));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacSafetyConfirm_MPC_XY_CRUISE"), scroller));
     QTRY_COMPARE_WITH_TIMEOUT(speed->rawValue().toDouble(), targetMetersPerSecond * rawUnitsPerMeterPerSecond,
                               TestTimeout::mediumMs());
     QTRY_VERIFY_WITH_TIMEOUT(mock->receivedMavlinkMessageCount(MAVLINK_MSG_ID_PARAM_SET) > writes,
@@ -359,6 +362,8 @@ void CaacFlightDataUITest::_safetyFailsafeEnums()
                                               Q_ARG(QVariant, originalStrings.at(index))));
             const QString text = display.toString();
             QVERIFY2(chinese.match(text).hasMatch(), qPrintable(originalStrings.at(index) + " -> " + text));
+            QVERIFY(!text.contains(QRegularExpression(QStringLiteral("[()（）]"))));
+            QVERIFY(!text.contains(QStringLiteral("FS_OPTIONS")));
             translated.append(text);
         }
         auto* selectedText = findItem(combo, prefix + QStringLiteral("_choiceText"));
@@ -378,6 +383,9 @@ void CaacFlightDataUITest::_safetyFailsafeEnums()
             QTRY_VERIFY_WITH_TIMEOUT(findItem(list, optionName), TestTimeout::shortMs());
             auto* text = findItem(list, optionName);
             QCOMPARE(text->property("text").toString(), translated.at(index));
+            auto* separator = findItem(list, prefix + QStringLiteral("_option_%1_separator").arg(index));
+            QVERIFY(separator);
+            QCOMPARE(separator->isVisible(), index < translated.size() - 1);
             QTRY_VERIFY_WITH_TIMEOUT(text->height() + 1 >= text->implicitHeight(), TestTimeout::shortMs());
             QTRY_VERIFY_WITH_TIMEOUT(text->property("paintedWidth").toReal() <= text->width() + 1,
                                      TestTimeout::shortMs());
@@ -458,7 +466,7 @@ void CaacFlightDataUITest::_safetyAndUomTelemetry()
     QCOMPARE(cruise->rawValue(), original);
     const int writes = mock->receivedMavlinkMessageCount(MAVLINK_MSG_ID_PARAM_SET);
     QVERIFY(
-        clickButtonScrolled(QStringLiteral("caacSafetyConfirm_RTL_RETURN_ALT"), QStringLiteral("caacSafetyScroller")));
+        clickButtonScrolled(QStringLiteral("caacSafetyConfirm_MPC_XY_CRUISE"), QStringLiteral("caacSafetyScroller")));
     QTRY_COMPARE_WITH_TIMEOUT(cruise->rawValue().toDouble(), 7.0, TestTimeout::mediumMs());
     QTRY_VERIFY_WITH_TIMEOUT(mock->receivedMavlinkMessageCount(MAVLINK_MSG_ID_PARAM_SET) > writes,
                              TestTimeout::mediumMs());
@@ -790,6 +798,75 @@ void CaacFlightDataUITest::_liveFlightData()
     QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacCenterVehicleButton"), 0));
     QVERIFY(verifyText(QStringLiteral("caacConnectionStatusButton"), QStringLiteral("未连接"),
                        QStringLiteral("aircraft disconnected")));
+}
+
+void CaacFlightDataUITest::_vehicleRebootConfirmation()
+{
+    runWithMockLink(
+        [] { return MockLink::startPX4MockLink(); },
+        [&](QPointer<MockLink> mock, Vehicle* vehicle) {
+            auto* manager = vehicle->parameterManager();
+            auto* fact = manager->getParameter(ParameterManager::defaultComponentId, QStringLiteral("BAT1_V_CHARGED"));
+            QVERIFY(fact);
+            QVERIFY(fact->vehicleRebootRequired());
+            const int systemId = vehicle->id();
+            QSignalSpy messages(MAVLinkProtocol::instance(), &MAVLinkProtocol::messageReceived);
+            QSignalSpy updated(fact, &Fact::vehicleUpdated);
+            const double original = fact->rawValue().toDouble();
+            const QRegularExpression notice(QRegularExpression::escape(QGCApplication::tr(
+                "Vehicle reboot required for changes to take effect. Select OK to reboot the flight controller now.")));
+            qgcApp()->resetRebootMessageDebounce();
+            expectAppMessage(notice);
+            fact->setRawValue(original + 0.1);
+            verifyExpectedLogMessage();
+            auto* accept = findVisibleItem(_rootItem, QStringLiteral("popupDialog_acceptButton"));
+            QVERIFY(accept);
+            QTRY_VERIFY_WITH_TIMEOUT(!updated.isEmpty() && !manager->pendingWrites(), TestTimeout::mediumMs());
+            manager->setPendingWritesForTest(true);
+            QTRY_VERIFY(!accept->isEnabled());
+            manager->setPendingWritesForTest(false);
+            QTRY_VERIFY(accept->isEnabled());
+            vehicle->setArmed(true, false);
+            QTRY_VERIFY(vehicle->armed());
+            QTRY_VERIFY(!accept->isEnabled());
+            vehicle->setArmed(false, false);
+            QTRY_VERIFY(!vehicle->armed());
+            QTRY_VERIFY(accept->isEnabled());
+            QVERIFY(rejectDialog());
+            QTRY_VERIFY_WITH_TIMEOUT(!dialogVisible(QGCApplication::tr("Notice")), TestTimeout::shortMs());
+            const auto rebootAccepted = [&] {
+                for (const auto& result : messages) {
+                    const auto message = result.at(1).value<mavlink_message_t>();
+                    if (message.sysid != systemId || message.msgid != MAVLINK_MSG_ID_COMMAND_ACK) {
+                        continue;
+                    }
+                    mavlink_command_ack_t ack{};
+                    mavlink_msg_command_ack_decode(&message, &ack);
+                    if (ack.command == MAV_CMD_PREFLIGHT_REBOOT_SHUTDOWN && ack.result == MAV_RESULT_ACCEPTED) {
+                        return true;
+                    }
+                }
+                return false;
+            };
+            QVERIFY(!rebootAccepted());
+            QCOMPARE(mock->receivedMavCommandCount(MAV_CMD_PREFLIGHT_REBOOT_SHUTDOWN), 0);
+            qgcApp()->resetRebootMessageDebounce();
+            expectAppMessage(notice);
+            fact->setRawValue(original + 0.2);
+            verifyExpectedLogMessage();
+            QTRY_VERIFY_WITH_TIMEOUT(!manager->pendingWrites(), TestTimeout::mediumMs());
+            QTRY_COMPARE_WITH_TIMEOUT(
+                mock->paramValue(MAV_COMP_ID_AUTOPILOT1, QStringLiteral("BAT1_V_CHARGED")).toFloat(),
+                static_cast<float>(original + 0.2), TestTimeout::mediumMs());
+            QVERIFY(!rebootAccepted());
+            QCOMPARE(mock->receivedMavCommandCount(MAV_CMD_PREFLIGHT_REBOOT_SHUTDOWN), 0);
+            auto* confirm = findVisibleItem(_rootItem, QStringLiteral("popupDialog_acceptButton"));
+            QVERIFY(confirm);
+            QTRY_VERIFY_WITH_TIMEOUT(confirm->isEnabled(), TestTimeout::mediumMs());
+            QVERIFY(acceptDialog());
+            QTRY_VERIFY_WITH_TIMEOUT(rebootAccepted(), TestTimeout::mediumMs());
+            QTRY_VERIFY_WITH_TIMEOUT(!MultiVehicleManager::instance()->activeVehicle(), TestTimeout::mediumMs());
+        });
 }
 
 UT_REGISTER_TEST(CaacFlightDataUITest, TestLabel::Integration, TestLabel::Vehicle)

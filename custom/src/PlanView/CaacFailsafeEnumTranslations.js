@@ -3,6 +3,7 @@
 // Match metadata text rather than enum values, whose meanings vary by firmware and version.
 function displayString(parameterName, originalText) {
     if (parameterName !== "FS_THR_ENABLE" && parameterName !== "FS_GCS_ENABLE"
+            && parameterName !== "THR_FAILSAFE" && parameterName !== "FS_GCS_ENABL"
             && parameterName !== "NAV_RCL_ACT" && parameterName !== "NAV_DLL_ACT") {
         return originalText
     }
@@ -54,6 +55,14 @@ function displayString(parameterName, originalText) {
         return qsTranslate("CaacSafetyFailsafeEnums", "Enabled Auto DO_LAND_START/DO_RETURN_PATH_START or RTL")
     case "Enabled":
         return qsTranslate("CaacSafetyFailsafeEnums", "Enabled")
+    case "EnabledNoFailsafe":
+        return qsTranslate("CaacSafetyFailsafeEnums", "EnabledNoFailsafe")
+    case "Heartbeat":
+        return qsTranslate("CaacSafetyFailsafeEnums", "Heartbeat")
+    case "HeartbeatAndREMRSSI":
+        return qsTranslate("CaacSafetyFailsafeEnums", "HeartbeatAndREMRSSI")
+    case "HeartbeatAndAUTO":
+        return qsTranslate("CaacSafetyFailsafeEnums", "HeartbeatAndAUTO")
     case "Enabled Continue with Mission in Auto":
         return qsTranslate("CaacSafetyFailsafeEnums", "Enabled Continue with Mission in Auto")
     case "Warn only":

@@ -385,7 +385,7 @@ void CaacMissionUpdateUITest::_updateWaypointsDuringFlight()
                                 QStringLiteral("Upload error acknowledged"));
     };
     QVERIFY(dismissDialog(QCoreApplication::translate("CaacRouteEditor", "Update waypoints")));
-    QVERIFY(dismissDialog(QCoreApplication::applicationName()));
+    QVERIFY(dismissDialog(QCoreApplication::translate("QGCApplication", "Notice")));
     link->setMissionItemFailureMode(MockLinkMissionItemHandler::FailNone, MAV_MISSION_ACCEPTED);
     finished.clear();
     QVERIFY2(drag(waypoint), qPrintable(dragError));
