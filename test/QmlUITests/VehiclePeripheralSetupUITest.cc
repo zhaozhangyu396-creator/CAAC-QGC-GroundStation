@@ -82,16 +82,13 @@ void VehiclePeripheralSetupUITest::_settings()
             auto* modes = findItem(_rootItem,
                                    QStringLiteral("vehicleConfig_comp_") + QString(modesComponent->name()).remove(' '));
             QVERIFY(gpsButton && radarButton && trimButton && modes);
-            if (apm) {
-                for (const auto& entry : vehicle->autopilotPlugin()->vehicleComponents()) {
-                    auto* component = entry.value<VehicleComponent*>();
-                    QVERIFY(component);
-                    if (component->inherits("APMFailsafesComponent") ||
-                        component->inherits("APMFlightSafetyComponent")) {
-                        QVERIFY(!findVisibleItem(
-                            _rootItem, QStringLiteral("vehicleConfig_comp_") + QString(component->name()).remove(' '),
-                            0));
-                    }
+            for (const auto& entry : vehicle->autopilotPlugin()->vehicleComponents()) {
+                auto* component = entry.value<VehicleComponent*>();
+                QVERIFY(component);
+                if (component->inherits("SafetyComponent") || component->inherits("APMSafetyComponent") ||
+                    component->inherits("APMFailsafesComponent") || component->inherits("APMFlightSafetyComponent")) {
+                    QVERIFY(!findVisibleItem(
+                        _rootItem, QStringLiteral("vehicleConfig_comp_") + QString(component->name()).remove(' '), 0));
                 }
             }
             auto* sidebar = findItem(_rootItem, QStringLiteral("vehicleConfig_sidebarFlickable"));
@@ -439,6 +436,14 @@ void VehiclePeripheralSetupUITest::_settings()
             auto* safety = findVisibleItem(_rootItem, QStringLiteral("caacSafetySettings"));
             QVERIFY(safety);
             const QString safetyScroller = QStringLiteral("caacSafetyScroller");
+            QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacSafetyObstacleDistanceOverlay")));
+            if (!apm) {
+                for (const QString& name : {QStringLiteral("BAT_EMERGEN_THR"), QStringLiteral("COM_DISARM_LAND")}) {
+                    auto* row = findItem(safety, QStringLiteral("caacSafety_") + name);
+                    QVERIFY(row);
+                    QCOMPARE(row->property("fact").value<Fact*>(), manager->getParameter(-1, name));
+                }
+            }
             auto* returnSettings = findVisibleItemScrolled(QStringLiteral("caacReturnSettings"), safetyScroller);
             QVERIFY(returnSettings);
             QCOMPARE(returnSettings->property("title").toString(), QStringLiteral("返航设置"));

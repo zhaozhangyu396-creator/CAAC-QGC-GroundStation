@@ -22,7 +22,7 @@ UT_REGISTER_TEST(PX4SensorsCalibrationUITest, TestLabel::Integration)
 void PX4SensorsCalibrationUITest::_testMotorSafetyGate()
 {
     if (!QGCCorePlugin::instance()->directMissionItemEditing()) {
-        QSKIP("The integrated calibration motor controls are specific to the CAAC interface");
+        QSKIP("The motor slider interface is specific to the CAAC interface");
     }
     runWithMockLink([] { return MockLink::startPX4MockLink(); },
                     [&](QPointer<MockLink>, Vehicle* vehicle) {
@@ -30,6 +30,8 @@ void PX4SensorsCalibrationUITest::_testMotorSafetyGate()
                         if (QTest::currentTestFailed()) {
                             return;
                         }
+                        QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_enableMotorTest"), 0));
+                        QVERIFY(clickSidebarButton(QStringLiteral("vehicleConfig_comp_Motors")));
                         auto* safetyCheck = findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_enableMotorTest"));
                         auto* slider = findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_motorSlider_1"));
                         QVERIFY(safetyCheck);
@@ -37,7 +39,7 @@ void PX4SensorsCalibrationUITest::_testMotorSafetyGate()
                         QVERIFY(!safetyCheck->property("checked").toBool());
                         QVERIFY(!slider->isEnabled());
                         QVERIFY(clickButtonScrolled(QStringLiteral("sensorsSetup_enableMotorTest"),
-                                                    QStringLiteral("sensorsSetup_buttonScroller")));
+                                                    QStringLiteral("vehicleSetup_scroller")));
                         QTRY_VERIFY(slider->isEnabled());
                         QSignalSpy commands(vehicle, &Vehicle::mavCommandResult);
                         slider->setProperty("value", 20);
@@ -58,10 +60,14 @@ void PX4SensorsCalibrationUITest::_testMotorSafetyGate()
                         QVERIFY(!safetyCheck->property("checked").toBool());
                         QVERIFY(!slider->isEnabled());
                         QVERIFY(clickButtonScrolled(QStringLiteral("sensorsSetup_enableMotorTest"),
-                                                    QStringLiteral("sensorsSetup_buttonScroller")));
+                                                    QStringLiteral("vehicleSetup_scroller")));
                         QTRY_VERIFY(slider->isEnabled());
                         slider->setProperty("value", 20);
                         QVERIFY(QMetaObject::invokeMethod(slider, "moved"));
+                        _navigateToSensorsPanel();
+                        if (QTest::currentTestFailed()) {
+                            return;
+                        }
                         clickSidebarButton(QStringLiteral("vehicleConfig_section_Accelerometer"));
                         if (QTest::currentTestFailed()) {
                             return;
@@ -75,6 +81,8 @@ void PX4SensorsCalibrationUITest::_testMotorSafetyGate()
                         if (QTest::currentTestFailed()) {
                             return;
                         }
+                        QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_enableMotorTest"), 0));
+                        QVERIFY(clickSidebarButton(QStringLiteral("vehicleConfig_comp_Motors")));
                         safetyCheck = findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_enableMotorTest"));
                         slider = findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_motorSlider_1"));
                         QVERIFY(safetyCheck);

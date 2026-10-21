@@ -348,12 +348,12 @@ void CaacPlanningInteractionUITest::_homeAltitudeAutoSave()
     mission->setHomePosition(QGeoCoordinate(30, 120, 0));
     auto* home = mission->visualItems()->value<MissionSettingsItem*>(0);
     QVERIFY(home);
-    QTRY_VERIFY_WITH_TIMEOUT(home->dirty(), TestTimeout::mediumMs());
     const QList<double> firstAltitude{2061};
     QVERIFY(QMetaObject::invokeMethod(home, "_terrainDataReceived", Qt::DirectConnection, Q_ARG(bool, true),
                                       Q_ARG(QList<double>, firstAltitude)));
     QTRY_COMPARE_WITH_TIMEOUT(mission->plannedHomePosition().altitude(), 2061.0, TestTimeout::mediumMs());
     QCOMPARE(home->plannedHomePositionAltitude()->rawValue().toDouble(), 2061.0);
+    QVERIFY(home->dirty());
     mission->setHomePosition(QGeoCoordinate(30.0001, 120, 2061));
     home->setDirty(false);
     const QList<double> secondAltitude{2070};

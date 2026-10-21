@@ -5,6 +5,7 @@
 #include <QtGui/QFont>
 #include <QtGui/QFontMetricsF>
 #include <QtGui/QScreen>
+#include <QtGui/QWheelEvent>
 #include <QtQuick/QQuickItem>
 #include <QtQuick/QQuickWindow>
 #include <QtTest/QTest>
@@ -28,6 +29,15 @@ QQuickItem* findFactControl(QQuickItem* root, const Fact* fact)
     if ((root->inherits("QQuickControl") || root->inherits("QQuickTextInput")) &&
         root->property("fact").value<Fact*>() == fact) {
         return root;
+    }
+    if (root->property("fact").value<Fact*>() == fact) {
+        for (QQuickItem* child : root->childItems()) {
+            if (child->isVisible() && (child->inherits("QQuickControl") || child->inherits("QQuickTextInput")) &&
+                (child->objectName().endsWith(QStringLiteral("_value")) ||
+                 child->objectName().endsWith(QStringLiteral("_choice")))) {
+                return child;
+            }
+        }
     }
     for (QQuickItem* child : root->childItems()) {
         if (QQuickItem* control = findFactControl(child, fact)) {
@@ -61,9 +71,9 @@ void PX4VehicleConfigUITest::_testNarrowParameterControls_data()
     QTest::addColumn<QStringList>("parameterNames");
 
     QTest::newRow("safety") << QStringLiteral("Safety")
-                            << QStringList{QStringLiteral("COM_LOW_BAT_ACT"), QStringLiteral("BAT_LOW_THR"),
-                                           QStringLiteral("BAT_CRIT_THR"), QStringLiteral("BAT_EMERGEN_THR"),
-                                           QStringLiteral("CP_DIST")};
+                            << QStringList{QStringLiteral("BAT_EMERGEN_THR"), QStringLiteral("COM_DISARM_LAND"),
+                                           QStringLiteral("CP_DIST"), QStringLiteral("NAV_RCL_ACT"),
+                                           QStringLiteral("COM_DL_LOSS_T")};
     QTest::newRow("battery") << QStringLiteral("Power")
                              << QStringList{QStringLiteral("BAT1_SOURCE"), QStringLiteral("BAT1_N_CELLS"),
                                             QStringLiteral("BAT1_CAPACITY"), QStringLiteral("BAT1_V_EMPTY"),
@@ -100,18 +110,29 @@ void PX4VehicleConfigUITest::_testNarrowParameterControls()
             QQuickItem* config = findVisibleItem(_rootItem, QStringLiteral("vehicleConfig_root"));
             QVERIFY(config);
             QVERIFY(config->property("embedded").toBool());
-            QVERIFY(clickSidebarButton(QStringLiteral("vehicleConfig_comp_") + componentName));
-            if (QTest::currentTestFailed()) {
-                return;
+            const bool mergedSafety = componentName == QStringLiteral("Safety");
+            QQuickItem* panel = nullptr;
+            if (mergedSafety) {
+                QVERIFY(!findVisibleItem(config, QStringLiteral("vehicleConfig_comp_Safety"), 0));
+                QVERIFY(clickButtonScrolled(QStringLiteral("toolbar_safety"),
+                                            QStringLiteral("caacSettingsNavigationScroller")));
+                panel = findVisibleItem(_rootItem, QStringLiteral("caacSafetySettings"));
+            } else {
+                QVERIFY(clickSidebarButton(QStringLiteral("vehicleConfig_comp_") + componentName));
+                if (QTest::currentTestFailed()) {
+                    return;
+                }
+                QQuickItem* loader = findVisibleItem(config, QStringLiteral("vehicleConfig_panelLoader"));
+                QVERIFY(loader);
+                panel = loader->property("item").value<QQuickItem*>();
             }
-            QQuickItem* loader = findVisibleItem(config, QStringLiteral("vehicleConfig_panelLoader"));
-            QVERIFY(loader);
-            QQuickItem* panel = loader->property("item").value<QQuickItem*>();
             QVERIFY(panel);
-            QQuickItem* viewport = findVisibleItem(panel, QStringLiteral("vehicleSetup_scroller"));
+            QQuickItem* viewport = findVisibleItem(
+                panel, mergedSafety ? QStringLiteral("caacSafetyScroller") : QStringLiteral("vehicleSetup_scroller"));
             QVERIFY(viewport);
-            QTRY_VERIFY_WITH_TIMEOUT(viewport->width() > 0 && viewport->width() < _window->width() / 2,
-                                     TestTimeout::shortMs());
+            QTRY_VERIFY_WITH_TIMEOUT(
+                viewport->width() > 0 && viewport->width() < _window->width() / (mergedSafety ? 1 : 2),
+                TestTimeout::shortMs());
 
             QQuickItem* firstControl = nullptr;
             ParameterManager* parameters = vehicle->parameterManager();
@@ -165,7 +186,9 @@ void PX4VehicleConfigUITest::_testNarrowParameterControls()
             const qreal maximumY = qMax(0.0, viewport->property("contentHeight").toReal() - viewport->height());
             viewport->setProperty("contentY", qBound(0.0, targetY, maximumY));
             QCOMPARE(viewport->property("contentX").toReal(), 0.0);
-            verifyPanelContentVisible(QStringLiteral("Narrow_") + componentName);
+            if (!mergedSafety) {
+                verifyPanelContentVisible(QStringLiteral("Narrow_") + componentName);
+            }
         });
 }
 #endif
@@ -366,3 +389,99 @@ void PX4VehicleConfigUITest::_testInteractiveTuningChart()
                         verifyInteractiveTuningChart();
                     });
 }
+
+#ifdef QGC_CUSTOM_BUILD
+class CaacSetupMenuUITest : public VehicleConfigUITestBase
+{
+    Q_OBJECT
+private slots:
+    void _setupPages();
+    void _toolbarWheel();
+};
+
+UT_REGISTER_TEST(CaacSetupMenuUITest, TestLabel::Integration)
+
+void CaacSetupMenuUITest::_setupPages()
+{
+    runWithMockLink(
+        [] { return MockLink::startPX4MockLink(); },
+        [&](QPointer<MockLink>, Vehicle* vehicle) {
+            navigateToConfigureView();
+            if (QTest::currentTestFailed()) {
+                return;
+            }
+            QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("vehicleConfig_comp_Safety"), 0));
+            QVERIFY(clickSidebarButton(QStringLiteral("vehicleConfig_comp_Sensors")));
+            QVERIFY(findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_setOrientation")));
+            QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_enableMotorTest"), 0));
+            QVERIFY(clickSidebarButton(QStringLiteral("vehicleConfig_comp_Motors")));
+            auto* safety = findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_enableMotorTest"));
+            auto* slider = findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_motorSlider_1"));
+            QVERIFY(safety && slider);
+            QVERIFY(!safety->property("checked").toBool());
+            QVERIFY(!slider->isEnabled());
+            QVERIFY(clickButtonScrolled(QStringLiteral("sensorsSetup_enableMotorTest"),
+                                        QStringLiteral("vehicleSetup_scroller")));
+            QTRY_VERIFY_WITH_TIMEOUT(slider->isEnabled(), TestTimeout::shortMs());
+            QVERIFY(clickSidebarButton(QStringLiteral("vehicleConfig_comp_Sensors")));
+            QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_enableMotorTest"), 0));
+            QVERIFY(clickSidebarButton(QStringLiteral("vehicleConfig_comp_Motors")));
+            safety = findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_enableMotorTest"));
+            slider = findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_motorSlider_1"));
+            QVERIFY(safety && slider);
+            QVERIFY(!safety->property("checked").toBool());
+            QVERIFY(!slider->isEnabled());
+            QCOMPARE(slider->property("value").toDouble(), 0.0);
+            QVERIFY(clickButtonScrolled(QStringLiteral("toolbar_safety"),
+                                        QStringLiteral("caacSettingsNavigationScroller")));
+            auto* panel = findVisibleItem(_rootItem, QStringLiteral("caacSafetySettings"));
+            QVERIFY(panel);
+            for (const QString& name : {QStringLiteral("BAT_EMERGEN_THR"), QStringLiteral("COM_DISARM_LAND")}) {
+                auto* row = findItem(panel, QStringLiteral("caacSafety_") + name);
+                QVERIFY(row);
+                QCOMPARE(row->property("fact").value<Fact*>(), vehicle->parameterManager()->getParameter(-1, name));
+                QVERIFY(findVisibleItemScrolled(QStringLiteral("caacSafety_") + name + QStringLiteral("_value"),
+                                                QStringLiteral("caacSafetyScroller")));
+            }
+            QVERIFY(findVisibleItemScrolled(QStringLiteral("caacSafetyObstacleDistanceOverlay"),
+                                            QStringLiteral("caacSafetyScroller")));
+        });
+}
+
+void CaacSetupMenuUITest::_toolbarWheel()
+{
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    _window->resize(QSize(800, 600).expandedTo(_window->minimumSize()));
+    auto* toolbar = findVisibleItem(_rootItem, QStringLiteral("caacMainToolsScroller"));
+    auto* map = findVisibleItem(_rootItem, QStringLiteral("planView_map"));
+    QVERIFY(toolbar && map);
+    QTRY_VERIFY_WITH_TIMEOUT(toolbar->property("contentHeight").toReal() > toolbar->height(), TestTimeout::shortMs());
+    const qreal zoom = map->property("zoomLevel").toReal();
+    const qreal maximumY = qMax(0.0, toolbar->property("contentHeight").toReal() - toolbar->height());
+    const QPointF position = toolbar->mapToScene(QPointF(toolbar->width() / 2, toolbar->height() / 2));
+    for (qreal scrollY : {qreal(0), maximumY / 2, maximumY}) {
+        for (bool pixels : {false, true}) {
+            for (int direction : {-1, 1}) {
+                toolbar->setProperty("contentY", scrollY);
+                QWheelEvent wheel(position, _window->mapToGlobal(position.toPoint()),
+                                  pixels ? QPoint(0, direction * 40) : QPoint(), QPoint(0, direction * 120),
+                                  Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+                QCoreApplication::sendEvent(_window, &wheel);
+                if (direction < 0 && scrollY < maximumY) {
+                    QTRY_VERIFY_WITH_TIMEOUT(toolbar->property("contentY").toReal() > scrollY, TestTimeout::shortMs());
+                } else if (direction > 0 && scrollY > 0) {
+                    QTRY_VERIFY_WITH_TIMEOUT(toolbar->property("contentY").toReal() < scrollY, TestTimeout::shortMs());
+                } else {
+                    QCOMPARE(toolbar->property("contentY").toReal(), scrollY);
+                }
+                QCOMPARE(map->property("zoomLevel").toReal(), zoom);
+            }
+        }
+    }
+}
+
+#include "PX4VehicleConfigUITest.moc"
+#endif

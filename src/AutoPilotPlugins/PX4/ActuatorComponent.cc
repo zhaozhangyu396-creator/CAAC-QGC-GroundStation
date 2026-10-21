@@ -35,7 +35,7 @@ QString ActuatorComponent::description(void) const
 
 QString ActuatorComponent::iconResource(void) const
 {
-    return QStringLiteral("/qmlimages/MotorComponentIcon.svg");
+    return QStringLiteral("/InstrumentValueIcons/tuning.svg");
 }
 
 bool ActuatorComponent::requiresSetup(void) const

@@ -839,7 +839,6 @@ SetupPage {
                     .arg(globals.activeVehicle && globals.activeVehicle.fixedWing
                         ? qsTr("To calibrate the airspeed sensor shield it from the wind. Do not touch the sensor or obstruct any holes during the calibration.") : "")
                 persistentActions: true
-                motorTestAvailable: false
                 nextEnabled: nextButton.enabled
                 cancelEnabled: cancelButton.enabled
                 cancelObjectName: "sensorsSetup_cancelButton"

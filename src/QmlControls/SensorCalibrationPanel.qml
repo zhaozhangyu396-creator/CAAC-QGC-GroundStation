@@ -54,7 +54,6 @@ Item {
     property string resultObjectName: "sensorsSetup_calibrationResult"
     property string waitingText: ""
     property bool orientationPreviewVisible: true
-    property bool motorTestAvailable: true
     readonly property var idleStates: [0, 0, 0, 0, 0, 0]
     readonly property var allSides: [true, true, true, true, true, true]
     readonly property var stillSides: [false, false, false, false, false, false]
@@ -104,7 +103,6 @@ Item {
     }
 
     onSectionIdChanged: {
-        if (motorTest) { motorTest.stopTesting() }
         Qt.callLater(focusSection)
     }
     onCalibrationActiveChanged: if (calibrationActive) { Qt.callLater(focusCalibration) }
@@ -155,7 +153,7 @@ Item {
                     text: qsTr("飞控朝向")
                     checked: root.orientationExpanded
                     enabled: root.calibrationEnabled && !root.calibrationActive && !root.preparationActive
-                        && (!root.vehicle || !root.vehicle.armed) && !motorTest.motorsEnabled
+                        && (!root.vehicle || !root.vehicle.armed)
                     onClicked: {
                         root.orientationExpanded = !root.orientationExpanded
                         if (root.orientationExpanded) { root.setOrientation() }
@@ -167,7 +165,7 @@ Item {
                     visible: root.orientationExpanded
                     active: root.orientationExpanded && root.matchesSection("Orientations")
                     enabled: root.calibrationEnabled && !root.calibrationActive
-                        && (!root.vehicle || !root.vehicle.armed) && !motorTest.motorsEnabled
+                        && (!root.vehicle || !root.vehicle.armed)
                     sourceComponent: root.orientationControls || offlineOrientationControls
                 }
             }
@@ -187,7 +185,7 @@ Item {
                     objectName: "sensorsSetup_calibrateAccel"
                     indicatorGreen: root.accelComplete
                     text: qsTr("Start Calibration")
-                    enabled: root.calibrationEnabled && !root.calibrationActive && !root.preparationActive && !motorTest.motorsEnabled
+                    enabled: root.calibrationEnabled && !root.calibrationActive && !root.preparationActive
                     onClicked: { root.currentType = "accel"; root.startAccel() }
                 }
             }
@@ -207,7 +205,6 @@ Item {
                     Layout.fillWidth: true
                     text: qsTr("校准水平")
                     enabled: root.levelEnabled && root.calibrationEnabled && !root.calibrationActive && !root.preparationActive
-                        && !motorTest.motorsEnabled
                     onClicked: { root.currentType = "level"; root.startLevel() }
                 }
             }
@@ -226,7 +223,7 @@ Item {
                     objectName: "sensorsSetup_calibrateCompass"
                     indicatorGreen: root.compassComplete
                     text: qsTr("Start Calibration")
-                    enabled: root.calibrationEnabled && !root.calibrationActive && !root.preparationActive && !motorTest.motorsEnabled
+                    enabled: root.calibrationEnabled && !root.calibrationActive && !root.preparationActive
                     onClicked: { root.currentType = "compass"; root.startCompass() }
                 }
             }
@@ -246,7 +243,6 @@ Item {
                     Layout.fillWidth: true
                     text: qsTr("Start Calibration")
                     enabled: root.calibrationEnabled && !root.calibrationActive && !root.preparationActive
-                        && !motorTest.motorsEnabled
                     onClicked: { root.currentType = "pressure"; root.startPressure() }
                 }
             }
@@ -266,7 +262,6 @@ Item {
                     Layout.fillWidth: true
                     text: qsTr("Start Calibration")
                     enabled: root.calibrationEnabled && !root.calibrationActive && !root.preparationActive
-                        && !motorTest.motorsEnabled
                     onClicked: { root.currentType = "compassmot"; root.startCompassMot() }
                 }
             }
@@ -276,7 +271,7 @@ Item {
                 Layout.preferredHeight: (item as Item)?.implicitHeight ?? 0
                 visible: root.additionalControls !== null
                 sourceComponent: root.additionalControls
-                enabled: root.calibrationEnabled && !root.calibrationActive && !root.preparationActive && !motorTest.motorsEnabled
+                enabled: root.calibrationEnabled && !root.calibrationActive && !root.preparationActive
             }
 
             ColumnLayout {
@@ -308,7 +303,7 @@ Item {
                         Layout.fillWidth: true
                         text: qsTr("Start Calibration")
                         enabled: root.calibrationEnabled && !root.calibrationActive
-                            && (!root.vehicle || !root.vehicle.armed) && !motorTest.motorsEnabled
+                            && (!root.vehicle || !root.vehicle.armed)
                         onClicked: root.confirmPreparation()
                     }
                     SettingsActionButton {
@@ -416,18 +411,7 @@ Item {
                 }
             }
 
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: root.margins
-                visible: root.motorTestAvailable && (root.sectionId === "" || root.sectionId === "Orientations")
-                SectionTitle { title: qsTr("电机测试") }
-                SensorCalibrationMotorTest {
-                    id: motorTest
-                    Layout.fillWidth: true
-                    vehicle: root.vehicle
-                    calibrationActive: root.calibrationActive
-                }
-            }
+
         }
     }
 

@@ -23743,4 +23743,23 @@ Source: %6 (session %7); destination: %8 (session %9)</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
+<context>
+    <name>CaacSafetySettings</name>
+    <message>
+        <source>附加安全设置</source>
+        <translation>附加安全设置</translation>
+    </message>
+    <message>
+        <source>紧急电量门限</source>
+        <translation>紧急电量门限</translation>
+    </message>
+    <message>
+        <source>降落后自动上锁延时</source>
+        <translation>降落后自动上锁延时</translation>
+    </message>
+    <message>
+        <source>显示障碍物距离</source>
+        <translation>显示障碍物距离</translation>
+    </message>
+</context>
 </TS>

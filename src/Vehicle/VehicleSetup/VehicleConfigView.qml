@@ -29,7 +29,6 @@ Rectangle {
         ["Peripheral", "trim", "/qmlimages/TuningComponentIcon.png"],
         ["MotorComponent", "Motors", "/qmlimages/MotorComponentIcon.svg"],
         ["PowerComponent", "Power", "/qmlimages/Battery.svg"],
-        ["SafetyComponent", "Safety", "/qmlimages/SafetyComponentIcon.png"],
         ["PX4TuningComponent", "PID Tuning", "/qmlimages/TuningComponentIcon.png"],
         ["JoystickComponent", "Joystick", "/qmlimages/Joystick.png"],
         ["PX4FlightBehavior", "Flight Behavior", "/qmlimages/TuningComponentIcon.png"],
@@ -221,7 +220,7 @@ Rectangle {
     }
 
     function _isMergedSafetyComponent(component) {
-        return _caacStyle && !!component && ["APMFailsafesComponent", "APMFlightSafetyComponent"].indexOf(
+        return _caacStyle && !!component && ["SafetyComponent", "APMSafetyComponent", "APMFailsafesComponent", "APMFlightSafetyComponent"].indexOf(
             component.toString().split("(")[0]) >= 0
     }
 

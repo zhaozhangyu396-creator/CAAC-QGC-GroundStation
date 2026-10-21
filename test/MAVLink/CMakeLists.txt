@@ -35,6 +35,13 @@ add_qgc_test(MAVLinkEnumsQmlTest LABELS Unit MAVLink)
 add_qgc_test(MAVLinkStreamConfigTest LABELS Unit MAVLink)
 add_qgc_test(QGCMAVLinkTest LABELS Unit MAVLink)
 add_qgc_test(OnlineMessageTranslatorTest LABELS Unit MAVLink)
+if(WIN32)
+    set_property(
+        TEST OnlineMessageTranslatorTest
+        APPEND
+        PROPERTY ENVIRONMENT_MODIFICATION "QT_QPA_PLATFORM=set:windows"
+    )
+endif()
 add_qgc_test(StatusTextHandlerTest LABELS Unit MAVLink)
 add_qgc_test(VehicleMessageTranslatorTest LABELS Unit MAVLink)
 add_qgc_test(SysStatusSensorInfoTest LABELS Unit MAVLink)

@@ -8684,7 +8684,7 @@
       <extracomment>.QGC.MetaData.Facts[exponentialPct].shortDesc, .QGC.MetaData.Facts[exponentialPct].label</extracomment>
       <location filename="../src/Settings/Joystick.SettingsGroup.json"/>
       <source>Stick Exponential</source>
-      <translation>操纵杆指数曲线</translation>
+      <translation>EXP</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[enableManualControlPitchExtension].shortDesc, .QGC.MetaData.Facts[enableManualControlPitchExtension].label</extracomment>

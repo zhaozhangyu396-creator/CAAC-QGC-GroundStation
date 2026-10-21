@@ -39,10 +39,14 @@ ColumnLayout {
     }
 
     function stopTesting() {
+        if (!safetyCheck) { return }
         if (motorsEnabled) { runMotor(-1, 0) }
         safetyCheck.checked = false
         resetSliders()
     }
+
+    onVisibleChanged: if (!visible) { stopTesting() }
+    Component.onDestruction: stopTesting()
 
     onCanTestChanged: if (!canTest) { safetyCheck.checked = false; resetSliders() }
     onVehicleChanged: { safetyCheck.checked = false; resetSliders() }

@@ -274,6 +274,21 @@ Item {
                     {label: qsTr("Trigger time"), names: ["COM_DL_LOSS_T", "FS_GCS_TIMEOUT"]}
                 ]
             }
+            SafetySection {
+                objectName: "caacAdditionalPx4SafetySettings"
+                title: qsTr("附加安全设置")
+                definitions: root.supported([
+                    {label: qsTr("紧急电量门限"), names: ["BAT_EMERGEN_THR"]},
+                    {label: qsTr("降落后自动上锁延时"), names: ["COM_DISARM_LAND"]}
+                ])
+                visible: definitions.length > 0
+            }
+            FactCheckBox {
+                objectName: "caacSafetyObstacleDistanceOverlay"
+                Layout.fillWidth: true
+                text: qsTr("显示障碍物距离")
+                fact: QGroundControl.settingsManager.flyViewSettings.showObstacleDistanceOverlay
+            }
             CaacBatteryProtection {
                 visible: !!root.parameter(["BAT_LOW_THR"])
                 lowThreshold: root.parameter(["BAT_LOW_THR"])

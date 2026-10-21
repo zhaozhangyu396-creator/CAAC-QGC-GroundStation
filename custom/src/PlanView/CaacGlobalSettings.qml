@@ -36,7 +36,7 @@ Item {
         if (_vehicle && !_vehicle.airborne && _vehicle.coordinate.isValid && _home.distanceTo(_vehicle.coordinate) < 2
             && isFinite(_vehicle.altitudeAMSL.rawValue)) { return Number(_vehicle.altitudeAMSL.rawValue) }
         const defaultHome = QGroundControl.corePlugin.defaultHomePosition()
-        if (_home.distanceTo(defaultHome) < 0.01 && Math.abs(_home.altitude - defaultHome.altitude) < 0.001) {
+        if (Math.abs(_home.altitude - defaultHome.altitude) < 0.001) {
             return _home.altitude
         }
         if (_homeItem && isFinite(_homeItem.terrainAltitude)) { return _homeItem.terrainAltitude }

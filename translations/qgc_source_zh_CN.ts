@@ -28507,6 +28507,22 @@ altitude</source>
       <source>失联行为</source>
       <translation>失联行为</translation>
     </message>
+    <message>
+        <source>附加安全设置</source>
+        <translation>附加安全设置</translation>
+    </message>
+    <message>
+        <source>紧急电量门限</source>
+        <translation>紧急电量门限</translation>
+    </message>
+    <message>
+        <source>降落后自动上锁延时</source>
+        <translation>降落后自动上锁延时</translation>
+    </message>
+    <message>
+        <source>显示障碍物距离</source>
+        <translation>显示障碍物距离</translation>
+    </message>
 </context>
   <context>
     <name>CaacSettingsMenu</name>

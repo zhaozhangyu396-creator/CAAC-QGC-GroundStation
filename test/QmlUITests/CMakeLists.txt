@@ -69,6 +69,16 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_
 add_qgc_test(TopLevelViewsTest LABELS Integration NoSanitizer TIMEOUT 120)
 add_qgc_test(FirmwareUpgradeUITest LABELS Integration NoSanitizer)
 add_qgc_test(PX4VehicleConfigUITest LABELS Integration NoSanitizer TIMEOUT 180)
+if(QGC_CUSTOM_BUILD)
+    add_qgc_test(CaacSetupMenuUITest LABELS Integration NoSanitizer TIMEOUT 120)
+    if(WIN32)
+        set_property(
+            TEST CaacSetupMenuUITest
+            APPEND
+            PROPERTY ENVIRONMENT_MODIFICATION "QT_QPA_PLATFORM=set:windows"
+        )
+    endif()
+endif()
 add_qgc_test(APMVehicleConfigUITest LABELS Integration NoSanitizer TIMEOUT 360)
 add_qgc_test(ToolbarIndicatorUITest LABELS Integration NoSanitizer TIMEOUT 180)
 add_qgc_test(
@@ -116,6 +126,7 @@ if(WIN32)
     # Native Windows fonts are required for the setup pages' geometry and mouse interactions.
     foreach(
         _setup_test
+        FirmwareUpgradeUITest
         PX4VehicleConfigUITest
         PX4SensorsCalibrationUITest
         PX4AirframeSetupUITest

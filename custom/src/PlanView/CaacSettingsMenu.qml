@@ -99,6 +99,7 @@ Rectangle {
         spacing: root.spacingSize
         QGCFlickable {
             objectName: "caacSettingsNavigationScroller"
+            consumeWheelEvents: true
             Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 11
             Layout.minimumWidth: Layout.preferredWidth
             Layout.maximumWidth: Layout.preferredWidth

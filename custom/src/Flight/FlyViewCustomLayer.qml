@@ -300,6 +300,7 @@ Item {
             QGCFlickable {
                 id: toolbarScroller
                 objectName: "caacMainToolsScroller"
+                consumeWheelEvents: true
                 Layout.alignment: Qt.AlignTop
                 Layout.fillWidth: true
                 Layout.minimumWidth: toolbar.implicitWidth
