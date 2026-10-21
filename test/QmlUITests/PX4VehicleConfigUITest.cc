@@ -454,7 +454,7 @@ void CaacSetupMenuUITest::_toolbarWheel()
     if (QTest::currentTestFailed()) {
         return;
     }
-    _window->resize(QSize(800, 600).expandedTo(_window->minimumSize()));
+    _window->resize(QSize(800, qMax(360, _window->minimumHeight())).expandedTo(_window->minimumSize()));
     auto* toolbar = findVisibleItem(_rootItem, QStringLiteral("caacMainToolsScroller"));
     auto* map = findVisibleItem(_rootItem, QStringLiteral("planView_map"));
     QVERIFY(toolbar && map);
