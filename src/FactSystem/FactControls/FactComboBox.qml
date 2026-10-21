@@ -11,7 +11,7 @@ QGCComboBox {
     readonly property bool modified: _pendingIndex >= 0
     property int _pendingIndex: -1
 
-    model: fact ? fact.enumStrings : null
+    model: fact ? OnlineMessageTranslator.parameterOptions(fact.enumStrings, OnlineMessageTranslator.revision) : null
 
     currentIndex: _pendingIndex >= 0 ? _pendingIndex : fact ? (indexModel ? fact.value : fact.enumIndex) : 0
 

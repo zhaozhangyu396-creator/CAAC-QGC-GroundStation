@@ -35,6 +35,7 @@ TextArea {
     Connections {
         target: _activeVehicle
         function onNewFormattedMessage(formattedMessage) { messageText.insert(0, formatMessage(formattedMessage)) }
+        function onFormattedMessagesChanged() { messageText.text = formatMessage(_activeVehicle.formattedMessages) }
     }
 
     FactPanelController {

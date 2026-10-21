@@ -180,6 +180,24 @@ if(WIN32)
 endif()
 
 add_qgc_test(
+    CaacDefaultHomeUITest
+    LABELS
+    Integration
+    Vehicle
+    NoSanitizer
+    ENV_MODIFICATION
+    "QGC_TEST_LOCALE=set:zh_CN"
+    "QGC_TEST_REALTIME_PLAN_TIMEOUTS=set:1"
+)
+if(WIN32)
+    set_property(
+        TEST CaacDefaultHomeUITest
+        APPEND
+        PROPERTY ENVIRONMENT_MODIFICATION "QT_QPA_PLATFORM=set:windows"
+    )
+endif()
+
+add_qgc_test(
     CaacPlanningInteractionUITest
     LABELS
     Integration

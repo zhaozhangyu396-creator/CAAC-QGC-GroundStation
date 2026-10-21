@@ -994,6 +994,7 @@ private:
 
 
     QString             _prearmError;
+    QString _prearmErrorSource;
     QTimer              _prearmErrorTimer;
     static const int    _prearmErrorTimeoutMSecs = 35 * 1000;   ///< Take away prearm error after 35 seconds
 

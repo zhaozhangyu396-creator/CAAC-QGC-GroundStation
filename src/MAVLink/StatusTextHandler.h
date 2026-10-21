@@ -22,6 +22,8 @@ public:
     QString getText() const { return m_text; }
     QString getFormattedText() const { return m_formatedText; }
 
+    void setDisplayContext(const QString& prefix, const QString& description);
+    void refreshTranslation();
     void setFormatedText(const QString &formatedText) { m_formatedText = formatedText; }
 
 private:
@@ -29,6 +31,8 @@ private:
     MAV_SEVERITY m_severity;
     QString m_text;
     QString m_formatedText;
+    QString m_prefix;
+    QString m_description;
 };
 
 class StatusTextHandler : public QObject
@@ -52,6 +56,7 @@ public:
     static QString getMessageText(const mavlink_message_t &message);
 
 signals:
+    void formattedMessagesChanged();
     void newFormattedMessage(QString message);
     void textMessageReceived(MAV_COMPONENT componentid, MAV_SEVERITY severity, QString text, QString description);
     void criticalMessageCountChanged();

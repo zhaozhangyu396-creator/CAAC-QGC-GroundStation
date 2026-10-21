@@ -21,6 +21,7 @@ GridLayout {
     property alias label:                   label.text
     property alias fact:                    _comboBox.fact
     property alias indexModel:              _comboBox.indexModel
+    property alias model:                   _comboBox.model
     property var   comboBox:                _comboBox
     property real  comboBoxPreferredWidth:  -1
 

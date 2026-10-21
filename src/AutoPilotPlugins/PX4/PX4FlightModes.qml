@@ -227,7 +227,7 @@ SetupPage {
                                                                                      (controller.rcChannelValues[swChannel] > thPWM) :
                                                                                      (controller.rcChannelValues[swChannel] <= thPWM))
                                             QGCLabel {
-                                                text:               root._switchLabels[modelData] || swFact.shortDescription
+                                                text:               root._switchLabels[modelData] || OnlineMessageTranslator.parameterText(swFact.shortDescription, OnlineMessageTranslator.revision)
                                                 Layout.fillWidth:   true
                                                 color:              swActive ? "yellow" : qgcPal.text
                                             }

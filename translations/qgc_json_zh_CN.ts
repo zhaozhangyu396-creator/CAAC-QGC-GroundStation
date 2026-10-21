@@ -5053,7 +5053,7 @@
       <extracomment>.mavCmdInfo[MAV_CMD_NAV_LOITER_TURNS].description</extracomment>
       <location filename="../src/MissionManager/MavCmdInfoCommon.json"/>
       <source>Travel to a position and Loiter around the specified position for a number of turns.</source>
-      <translation>移动到一个位置，在指定的半径周围盘旋指定圈數。</translation>
+      <translation>移动到一个位置，在指定的半径周围盘旋指定圈数。</translation>
     </message>
     <message>
       <extracomment>.mavCmdInfo[MAV_CMD_NAV_LOITER_TURNS].param1.label</extracomment>
@@ -7819,7 +7819,15 @@
       <source>log,time,elapsed,timestamp,console</source>
       <translation>日志,时间,已过去,时间戳,控制台</translation>
     </message>
-  </context>
+      <message>
+      <source>在线翻译英文提示和参数说明</source>
+      <translation>在线翻译英文提示和参数说明</translation>
+    </message>
+    <message>
+      <source>本地词库优先，未收录的英文提示和参数说明通过免密钥 MyMemory 公共服务翻译为简体中文。需要联网，会发送提示文字；参数标识和数值会被替换后再发送。公共服务有额度限制，翻译失败时保留原文。在线译文仅供参考，原始消息保持不变。</source>
+      <translation>本地词库优先，未收录的英文提示和参数说明通过免密钥 MyMemory 公共服务翻译为简体中文。需要联网，会发送提示文字；参数标识和数值会被替换后再发送。公共服务有额度限制，翻译失败时保留原文。在线译文仅供参考，原始消息保持不变。</translation>
+    </message>
+</context>
   <context>
     <name>AutoConnect.SettingsGroup.json</name>
     <message>
@@ -8000,7 +8008,7 @@
       <translatorcomment>Only use english comma ',' to separate strings</translatorcomment>
       <location filename="../src/Settings/FirmwareUpgrade.SettingsGroup.json"/>
       <source>ChibiOS,NuttX</source>
-      <translation>ChibiiOS,NuttX</translation>
+      <translation>ChibiOS,NuttX</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[apmChibiOS].label</extracomment>
@@ -8676,7 +8684,7 @@
       <extracomment>.QGC.MetaData.Facts[exponentialPct].shortDesc, .QGC.MetaData.Facts[exponentialPct].label</extracomment>
       <location filename="../src/Settings/Joystick.SettingsGroup.json"/>
       <source>Stick Exponential</source>
-      <translation>EXP</translation>
+      <translation>操纵杆指数曲线</translation>
     </message>
     <message>
       <extracomment>.QGC.MetaData.Facts[enableManualControlPitchExtension].shortDesc, .QGC.MetaData.Facts[enableManualControlPitchExtension].label</extracomment>

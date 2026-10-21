@@ -273,55 +273,55 @@ SetupPage {
                 GridLayout {
                     columns: 2
 
-                    QGCLabel { text: _hSvMan.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hSvMan.shortDescription, OnlineMessageTranslator.revision) }
                     FactComboBox {
                         fact:       _hSvMan
                         indexModel: false
                     }
 
-                    QGCLabel { text: _hSwType.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hSwType.shortDescription, OnlineMessageTranslator.revision) }
                     FactComboBox {
                         fact:       _hSwType
                         indexModel: false
                     }
 
-                    QGCLabel { text: _hSwColDir.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hSwColDir.shortDescription, OnlineMessageTranslator.revision) }
                     FactComboBox {
                         fact:       _hSwColDir
                         indexModel: false
                     }
 
-                    QGCLabel { text: _hSwLinSvo.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hSwLinSvo.shortDescription, OnlineMessageTranslator.revision) }
                     FactComboBox {
                         fact:       _hSwLinSvo
                         indexModel: false
                     }
 
-                    QGCLabel { text: _hFlybarMode.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hFlybarMode.shortDescription, OnlineMessageTranslator.revision) }
                     FactComboBox {
                         fact:       _hFlybarMode
                         indexModel: false
                     }
 
-                    QGCLabel { text: _hCycMax.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hCycMax.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hCycMax }
 
-                    QGCLabel { text: _hColMax.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hColMax.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hColMax }
 
-                    QGCLabel { text: _hColAngMax.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hColAngMax.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hColAngMax }
 
-                    QGCLabel { text: _hColMin.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hColMin.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hColMin }
 
-                    QGCLabel { text: _hColAngMin.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hColAngMin.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hColAngMin }
 
-                    QGCLabel { text: _hColZeroThrst.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hColZeroThrst.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hColZeroThrst }
 
-                    QGCLabel { text: _hColLandMin.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hColLandMin.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hColLandMin }
                 }
             }
@@ -332,43 +332,43 @@ SetupPage {
                 GridLayout {
                     columns: 2
 
-                    QGCLabel { text: _hRscMode.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hRscMode.shortDescription, OnlineMessageTranslator.revision) }
                     FactComboBox {
                         fact:       _hRscMode
                         indexModel: false
                     }
 
-                    QGCLabel { text: _hRscCritical.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hRscCritical.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hRscCritical }
 
-                    QGCLabel { text: _hRscRampTime.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hRscRampTime.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hRscRampTime }
 
-                    QGCLabel { text: _hRscRunupTime.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hRscRunupTime.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hRscRunupTime }
 
-                    QGCLabel { text: _hRscCldwnTime.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hRscCldwnTime.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hRscCldwnTime }
 
-                    QGCLabel { text: _hRscSetpoint.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hRscSetpoint.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hRscSetpoint }
 
-                    QGCLabel { text: _hRscIdle.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hRscIdle.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hRscIdle }
 
-                    QGCLabel { text: _hRscThrcrv0.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hRscThrcrv0.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hRscThrcrv0 }
 
-                    QGCLabel { text: _hRscThrcrv25.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hRscThrcrv25.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hRscThrcrv25 }
 
-                    QGCLabel { text: _hRscThrcrv50.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hRscThrcrv50.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hRscThrcrv50 }
 
-                    QGCLabel { text: _hRscThrcrv75.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hRscThrcrv75.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hRscThrcrv75 }
 
-                    QGCLabel { text: _hRscThrcrv100.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hRscThrcrv100.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hRscThrcrv100 }
                 }
             }
@@ -379,22 +379,22 @@ SetupPage {
                 GridLayout {
                     columns: 2
 
-                    QGCLabel { text: _hRscGovComp.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hRscGovComp.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hRscGovComp }
 
-                    QGCLabel { text: _hRscGovDroop.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hRscGovDroop.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hRscGovDroop }
 
-                    QGCLabel { text: _hRscGovFf.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hRscGovFf.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hRscGovFf }
 
-                    QGCLabel { text: _hRscGovRange.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hRscGovRange.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hRscGovRange }
 
-                    QGCLabel { text: _hRscGovRpm.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hRscGovRpm.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hRscGovRpm }
 
-                    QGCLabel { text: _hRscGovTorque.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hRscGovTorque.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hRscGovTorque }
                 }
             }
@@ -408,37 +408,37 @@ SetupPage {
                     QGCLabel { text: qsTr("* Stabilize Collective Curve *") }
                     QGCLabel { text: qsTr("") }
 
-                    QGCLabel { text: _imStbCol1.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_imStbCol1.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _imStbCol1 }
 
-                    QGCLabel { text: _imStbCol2.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_imStbCol2.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _imStbCol2 }
 
-                    QGCLabel { text: _imStbCol3.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_imStbCol3.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _imStbCol3 }
 
-                    QGCLabel { text: _imStbCol4.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_imStbCol4.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _imStbCol4 }
 
                     QGCLabel { text: qsTr("* Tail & Gyros *") }
                     QGCLabel { text: qsTr("") }
 
-                    QGCLabel { text: _hTailType.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hTailType.shortDescription, OnlineMessageTranslator.revision) }
                     FactComboBox {
                         fact:       _hTailType
                         indexModel: false
                     }
 
-                    QGCLabel { text: _hTailSpeed.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hTailSpeed.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hTailSpeed }
 
-                    QGCLabel { text: _hGyrGain.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hGyrGain.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hGyrGain }
 
-                    QGCLabel { text: _hGyrGainAcro.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hGyrGainAcro.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hGyrGainAcro }
 
-                    QGCLabel { text: _hColYaw.shortDescription }
+                    QGCLabel { text: OnlineMessageTranslator.parameterText(_hColYaw.shortDescription, OnlineMessageTranslator.revision) }
                     FactTextField { fact: _hColYaw }
                 }
             }

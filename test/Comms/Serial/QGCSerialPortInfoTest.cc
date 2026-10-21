@@ -121,4 +121,26 @@ void QGCSerialPortInfoTest::_testFallbackRegexesCompile()
     }
 }
 
+void QGCSerialPortInfoTest::_testSlcanInterface_data()
+{
+    QTest::addColumn<QString>("description");
+    QTest::addColumn<bool>("slcan");
+    QTest::newRow("ardupilot-can") << QStringLiteral("ArduPilot SLCAN") << true;
+    QTest::newRow("windows-can") << QStringLiteral("ARDUPILOT_slcan (COM24)") << true;
+    QTest::newRow("can-adapter") << QStringLiteral("USB-SLCAN adapter") << true;
+    QTest::newRow("autopilot") << QStringLiteral("ArduPilot ChibiOS") << false;
+    QTest::newRow("telemetry") << QStringLiteral("ArduPilot MAVLink") << false;
+    QTest::newRow("bootloader") << QStringLiteral("PX4 FMU BL") << false;
+    QTest::newRow("can-capable-board") << QStringLiteral("Pixhawk CAN bus capable") << false;
+    QTest::newRow("partial-word") << QStringLiteral("USBSLCANISH") << false;
+    QTest::newRow("unknown") << QStringLiteral("") << false;
+}
+
+void QGCSerialPortInfoTest::_testSlcanInterface()
+{
+    QFETCH(QString, description);
+    QFETCH(bool, slcan);
+    QCOMPARE(QGCSerialPortInfo::isSlcanInterface(description), slcan);
+}
+
 UT_REGISTER_TEST(QGCSerialPortInfoTest, TestLabel::Unit, TestLabel::Comms)

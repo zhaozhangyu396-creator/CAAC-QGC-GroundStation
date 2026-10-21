@@ -13,8 +13,10 @@ import QGroundControl.PlanView
 
 FlightMap {
     id:                         _root
-    allowGCSLocationCenter:     true
+    allowGCSLocationCenter:     !QGroundControl.corePlugin.directMissionItemEditing
     allowVehicleLocationCenter: !_keepVehicleCentered
+    initialZoomLevel: QGroundControl.corePlugin.directMissionItemEditing ? QGroundControl.flightMapZoom
+        : QGroundControl.flightMapInitialZoom
     planView:                   false
     zoomLevel:                  QGroundControl.flightMapZoom
     center:                     QGroundControl.flightMapPosition

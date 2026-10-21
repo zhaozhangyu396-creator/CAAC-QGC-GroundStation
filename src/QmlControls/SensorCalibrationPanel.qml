@@ -59,8 +59,8 @@ Item {
     readonly property var allSides: [true, true, true, true, true, true]
     readonly property var stillSides: [false, false, false, false, false, false]
     readonly property real margins: ScreenTools.defaultFontPixelHeight * 0.6
-    readonly property bool _previewSection: sectionId === "" || sectionId === "Accelerometer"
-        || sectionId === "Compass" || sectionId === "Gyroscope"
+    readonly property bool _previewSection: (sectionId === "" || sectionId === "Accelerometer"
+        || sectionId === "Compass") && (currentType === "accel" || currentType === "compass")
     readonly property bool _workflowVisible: preparationActive || calibrationActive || resultVisible
         || statusText !== "" || helpText !== "" || waitingText !== ""
         || (orientationPreviewVisible && _previewSection) || (persistentActions && currentType === "accel")
@@ -273,7 +273,7 @@ Item {
 
             Loader {
                 Layout.fillWidth: true
-                Layout.preferredHeight: item ? item.implicitHeight : 0
+                Layout.preferredHeight: (item as Item)?.implicitHeight ?? 0
                 visible: root.additionalControls !== null
                 sourceComponent: root.additionalControls
                 enabled: root.calibrationEnabled && !root.calibrationActive && !root.preparationActive && !motorTest.motorsEnabled
@@ -374,8 +374,7 @@ Item {
                     vehicle: root.vehicle
                     sideStates: root.sideStates
                     sideVisible: root.currentType === "compass" && root.compassMotionGuidance ? root.allSides
-                        : root.calibrationActive ? root.sideVisible
-                        : root.currentType === "gyro" ? [true, false, false, false, false, false] : root.allSides
+                        : root.calibrationActive ? root.sideVisible : root.allSides
                     sideRotating: root.sideRotating
                 }
                 QGCLabel {

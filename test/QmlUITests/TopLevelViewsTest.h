@@ -28,3 +28,11 @@ private slots:
 private:
     QQuickItem* _clickSettingsButton(const QString& pageName);
 };
+
+class FirmwareUpgradeUITest : public QmlUITestBase
+{
+    Q_OBJECT
+private slots:
+    void _longPortNameFits_data();
+    void _longPortNameFits();
+};

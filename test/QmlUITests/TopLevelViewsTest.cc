@@ -1,10 +1,11 @@
 #include "TopLevelViewsTest.h"
 
+#include <algorithm>
+
 #include <QtCore/QScopeGuard>
+#include <QtQml/QQmlProperty>
 #include <QtQuick/QQuickItem>
 #include <QtTest/QTest>
-
-#include <algorithm>
 
 #include "Fact.h"
 #include "ScreenToolsController.h"
@@ -12,6 +13,50 @@
 #include "VideoSettings.h"
 
 UT_REGISTER_TEST(TopLevelViewsTest, TestLabel::Integration)
+UT_REGISTER_TEST(FirmwareUpgradeUITest, TestLabel::Integration)
+
+void FirmwareUpgradeUITest::_longPortNameFits_data()
+{
+    QTest::addColumn<int>("pageWidth");
+    QTest::newRow("narrow") << 320;
+    QTest::newRow("wide") << 640;
+}
+
+void FirmwareUpgradeUITest::_longPortNameFits()
+{
+    QFETCH(int, pageWidth);
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_viewConfigure")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("vehicleConfig_firmwareButton"),
+                                QStringLiteral("vehicleConfig_sidebarFlickable")));
+    auto* page = findVisibleItem(_rootItem, QStringLiteral("firmwareUpgrade_page"));
+    QVERIFY(page);
+    QVERIFY(page->setProperty("availableWidth", pageWidth));
+    auto* loader = findItem(page, QStringLiteral("setupPage_contentLoader"));
+    QVERIFY(loader);
+    auto* content = loader->property("item").value<QQuickItem*>();
+    auto* combo = findVisibleItem(page, QStringLiteral("firmwareUpgrade_portCombo"));
+    auto* flash = findVisibleItem(page, QStringLiteral("firmwareUpgrade_flashButton"));
+    auto* log = findVisibleItem(page, QStringLiteral("firmwareUpgrade_statusLog"));
+    QVERIFY(content && combo && flash && log);
+    const QVariantList ports{
+        QVariantMap{{QStringLiteral("displayName"), QStringLiteral("COM25 — ArduPilot ChibiOS — ").repeated(8)}}};
+    QVERIFY(QQmlProperty(combo, QStringLiteral("model")).write(ports));
+    QVERIFY(combo->setProperty("currentIndex", 0));
+    QTRY_COMPARE_WITH_TIMEOUT(content->width(), qreal(pageWidth), TestTimeout::shortMs());
+    const auto withinPage = [&](QQuickItem* item) {
+        const auto bounds = item->mapRectToItem(content, item->boundingRect());
+        return bounds.width() > 0 && bounds.left() >= -1 && bounds.right() <= content->width() + 1;
+    };
+    QTRY_VERIFY_WITH_TIMEOUT(withinPage(combo) && withinPage(flash) && withinPage(log), TestTimeout::shortMs());
+    QVERIFY(flash->mapRectToItem(content, flash->boundingRect()).top() >=
+            combo->mapRectToItem(content, combo->boundingRect()).bottom());
+    QVERIFY(QMetaObject::invokeMethod(log, "append", Q_ARG(QString, QStringLiteral("long_device_path_").repeated(30))));
+    QTRY_VERIFY_WITH_TIMEOUT(log->property("contentWidth").toReal() <= log->width() + 1, TestTimeout::shortMs());
+}
 
 // This test assumes Advanced UI mode is enabled (the default). All views including
 // Analyze are expected to be visible.

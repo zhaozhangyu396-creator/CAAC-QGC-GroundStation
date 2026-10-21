@@ -22,17 +22,23 @@ private slots:
 void CaacStartupUITest::_readyMilestones_data()
 {
     QTest::addColumn<QList<int>>("order");
-    QTest::newRow("backend-services-frame") << QList<int>{0, 1, 2};
-    QTest::newRow("backend-frame-services") << QList<int>{0, 2, 1};
-    QTest::newRow("services-backend-frame") << QList<int>{1, 0, 2};
-    QTest::newRow("services-frame-backend") << QList<int>{1, 2, 0};
-    QTest::newRow("frame-backend-services") << QList<int>{2, 0, 1};
-    QTest::newRow("frame-services-backend") << QList<int>{2, 1, 0};
+    QTest::addColumn<bool>("videoAvailable");
+    const auto addOrder = [](const char* name, const QList<int>& order) {
+        QTest::newRow(name) << order << true;
+        QTest::newRow(qPrintable(QString::fromLatin1(name) + QStringLiteral("-video-unavailable"))) << order << false;
+    };
+    addOrder("backend-services-frame", {0, 1, 2});
+    addOrder("backend-frame-services", {0, 2, 1});
+    addOrder("services-backend-frame", {1, 0, 2});
+    addOrder("services-frame-backend", {1, 2, 0});
+    addOrder("frame-backend-services", {2, 0, 1});
+    addOrder("frame-services-backend", {2, 1, 0});
 }
 
 void CaacStartupUITest::_readyMilestones()
 {
     QFETCH(QList<int>, order);
+    QFETCH(bool, videoAvailable);
     const bool previousQuit = QGuiApplication::quitOnLastWindowClosed();
     QGuiApplication::setQuitOnLastWindowClosed(false);
     const auto restoreQuit =
@@ -58,9 +64,9 @@ void CaacStartupUITest::_readyMilestones()
     startup.setStage(CaacStartupController::Stage::FirstFrame);
     QCOMPARE(startup.progress(), 95);
     QSignalSpy finished(&startup, &CaacStartupController::finishedChanged);
-    const auto mark = [&startup](int milestone) {
+    const auto mark = [&startup, videoAvailable](int milestone) {
         if (milestone == 0) {
-            startup.markBackendReady();
+            startup.completeVideoInitialization(videoAvailable);
         } else if (milestone == 1) {
             startup.markServicesReady();
         } else {
@@ -78,6 +84,10 @@ void CaacStartupUITest::_readyMilestones()
     }
     mark(order[2]);
     QCOMPARE(startup.progress(), 100);
+    QCOMPARE(startup.videoAvailable(), videoAvailable);
+    QVERIFY(!startup.failed());
+    QCOMPARE(startup.statusText(),
+             videoAvailable ? QStringLiteral("系统已就绪") : QStringLiteral("系统已就绪，图传暂不可用"));
     QVERIFY(!startup.finished());
     QTRY_VERIFY_WITH_TIMEOUT(startup.finished(), TestTimeout::mediumMs());
     QCOMPARE(finished.count(), 1);
@@ -91,7 +101,7 @@ void CaacStartupUITest::_failureAndCancellationDoNotReveal()
     CaacStartupController failed;
     failed.setStage(CaacStartupController::Stage::VideoBackend);
     failed.fail(QStringLiteral("startup failure"));
-    failed.markBackendReady();
+    failed.completeVideoInitialization(false);
     failed.markServicesReady();
     failed.markMainFrameReady();
     QVERIFY(failed.failed());
@@ -104,7 +114,7 @@ void CaacStartupUITest::_failureAndCancellationDoNotReveal()
     cancelled.requestClose();
     cancelled.requestClose();
     QCOMPARE(close.count(), 1);
-    cancelled.markBackendReady();
+    cancelled.completeVideoInitialization(false);
     cancelled.markServicesReady();
     cancelled.markMainFrameReady();
     QVERIFY(!cancelled.finished());

@@ -206,14 +206,14 @@ Rectangle {
             Item { width: 1; height: _spacer }
 
             FactCheckBox {
-                text:       _stopTakingPhotos.shortDescription
+                text:       OnlineMessageTranslator.parameterText(_stopTakingPhotos.shortDescription, OnlineMessageTranslator.revision)
                 fact:       _stopTakingPhotos
 
                 property Fact _stopTakingPhotos: missionItem.stopTakingPhotos
             }
 
             FactCheckBox {
-                text:       _stopTakingVideo.shortDescription
+                text:       OnlineMessageTranslator.parameterText(_stopTakingVideo.shortDescription, OnlineMessageTranslator.revision)
                 fact:       _stopTakingVideo
 
                 property Fact _stopTakingVideo: missionItem.stopTakingVideo

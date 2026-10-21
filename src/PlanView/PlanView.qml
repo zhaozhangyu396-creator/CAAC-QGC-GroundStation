@@ -55,6 +55,17 @@ Item {
     readonly property int _layerFence: PlanEditLayers.layerFence
     readonly property int _layerRally: PlanEditLayers.layerRally
 
+    function initializeDefaultPlan() {
+        if (unifiedFlightPlan) {
+            QGroundControl.corePlugin.initializeDefaultPlan(_planMasterController)
+        }
+    }
+
+    Connections {
+        target: _root._missionController
+        function onVisualItemsReset() { Qt.callLater(_root.initializeDefaultPlan) }
+    }
+
     onVisibleChanged: {
         if(visible) {
             editorMap.zoomLevel = QGroundControl.flightMapZoom
@@ -90,6 +101,7 @@ Item {
 
         Component.onCompleted: {
             _planMasterController.start()
+            _root.initializeDefaultPlan()
             _missionController.setCurrentPlanViewSeqNum(0, true)
         }
 
@@ -300,8 +312,10 @@ Item {
             readonly property var mapToolsContainer: _root.unifiedFlightPlan ? unifiedFlightLayer.mapToolsContainer : null
             anchors.fill: parent
             mapName: "MissionEditor"
-            allowGCSLocationCenter: true
+            allowGCSLocationCenter: !_root.unifiedFlightPlan
             allowVehicleLocationCenter: true
+            initialZoomLevel: _root.unifiedFlightPlan ? QGroundControl.flightMapZoom
+                : QGroundControl.flightMapInitialZoom
             planView: true
             directMissionItemEditing: QGroundControl.corePlugin.directMissionItemEditing
                                       && _editingLayer === _layerMission

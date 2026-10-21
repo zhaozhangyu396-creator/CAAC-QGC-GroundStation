@@ -16,8 +16,13 @@ target_sources(
             QGCMAVLink.cc
             QGCMAVLink.h
             QGCMAVLinkTypes.h
+            OnlineMessageTranslator.cc
+            OnlineMessageTranslator.h
             StatusTextHandler.cc
             StatusTextHandler.h
+            VehicleMessageTranslator.cc
+            VehicleMessageTranslator.h
+            VehicleMessageCatalog.h
             SysStatusSensorInfo.cc
             SysStatusSensorInfo.h
 )

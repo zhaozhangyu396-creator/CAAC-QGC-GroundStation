@@ -15831,6 +15831,10 @@ Note that this will also completely reset everything, including UAVCAN nodes, al
         <source>Set RC to Param</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+      <source>Show original English description</source>
+      <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>ParameterManager</name>
@@ -17979,6 +17983,42 @@ Click &apos;Ok&apos; to upload the Plan anyway.</source>
 </context>
 <context>
     <name>RadioComponent</name>
+    <message>
+        <source>AUX1 Passthrough RC channel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>AUX2 Passthrough RC channel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>PARAM1 tuning channel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>PARAM2 tuning channel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>PARAM3 tuning channel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Payload Power Switch RC channel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Flaps channel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unassigned</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Channel %1</source>
+        <translation type="unfinished"></translation>
+    </message>
     <message>
         <location filename="../src/AutoPilotPlugins/Common/RadioComponent.qml" line="29"/>
         <source>Throttle channel reversed</source>
@@ -21609,7 +21649,7 @@ If a vehicle still has this key configured, you will no longer be able to commun
     </message>
     <message>
         <location filename="../src/Vehicle/VehicleSetup/VehicleSummary.qml" line="75"/>
-        <source>WARNING: Configuration tasks remain before this vehicle is ready to fly. Open the red-marked components on the left to finish setup.</source>
+        <source>WARNING: Complete the remaining setup tasks before flying. Open the overview cards marked with a red dot, or expand the setup menu and select items marked with an orange dot.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -22285,6 +22325,1421 @@ Source: %6 (session %7); destination: %8 (session %9)</source>
     <message>
         <location filename="../src/GPS/NTRIP/NTRIPConnectionStatus.qml" line="124"/>
         <source>Queued to vehicle links (all sources)</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>VehicleMessages</name>
+    <message>
+        <source>Notice</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Warning</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Error</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Information</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Critical</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Confirmation</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Success</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Motors</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Motor</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Servo</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mount</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Generator</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>VisOdom</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Battery</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Radio</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>RC</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Magnetometer</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Accelerometer</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Barometer</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Strong magnetic interference</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Heading estimate invalid</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Horizontal velocity unstable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Vertical velocity unstable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Horizontal position unstable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Height estimate not stable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Waiting for estimator to initialize</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No heading reference</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>High Accelerometer Bias</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>High Gyro Bias</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Stopping compass use</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Compass needs calibration</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GNSS heading not reliable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS fix too low</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Not enough GPS Satellites</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS PDOP too high</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS Horizontal Pos Error too high</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS Horizontal Position Error too high</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS Vertical Pos Error too high</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS Vertical Position Error too high</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS Speed Accuracy too low</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS Horizontal Pos Drift too high</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS Horizontal Position Drift too high</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS Vertical Pos Drift too high</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS Vertical Position Drift too high</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS Hor Speed Drift too high</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS Horizontal Speed Drift too high</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS Vert Speed Drift too high</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS Vertical Speed Drift too high</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS signal spoofed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS signal jammed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS jamming detected</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Estimator not using GPS</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Poor GPS Quality</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GNSS data fusion stopped</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GNSS data fusion started</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GNSS signal spoofed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GNSS signal jammed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Local position lost, no GNSS data</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Position estimate has low accuracy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Angular velocity no longer valid</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Estimated position error is approaching the failsafe threshold</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Flight termination active</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Flying with USB is not safe</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Global position estimate required</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Home position required</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Press safety button first</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Turn safety off first</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Vehicle is in transition state</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Vehicle is not in multicopter mode</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Arm authorization denied</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>UAVCAN firmware update in progress</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No connection to the GCS</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No connection to the ground control station</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Manual control lost</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Manual control regained</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Low battery</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Critical battery</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Emergency battery level</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Battery unhealthy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remaining flight time low</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Under voltage</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Under temperature</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Over voltage</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Over temperature</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Voltage mismatch</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Incompatible firmware</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Incompatible model</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Hardware fault</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to arm</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Land now!</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Land now</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Return to launch</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Returning to launch</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Return mode activated</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Landing</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Landed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Takeoff</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Taking off</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Takeoff complete</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Landing complete</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Armed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Disarmed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Ready to fly</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Not ready to fly</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mission started</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mission finished</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mission completed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mission paused</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mission resumed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mission rejected</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mission upload failed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mission download failed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No valid mission available</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unable to start mission</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Geofence breached</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Geofence violation</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Geofence violation: returning to launch</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failsafe activated</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failsafe enabled</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failsafe cleared</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failsafe mode activated</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Low memory</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Logging failed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No SD card</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>SD card missing</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>SD card full</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Downloading logs</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Logging not started</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Logging started</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Logging stopped</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Gyros not healthy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Gyros not calibrated</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Accels not healthy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>3D Accel calibration needed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Accels calibrated requires reboot</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Accels inconsistent</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Gyros inconsistent</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Temperature cal running</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Batch sampling requires reboot</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Compass calibration running</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Compass calibrated requires reboot</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Compass offsets too high</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Compasses inconsistent</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>AHRS: waiting for home</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Safety Switch</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Throttle</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>VTOL Fwd Throttle is not zero</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Duplicate Aux Switch Options</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>RC calibrating</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Radio failsafe on</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No rally library present</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Can't check rally without position</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No sufficiently close rally point located</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mission: Zero takeoff altitude</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mode requires mission</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>IOMCU is unhealthy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Param storage failed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Parameter storage full</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Terrain out of memory</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>ADSB out of memory</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Terrain disabled</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Terrain required but disabled</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>PiccoloCAN not enabled</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Same rfnd on different CAN ports</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to open fence storage</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Memory low for auxiliary authorisation</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Too many auxiliary authorisers</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Auxiliary authorisation refused</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Waiting for auxiliary authorisation</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Multiple SERIAL ports configured for RC input</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Motors Emergency Stopped</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS_AUTO_SWITCH==2 but no blending</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>CrashDump data detected</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Disarm Switch on</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>System not initialised</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>System not initialized</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Interlock/E-Stop Conflict</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Motor Interlock Enabled</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>RC not found</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>RC signal lost</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>RC signal regained</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Altitude disparity</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>EKF attitude is bad</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Battery failsafe</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Check FS_THR_VALUE</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>FS_GCS_ENABLE=2 removed, see FS_OPTIONS</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Check ACRO_BAL_ROLL/PITCH</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Check PILOT_SPD_UP</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Motor Interlock not configured</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Invalid MultiCopter FRAME_CLASS</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No terrain data</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No rangefinder</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>RTL_ALT_M above RNGFND_MAX</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Rangefinder not in firmware</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>ADSB threat detected</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Check Object Avoidance</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>High GPS HDOP</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Need Position Estimate</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Fence enabled, need position estimate</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS glitching</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GCS failsafe on</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Need Alt Estimate</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>AHRS not healthy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Leaning</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No global position</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No local position</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS not healthy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS not detected</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No GPS</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS fix lost</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS fix acquired</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS 3D fix</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>EKF variance</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>EKF failsafe</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>EKF not healthy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>EKF is not ready</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Barometer not healthy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Barometer not calibrated</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Baro not healthy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Accelerometer not calibrated</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Gyro not calibrated</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Compass not calibrated</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Compass not healthy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Compass inconsistent</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Accelerometer inconsistent</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Gyro inconsistent</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Not calibrated</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Not healthy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Not found</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Not ready</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Not enabled</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Missing</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Disconnected</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Bad fix</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failsafe</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Calibration started</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Calibration successful</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Calibration completed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Calibration done</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Calibration failed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Calibration cancelled</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Calibration canceled</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Calibration in progress</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Please reboot the autopilot</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Reboot required</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Rebooting</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Place vehicle level</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Keep vehicle still</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Preflight Fail:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Preflight Warning:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>PreArm:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Arm:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Compass</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mag</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Accel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Gyro</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Baro</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Airspeed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>AHRS</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Velocity</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Position</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Height</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Yaw</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Roll</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Pitch</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Level</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>On its left side</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>On its right side</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Nose down</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Nose up</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Upside down</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Preflight check failed: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Preflight check warning: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Preflight check: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Pre-arm check: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Arming check: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Arming denied: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to arm: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failsafe: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Vehicle %1: %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Battery %1: %2. %3</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Battery %1: %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Battery %1 missing</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Battery %1 disconnected</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Manual control regained after %1 s</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 - Land now!</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Local position lost, GNSS check failed: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Compass %1 not healthy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS %1: %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS %1 not healthy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS %1 not detected</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Primary but TYPE 0</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS positions differ by %1 m</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS and AHRS differ by %1 m</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPS fix lost for %1 s</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Check magnetic field: %1, max %2, min %3</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Check magnetic field (XY difference: %1 &gt; %2)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Check magnetic field (Z difference: %1 &gt; %2)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>EKF %1 variance</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 (non-finite values)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Bad parameter: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Check %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 mode not armable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 below failsafe threshold</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 (RC%2) is not neutral</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mode channel and RC%1_OPTION conflict</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 is greater than %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 is less than %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>SERVO%1_FUNCTION=%2 on disabled channel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Missing mission item: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed to open %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Board voltage %1 V outside range %2-%3 V</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Servo voltage too low (%1 V &lt; %2 V)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Heater temperature too low (%1 &lt; %2)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Main loop slow (%1 Hz &lt; %2 Hz)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Internal errors %1, line %2: %3</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Obstacle at %1 deg, %2 m (required &gt; %3 m)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 radio minimum too high</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 radio maximum too low</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1: %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 not healthy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 not calibrated</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 not found</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 too high</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 too low</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Set %1 to %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Please check %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mission item %1: %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Mission reached item %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Reached command %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Changing to %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Calibration started (protocol %1): %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Calibration started: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Calibration done: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Calibration failed: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Calibration successful: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Place vehicle %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 instance %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Strength (EKF2_MAG_CHK_STR)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Inclination (EKF2_MAG_CHK_INC)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Wait for WMM</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Magnetic field strength test selection</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Bitmask to set which check is used to decide whether the magnetometer data is valid. If GNSS data is received, the magnetic field is compared to a World Magnetic Model (WMM), otherwise an average value is used. This check is useful to reject occasional hard iron disturbance. Set bits to 1 to enable checks. Checks enabled by the following bit positions 0 : Magnetic field strength. Set tolerance using EKF2_MAG_CHK_STR 1 : Magnetic field inclination. Set tolerance using EKF2_MAG_CHK_INC 2 : Wait for GNSS to find the theoretical strength and inclination using the WMM</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Enabled</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Disabled</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Unassigned</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>None</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Automatic</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Manual</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Magnetic field strength</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Magnetic field inclination</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

@@ -35,6 +35,10 @@ Item {
             && isFinite(_vehicle.homePosition.altitude)) { return _vehicle.homePosition.altitude }
         if (_vehicle && !_vehicle.airborne && _vehicle.coordinate.isValid && _home.distanceTo(_vehicle.coordinate) < 2
             && isFinite(_vehicle.altitudeAMSL.rawValue)) { return Number(_vehicle.altitudeAMSL.rawValue) }
+        const defaultHome = QGroundControl.corePlugin.defaultHomePosition()
+        if (_home.distanceTo(defaultHome) < 0.01 && Math.abs(_home.altitude - defaultHome.altitude) < 0.001) {
+            return _home.altitude
+        }
         if (_homeItem && isFinite(_homeItem.terrainAltitude)) { return _homeItem.terrainAltitude }
         return _home.altitude
     }
@@ -48,7 +52,7 @@ Item {
         fillHomeAltitude()
         if (_savingHome || !_home.isValid || !homeAltitude || homeAltitude.manuallyEdited
             || !isFinite(_availableHomeAltitude) || (editor._draggedWaypoint && editor._draggedWaypoint.sequenceNumber === 0)) { return }
-        if (_homeItem && _homeItem.dirty && Math.abs(_home.altitude - _availableHomeAltitude) < 0.001) { return }
+        if (_homeItem && Math.abs(_home.altitude - _availableHomeAltitude) < 0.001) { return }
         _savingHome = true
         try {
             routeController.updatePlannedHome(_home.latitude, _home.longitude, _availableHomeAltitude)

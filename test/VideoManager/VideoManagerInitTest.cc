@@ -2,10 +2,13 @@
 
 #ifdef QGC_GST_STREAMING
 
-#include "VideoManager.h"
-
 #include <QtCore/QRegularExpression>
+#include <QtCore/QScopeGuard>
 #include <QtQuick/QQuickWindow>
+
+#include "SettingsManager.h"
+#include "VideoManager.h"
+#include "VideoSettings.h"
 
 void VideoManagerInitTest::init()
 {
@@ -101,12 +104,84 @@ void VideoManagerInitTest::_testBackendInitFailure()
     QCOMPARE(createReceiversCount, 0);
 }
 
+void VideoManagerInitTest::_testDisabledBackend_data()
+{
+    QTest::addColumn<bool>("qmlReady");
+    QTest::addColumn<bool>("lateSuccess");
+    QTest::newRow("backend-pending-late-success") << false << true;
+    QTest::newRow("backend-pending-late-failure") << false << false;
+    QTest::newRow("qml-ready-late-success") << true << true;
+    QTest::newRow("qml-ready-late-failure") << true << false;
+}
+
+void VideoManagerInitTest::_testDisabledBackend()
+{
+    QFETCH(bool, qmlReady);
+    QFETCH(bool, lateSuccess);
+    auto* settings = SettingsManager::instance()->videoSettings();
+    const QVariant previousSource = settings->videoSource()->rawValue();
+    const QVariant previousEnabled = settings->streamEnabled()->rawValue();
+    const auto restoreSettings = qScopeGuard([settings, previousSource, previousEnabled]() {
+        settings->videoSource()->setRawValue(previousSource);
+        settings->streamEnabled()->setRawValue(previousEnabled);
+    });
+    settings->videoSource()->setRawValue(VideoSettings::videoSourceUDPH264);
+    settings->streamEnabled()->setRawValue(true);
+
+    VideoManager videoManager;
+    QQuickWindow mainWindow;
+    videoManager._backendDisabledForTests = false;
+    videoManager._initState = qmlReady ? VideoManager::InitState::QmlReady : VideoManager::InitState::Pending;
+    int createReceiversCount = 0;
+    videoManager._createVideoReceiversForTest = [&createReceiversCount]() { ++createReceiversCount; };
+    QVERIFY(videoManager.hasVideo());
+
+    videoManager.disableVideoForSession();
+    QVERIFY(!videoManager.hasVideo());
+    QVERIFY(!videoManager.waitForVideoBackendReady());
+    videoManager.startVideoBackendInit();
+    videoManager.init(&mainWindow);
+    videoManager._onBackendInitComplete(lateSuccess);
+    videoManager._initAfterQmlIsReady();
+    QCOMPARE(videoManager._initState, VideoManager::InitState::Disabled);
+    QCOMPARE(createReceiversCount, 0);
+    QVERIFY(videoManager._videoReceivers.isEmpty());
+    QCOMPARE(settings->videoSource()->rawValue(), QVariant(VideoSettings::videoSourceUDPH264));
+    QCOMPARE(settings->streamEnabled()->rawValue(), QVariant(true));
+}
+
 #else
 
-void VideoManagerInitTest::init() { UnitTest::init(); QSKIP("GStreamer not enabled"); }
-void VideoManagerInitTest::_testQmlReadyBeforeBackendReady() { QSKIP("GStreamer not enabled"); }
-void VideoManagerInitTest::_testBackendReadyBeforeQmlReady() { QSKIP("GStreamer not enabled"); }
-void VideoManagerInitTest::_testBackendInitFailure() { QSKIP("GStreamer not enabled"); }
+void VideoManagerInitTest::init()
+{
+    UnitTest::init();
+    QSKIP("GStreamer not enabled");
+}
+
+void VideoManagerInitTest::_testQmlReadyBeforeBackendReady()
+{
+    QSKIP("GStreamer not enabled");
+}
+
+void VideoManagerInitTest::_testBackendReadyBeforeQmlReady()
+{
+    QSKIP("GStreamer not enabled");
+}
+
+void VideoManagerInitTest::_testBackendInitFailure()
+{
+    QSKIP("GStreamer not enabled");
+}
+
+void VideoManagerInitTest::_testDisabledBackend_data()
+{
+    QSKIP("GStreamer not enabled");
+}
+
+void VideoManagerInitTest::_testDisabledBackend()
+{
+    QSKIP("GStreamer not enabled");
+}
 
 #endif
 

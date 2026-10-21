@@ -1,24 +1,39 @@
 #include "HealthAndArmingCheckReport.h"
+
 #include "EventHandler.h"
-#include "QmlObjectListModel.h"
 #include "LibEvents.h"
 #include "MAVLinkEnums.h"
+#include "OnlineMessageTranslator.h"
 #include "QGCLoggingCategory.h"
+#include "QmlObjectListModel.h"
+#include "VehicleMessageTranslator.h"
 
 QGC_LOGGING_CATEGORY(HealthAndArmingCheckReportLog, "MAVLink.LibEvents.HealthAndArmingCheckReport")
 
-HealthAndArmingCheckProblem::HealthAndArmingCheckProblem(const QString& message, const QString& description, const QString& severity, QObject *parent)
+HealthAndArmingCheckProblem::HealthAndArmingCheckProblem(const QString& message, const QString& description,
+                                                         const QString& severity, QObject* parent)
     : QObject(parent)
-    , _message(message)
-    , _description(description)
+    , _message(VehicleMessageTranslator::translate(message))
+    , _description(VehicleMessageTranslator::translate(description))
+    , _sourceMessage(message)
+    , _sourceDescription(description)
     , _severity(severity)
 {
+    connect(OnlineMessageTranslator::instance(), &OnlineMessageTranslator::translationsChanged, this, [this] {
+        const QString translatedMessage = VehicleMessageTranslator::translate(_sourceMessage);
+        const QString translatedDescription = VehicleMessageTranslator::translate(_sourceDescription);
+        if (_message != translatedMessage || _description != translatedDescription) {
+            _message = translatedMessage;
+            _description = translatedDescription;
+            emit translationChanged();
+        }
+    });
     qCDebug(HealthAndArmingCheckReportLog) << this;
 }
 
 /*===========================================================================*/
 
-HealthAndArmingCheckReport::HealthAndArmingCheckReport(QObject *parent)
+HealthAndArmingCheckReport::HealthAndArmingCheckReport(QObject* parent)
     : QObject(parent)
     , _problemsForCurrentMode(new QmlObjectListModel(this))
 {

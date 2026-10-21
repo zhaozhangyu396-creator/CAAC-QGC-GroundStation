@@ -61,6 +61,8 @@ public:
     void init(QQuickWindow *mainWindow);
     void startVideoBackendInit();
     bool waitForVideoBackendReady(std::chrono::milliseconds timeout = std::chrono::minutes(1));
+    /// Keeps a failed or timed-out backend disabled until the next application launch.
+    void disableVideoForSession();
     void cleanup();
     bool autoStreamConfigured() const;
     bool decoding() const { return _decoding; }
@@ -108,7 +110,8 @@ private:
         BackendReady,
         QmlReady,
         Running,
-        Failed
+        Failed,
+        Disabled
     };
 
     void _initAfterQmlIsReady();

@@ -48,6 +48,8 @@ public:
     CaacFigureEightController* figureEight() const { return _figureEight; }
 
     Q_INVOKABLE QString refreshFlightMission(PlanMasterController* controller);
+    Q_INVOKABLE static QGeoCoordinate defaultHomePosition();
+    Q_INVOKABLE void initializeDefaultPlan(PlanMasterController* controller) const;
     Q_INVOKABLE void resetFlightDistanceForSimulationRestart(Vehicle* vehicle);
     Q_INVOKABLE QString updateFlightWaypointAltitude(PlanMasterController* controller, QObject* waypoint,
                                                      double altitude);

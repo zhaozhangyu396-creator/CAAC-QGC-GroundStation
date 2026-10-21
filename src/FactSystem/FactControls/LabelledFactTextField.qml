@@ -18,7 +18,7 @@ GridLayout {
         }
         return null
     }
-    property string label:                   fact ? fact.shortDescription : ""
+    property string label:                   fact ? OnlineMessageTranslator.parameterText(fact.shortDescription, OnlineMessageTranslator.revision) : ""
     property alias  fact:                    _factTextField.fact
     property real   textFieldPreferredWidth: -1
     property alias  textFieldUnitsLabel:     _factTextField.unitsLabel

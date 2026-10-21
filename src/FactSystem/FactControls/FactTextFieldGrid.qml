@@ -7,7 +7,7 @@ import QGroundControl.Controls
 GridLayout {
     property var factList                   ///< List of Facts to show
     property var factLabels                 ///< Labels for facts, if not set, use Fact.name or Fact.shortDescription
-    property bool useNameForLabels: true    ///< true: Use Fact.name for labels, false: Use Fact.shortDescription
+    property bool useNameForLabels: true    ///< true: Use Fact.name for labels, false: Use OnlineMessageTranslator.parameterText(Fact.shortDescription, OnlineMessageTranslator.revision)
 
     rows: factList.length
     flow: GridLayout.TopToBottom
@@ -22,7 +22,7 @@ GridLayout {
                 } else if (useNameForLabels) {
                     return modelData.name
                 } else {
-                    return modelData.shortDescription
+                    return OnlineMessageTranslator.parameterText(modelData.shortDescription, OnlineMessageTranslator.revision)
                 }
             }
         }

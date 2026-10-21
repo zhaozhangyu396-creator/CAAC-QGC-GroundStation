@@ -8,6 +8,7 @@
 #include <QtCore/QLineF>
 #include <QtCore/QRegularExpression>
 #include <QtCore/QScopeGuard>
+#include <QtCore/QSettings>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QScreen>
 #include <QtQml/QQmlEngine>
@@ -48,13 +49,19 @@ class CaacSimulationUITest : public QmlUITestBase
 {
     Q_OBJECT
 private slots:
-    void _defaultStartPosition();
     void _levelFlightTelemetry();
     void _uploadAndFlightControls();
     void _closedRouteAndSimulationToggle();
     void _fourLoopsFromUnsavedSettings();
     void _repeatFromLanding();
     void _usbJoystickModeSwitch();
+};
+
+class CaacDefaultHomeUITest : public QmlUITestBase
+{
+    Q_OBJECT
+private slots:
+    void _defaultStartPosition();
 };
 
 class CaacMissionUpdateUITest : public QmlUITestBase
@@ -773,8 +780,12 @@ void CaacSimulationUITest::_levelFlightTelemetry()
     QTRY_COMPARE_WITH_TIMEOUT(vehicle->pitch()->rawValue().toDouble(), 0.0, TestTimeout::mediumMs());
 }
 
-void CaacSimulationUITest::_defaultStartPosition()
+void CaacDefaultHomeUITest::_defaultStartPosition()
 {
+    QSettings settings;
+    settings.setValue(QStringLiteral("FlightMapPosition/Latitude"), 30.0);
+    settings.setValue(QStringLiteral("FlightMapPosition/Longitude"), 120.0);
+    settings.setValue(QStringLiteral("FlightMapPosition/FlightMapZoom"), 7.0);
     startUI();
     if (QTest::currentTestFailed()) {
         return;
@@ -785,13 +796,19 @@ void CaacSimulationUITest::_defaultStartPosition()
     auto* master = plan->property("_planMasterController").value<PlanMasterController*>();
     QVERIFY(master);
     auto* mission = master->missionController();
-    QVERIFY(!mission->plannedHomePosition().isValid());
+    const QGeoCoordinate expected(25.137904838950554, 102.72128132348416, 2062.0);
+    QCOMPARE(mission->plannedHomePosition(), expected);
+    QVERIFY(!master->dirtyForSave());
+    auto* startupMap = findVisibleItem(_rootItem, QStringLiteral("planView_map"));
+    QVERIFY(startupMap);
+    QTRY_VERIFY_WITH_TIMEOUT(startupMap->property("mapReady").toBool(), TestTimeout::mediumMs());
+    QVERIFY(QGCGeo::geodesicDistance(startupMap->property("center").value<QGeoCoordinate>(), expected) < 0.02);
+    QCOMPARE(startupMap->property("zoomLevel").toDouble(), 19.0);
     auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
     QVERIFY(plugin);
     auto* simulation = plugin->simulation();
     QVERIFY(simulation);
     const auto stop = qScopeGuard([simulation]() { simulation->stop(); });
-    const QGeoCoordinate expected(25.137898058569604, 102.7212769885262, 0);
     for (int attempt = 0; attempt < 2; ++attempt) {
         QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_simulation")));
         QTRY_VERIFY_WITH_TIMEOUT(simulation->vehicle() && simulation->vehicle()->isInitialConnectComplete(),
@@ -805,6 +822,7 @@ void CaacSimulationUITest::_defaultStartPosition()
         auto* map = findVisibleItem(_rootItem, QStringLiteral("planView_map"));
         QVERIFY(map);
         QVERIFY(QGCGeo::geodesicDistance(map->property("center").value<QGeoCoordinate>(), expected) < 0.02);
+        QCOMPARE(map->property("zoomLevel").toDouble(), 19.0);
         auto* marker = findVisibleItem(_rootItem, QStringLiteral("planView_vehicle_%1").arg(vehicle->id()));
         QVERIFY(marker);
         auto* homeDragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_0"));
@@ -1823,5 +1841,6 @@ void CaacSimulationUITest::_uploadAndFlightControls()
 }
 
 UT_REGISTER_TEST(CaacSimulationUITest, TestLabel::Integration, TestLabel::Vehicle)
+UT_REGISTER_TEST(CaacDefaultHomeUITest, TestLabel::Integration, TestLabel::Vehicle)
 UT_REGISTER_TEST(CaacMissionUpdateUITest, TestLabel::Integration, TestLabel::Vehicle)
 #include "CaacSimulationUITest.moc"

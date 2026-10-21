@@ -21,6 +21,7 @@ class CaacPlanningToolsTest : public OfflineMissionTest
 {
     Q_OBJECT
 private slots:
+    void _defaultPlannedHome();
     void _templateTransactions();
     void _translationPreservesMission();
     void _invalidInputsAreAtomic();
@@ -43,6 +44,47 @@ private slots:
     void _planningPreferences();
     void _nearlyCoincidentSnapGuides();
 };
+
+void CaacPlanningToolsTest::_defaultPlannedHome()
+{
+    auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
+    QVERIFY(plugin);
+    auto* master = planController();
+    auto* mission = missionController();
+    QVERIFY(!mission->homePositionSet());
+    plugin->initializeDefaultPlan(nullptr);
+    plugin->initializeDefaultPlan(master);
+    const QGeoCoordinate expected(25.137904838950554, 102.72128132348416, 2062.0);
+    QCOMPARE(mission->plannedHomePosition(), expected);
+    QVERIFY(!mission->dirty());
+
+    const QGeoCoordinate edited(30, 120, 100);
+    mission->setHomePosition(edited);
+    plugin->initializeDefaultPlan(master);
+    QCOMPARE(mission->plannedHomePosition(), edited);
+
+    CaacRouteEditorController editor;
+    editor.setPlanMasterController(master);
+    QVERIFY(editor.addWaypoint(edited.atDistanceAndAzimuth(100, 90)));
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+    const auto path = directory.filePath(QStringLiteral("home.plan"));
+    QVERIFY(master->saveToFile(path));
+    const auto saved = master->saveToJson();
+    master->removeAll();
+    mission->setDirty(true);
+    plugin->initializeDefaultPlan(master);
+    QCOMPARE(mission->plannedHomePosition(), expected);
+    QVERIFY(mission->dirty());
+    master->loadFromFile(path);
+    plugin->initializeDefaultPlan(master);
+    QCOMPARE(master->saveToJson(), saved);
+
+    master->removeAll();
+    master->setFlyView(true);
+    plugin->initializeDefaultPlan(master);
+    QVERIFY(!mission->homePositionSet());
+}
 
 void CaacPlanningToolsTest::_nearlyCoincidentSnapGuides()
 {

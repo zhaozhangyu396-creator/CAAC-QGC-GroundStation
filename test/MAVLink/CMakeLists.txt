@@ -17,6 +17,10 @@ target_sources(
             QGCMAVLinkTest.h
             StatusTextHandlerTest.cc
             StatusTextHandlerTest.h
+            OnlineMessageTranslatorTest.cc
+            OnlineMessageTranslatorTest.h
+            VehicleMessageTranslatorTest.cc
+            VehicleMessageTranslatorTest.h
             SysStatusSensorInfoTest.cc
             SysStatusSensorInfoTest.h
 )
@@ -30,5 +34,7 @@ add_qgc_test(ImageProtocolManagerTest LABELS Unit MAVLink)
 add_qgc_test(MAVLinkEnumsQmlTest LABELS Unit MAVLink)
 add_qgc_test(MAVLinkStreamConfigTest LABELS Unit MAVLink)
 add_qgc_test(QGCMAVLinkTest LABELS Unit MAVLink)
+add_qgc_test(OnlineMessageTranslatorTest LABELS Unit MAVLink)
 add_qgc_test(StatusTextHandlerTest LABELS Unit MAVLink)
+add_qgc_test(VehicleMessageTranslatorTest LABELS Unit MAVLink)
 add_qgc_test(SysStatusSensorInfoTest LABELS Unit MAVLink)

@@ -6,6 +6,7 @@ on:
       - master
       - 'Stable*'
       - codex/caac-eight-flight-installer-20261017
+      - codex/caac-installer-recovered-v255
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
     paths-ignore:
@@ -68,7 +69,7 @@ jobs:
             && '["Release","RelWithDebInfo"]'
             || format('["{0}"]', inputs.build_type || 'Release')
           ) }}
-        variant: [amd64, arm64, arm64-cross]
+        variant: [amd64]
         include:
           - variant: amd64
             runs_on: >-
@@ -81,26 +82,6 @@ jobs:
             preset: Windows
             package: QGroundControl-installer-AMD64
             gstreamer: true
-
-          - variant: arm64
-            runs_on: windows-11-arm
-            host: windows_arm64
-            arch: win64_msvc2022_arm64
-            preset: Windows-arm64
-            package: QGroundControl-installer-ARM64
-            gstreamer: true
-
-          - variant: arm64-cross
-            runs_on: >-
-              ${{ github.repository_owner == 'mavlink' &&
-                  format('runs-on={0}/{1}', github.run_id,
-                    vars.RUNS_ON_WINDOWS_POOL != '' && format('pool={0}', vars.RUNS_ON_WINDOWS_POOL) ||
-                    'runner=windows-x64-builder') || 'windows-2022' }}
-            host: windows
-            arch: win64_msvc2022_arm64_cross_compiled
-            preset: Windows-arm64
-            package: QGroundControl-installer-AMD64-ARM64
-            gstreamer: false
 
     defaults:
       run:
@@ -311,6 +292,8 @@ jobs:
           build-dir: ${{ runner.temp }}/build
           build-type: ${{ matrix.build_type }}
           tests-regex: "^(FactGroupTest|Caac.*Test|CompassRotationTest|VehiclePeripheralSetupUITest|\
+            FirmwareUpgradeUITest|FirmwareUpgradeControllerTest|QGCSerialPortInfoTest|VideoManagerInitTest|\
+            VehicleMessageTranslatorTest|OnlineMessageTranslatorTest|\
             AirframeComponentAirframesTest|APMAirframeComponentControllerTest|\
             (PX4|APM)(VehicleConfig|SensorsCalibration|AirframeSetup|FreshFlash)UITest)$"
           include-labels: 'Unit|Integration'

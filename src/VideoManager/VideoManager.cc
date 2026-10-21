@@ -72,6 +72,9 @@ VideoManager *VideoManager::instance()
 
 void VideoManager::startVideoBackendInit()
 {
+    if (_initState.load() == InitState::Disabled) {
+        return;
+    }
     if (!VideoBackend::needsAsyncInit()) return;
 
     if (_backendDisabledForTests) {
@@ -103,6 +106,9 @@ void VideoManager::startVideoBackendInit()
 
 bool VideoManager::waitForVideoBackendReady(std::chrono::milliseconds timeout)
 {
+    if (_initState.load() == InitState::Disabled) {
+        return false;
+    }
     if (!VideoBackend::needsAsyncInit()) return true;
 
     if (_backendDisabledForTests) {
@@ -114,15 +120,16 @@ bool VideoManager::waitForVideoBackendReady(std::chrono::milliseconds timeout)
     }
 
     switch (_initState.load()) {
-    case InitState::Failed:
-        return false;
-    case InitState::BackendReady:
-    case InitState::Running:
-        return true;
-    case InitState::NotStarted:
-    case InitState::Pending:
-    case InitState::QmlReady:
-        break;
+        case InitState::Disabled:
+        case InitState::Failed:
+            return false;
+        case InitState::BackendReady:
+        case InitState::Running:
+            return true;
+        case InitState::NotStarted:
+        case InitState::Pending:
+        case InitState::QmlReady:
+            break;
     }
 
     QFuture<bool> future;
@@ -157,7 +164,16 @@ bool VideoManager::waitForVideoBackendReady(std::chrono::milliseconds timeout)
     if (_initState.load() == InitState::Pending || _initState.load() == InitState::QmlReady) {
         _onBackendInitComplete(success);
     }
-    return _initState.load() != InitState::Failed;
+    const InitState state = _initState.load();
+    return state == InitState::BackendReady || state == InitState::Running;
+}
+
+void VideoManager::disableVideoForSession()
+{
+    _initState.store(InitState::Disabled);
+    stopVideo();
+    setfullScreen(false);
+    emit hasVideoChanged();
 }
 
 void VideoManager::init(QQuickWindow *mainWindow)
@@ -172,6 +188,11 @@ void VideoManager::init(QQuickWindow *mainWindow)
         return;
     }
     _mainWindow = mainWindow;
+
+    if (_initState.load() == InitState::Disabled || _initState.load() == InitState::Failed) {
+        _initialized = true;
+        return;
+    }
 
     VideoBackend::onMainWindowReady(mainWindow);
 
@@ -212,6 +233,9 @@ void VideoManager::init(QQuickWindow *mainWindow)
 
 void VideoManager::_initAfterQmlIsReady()
 {
+    if (_initState.load() == InitState::Disabled) {
+        return;
+    }
     if (!_mainWindow) {
         qCCritical(VideoManagerLog) << "_initAfterQmlIsReady called with NULL mainWindow";
         return;
@@ -232,6 +256,8 @@ void VideoManager::_initAfterQmlIsReady()
         case InitState::Failed:
             qCWarning(VideoManagerLog) << "QML ready but video init failed";
             return;
+        case InitState::Disabled:
+            return;
         case InitState::NotStarted:
         case InitState::QmlReady:
         case InitState::Running:
@@ -244,9 +270,14 @@ void VideoManager::_initAfterQmlIsReady()
 
 void VideoManager::_onBackendInitComplete(bool success)
 {
+    // A timed-out initialization may finish after startup has disabled video for this session.
+    if (_initState.load() == InitState::Disabled) {
+        return;
+    }
     if (!success) {
         _initState.store(InitState::Failed);
         qCCritical(VideoManagerLog) << "video initialization failed";
+        emit hasVideoChanged();
         return;
     }
 
@@ -473,6 +504,9 @@ bool VideoManager::hasThermal() const
 
 bool VideoManager::hasVideo() const
 {
+    if (_initState.load() == InitState::Disabled || _initState.load() == InitState::Failed) {
+        return false;
+    }
     return (_videoSettings->streamEnabled()->rawValue().toBool() && _videoSettings->streamConfigured());
 }
 

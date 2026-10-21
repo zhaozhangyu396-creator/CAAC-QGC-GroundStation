@@ -6,7 +6,7 @@ import QGroundControl.Controls
 import QGroundControl.FactControls
 
 RowLayout {
-    property string label:                   fact.shortDescription
+    property string label:                   OnlineMessageTranslator.parameterText(fact.shortDescription, OnlineMessageTranslator.revision)
     property alias  fact:                    _factLabel.fact
     property real   labelPreferredWidth: -1
     property alias  factLabelShowUnits:      _factLabel.showUnits

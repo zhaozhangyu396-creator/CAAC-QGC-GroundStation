@@ -35,6 +35,9 @@ public:
     /// @return true: we can flash this board type
     bool canFlash() const;
 
+    /// SLCAN exposes a CAN adapter interface rather than the autopilot bootloader.
+    static bool isSlcanInterface(const QString& description);
+
     /// @return true: Board is currently in bootloader
     bool isBootloader() const;
 

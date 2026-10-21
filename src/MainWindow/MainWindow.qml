@@ -605,7 +605,7 @@ ApplicationWindow {
         modal:              false
         closePolicy:        Popup.CloseOnPressOutside
 
-        property alias  criticalVehicleMessage:             criticalVehicleMessageText.text
+        property string criticalVehicleMessage:             ""
         property bool   additionalCriticalMessagesReceived: false
         property int    shownMessageCount:                  0
         readonly property int maxShownMessages:             5
@@ -681,6 +681,7 @@ ApplicationWindow {
         QGCLabel {
             id:                 criticalVehicleMessageText
             objectName:         "criticalVehicleMessage_text"
+            text:               OnlineMessageTranslator.displayText(criticalVehicleMessagePopup.criticalVehicleMessage, OnlineMessageTranslator.revision)
             width:              criticalVehicleMessagePopup.width - ScreenTools.defaultFontPixelHeight
             anchors.centerIn:   parent
             wrapMode:           Text.WordWrap

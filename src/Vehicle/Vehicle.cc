@@ -32,6 +32,7 @@
 #include "MissionCommandTree.h"
 #include "MissionManager.h"
 #include "MultiVehicleManager.h"
+#include "OnlineMessageTranslator.h"
 #include "ParameterManager.h"
 #include "PlanMasterController.h"
 #include "PositionManager.h"
@@ -68,6 +69,7 @@
 #include "VehicleLinkManager.h"
 #include "VehicleLocalPositionFactGroup.h"
 #include "VehicleLocalPositionSetpointFactGroup.h"
+#include "VehicleMessageTranslator.h"
 #include "VehicleObjectAvoidance.h"
 #include "VehicleRPMFactGroup.h"
 #include "VehicleSetpointFactGroup.h"
@@ -227,6 +229,14 @@ void Vehicle::stopTrackingFirmwareVehicleTypeChanges(void)
 
 void Vehicle::_commonInit(LinkInterface* link)
 {
+    connect(OnlineMessageTranslator::instance(), &OnlineMessageTranslator::translationsChanged, this, [this] {
+        const QString translated = VehicleMessageTranslator::translate(_prearmErrorSource);
+        if (translated != _prearmError) {
+            _prearmError = translated;
+            emit prearmErrorChanged(_prearmError);
+        }
+    });
+
     _firmwarePlugin = FirmwarePluginManager::instance()->firmwarePluginForAutopilot(_firmwareType, _vehicleType);
 
     connect(_firmwarePlugin, &FirmwarePlugin::toolIndicatorsChanged, this, &Vehicle::toolIndicatorsChanged);
@@ -1744,7 +1754,7 @@ void Vehicle::virtualTabletJoystickValue(double roll, double pitch, double yaw, 
 
 void Vehicle::_say(const QString& text)
 {
-    AudioOutput::instance()->say(text.toLower());
+    AudioOutput::instance()->say(VehicleMessageTranslator::translateLocal(text).toLower());
 }
 
 bool Vehicle::airship() const
@@ -2290,7 +2300,8 @@ void Vehicle::requestMessage(RequestMessageResultHandler resultHandler, void* re
 
 void Vehicle::setPrearmError(const QString& prearmError)
 {
-    _prearmError = prearmError;
+    _prearmErrorSource = prearmError;
+    _prearmError = VehicleMessageTranslator::translate(prearmError);
     emit prearmErrorChanged(_prearmError);
     if (!_prearmError.isEmpty()) {
         _prearmErrorTimer.start();
@@ -3490,6 +3501,8 @@ void Vehicle::_createStatusTextHandler()
     (void) connect(m_statusTextHandler, &StatusTextHandler::criticalMessageCountChanged, this,
                    &Vehicle::criticalMessageCountChanged);
     (void) connect(m_statusTextHandler, &StatusTextHandler::newFormattedMessage, this, &Vehicle::newFormattedMessage);
+    connect(m_statusTextHandler, &StatusTextHandler::formattedMessagesChanged, this,
+            &Vehicle::formattedMessagesChanged);
     (void) connect(m_statusTextHandler, &StatusTextHandler::textMessageReceived, this, &Vehicle::_textMessageReceived);
     (void) connect(m_statusTextHandler, &StatusTextHandler::newErrorMessage, this, &Vehicle::_errorMessageReceived);
 }

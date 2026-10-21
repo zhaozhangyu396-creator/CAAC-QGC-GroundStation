@@ -14,6 +14,9 @@
                     "control": "combobox"
                 },
                 {
+                    "setting": "appSettings.onlineMessageTranslation"
+                },
+                {
                     "setting": "appSettings.indoorPalette"
                 },
                 {

@@ -9,8 +9,8 @@ class QmlObjectListModel;
 class HealthAndArmingCheckProblem : public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(QString message      READ message        CONSTANT)
-    Q_PROPERTY(QString description  READ description    CONSTANT)
+    Q_PROPERTY(QString message READ message NOTIFY translationChanged)
+    Q_PROPERTY(QString description READ description NOTIFY translationChanged)
     Q_PROPERTY(QString severity     READ severity       CONSTANT)
     Q_PROPERTY(bool expanded        READ expanded       WRITE setExpanded NOTIFY expandedChanged)
 
@@ -26,10 +26,13 @@ public:
 
 signals:
     void expandedChanged();
+    void translationChanged();
 
 private:
-    const QString _message;
-    const QString _description;
+    QString _message;
+    QString _description;
+    const QString _sourceMessage;
+    const QString _sourceDescription;
     const QString _severity;
     bool _expanded{false};
 };

@@ -457,6 +457,26 @@ QUrl CaacCorePlugin::planViewEditor() const
     return QUrl(QStringLiteral("qrc:/qml/CAAC/Plan/CaacRouteEditor.qml"));
 }
 
+QGeoCoordinate CaacCorePlugin::defaultHomePosition()
+{
+    return QGeoCoordinate(25.137904838950554, 102.72128132348416, 2062.0);
+}
+
+void CaacCorePlugin::initializeDefaultPlan(PlanMasterController* controller) const
+{
+    if (!controller || controller->property("flyView").toBool() || !controller->offline() ||
+        controller->syncInProgress()) {
+        return;
+    }
+    auto* mission = controller->missionController();
+    if (mission->visualItems()->count() != 1 || mission->homePositionSet()) {
+        return;
+    }
+    const bool wasDirty = mission->dirty();
+    mission->setHomePosition(defaultHomePosition());
+    mission->setDirty(wasDirty);
+}
+
 bool CaacCorePlugin::keepCurrentPlanOnVehicleChange(PlanMasterController* controller) const
 {
     return controller && _simulation->ownsVehicle(controller->managerVehicle());
@@ -464,6 +484,13 @@ bool CaacCorePlugin::keepCurrentPlanOnVehicleChange(PlanMasterController* contro
 
 QQmlApplicationEngine* CaacCorePlugin::createQmlApplicationEngine(QObject* parent)
 {
+    // Each launch opens the training site, independent of the last panned map view.
+    const auto home = defaultHomePosition();
+    QSettings settings;
+    settings.beginGroup(QStringLiteral("FlightMapPosition"));
+    settings.setValue(QStringLiteral("Latitude"), home.latitude());
+    settings.setValue(QStringLiteral("Longitude"), home.longitude());
+    settings.setValue(QStringLiteral("FlightMapZoom"), 19.0);
     auto* engine = QGCCorePlugin::createQmlApplicationEngine(parent);
     auto* interceptor = new CaacFlyViewInterceptor;
     engine->addUrlInterceptor(interceptor);

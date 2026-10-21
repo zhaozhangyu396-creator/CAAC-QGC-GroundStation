@@ -12,6 +12,27 @@ SetupPage {
     id: radioPage
     pageComponent: pageComponent
 
+    readonly property var _additionalChannelLabels: ({
+        "RC_MAP_AUX1": qsTr("AUX1 Passthrough RC channel"),
+        "RC_MAP_AUX2": qsTr("AUX2 Passthrough RC channel"),
+        "RC_MAP_PARAM1": qsTr("PARAM1 tuning channel"),
+        "RC_MAP_PARAM2": qsTr("PARAM2 tuning channel"),
+        "RC_MAP_PARAM3": qsTr("PARAM3 tuning channel"),
+        "RC_MAP_PAY_SW": qsTr("Payload Power Switch RC channel"),
+        "RC_MAP_FLAPS": qsTr("Flaps channel")
+    })
+
+    function channelLabels(fact) {
+        if (!fact) { return [] }
+        return fact.enumStrings.map(function(label) {
+            if (label === "Unassigned") {
+                return qsTr("Unassigned")
+            }
+            const channel = /^Channel (\d+)$/.exec(label)
+            return channel ? qsTr("Channel %1").arg(channel[1]) : label
+        })
+    }
+
     Component {
         id: pageComponent
 
@@ -50,8 +71,9 @@ SetupPage {
                         LabelledFactComboBox {
                             objectName: "radioAdditionalChannel_" + modelData
                             Layout.fillWidth: true
-                            label: fact.shortDescription
+                            label: radioPage._additionalChannelLabels[modelData] || OnlineMessageTranslator.parameterText(fact.shortDescription, OnlineMessageTranslator.revision)
                             fact: controller.getParameterFact(-1, modelData)
+                            model: radioPage.channelLabels(fact)
                             indexModel: false
                         }
                     }

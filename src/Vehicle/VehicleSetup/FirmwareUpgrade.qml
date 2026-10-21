@@ -9,6 +9,7 @@ import QGroundControl.FactControls
 
 SetupPage {
     id:             firmwarePage
+    objectName:     "firmwareUpgrade_page"
     pageComponent:  firmwarePageComponent
     pageName:       qsTr("Firmware")
     showAdvanced:   globals.activeVehicle && globals.activeVehicle.apmFirmware
@@ -58,6 +59,7 @@ SetupPage {
 
             function setupPageCompleted() {
                 controller.startBoardSearch()
+                statusTextArea.append(plugInText)
                 _defaultFirmwareIsPX4 = _defaultFirmwareFact.rawValue === _defaultFimwareTypePX4 // we don't want this to be bound and change as radios are selected
                 _lastKnownCount = 0
             }
@@ -491,13 +493,16 @@ SetupPage {
                 } // QGCPopupDialog
             } // Component - firmwareSelectDialogComponent
 
-            RowLayout {
+            ColumnLayout {
+                Layout.fillWidth: true
                 spacing: ScreenTools.defaultFontPixelWidth
                 visible: !flashBootloaderButton.visible
 
                 QGCComboBox {
                     id:                 portCombo
-                    sizeToContents:     true
+                    objectName:         "firmwareUpgrade_portCombo"
+                    Layout.fillWidth:   true
+                    Layout.minimumWidth: 0
                     visible:            !_flashStarted
                     enabled:            controller.availablePorts.length > 0
                     model:              controller.availablePorts
@@ -528,51 +533,60 @@ SetupPage {
 
                 QGCLabel {
                     id:         portLabel
+                    Layout.fillWidth: true
                     visible:    _flashStarted
                     text:       qsTr("Flashing - %1").arg(_selectedDisplayName)
-                    elide:      Text.ElideRight
+                    wrapMode:   Text.Wrap
                 }
 
-                QGCButton {
-                    id:         flashButton
-                    text:       qsTr("Flash")
-                    visible:    !_flashStarted
-                    enabled:    portCombo.currentIndex >= 0 && controller.availablePorts.length > 0
-                    onClicked: {
-                        var ports = controller.availablePorts
-                        if (portCombo.currentIndex < 0 || portCombo.currentIndex >= ports.length) {
-                            return
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: ScreenTools.defaultFontPixelWidth
+
+                    QGCButton {
+                        id:         flashButton
+                        objectName: "firmwareUpgrade_flashButton"
+                        Layout.fillWidth: true
+                        text:       qsTr("Flash")
+                        visible:    !_flashStarted
+                        enabled:    portCombo.currentIndex >= 0 && controller.availablePorts.length > 0
+                        onClicked: {
+                            var ports = controller.availablePorts
+                            if (portCombo.currentIndex < 0 || portCombo.currentIndex >= ports.length) {
+                                return
+                            }
+                            var entry = ports[portCombo.currentIndex]
+                            _selectedSystemLocation = entry.systemLocation
+                            _selectedDisplayName = portCombo.alternateText !== "" ? portCombo.alternateText : entry.displayName
+                            _flashStarted = true
+                            statusTextArea.append(unplugReplugText)
+                            if (QGroundControl.multiVehicleManager.activeVehicle) {
+                                QGroundControl.multiVehicleManager.activeVehicle.vehicleLinkManager.autoDisconnect = true
+                            }
+                            controller.flashPort(entry.systemLocation)
                         }
-                        var entry = ports[portCombo.currentIndex]
-                        _selectedSystemLocation = entry.systemLocation
-                        _selectedDisplayName = portCombo.alternateText !== "" ? portCombo.alternateText : entry.displayName
-                        _flashStarted = true
-                        statusTextArea.append(unplugReplugText)
-                        if (QGroundControl.multiVehicleManager.activeVehicle) {
-                            QGroundControl.multiVehicleManager.activeVehicle.vehicleLinkManager.autoDisconnect = true
-                        }
-                        controller.flashPort(entry.systemLocation)
                     }
-                }
 
-                QGCButton {
-                    id:         cancelButton
-                    text:       qsTr("Cancel")
-                    visible:    _flashStarted
-                    enabled:    _cancellable
-                    onClicked: {
-                        controller.cancel()
-                        _flashStarted = false
-                        _cancellable = true
-                        _selectedDisplayName = ""
-                        statusTextArea.append(highlightPrefix + qsTr("Cancelled. Select a port and press Flash to try again.") + highlightSuffix)
+                    QGCButton {
+                        id:         cancelButton
+                        Layout.fillWidth: true
+                        text:       qsTr("Cancel")
+                        visible:    _flashStarted
+                        enabled:    _cancellable
+                        onClicked: {
+                            controller.cancel()
+                            _flashStarted = false
+                            _cancellable = true
+                            _selectedDisplayName = ""
+                            statusTextArea.append(highlightPrefix + qsTr("Cancelled. Select a port and press Flash to try again.") + highlightSuffix)
+                        }
                     }
                 }
             }
 
             ProgressBar {
                 id:                     progressBar
-                Layout.preferredWidth:  parent.width
+                Layout.fillWidth:       true
                 visible:                !flashBootloaderButton.visible
             }
 
@@ -585,11 +599,14 @@ SetupPage {
 
             TextArea {
                 id:                 statusTextArea
-                Layout.preferredWidth:              parent.width
+                objectName:         "firmwareUpgrade_statusLog"
+                Layout.fillWidth:   true
+                Layout.minimumWidth: 0
                 Layout.fillHeight:  true
                 readOnly:           true
                 font.pointSize:     ScreenTools.defaultFontPointSize
                 textFormat:         TextEdit.RichText
+                wrapMode:           TextEdit.Wrap
                 text:               _singleFirmwareMode ? welcomeTextSingle : welcomeText
                 color:              qgcPal.text
 

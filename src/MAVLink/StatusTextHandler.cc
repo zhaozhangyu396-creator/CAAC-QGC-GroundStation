@@ -1,9 +1,11 @@
 #include "StatusTextHandler.h"
-#include "MAVLinkLib.h"
-#include <QGCLoggingCategory.h>
 
-#include <QtCore/QTimer>
+#include <QGCLoggingCategory.h>
 #include <QtCore/QDateTime>
+#include <QtCore/QTimer>
+
+#include "MAVLinkLib.h"
+#include "OnlineMessageTranslator.h"
 
 QGC_LOGGING_CATEGORY(StatusTextHandlerLog, "MAVLink.StatusTextHandler")
 
@@ -13,6 +15,25 @@ StatusText::StatusText(MAV_COMPONENT componentid, MAV_SEVERITY severity, const Q
     , m_text(text)
 {
     // qCDebug(StatusTextHandlerLog) << Q_FUNC_INFO << this;
+}
+
+void StatusText::setDisplayContext(const QString& prefix, const QString& description)
+{
+    m_prefix = prefix;
+    m_description = description;
+    refreshTranslation();
+}
+
+void StatusText::refreshTranslation()
+{
+    QString body = OnlineMessageTranslator::instance()->displayText(m_text, 0);
+    body.replace("\n", "<br/>");
+    if (!m_description.isEmpty()) {
+        QString description = OnlineMessageTranslator::instance()->displayText(m_description, 0);
+        description.replace("\n", "<br/>");
+        body += QStringLiteral("<br/><small><small>") + description + QStringLiteral("</small></small>");
+    }
+    m_formatedText = m_prefix + body + QStringLiteral("</font><br/>");
 }
 
 bool StatusText::severityIsError() const
@@ -35,6 +56,12 @@ StatusTextHandler::StatusTextHandler(QObject *parent)
 {
     // qCDebug(StatusTextHandlerLog) << Q_FUNC_INFO << this;
 
+    connect(OnlineMessageTranslator::instance(), &OnlineMessageTranslator::translationsChanged, this, [this] {
+        for (auto* message : m_messages) {
+            message->refreshTranslation();
+        }
+        emit formattedMessagesChanged();
+    });
     m_chunkedStatusTextTimer->setSingleShot(true);
     m_chunkedStatusTextTimer->setInterval(1000);
     (void) connect(m_chunkedStatusTextTimer, &QTimer::timeout, this, &StatusTextHandler::_chunkedStatusTextTimeout);
@@ -85,19 +112,6 @@ void StatusTextHandler::clearMessages()
 
 void StatusTextHandler::handleHTMLEscapedTextMessage(MAV_COMPONENT compId, MAV_SEVERITY severity, const QString &text, const QString &description)
 {
-    QString htmlText(text);
-
-    (void) htmlText.replace("\n", "<br/>");
-
-    // TODO: handle text + description separately in the UI
-    if (!description.isEmpty()) {
-        QString htmlDescription(description);
-        (void) htmlDescription.replace("\n", "<br/>");
-        (void) htmlText.append(QStringLiteral("<br/><small><small>"));
-        (void) htmlText.append(htmlDescription);
-        (void) htmlText.append(QStringLiteral("</small></small>"));
-    }
-
     if (m_activeComponent == MAV_COMPONENT::MAV_COMPONENT_ENUM_END) {
         m_activeComponent = compId;
     }
@@ -175,10 +189,11 @@ void StatusTextHandler::handleHTMLEscapedTextMessage(MAV_COMPONENT compId, MAV_S
 
     const QString dateString = QDateTime::currentDateTime().toString("hh:mm:ss.zzz");
 
-    const QString formatText = QString("<font style=\"%1\">[%2 %3] %4: %5</font><br/>").arg(style, dateString, compString, severityText, htmlText);
+    const QString prefix = QString("<font style=\"%1\">[%2 %3] %4: ").arg(style, dateString, compString, severityText);
 
     StatusText* const message = new StatusText(compId, severity, text);
-    message->setFormatedText(formatText);
+    message->setDisplayContext(prefix, description);
+    const QString formatText = message->getFormattedText();
 
     emit newFormattedMessage(formatText);
 

@@ -23,6 +23,7 @@ Map {
     property alias  firstVehiclePositionReceived:   _positionTracker.firstVehiclePositionReceived ///< true: first vehicle position update was responded to
     property alias  positionTracker:                _positionTracker                            ///< Auto-centering policy, for derived maps to layer follow behavior on
     property bool   planView:                       false   ///< true: map being using for Plan view, items should be draggable
+    property real   initialZoomLevel:               QGroundControl.flightMapInitialZoom
     property bool   directMissionItemEditing:       false
     property var    missionItemDragEditor: null
     property bool   missionItemDragBlocked: false
@@ -58,7 +59,7 @@ Map {
         onCenterMap: (coordinate, firstPosition) => {
             _map.center = coordinate
             if (firstPosition) {
-                _map.zoomLevel = QGroundControl.flightMapInitialZoom
+                _map.zoomLevel = _map.initialZoomLevel
             }
         }
     }

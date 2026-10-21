@@ -32,7 +32,7 @@ public:
 
     bool show();
     void setStage(Stage stage);
-    void markBackendReady();
+    void completeVideoInitialization(bool available);
     void markServicesReady();
     void markMainFrameReady();
     void fail(const QString& message);
@@ -45,6 +45,8 @@ public:
     bool failed() const { return _failed; }
 
     bool finished() const { return _finished; }
+
+    bool videoAvailable() const { return _videoAvailable; }
 
     Q_INVOKABLE void requestClose();
 
@@ -66,7 +68,8 @@ private:
     QQuickWindow* _window = nullptr;
     QString _statusText;
     int _progress = 0;
-    bool _backendReady = false;
+    bool _videoInitializationFinished = false;
+    bool _videoAvailable = false;
     bool _servicesReady = false;
     bool _mainFrameReady = false;
     bool _finishing = false;

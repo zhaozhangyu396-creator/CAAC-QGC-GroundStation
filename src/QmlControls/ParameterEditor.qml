@@ -521,7 +521,7 @@ Item {
                 anchors.leftMargin: ScreenTools.defaultFontPixelWidth / 2
                 anchors.verticalCenter: parent.verticalCenter
                 width:              parent.width - ScreenTools.defaultFontPixelWidth
-                text:               column == 2 ? col1String() : display
+                text:               column == 2 ? col1String() : OnlineMessageTranslator.parameterText(display, OnlineMessageTranslator.revision)
                 color:              column == 2 && fact.defaultValueAvailable && !fact.valueEqualsDefault ? qgcPal.modifiedParamValue : qgcPal.text
                 font.bold:          column == 2 && fact.defaultValueAvailable && !fact.valueEqualsDefault
                 wrapMode:           Text.Wrap
@@ -531,9 +531,9 @@ Item {
                         return fact.valueString + " " + fact.units
                     }
                     if (fact.bitmaskStrings.length != 0) {
-                        return fact.selectedBitmaskStrings.join(',')
+                        return OnlineMessageTranslator.parameterOptions(fact.selectedBitmaskStrings, OnlineMessageTranslator.revision).join(',')
                     }
-                    return fact.enumStringValue
+                    return OnlineMessageTranslator.parameterText(fact.enumStringValue, OnlineMessageTranslator.revision)
                 }
             }
 

@@ -396,8 +396,11 @@ bool CaacSimulationController::start(PlanMasterController* plan)
     _planningPlan->setProperty("caacSimulationPlanning", true);
     _link->_caacSimulation = true;
     if (!_home.isValid()) {
-        const double altitude = std::isfinite(_home.altitude()) ? _home.altitude() : 0;
-        _home = QGeoCoordinate(25.137898058569604, 102.7212769885262, altitude);
+        const double altitude = _home.altitude();
+        _home = CaacCorePlugin::defaultHomePosition();
+        if (std::isfinite(altitude)) {
+            _home.setAltitude(altitude);
+        }
         plan->missionController()->setHomePosition(_home);
     }
     if (!std::isfinite(_home.altitude())) {

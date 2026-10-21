@@ -112,7 +112,7 @@ QGCPopupDialog {
             QGCComboBox {
                 id:             factCombo
                 width:          _editFieldWidth
-                model:          fact.enumStrings
+                model:          OnlineMessageTranslator.parameterOptions(fact.enumStrings, OnlineMessageTranslator.revision)
                 sizeToContents: true
                 visible:        _showCombo
                 focus:          visible
@@ -125,10 +125,16 @@ QGCPopupDialog {
                     }
                 }
 
-                onCurrentIndexChanged: {
-                    if (currentIndex >=0 && currentIndex < model.length) {
-                        valueField.text = fact.enumValues[currentIndex]
+                onActivated: (index) => {
+                    if (index >= 0 && index < fact.enumValues.length) {
+                        valueField.text = fact.enumValues[index]
                     }
+                }
+
+                onModelChanged: {
+                    const value = fact.typeIsString ? valueField.text : Number(valueField.text)
+                    const selected = fact.enumValues.indexOf(value)
+                    currentIndex = selected >= 0 ? selected : fact.enumIndex
                 }
             }
 
@@ -159,7 +165,7 @@ QGCPopupDialog {
                 model:  fact.bitmaskStrings
 
                 delegate : QGCCheckBox {
-                    text : modelData
+                    text : OnlineMessageTranslator.parameterText(modelData, OnlineMessageTranslator.revision)
                     checked : fact.value & fact.bitmaskValues[index]
 
                     onClicked: {
@@ -173,7 +179,7 @@ QGCPopupDialog {
             Layout.fillWidth:   true
             wrapMode:           Text.WordWrap
             visible:            !longDescriptionLabel.visible
-            text:               fact.shortDescription
+            text:               originalDescription.checked ? fact.shortDescription : OnlineMessageTranslator.displayText(fact.shortDescription, OnlineMessageTranslator.revision)
         }
 
         QGCLabel {
@@ -181,7 +187,13 @@ QGCPopupDialog {
             Layout.fillWidth:   true
             wrapMode:           Text.WordWrap
             visible:            fact.longDescription != ""
-            text:               fact.longDescription
+            text:               originalDescription.checked ? fact.longDescription : OnlineMessageTranslator.displayText(fact.longDescription, OnlineMessageTranslator.revision)
+        }
+
+        QGCCheckBox {
+            id: originalDescription
+            text: qsTr("Show original English description")
+            visible: fact.shortDescription !== "" || fact.longDescription !== ""
         }
 
         RowLayout {

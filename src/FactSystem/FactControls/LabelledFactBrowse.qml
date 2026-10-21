@@ -19,7 +19,7 @@ import QGroundControl.FactControls
 RowLayout {
     id:      root
 
-    property string label:          fact.shortDescription
+    property string label:          OnlineMessageTranslator.parameterText(fact.shortDescription, OnlineMessageTranslator.revision)
     property Fact   fact
     property string dialogTitle:    label
     property bool   selectFolder:   true

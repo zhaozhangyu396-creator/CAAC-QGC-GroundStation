@@ -67,6 +67,7 @@ target_sources(
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_qgc_test(TopLevelViewsTest LABELS Integration NoSanitizer TIMEOUT 120)
+add_qgc_test(FirmwareUpgradeUITest LABELS Integration NoSanitizer)
 add_qgc_test(PX4VehicleConfigUITest LABELS Integration NoSanitizer TIMEOUT 180)
 add_qgc_test(APMVehicleConfigUITest LABELS Integration NoSanitizer TIMEOUT 360)
 add_qgc_test(ToolbarIndicatorUITest LABELS Integration NoSanitizer TIMEOUT 180)

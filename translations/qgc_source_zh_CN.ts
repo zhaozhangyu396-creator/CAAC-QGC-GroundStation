@@ -3225,7 +3225,19 @@ Click Ok to start calibration.</source>
       <source>飞控朝向</source>
       <translation>飞控朝向</translation>
     </message>
-  </context>
+      <message>
+      <source>Reboot Vehicle</source>
+      <translation>重启飞控</translation>
+    </message>
+    <message>
+      <source>开始校准</source>
+      <translation>开始校准</translation>
+    </message>
+    <message>
+      <source>Close</source>
+      <translation>关闭</translation>
+    </message>
+</context>
   <context>
     <name>APMSensorsComponentController</name>
     <message>
@@ -3270,7 +3282,7 @@ Click Ok to start calibration.</source>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponentController.cc" line="381"/>
       <source>Requesting gyro calibration...</source>
-      <translation>需要进行陀螺儀校准...</translation>
+      <translation>需要进行陀螺仪校准...</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponentController.cc" line="203"/>
@@ -3350,7 +3362,7 @@ Click Ok to start calibration.</source>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponentSummary.qml" line="31"/>
       <source>Compasses:</source>
-      <translation>圆规：</translation>
+      <translation>罗盘：</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/APM/APMSensorsComponentSummary.qml" line="49"/>
@@ -3776,7 +3788,11 @@ Please place your vehicle in water, click the button, and wait. Note that the th
       <source>Configure the airframe type and apply default tuning parameters.</source>
       <translation>配置机身类型并应用默认调整参数。</translation>
     </message>
-  </context>
+      <message>
+      <source>当前固件没有此类型的可选机架。</source>
+      <translation>当前固件没有此类型的可选机架。</translation>
+    </message>
+</context>
   <context>
     <name>AirframeComponentController</name>
     <message>
@@ -4284,7 +4300,47 @@ Please place your vehicle in water, click the button, and wait. Note that the th
       <source>Turtle</source>
       <translation>龟</translation>
     </message>
-  </context>
+      <message>
+      <source>ArduCopter 原生围栏制动失败时可能回退降落，不满足制动失败不降落要求，禁止写入。需要适配机载回退策略。</source>
+      <translation>ArduCopter 原生围栏制动失败时可能回退降落，不满足制动失败不降落要求，禁止写入。需要适配机载回退策略。</translation>
+    </message>
+    <message>
+      <source>未能验证 ArduCopter 训练围栏不降落扩展的参数支持，禁止写入。</source>
+      <translation>未能验证 ArduCopter 训练围栏不降落扩展的参数支持，禁止写入。</translation>
+    </message>
+    <message>
+      <source>无法读取 ArduCopter 当前围栏类型，禁止写入。</source>
+      <translation>无法读取 ArduCopter 当前围栏类型，禁止写入。</translation>
+    </message>
+    <message>
+      <source>ArduCopter 训练围栏：触发时制动，制动失败时保持原模式并报警，等待人工接管。</source>
+      <translation>ArduCopter 训练围栏：触发时制动，制动失败时保持原模式并报警，等待人工接管。</translation>
+    </message>
+    <message>
+      <source>%1 %2 米</source>
+      <translation>%1 %2 米</translation>
+    </message>
+    <message>
+      <source>HOME 圆形围栏半径</source>
+      <translation>HOME 圆形围栏半径</translation>
+    </message>
+    <message>
+      <source>最高高度</source>
+      <translation>最高高度</translation>
+    </message>
+    <message>
+      <source>最低高度</source>
+      <translation>最低高度</translation>
+    </message>
+    <message>
+      <source>同时生效：%1。</source>
+      <translation>同时生效：%1。</translation>
+    </message>
+    <message>
+      <source>；</source>
+      <translation>；</translation>
+    </message>
+</context>
   <context>
     <name>ArduPlaneFirmwarePlugin</name>
     <message>
@@ -4579,7 +4635,11 @@ Please place your vehicle in water, click the button, and wait. Note that the th
       <source>Configuration tasks remain before this vehicle is ready to fly. See Vehicle Configuration for details.</source>
       <translation>在该飞行器准备飞行之前，配置任务仍然存在。详细信息请参见无人机配置。</translation>
     </message>
-  </context>
+      <message>
+      <source>One or more vehicle components require setup prior to flight.</source>
+      <translation>飞行前仍有一个或多个组件需要配置。</translation>
+    </message>
+</context>
   <context>
     <name>Autotune</name>
     <message>
@@ -4696,7 +4756,7 @@ Click Ok to start the auto-tuning process.
       <location filename="../src/Toolbar/BatteryIndicator.qml" line="274"/>
       <location filename="../src/Toolbar/BatteryIndicator.qml" line="283"/>
       <source>n/a</source>
-      <translation>n/a</translation>
+      <translation>暂无数据</translation>
     </message>
     <message>
       <location filename="../src/Toolbar/BatteryIndicator.qml" line="375"/>
@@ -6945,7 +7005,11 @@ Click Ok to start the auto-tuning process.
       <source>OK for your platform? Launching into the wind?</source>
       <translation>适合您的平台吗？迎风发射？</translation>
     </message>
-  </context>
+      <message>
+      <source>OK for your platform? Lauching into the wind?</source>
+      <translation>是否适合当前机型？是否逆风起飞？</translation>
+    </message>
+</context>
   <context>
     <name>ESCCalibrationDialog</name>
     <message>
@@ -7690,7 +7754,11 @@ Click Ok to start the auto-tuning process.
       <source>Restart application for changes to take effect.</source>
       <translation>重新启动应用程序以使更改生效。</translation>
     </message>
-  </context>
+      <message>
+      <source>Reboot vehicle for changes to take effect.</source>
+      <translation>需要重启飞控才能使更改生效。</translation>
+    </message>
+</context>
   <context>
     <name>FactMetaData</name>
     <message>
@@ -7782,7 +7850,7 @@ Click Ok to start the auto-tuning process.
     <message>
       <location filename="../src/MAVLink/QGCMAVLink.cc" line="124"/>
       <source>ArduPilot</source>
-      <translation>阿杜飞行员</translation>
+      <translation>ArduPilot</translation>
     </message>
     <message>
       <location filename="../src/MAVLink/QGCMAVLink.cc" line="126"/>
@@ -7892,7 +7960,11 @@ Click Ok to start the auto-tuning process.
       <source>Unable to open firmware file %1, %2</source>
       <translation>无法打开固件文件 %1、%2</translation>
     </message>
-  </context>
+      <message>
+      <source>Unabled to open firmware file %1, %2</source>
+      <translation>无法打开固件文件 %1，%2</translation>
+    </message>
+</context>
   <context>
     <name>FirmwarePlugin</name>
     <message>
@@ -7905,7 +7977,11 @@ Click Ok to start the auto-tuning process.
       <source>Not Supported</source>
       <translation>不支持</translation>
     </message>
-  </context>
+      <message>
+      <source>当前飞控未提供满足制动失败不降落要求的训练围栏策略，禁止写入。需要适配机载回退策略。</source>
+      <translation>当前飞控未提供满足制动失败不降落要求的训练围栏策略，禁止写入。需要适配机载回退策略。</translation>
+    </message>
+</context>
   <context>
     <name>FirmwareUpgrade</name>
     <message>
@@ -8029,7 +8105,7 @@ Click Ok to start the auto-tuning process.
     <message>
       <location filename="../src/Vehicle/VehicleSetup/FirmwareUpgrade.qml" line="382"/>
       <source>ArduPilot</source>
-      <translation>阿杜飞行员</translation>
+      <translation>ArduPilot</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/FirmwareUpgrade.qml" line="333"/>
@@ -8045,7 +8121,7 @@ Click Ok to start the auto-tuning process.
       <location filename="../src/Vehicle/VehicleSetup/FirmwareUpgrade.qml" line="34"/>
       <location filename="../src/Vehicle/VehicleSetup/FirmwareUpgrade.qml" line="538"/>
       <source>Flash</source>
-      <translation>闪光</translation>
+      <translation>刷写</translation>
     </message>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/FirmwareUpgrade.qml" line="35"/>
@@ -8353,7 +8429,11 @@ Click Ok to start the auto-tuning process.
       <source>OK for your platform? Launching into the wind?</source>
       <translation>适合您的平台吗？迎风发射？</translation>
     </message>
-  </context>
+      <message>
+      <source>OK for your platform? Lauching into the wind?</source>
+      <translation>是否适合当前机型？是否逆风起飞？</translation>
+    </message>
+</context>
   <context>
     <name>FixedWingLandingComplexItem</name>
     <message>
@@ -8687,7 +8767,39 @@ VTOL</source>
       <source>Edit Position</source>
       <translation>编辑位置</translation>
     </message>
-  </context>
+      <message>
+      <source>Go to location</source>
+      <translation>飞往此处</translation>
+    </message>
+    <message>
+      <source>Orbit at location</source>
+      <translation>在此处环绕飞行</translation>
+    </message>
+    <message>
+      <source>ROI at location</source>
+      <translation>将此处设为兴趣点</translation>
+    </message>
+    <message>
+      <source>Set home here</source>
+      <translation>将此处设为起飞点</translation>
+    </message>
+    <message>
+      <source>Set Estimator Origin</source>
+      <translation>设置状态估计器原点</translation>
+    </message>
+    <message>
+      <source>Set Heading</source>
+      <translation>设置航向</translation>
+    </message>
+    <message>
+      <source>Lat: %1</source>
+      <translation>纬度：%1</translation>
+    </message>
+    <message>
+      <source>Lon: %1</source>
+      <translation>经度：%1</translation>
+    </message>
+</context>
   <context>
     <name>FlyViewMapClickDropPanel</name>
     <message>
@@ -9128,7 +9240,129 @@ VTOL</source>
       <source>NTRIP</source>
       <translation>NTRIP</translation>
     </message>
-  </context>
+      <message>
+      <source>N/A</source>
+      <comment>No data to display</comment>
+      <translation>暂无数据</translation>
+    </message>
+    <message>
+      <source>–.––</source>
+      <comment>No data to display</comment>
+      <translation>–.––</translation>
+    </message>
+    <message>
+      <source>Disconnected</source>
+      <translation>未连接</translation>
+    </message>
+    <message>
+      <source>Incoming correction</source>
+      <translation>接收差分数据</translation>
+    </message>
+    <message>
+      <source>Configuration</source>
+      <translation>配置</translation>
+    </message>
+    <message>
+      <source>Software</source>
+      <translation>软件</translation>
+    </message>
+    <message>
+      <source>Antenna</source>
+      <translation>天线</translation>
+    </message>
+    <message>
+      <source>Event congestion</source>
+      <translation>事件拥塞</translation>
+    </message>
+    <message>
+      <source>CPU overload</source>
+      <translation>处理器过载</translation>
+    </message>
+    <message>
+      <source>Output congestion</source>
+      <translation>输出拥塞</translation>
+    </message>
+    <message>
+      <source>Multiple errors</source>
+      <translation>多项错误</translation>
+    </message>
+    <message>
+      <source>GPS Lock</source>
+      <translation>GPS 定位状态</translation>
+    </message>
+    <message>
+      <source>HDOP</source>
+      <translation>水平精度因子</translation>
+    </message>
+    <message>
+      <source>VDOP</source>
+      <translation>垂直精度因子</translation>
+    </message>
+    <message>
+      <source>Course Over Ground</source>
+      <translation>地面航迹角</translation>
+    </message>
+    <message>
+      <source>RTK GPS Status</source>
+      <translation>RTK GPS 状态</translation>
+    </message>
+    <message>
+      <source>Survey-in Active</source>
+      <translation>正在测定基站位置</translation>
+    </message>
+    <message>
+      <source>RTK Streaming</source>
+      <translation>正在发送 RTK 数据</translation>
+    </message>
+    <message>
+      <source>Duration</source>
+      <translation>持续时间</translation>
+    </message>
+    <message>
+      <source>Accuracy</source>
+      <translation>精度</translation>
+    </message>
+    <message>
+      <source>Current Accuracy</source>
+      <translation>当前精度</translation>
+    </message>
+    <message>
+      <source>RTK GPS Settings</source>
+      <translation>RTK GPS 设置</translation>
+    </message>
+    <message>
+      <source>AutoConnect</source>
+      <translation>自动连接</translation>
+    </message>
+    <message>
+      <source>Settings displayed</source>
+      <translation>显示的设置</translation>
+    </message>
+    <message>
+      <source>Survey-In</source>
+      <translation>基站位置测定</translation>
+    </message>
+    <message>
+      <source>Specify position</source>
+      <translation>指定位置</translation>
+    </message>
+    <message>
+      <source>Min Duration</source>
+      <translation>最短持续时间</translation>
+    </message>
+    <message>
+      <source>Current Base Position</source>
+      <translation>当前基站位置</translation>
+    </message>
+    <message>
+      <source>Save</source>
+      <translation>保存</translation>
+    </message>
+    <message>
+      <source>Not Yet Valid</source>
+      <translation>尚未有效</translation>
+    </message>
+</context>
   <context>
     <name>GPSReceiver</name>
     <message>
@@ -9778,7 +10012,15 @@ VTOL</source>
       <source>Horizontal accuracy</source>
       <translation>水平精度</translation>
     </message>
-  </context>
+      <message>
+      <source>N/A</source>
+      <translation>暂无数据</translation>
+    </message>
+    <message>
+      <source>HDOP</source>
+      <translation>水平精度因子</translation>
+    </message>
+</context>
   <context>
     <name>GeoFenceController</name>
     <message>
@@ -10883,7 +11125,11 @@ VTOL</source>
       <source>_activeVehicle(%1) _vehicleArmed(%2) guidedModeSupported(%3) _vehicleUnderway(%4) _vehicleWasUnderway(%5) _vehicleInRTLMode(%6) pauseVehicleSupported(%7) _vehiclePaused(%8) _flightMode(%9) _visualItemsCount(%10) roiSupported(%11) orbitSupported(%12) _missionActive(%13) _hideROI(%14) _hideOrbit(%15)</source>
       <translation>_activeVehicle(%1) _vehicleArmed(%2) guidedModeSupported(%3) _vehicleUnderway(%4) _vehicleWasUnderway(%5) _vehicleInRTLMode(%6) pauseVehicleSupported(%7) _vehiclePaused(%8) _flightMode(%9) _visualItemsCount(%10) roiSupported(%11) orbitSupported(%12) _missionActive(%13) _hideROI(%14) _hideOrbit(%15)</translation>
     </message>
-  </context>
+      <message>
+      <source>_activeVehicle(%1) _vehicleArmed(%2) guidedModeSupported(%3) _vehicleFlying(%4) _vehicleWasFlying(%5) _vehicleInRTLMode(%6) pauseVehicleSupported(%7) _vehiclePaused(%8) _flightMode(%9) _visualItemsCount(%10) roiSupported(%11) orbitSupported(%12) _missionActive(%13) _hideROI(%14) _hideOrbit(%15)</source>
+      <translation>当前无人机(%1) 已解锁(%2) 支持引导模式(%3) 正在飞行(%4) 曾经飞行(%5) 处于返航模式(%6) 支持暂停(%7) 已暂停(%8) 飞行模式(%9) 可视任务项数量(%10) 支持兴趣点(%11) 支持环绕飞行(%12) 任务运行中(%13) 隐藏兴趣点(%14) 隐藏环绕飞行(%15)</translation>
+    </message>
+</context>
   <context>
     <name>HeightIndicator</name>
     <message>
@@ -14001,7 +14247,27 @@ VTOL</source>
       <source>No sensor data available</source>
       <translation>尚未获取传感器数据</translation>
     </message>
-  </context>
+      <message>
+      <source>Force arming bypasses pre-arm checks. Use with caution.</source>
+      <translation>强制解锁会跳过解锁前检查，请谨慎使用。</translation>
+    </message>
+    <message>
+      <source>Allow Force Arm</source>
+      <translation>允许强制解锁</translation>
+    </message>
+    <message>
+      <source>Vehicle Parameters</source>
+      <translation>无人机参数</translation>
+    </message>
+    <message>
+      <source>Configure</source>
+      <translation>配置</translation>
+    </message>
+    <message>
+      <source>Vehicle Configuration</source>
+      <translation>无人机设置</translation>
+    </message>
+</context>
   <context>
     <name>MainStatusIndicatorOfflinePage</name>
     <message>
@@ -14054,7 +14320,15 @@ VTOL</source>
       <source>UDP</source>
       <translation>UDP</translation>
     </message>
-  </context>
+      <message>
+      <source>Comm Links</source>
+      <translation>通信链路</translation>
+    </message>
+    <message>
+      <source>RTK</source>
+      <translation>实时差分定位（RTK）</translation>
+    </message>
+</context>
   <context>
     <name>MainWindow</name>
     <message>
@@ -14139,7 +14413,15 @@ VTOL</source>
       <source>Vehicle Alert</source>
       <translation>无人机警报</translation>
     </message>
-  </context>
+      <message>
+      <source>Vehicle Error</source>
+      <translation>无人机错误</translation>
+    </message>
+    <message>
+      <source>Additional errors received</source>
+      <translation>收到其他错误消息</translation>
+    </message>
+</context>
   <context>
     <name>MapNames</name>
     <message>
@@ -15077,7 +15359,7 @@ VTOL</source>
     <message>
       <location filename="../src/AppSettings/MockLinkSettings.qml" line="119"/>
       <source>ArduPilot</source>
-      <translation>阿杜飞行员</translation>
+      <translation>ArduPilot</translation>
     </message>
     <message>
       <location filename="../src/AppSettings/MockLinkSettings.qml" line="121"/>
@@ -15620,7 +15902,11 @@ Do you wish to proceed?</source>
       <source>No position is available to send to the caster. Network (VRS) mountpoints send corrections only after receiving a position; check the GGA position source.</source>
       <translation>没有位置可发送给施法者。网络 (VRS) 安装点仅在收到位置后发送更正；检查 GGA 位置源。</translation>
     </message>
-  </context>
+      <message>
+      <source>Queued to vehicle links (all sources)</source>
+      <translation>已加入无人机链路队列（全部数据源）</translation>
+    </message>
+</context>
   <context>
     <name>NTRIPGgaReporter</name>
     <message>
@@ -15793,7 +16079,31 @@ Do you wish to proceed?</source>
       <source>Invalid NTRIP endpoint</source>
       <translation>NTRIP 端点无效</translation>
     </message>
-  </context>
+      <message>
+      <source>Invalid mountpoint name (contains control characters)</source>
+      <translation>挂载点名称无效（包含控制字符）</translation>
+    </message>
+    <message>
+      <source>HTTP response header too large</source>
+      <translation>HTTP 响应头过大</translation>
+    </message>
+    <message>
+      <source>Authentication failed (401): check username and password</source>
+      <translation>身份验证失败（401）：请检查用户名和密码</translation>
+    </message>
+    <message>
+      <source>HTTP %1</source>
+      <translation>HTTP 状态 %1</translation>
+    </message>
+    <message>
+      <source>HTTP %1: %2</source>
+      <translation>HTTP 状态 %1：%2</translation>
+    </message>
+    <message>
+      <source>Invalid HTTP response from caster</source>
+      <translation>差分数据服务器返回了无效的 HTTP 响应</translation>
+    </message>
+</context>
   <context>
     <name>NTRIPManager</name>
     <message>
@@ -15853,7 +16163,23 @@ Do you wish to proceed?</source>
       <source>Reconnecting in %1s: %2</source>
       <translation>在 %1 秒内重新连接：%2</translation>
     </message>
-  </context>
+      <message>
+      <source>No host address</source>
+      <translation>未设置服务器地址</translation>
+    </message>
+    <message>
+      <source>Invalid port</source>
+      <translation>端口无效</translation>
+    </message>
+    <message>
+      <source>Reconnecting in %1s...</source>
+      <translation>将在 %1 秒后重新连接…</translation>
+    </message>
+    <message>
+      <source>Host address is empty</source>
+      <translation>服务器地址为空</translation>
+    </message>
+</context>
   <context>
     <name>NTRIPMountpoint</name>
     <message>
@@ -16370,7 +16696,15 @@ Is this really what you want?</source>
       <source>The selected onboard log files will be erased permanently. Is this really what you want?</source>
       <translation>选定的板载日志文件将被永久删除。这真的是你想要的吗？</translation>
     </message>
-  </context>
+      <message>
+      <source>Onboard Log</source>
+      <translation>机载日志</translation>
+    </message>
+    <message>
+      <source>You must select at least one onboard log file to download.</source>
+      <translation>请至少选择一个要下载的机载日志文件。</translation>
+    </message>
+</context>
   <context>
     <name>OpticalFlowSensor</name>
     <message>
@@ -16708,7 +17042,43 @@ Is this really what you want?</source>
       <source>Unable to set ROI, home position altitude unknown.</source>
       <translation>无法设置 ROI，起始位置海拔高度未知。</translation>
     </message>
-  </context>
+      <message>
+      <source>Return to Groundstation</source>
+      <translation>返回地面站位置</translation>
+    </message>
+    <message>
+      <source>PX4 原生围栏悬停失败时可能回退降落，不满足制动失败不降落要求，禁止写入。需要适配机载回退策略。</source>
+      <translation>PX4 原生围栏悬停失败时可能回退降落，不满足制动失败不降落要求，禁止写入。需要适配机载回退策略。</translation>
+    </message>
+    <message>
+      <source>未能验证 PX4 训练围栏不降落扩展的参数支持，禁止写入。</source>
+      <translation>未能验证 PX4 训练围栏不降落扩展的参数支持，禁止写入。</translation>
+    </message>
+    <message>
+      <source>PX4 训练围栏：触发时制动悬停，无法悬停时保持原模式并报警，等待人工接管。</source>
+      <translation>PX4 训练围栏：触发时制动悬停，无法悬停时保持原模式并报警，等待人工接管。</translation>
+    </message>
+    <message>
+      <source>距 HOME 半径上限</source>
+      <translation>距 HOME 半径上限</translation>
+    </message>
+    <message>
+      <source>距 HOME 高度上限</source>
+      <translation>距 HOME 高度上限</translation>
+    </message>
+    <message>
+      <source>%1 %2 米</source>
+      <translation>%1 %2 米</translation>
+    </message>
+    <message>
+      <source>同时生效：%1。</source>
+      <translation>同时生效：%1。</translation>
+    </message>
+    <message>
+      <source>；</source>
+      <translation>；</translation>
+    </message>
+</context>
   <context>
     <name>PX4FirmwareUpgradeThreadWorker</name>
     <message>
@@ -17007,7 +17377,11 @@ Is this really what you want?</source>
       <source>Yellow indicates the input switch position. Check the top bar for the actual flight mode.</source>
       <translation>黄色标记表示开关输入档位，实际飞行模式请查看顶部状态栏。</translation>
     </message>
-  </context>
+      <message>
+      <source>Flight Modes</source>
+      <translation>飞行模式</translation>
+    </message>
+</context>
   <context>
     <name>PX4LogControl</name>
     <message>
@@ -17781,7 +18155,35 @@ Is this really what you want?</source>
       <source>Rate</source>
       <translation>速率</translation>
     </message>
-  </context>
+      <message>
+      <source>Porportional gain (FW_RR_P)</source>
+      <translation>比例增益（FW_RR_P）</translation>
+    </message>
+    <message>
+      <source>Porportional gain.</source>
+      <translation>比例增益。</translation>
+    </message>
+    <message>
+      <source>Feedforward gused to compensate for aerodynamic damping.</source>
+      <translation>用于补偿气动阻尼的前馈增益。</translation>
+    </message>
+    <message>
+      <source>Porportional Gain (FW_PR_P)</source>
+      <translation>比例增益（FW_PR_P）</translation>
+    </message>
+    <message>
+      <source>Porportional Gain.</source>
+      <translation>比例增益。</translation>
+    </message>
+    <message>
+      <source>Porportional Gain (FW_YR_P)</source>
+      <translation>比例增益（FW_YR_P）</translation>
+    </message>
+    <message>
+      <source>Integral Gain (FW_YR_D)</source>
+      <translation>积分增益（FW_YR_D）</translation>
+    </message>
+</context>
   <context>
     <name>PX4TuningComponentPlaneTECS</name>
     <message>
@@ -18200,7 +18602,19 @@ Is this really what you want?</source>
       <source>Parameters marked 'not on Vehicle' cannot be sent since the file does not include type information. They may only exist after another parameter is changed and the Vehicle is rebooted, after which you can load this file again.</source>
       <translation>无法发送标记为“不在无人机上”的参数，因为该文件不包括类型信息。它们可能仅在更改另一个参数并重新启动无人机后才存在，之后您可以再次加载该文件。</translation>
     </message>
-  </context>
+      <message>
+      <source>The following parameters from the loaded file differ from what is currently set on the Vehicle. Click 'Ok' to update them on the Vehicle.</source>
+      <translation>加载文件中的以下参数与无人机当前设置不同。点击“确定”将这些参数写入无人机。</translation>
+    </message>
+    <message>
+      <source>There are no differences between the file loaded and the current settings on the Vehicle.</source>
+      <translation>加载文件与无人机当前设置之间没有差异。</translation>
+    </message>
+    <message>
+      <source>N/A</source>
+      <translation>暂无数据</translation>
+    </message>
+</context>
   <context>
     <name>ParameterDownloadProgress</name>
     <message>
@@ -18350,7 +18764,15 @@ Note that this will also completely reset everything, including UAVCAN nodes, al
       <source>Group</source>
       <translation>分组</translation>
     </message>
-  </context>
+      <message>
+      <source>Missing Parameters</source>
+      <translation>缺失参数</translation>
+    </message>
+    <message>
+      <source>The following parameters from the file were not found on the vehicle and were skipped: %1</source>
+      <translation>无人机上未找到文件中的以下参数，已跳过：%1</translation>
+    </message>
+</context>
   <context>
     <name>ParameterEditorController</name>
     <message>
@@ -18456,7 +18878,11 @@ Note that this will also completely reset everything, including UAVCAN nodes, al
       <source>Force edit read-only param</source>
       <translation>强制编辑只读参数</translation>
     </message>
-  </context>
+      <message>
+      <source>Show original English description</source>
+      <translation>显示英文原文</translation>
+    </message>
+</context>
   <context>
     <name>ParameterManager</name>
     <message>
@@ -18726,7 +19152,11 @@ Note that this will also completely reset everything, including UAVCAN nodes, al
       <source>&lt;Untitled&gt;</source>
       <translation>&lt;无题&gt;</translation>
     </message>
-  </context>
+      <message>
+      <source>Untitled</source>
+      <translation>未命名</translation>
+    </message>
+</context>
   <context>
     <name>PlanManager</name>
     <message>
@@ -18962,6 +19392,30 @@ Note that this will also completely reset everything, including UAVCAN nodes, al
       <source>上传航线</source>
       <translation>上传航线</translation>
     </message>
+    <message>
+      <source>Archive file not found: %1</source>
+      <translation>找不到压缩文件：%1</translation>
+    </message>
+    <message>
+      <source>Not a supported archive format: %1</source>
+      <translation>不支持此压缩格式：%1</translation>
+    </message>
+    <message>
+      <source>Could not create temporary directory</source>
+      <translation>无法创建临时目录</translation>
+    </message>
+    <message>
+      <source>Extraction failed</source>
+      <translation>解压失败</translation>
+    </message>
+    <message>
+      <source>Failed to extract plan archive: %1</source>
+      <translation>无法解压任务文件：%1</translation>
+    </message>
+    <message>
+      <source>No plan file found in archive</source>
+      <translation>压缩包中未找到任务文件</translation>
+    </message>
 </context>
   <context>
     <name>PlanToolBarIndicators</name>
@@ -19043,7 +19497,15 @@ Note that this will also completely reset everything, including UAVCAN nodes, al
       <source>Save as...</source>
       <translation>另存为...</translation>
     </message>
-  </context>
+      <message>
+      <source>'%1' already exists. Overwrite?</source>
+      <translation>“%1”已存在，是否覆盖？</translation>
+    </message>
+    <message>
+      <source>Save as '%1'?</source>
+      <translation>是否另存为“%1”？</translation>
+    </message>
+</context>
   <context>
     <name>PlanTreeView</name>
     <message>
@@ -19061,7 +19523,15 @@ Note that this will also completely reset everything, including UAVCAN nodes, al
       <source>%1 points</source>
       <translation>%1 点</translation>
     </message>
-  </context>
+      <message>
+      <source> items</source>
+      <translation> 项</translation>
+    </message>
+    <message>
+      <source> points</source>
+      <translation> 个点</translation>
+    </message>
+</context>
   <context>
     <name>PlanView</name>
     <message>
@@ -19270,6 +19740,10 @@ Click 'Ok' to upload the Plan anyway.</source>
       <source>关闭</source>
       <translation>关闭</translation>
     </message>
+    <message>
+      <source>ROI</source>
+      <translation>兴趣点</translation>
+    </message>
 </context>
   <context>
     <name>PlanViewToolBar</name>
@@ -19364,7 +19838,11 @@ Click 'Ok' to upload the Plan anyway.</source>
       <source>Configure battery parameters and ESC calibration.</source>
       <translation>配置电池参数和电调校准。</translation>
     </message>
-  </context>
+      <message>
+      <source>Configure battery parameters, ESC calibration, and UAVCAN bus settings.</source>
+      <translation>配置电池参数、电调校准和 UAVCAN 总线。</translation>
+    </message>
+</context>
   <context>
     <name>PowerComponentSummary</name>
     <message>
@@ -19608,7 +20086,31 @@ Click 'Ok' to upload the Plan anyway.</source>
       <source>Parameters are missing from firmware. You may be running a version of firmware which is not fully supported or your firmware has a bug in it. Missing params: %1</source>
       <translation>从固件中缺少参数。 您可能正在运行一个不完全支持的固件版本，或者您的固件里有一个错误。 缺少参数： %1</translation>
     </message>
-  </context>
+      <message>
+      <source>There is a newer version of %1 available. You can download it from %2.</source>
+      <translation>%1 有新版本可用，可从 %2 下载。</translation>
+    </message>
+    <message>
+      <source>New Version Available</source>
+      <translation>发现新版本</translation>
+    </message>
+    <message>
+      <source>视频系统初始化失败，本次运行已停用图传和录像。地图、飞控连接和参数设置仍可使用。请保留应用日志，以便检查视频组件。</source>
+      <translation>视频系统初始化失败，本次运行已停用图传和录像。地图、飞控连接和参数设置仍可使用。请保留应用日志，以便检查视频组件。</translation>
+    </message>
+    <message>
+      <source>视频不可用</source>
+      <translation>视频不可用</translation>
+    </message>
+    <message>
+      <source>主界面加载失败，请关闭后重新启动。</source>
+      <translation>主界面加载失败，请关闭后重新启动。</translation>
+    </message>
+    <message>
+      <source>图形系统初始化失败：%1</source>
+      <translation>图形系统初始化失败：%1</translation>
+    </message>
+</context>
   <context>
     <name>QGCCacheWorker</name>
     <message>
@@ -19693,7 +20195,11 @@ Click 'Ok' to upload the Plan anyway.</source>
       <source>WARNING: You are about to enter Advanced Mode. If used incorrectly, this may cause your vehicle to malfunction thus voiding your warranty. You should do so only if instructed by customer support. Are you sure you want to enable Advanced Mode?</source>
       <translation>警告：您即将进入高级模式。如果使用不当，这可能导致您的飞机故障，从而使您的保修作废。只有在客户支持的指导下才能这样做。是否确实要启用高级模式？</translation>
     </message>
-  </context>
+      <message>
+      <source>Onboard Logs (FTP)</source>
+      <translation>机载日志（FTP）</translation>
+    </message>
+</context>
   <context>
     <name>QGCDelayButton</name>
     <message>
@@ -20404,7 +20910,11 @@ Click 'Ok' to upload the Plan anyway.</source>
       <source>Unable to parse json file: %1 error: %2</source>
       <translation>无法解析 json 文件: %1 错误: %2</translation>
     </message>
-  </context>
+      <message>
+      <source>Unable to parse json file: %1 error: %2 offset: %3</source>
+      <translation>无法解析 JSON 文件：%1，错误：%2，偏移位置：%3</translation>
+    </message>
+</context>
   <context>
     <name>QSerialPort</name>
     <message>
@@ -20577,7 +21087,19 @@ Click 'Ok' to upload the Plan anyway.</source>
       <source>Device disconnected</source>
       <translation>设备已断开连接</translation>
     </message>
-  </context>
+      <message>
+      <source>Timeout while waiting for bytes written</source>
+      <translation>等待数据写入超时</translation>
+    </message>
+    <message>
+      <source>Failed to write data one shot</source>
+      <translation>无法一次性写入全部数据</translation>
+    </message>
+    <message>
+      <source>Failed to flush</source>
+      <translation>无法刷新输出缓冲区</translation>
+    </message>
+</context>
   <context>
     <name>QmlTest</name>
     <message>
@@ -21053,6 +21575,42 @@ Click 'Ok' to upload the Plan anyway.</source>
   <context>
     <name>RadioComponent</name>
     <message>
+      <source>AUX1 Passthrough RC channel</source>
+      <translation>AUX1 遥控直通通道</translation>
+    </message>
+    <message>
+      <source>AUX2 Passthrough RC channel</source>
+      <translation>AUX2 遥控直通通道</translation>
+    </message>
+    <message>
+      <source>PARAM1 tuning channel</source>
+      <translation>参数 1 调节通道</translation>
+    </message>
+    <message>
+      <source>PARAM2 tuning channel</source>
+      <translation>参数 2 调节通道</translation>
+    </message>
+    <message>
+      <source>PARAM3 tuning channel</source>
+      <translation>参数 3 调节通道</translation>
+    </message>
+    <message>
+      <source>Payload Power Switch RC channel</source>
+      <translation>载荷电源开关通道</translation>
+    </message>
+    <message>
+      <source>Flaps channel</source>
+      <translation>襟翼控制通道</translation>
+    </message>
+    <message>
+      <source>Unassigned</source>
+      <translation>未分配</translation>
+    </message>
+    <message>
+      <source>Channel %1</source>
+      <translation>通道 %1</translation>
+    </message>
+    <message>
       <location filename="../src/AutoPilotPlugins/Common/RadioComponent.qml" line="29"/>
       <source>Throttle channel reversed</source>
       <translation>油门通道反向</translation>
@@ -21076,12 +21634,12 @@ Click 'Ok' to upload the Plan anyway.</source>
       <location filename="../src/AutoPilotPlugins/Common/RadioComponent.qml" line="72"/>
       <location filename="../src/AutoPilotPlugins/Common/RadioComponent.qml" line="73"/>
       <source>CRSF Bind</source>
-      <translation>CRSF 绑定</translation>
+      <translation>ELRS接收机对频</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/Common/RadioComponent.qml" line="74"/>
       <source>Click Ok to place your CRSF receiver in the bind mode.</source>
-      <translation>单击“确定”将 CRSF 接收器置于绑定模式。</translation>
+      <translation>点击“确定”，使ELRS接收机进入对频模式。</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/Common/RadioComponent.qml" line="82"/>
@@ -22087,7 +22645,11 @@ Click 'Ok' to upload the Plan anyway.</source>
       <source>飞控校准</source>
       <translation>飞控校准</translation>
     </message>
-  </context>
+      <message>
+      <source>飞控朝向</source>
+      <translation>飞控朝向</translation>
+    </message>
+</context>
   <context>
     <name>SensorsComponentController</name>
     <message>
@@ -22228,7 +22790,23 @@ Click 'Ok' to upload the Plan anyway.</source>
       <source>Airspeed</source>
       <translation>空速：</translation>
     </message>
-  </context>
+      <message>
+      <source>Compass:</source>
+      <translation>罗盘：</translation>
+    </message>
+    <message>
+      <source>Gyro:</source>
+      <translation>陀螺仪：</translation>
+    </message>
+    <message>
+      <source>Accelerometer:</source>
+      <translation>加速度计：</translation>
+    </message>
+    <message>
+      <source>Airspeed:</source>
+      <translation>空速计：</translation>
+    </message>
+</context>
   <context>
     <name>SensorsSetup</name>
     <message>
@@ -22409,7 +22987,35 @@ ROTATION_NONE indicates component points in direction of flight.</source>
       <source>Calibration complete</source>
       <translation>校准完成</translation>
     </message>
-  </context>
+      <message>
+      <source>Reboot Vehicle</source>
+      <translation>重启飞控</translation>
+    </message>
+    <message>
+      <source>Compass</source>
+      <translation>罗盘</translation>
+    </message>
+    <message>
+      <source>Gyroscope</source>
+      <translation>陀螺仪</translation>
+    </message>
+    <message>
+      <source>Accelerometer</source>
+      <translation>加速度计</translation>
+    </message>
+    <message>
+      <source>Airspeed</source>
+      <translation>空速计</translation>
+    </message>
+    <message>
+      <source>Orientations</source>
+      <translation>安装方向</translation>
+    </message>
+    <message>
+      <source>飞控朝向</source>
+      <translation>飞控朝向</translation>
+    </message>
+</context>
   <context>
     <name>SerialConfiguration</name>
     <message>
@@ -24037,7 +24643,11 @@ If a vehicle still has this key configured, you will no longer be able to commun
       <source>Note: For best performance, please disable AutoConnect to UDP devices on the General page.</source>
       <translation>注意：为了获得最佳性能，请在“常规”页面上禁用自动连接到 UDP 设备。</translation>
     </message>
-  </context>
+      <message>
+      <source>Note: For best perfomance, please disable AutoConnect to UDP devices on the General page.</source>
+      <translation>提示：为获得最佳性能，请在“常规”页面关闭 UDP 设备自动连接。</translation>
+    </message>
+</context>
   <context>
     <name>UnitsSettings</name>
     <message>
@@ -24261,7 +24871,11 @@ If a vehicle still has this key configured, you will no longer be able to commun
       <source>OK for your platform? Launching into the wind?</source>
       <translation>适合您的平台吗？迎风发射？</translation>
     </message>
-  </context>
+      <message>
+      <source>OK for your platform? Lauching into the wind?</source>
+      <translation>是否适合当前机型？是否逆风起飞？</translation>
+    </message>
+</context>
   <context>
     <name>VTOLLandingComplexItem</name>
     <message>
@@ -24681,7 +25295,23 @@ If a vehicle still has this key configured, you will no longer be able to commun
       <source>返回无人机设置</source>
       <translation>返回无人机设置</translation>
     </message>
-  </context>
+      <message>
+      <source>Parameter download was skipped because the vehicle is flying. Configuration pages will be available after parameters are downloaded.</source>
+      <translation>无人机正在飞行，已跳过参数下载。参数下载完成后即可使用配置页面。</translation>
+    </message>
+    <message>
+      <source>GPS 设置</source>
+      <translation>GPS 设置</translation>
+    </message>
+    <message>
+      <source>雷达设置</source>
+      <translation>雷达设置</translation>
+    </message>
+    <message>
+      <source>飞控微调</source>
+      <translation>飞控微调</translation>
+    </message>
+</context>
   <context>
     <name>VehicleGPSFactGroup</name>
     <message>
@@ -24836,8 +25466,8 @@ If a vehicle still has this key configured, you will no longer be able to commun
     </message>
     <message>
       <location filename="../src/Vehicle/VehicleSetup/VehicleSummary.qml" line="48"/>
-      <source>WARNING: Configuration tasks remain before this vehicle is ready to fly. Open the red-marked components on the left to finish setup.</source>
-      <translation>警告：在该飞行器准备飞行之前，配置任务仍然存在。打开左侧红色标记的组件即可完成设置。</translation>
+      <source>WARNING: Complete the remaining setup tasks before flying. Open the overview cards marked with a red dot, or expand the setup menu and select items marked with an orange dot.</source>
+      <translation>警告：飞行前请完成剩余设置。点击下方带红色圆点的设置卡片，或展开设置菜单查看带橙色圆点的项目。</translation>
     </message>
   </context>
   <context>
@@ -24913,7 +25543,11 @@ If a vehicle still has this key configured, you will no longer be able to commun
       <source>Unable to record video. Video save path must be specified in Settings.</source>
       <translation>无法录制视频。必须在“设置”中指定视频保存路径。</translation>
     </message>
-  </context>
+      <message>
+      <source>Unabled to record video. Video save path must be specified in Settings.</source>
+      <translation>无法录制视频，请先在设置中指定视频保存路径。</translation>
+    </message>
+</context>
   <context>
     <name>VideoSettings</name>
     <message>
@@ -25215,7 +25849,19 @@ If a vehicle still has this key configured, you will no longer be able to commun
       <source>--no-windows-assert-ui is only supported on Windows.</source>
       <translation>--no-windows-assert-ui 仅在 Windows 上受支持。</translation>
     </message>
-  </context>
+      <message>
+      <source>Force software OpenGL.</source>
+      <translation>强制使用软件 OpenGL。</translation>
+    </message>
+    <message>
+      <source>Force Desktop OpenGL.</source>
+      <translation>强制使用桌面 OpenGL。</translation>
+    </message>
+    <message>
+      <source>--desktop/--no-windows-assert-ui are only supported on Windows.</source>
+      <translation>--desktop/--no-windows-assert-ui 仅支持 Windows。</translation>
+    </message>
+</context>
   <context>
     <name>CaacRelativeEditor</name>
     <message>
@@ -25399,6 +26045,38 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
         <source>Calculator</source>
         <translation>计算器</translation>
+    </message>
+    <message>
+      <source>场地列表</source>
+      <translation>场地列表</translation>
+    </message>
+    <message>
+      <source>考试偏好</source>
+      <translation>考试偏好</translation>
+    </message>
+    <message>
+      <source>标准设置</source>
+      <translation>标准设置</translation>
+    </message>
+    <message>
+      <source>电子围栏</source>
+      <translation>电子围栏</translation>
+    </message>
+    <message>
+      <source>清除轨迹</source>
+      <translation>清除轨迹</translation>
+    </message>
+    <message>
+      <source>查看考试监测</source>
+      <translation>查看考试监测</translation>
+    </message>
+    <message>
+      <source>结束考试</source>
+      <translation>结束考试</translation>
+    </message>
+    <message>
+      <source>开始考试</source>
+      <translation>开始考试</translation>
     </message>
 </context>
   <context>
@@ -26298,6 +26976,22 @@ altitude</source>
     <message>
       <source>Unable to create the landing point.</source>
       <translation>无法创建降落点。</translation>
+    </message>
+    <message>
+      <source>Connect a USB joystick first.</source>
+      <translation>请先连接 USB 操纵杆。</translation>
+    </message>
+    <message>
+      <source>Complete joystick calibration first.</source>
+      <translation>请先完成操纵杆校准。</translation>
+    </message>
+    <message>
+      <source>Select a mode switch axis channel.</source>
+      <translation>请选择模式切换轴通道。</translation>
+    </message>
+    <message>
+      <source>CH%1 is assigned to a control stick. Select an independent switch channel.</source>
+      <translation>通道 CH%1 已分配给操纵杆，请选择独立的开关通道。</translation>
     </message>
 </context>
 <context>
@@ -27633,7 +28327,187 @@ altitude</source>
       <source>围栏范围设置</source>
       <translation>围栏范围设置</translation>
     </message>
-  </context>
+      <message>
+      <source>返航设置</source>
+      <translation>返航设置</translation>
+    </message>
+    <message>
+      <source>返航高度</source>
+      <translation>返航高度</translation>
+    </message>
+    <message>
+      <source>返航方式</source>
+      <translation>返航方式</translation>
+    </message>
+    <message>
+      <source>返航点上方悬停时间</source>
+      <translation>返航点上方悬停时间</translation>
+    </message>
+    <message>
+      <source>最终降落阶段高度</source>
+      <translation>最终降落阶段高度</translation>
+    </message>
+    <message>
+      <source>最终降落速度</source>
+      <translation>最终降落速度</translation>
+    </message>
+    <message>
+      <source>返航盘旋半径</source>
+      <translation>返航盘旋半径</translation>
+    </message>
+    <message>
+      <source>返航后自动降落</source>
+      <translation>返航后自动降落</translation>
+    </message>
+    <message>
+      <source>围栏附加设置</source>
+      <translation>围栏附加设置</translation>
+    </message>
+    <message>
+      <source>围栏类型</source>
+      <translation>围栏类型</translation>
+    </message>
+    <message>
+      <source>最高高度</source>
+      <translation>最高高度</translation>
+    </message>
+    <message>
+      <source>以返航点为中心的圆形</source>
+      <translation>以返航点为中心的圆形</translation>
+    </message>
+    <message>
+      <source>包含／排除区域</source>
+      <translation>包含／排除区域</translation>
+    </message>
+    <message>
+      <source>最低高度</source>
+      <translation>最低高度</translation>
+    </message>
+    <message>
+      <source>安全边距</source>
+      <translation>安全边距</translation>
+    </message>
+    <message>
+      <source>自动启用围栏</source>
+      <translation>自动启用围栏</translation>
+    </message>
+    <message>
+      <source>越界后的返航高度</source>
+      <translation>越界后的返航高度</translation>
+    </message>
+    <message>
+      <source>越界后前往最近集结点</source>
+      <translation>越界后前往最近集结点</translation>
+    </message>
+    <message>
+      <source>解锁检查</source>
+      <translation>解锁检查</translation>
+    </message>
+    <message>
+      <source>解锁前检查项目</source>
+      <translation>解锁前检查项目</translation>
+    </message>
+    <message>
+      <source>允许跳过的检查</source>
+      <translation>允许跳过的检查</translation>
+    </message>
+    <message>
+      <source>电池 %1 保护</source>
+      <translation>电池 %1 保护</translation>
+    </message>
+    <message>
+      <source>低电量行为</source>
+      <translation>低电量行为</translation>
+    </message>
+    <message>
+      <source>严重低电量行为</source>
+      <translation>严重低电量行为</translation>
+    </message>
+    <message>
+      <source>低电压门限</source>
+      <translation>低电压门限</translation>
+    </message>
+    <message>
+      <source>严重低电压门限</source>
+      <translation>严重低电压门限</translation>
+    </message>
+    <message>
+      <source>低剩余容量门限</source>
+      <translation>低剩余容量门限</translation>
+    </message>
+    <message>
+      <source>严重低剩余容量门限</source>
+      <translation>严重低剩余容量门限</translation>
+    </message>
+    <message>
+      <source>导航与姿态故障保护</source>
+      <translation>导航与姿态故障保护</translation>
+    </message>
+    <message>
+      <source>EKF 失效门限</source>
+      <translation>EKF 失效门限</translation>
+    </message>
+    <message>
+      <source>EKF 失效行为</source>
+      <translation>EKF 失效行为</translation>
+    </message>
+    <message>
+      <source>推算导航超时</source>
+      <translation>推算导航超时</translation>
+    </message>
+    <message>
+      <source>推算导航失效行为</source>
+      <translation>推算导航失效行为</translation>
+    </message>
+    <message>
+      <source>碰撞保护</source>
+      <translation>碰撞保护</translation>
+    </message>
+    <message>
+      <source>振动保护</source>
+      <translation>振动保护</translation>
+    </message>
+    <message>
+      <source>其他失联与故障保护</source>
+      <translation>其他失联与故障保护</translation>
+    </message>
+    <message>
+      <source>油门失联 PWM 门限</source>
+      <translation>油门失联 PWM 门限</translation>
+    </message>
+    <message>
+      <source>故障保护选项</source>
+      <translation>故障保护选项</translation>
+    </message>
+    <message>
+      <source>短时失联行为</source>
+      <translation>短时失联行为</translation>
+    </message>
+    <message>
+      <source>长时失联行为</source>
+      <translation>长时失联行为</translation>
+    </message>
+    <message>
+      <source>长时失联超时</source>
+      <translation>长时失联超时</translation>
+    </message>
+    <message>
+      <source>垂直起降转换失败行为</source>
+      <translation>垂直起降转换失败行为</translation>
+    </message>
+    <message>
+      <source>垂直起降转换超时</source>
+      <translation>垂直起降转换超时</translation>
+    </message>
+    <message>
+      <source>失联超时</source>
+      <translation>失联超时</translation>
+    </message>
+    <message>
+      <source>失联行为</source>
+      <translation>失联行为</translation>
+    </message>
+</context>
   <context>
     <name>CaacSettingsMenu</name>
     <message>
@@ -27874,7 +28748,27 @@ altitude</source>
       <source>已完成</source>
       <translation>已完成</translation>
     </message>
-  </context>
+      <message>
+      <source>转动已完成</source>
+      <translation>转动已完成</translation>
+    </message>
+    <message>
+      <source>请按图转动</source>
+      <translation>请按图转动</translation>
+    </message>
+    <message>
+      <source>待转动</source>
+      <translation>待转动</translation>
+    </message>
+    <message>
+      <source>转动进度 %1%</source>
+      <translation>转动进度 %1%</translation>
+    </message>
+    <message>
+      <source>校准进度 %1%</source>
+      <translation>校准进度 %1%</translation>
+    </message>
+</context>
   <context>
     <name>SensorCalibrationMotorTest</name>
     <message>
@@ -28000,7 +28894,19 @@ altitude</source>
       <source>默认朝向</source>
       <translation>默认朝向</translation>
     </message>
-  </context>
+      <message>
+      <source>飞控总体进度 %1%</source>
+      <translation>飞控总体进度 %1%</translation>
+    </message>
+    <message>
+      <source>按六个姿态分别绕竖直轴转动一周。分面进度表示姿态转动完成度；罗盘校准结果以飞控反馈为准。</source>
+      <translation>按六个姿态分别绕竖直轴转动一周。分面进度表示姿态转动完成度；罗盘校准结果以飞控反馈为准。</translation>
+    </message>
+    <message>
+      <source>按动图转动无人机，各面进度由飞控反馈更新。</source>
+      <translation>按动图转动无人机，各面进度由飞控反馈更新。</translation>
+    </message>
+</context>
   <context>
     <name>CaacSimulationController</name>
     <message>
@@ -28330,6 +29236,16 @@ altitude</source>
       <source>A waypoint update is already in progress.</source>
       <translation>正在更新航点，请稍候。</translation>
     </message>
+    <message>
+      <source>Upload error %1: %2</source>
+      <translation>上传错误 %1：%2</translation>
+    </message>
+    <message>
+      <source>Waypoint upload failed. The mission remains paused.
+%1</source>
+      <translation>航点上传失败，任务仍处于暂停状态。
+%1</translation>
+    </message>
 </context>
   <context>
     <name>CaacSimulationEngine</name>
@@ -28399,7 +29315,7 @@ altitude</source>
     </message>
     <message>
       <source>OFF</source>
-      <translation>OFF</translation>
+      <translation>关闭</translation>
     </message>
   </context>
 <context>
@@ -28664,4 +29580,3948 @@ altitude</source>
       <translation>仅自动模式下心跳超时触发</translation>
     </message>
 </context>
+<context>
+  <name>VehicleMessages</name>
+  <message>
+    <source>Notice</source>
+    <translation>提示</translation>
+  </message>
+  <message>
+    <source>Warning</source>
+    <translation>警告</translation>
+  </message>
+  <message>
+    <source>Error</source>
+    <translation>错误</translation>
+  </message>
+  <message>
+    <source>Information</source>
+    <translation>信息</translation>
+  </message>
+  <message>
+    <source>Critical</source>
+    <translation>严重</translation>
+  </message>
+  <message>
+    <source>Confirmation</source>
+    <translation>确认</translation>
+  </message>
+  <message>
+    <source>Success</source>
+    <translation>成功</translation>
+  </message>
+  <message>
+    <source>Failed</source>
+    <translation>失败</translation>
+  </message>
+  <message>
+    <source>Motors</source>
+    <translation>电机</translation>
+  </message>
+  <message>
+    <source>Motor</source>
+    <translation>电机</translation>
+  </message>
+  <message>
+    <source>Servo</source>
+    <translation>舵机</translation>
+  </message>
+  <message>
+    <source>Mount</source>
+    <translation>云台</translation>
+  </message>
+  <message>
+    <source>Generator</source>
+    <translation>发电机</translation>
+  </message>
+  <message>
+    <source>VisOdom</source>
+    <translation>视觉里程计</translation>
+  </message>
+  <message>
+    <source>Battery</source>
+    <translation>电池</translation>
+  </message>
+  <message>
+    <source>Radio</source>
+    <translation>遥控器</translation>
+  </message>
+  <message>
+    <source>RC</source>
+    <translation>遥控信号</translation>
+  </message>
+  <message>
+    <source>Magnetometer</source>
+    <translation>磁力计</translation>
+  </message>
+  <message>
+    <source>Accelerometer</source>
+    <translation>加速度计</translation>
+  </message>
+  <message>
+    <source>Barometer</source>
+    <translation>气压计</translation>
+  </message>
+  <message>
+    <source>Strong magnetic interference</source>
+    <translation>磁场干扰过强</translation>
+  </message>
+  <message>
+    <source>Heading estimate invalid</source>
+    <translation>航向估计无效</translation>
+  </message>
+  <message>
+    <source>Horizontal velocity unstable</source>
+    <translation>水平速度不稳定</translation>
+  </message>
+  <message>
+    <source>Vertical velocity unstable</source>
+    <translation>垂直速度不稳定</translation>
+  </message>
+  <message>
+    <source>Horizontal position unstable</source>
+    <translation>水平位置不稳定</translation>
+  </message>
+  <message>
+    <source>Height estimate not stable</source>
+    <translation>高度估计不稳定</translation>
+  </message>
+  <message>
+    <source>Waiting for estimator to initialize</source>
+    <translation>正在等待状态估计器初始化</translation>
+  </message>
+  <message>
+    <source>No heading reference</source>
+    <translation>无航向参考</translation>
+  </message>
+  <message>
+    <source>High Accelerometer Bias</source>
+    <translation>加速度计零偏过大</translation>
+  </message>
+  <message>
+    <source>High Gyro Bias</source>
+    <translation>陀螺仪零偏过大</translation>
+  </message>
+  <message>
+    <source>Stopping compass use</source>
+    <translation>正在停止使用罗盘</translation>
+  </message>
+  <message>
+    <source>Compass needs calibration</source>
+    <translation>罗盘需要校准</translation>
+  </message>
+  <message>
+    <source>GNSS heading not reliable</source>
+    <translation>GNSS 航向不可靠</translation>
+  </message>
+  <message>
+    <source>GPS fix too low</source>
+    <translation>GPS 定位等级不足</translation>
+  </message>
+  <message>
+    <source>Not enough GPS Satellites</source>
+    <translation>GPS 卫星数量不足</translation>
+  </message>
+  <message>
+    <source>GPS PDOP too high</source>
+    <translation>GPS 位置精度因子过大</translation>
+  </message>
+  <message>
+    <source>GPS Horizontal Pos Error too high</source>
+    <translation>GPS 水平位置误差过大</translation>
+  </message>
+  <message>
+    <source>GPS Horizontal Position Error too high</source>
+    <translation>GPS 水平位置误差过大</translation>
+  </message>
+  <message>
+    <source>GPS Vertical Pos Error too high</source>
+    <translation>GPS 垂直位置误差过大</translation>
+  </message>
+  <message>
+    <source>GPS Vertical Position Error too high</source>
+    <translation>GPS 垂直位置误差过大</translation>
+  </message>
+  <message>
+    <source>GPS Speed Accuracy too low</source>
+    <translation>GPS 速度精度不足</translation>
+  </message>
+  <message>
+    <source>GPS Horizontal Pos Drift too high</source>
+    <translation>GPS 水平位置漂移过大</translation>
+  </message>
+  <message>
+    <source>GPS Horizontal Position Drift too high</source>
+    <translation>GPS 水平位置漂移过大</translation>
+  </message>
+  <message>
+    <source>GPS Vertical Pos Drift too high</source>
+    <translation>GPS 垂直位置漂移过大</translation>
+  </message>
+  <message>
+    <source>GPS Vertical Position Drift too high</source>
+    <translation>GPS 垂直位置漂移过大</translation>
+  </message>
+  <message>
+    <source>GPS Hor Speed Drift too high</source>
+    <translation>GPS 水平速度漂移过大</translation>
+  </message>
+  <message>
+    <source>GPS Horizontal Speed Drift too high</source>
+    <translation>GPS 水平速度漂移过大</translation>
+  </message>
+  <message>
+    <source>GPS Vert Speed Drift too high</source>
+    <translation>GPS 垂直速度漂移过大</translation>
+  </message>
+  <message>
+    <source>GPS Vertical Speed Drift too high</source>
+    <translation>GPS 垂直速度漂移过大</translation>
+  </message>
+  <message>
+    <source>GPS signal spoofed</source>
+    <translation>GPS 信号存在欺骗干扰</translation>
+  </message>
+  <message>
+    <source>GPS signal jammed</source>
+    <translation>GPS 信号受到干扰</translation>
+  </message>
+  <message>
+    <source>GPS jamming detected</source>
+    <translation>检测到 GPS 信号干扰</translation>
+  </message>
+  <message>
+    <source>Estimator not using GPS</source>
+    <translation>状态估计器未使用 GPS 数据</translation>
+  </message>
+  <message>
+    <source>Poor GPS Quality</source>
+    <translation>GPS 信号质量较差</translation>
+  </message>
+  <message>
+    <source>GNSS data fusion stopped</source>
+    <translation>GNSS 数据融合已停止</translation>
+  </message>
+  <message>
+    <source>GNSS data fusion started</source>
+    <translation>GNSS 数据融合已开始</translation>
+  </message>
+  <message>
+    <source>GNSS signal spoofed</source>
+    <translation>GNSS 信号存在欺骗干扰</translation>
+  </message>
+  <message>
+    <source>GNSS signal jammed</source>
+    <translation>GNSS 信号受到干扰</translation>
+  </message>
+  <message>
+    <source>Local position lost, no GNSS data</source>
+    <translation>局部位置丢失，无 GNSS 数据</translation>
+  </message>
+  <message>
+    <source>Position estimate has low accuracy</source>
+    <translation>位置估计精度较低</translation>
+  </message>
+  <message>
+    <source>Angular velocity no longer valid</source>
+    <translation>角速度数据已失效</translation>
+  </message>
+  <message>
+    <source>Estimated position error is approaching the failsafe threshold</source>
+    <translation>估计位置误差正在接近故障保护阈值</translation>
+  </message>
+  <message>
+    <source>Flight termination active</source>
+    <translation>飞行终止功能已触发</translation>
+  </message>
+  <message>
+    <source>Flying with USB is not safe</source>
+    <translation>通过 USB 连接时不宜飞行</translation>
+  </message>
+  <message>
+    <source>Global position estimate required</source>
+    <translation>需要有效的全局位置估计</translation>
+  </message>
+  <message>
+    <source>Home position required</source>
+    <translation>需要设置返航点</translation>
+  </message>
+  <message>
+    <source>Press safety button first</source>
+    <translation>请先按下安全按钮</translation>
+  </message>
+  <message>
+    <source>Turn safety off first</source>
+    <translation>请先解除安全开关</translation>
+  </message>
+  <message>
+    <source>Vehicle is in transition state</source>
+    <translation>无人机正在切换飞行形态</translation>
+  </message>
+  <message>
+    <source>Vehicle is not in multicopter mode</source>
+    <translation>无人机未处于多旋翼模式</translation>
+  </message>
+  <message>
+    <source>Arm authorization denied</source>
+    <translation>解锁授权被拒绝</translation>
+  </message>
+  <message>
+    <source>UAVCAN firmware update in progress</source>
+    <translation>UAVCAN 固件正在更新</translation>
+  </message>
+  <message>
+    <source>No connection to the GCS</source>
+    <translation>未连接地面站</translation>
+  </message>
+  <message>
+    <source>No connection to the ground control station</source>
+    <translation>未连接地面站</translation>
+  </message>
+  <message>
+    <source>Manual control lost</source>
+    <translation>手动控制信号丢失</translation>
+  </message>
+  <message>
+    <source>Manual control regained</source>
+    <translation>手动控制信号已恢复</translation>
+  </message>
+  <message>
+    <source>Low battery</source>
+    <translation>电池电量不足</translation>
+  </message>
+  <message>
+    <source>Critical battery</source>
+    <translation>电池电量严重不足</translation>
+  </message>
+  <message>
+    <source>Emergency battery level</source>
+    <translation>电池电量极低</translation>
+  </message>
+  <message>
+    <source>Battery unhealthy</source>
+    <translation>电池状态异常</translation>
+  </message>
+  <message>
+    <source>Remaining flight time low</source>
+    <translation>剩余飞行时间不足</translation>
+  </message>
+  <message>
+    <source>Under voltage</source>
+    <translation>电压过低</translation>
+  </message>
+  <message>
+    <source>Under temperature</source>
+    <translation>温度过低</translation>
+  </message>
+  <message>
+    <source>Over voltage</source>
+    <translation>电压过高</translation>
+  </message>
+  <message>
+    <source>Over temperature</source>
+    <translation>温度过高</translation>
+  </message>
+  <message>
+    <source>Voltage mismatch</source>
+    <translation>电压不匹配</translation>
+  </message>
+  <message>
+    <source>Incompatible firmware</source>
+    <translation>固件不兼容</translation>
+  </message>
+  <message>
+    <source>Incompatible model</source>
+    <translation>型号不兼容</translation>
+  </message>
+  <message>
+    <source>Hardware fault</source>
+    <translation>硬件故障</translation>
+  </message>
+  <message>
+    <source>Failed to arm</source>
+    <translation>解锁失败</translation>
+  </message>
+  <message>
+    <source>Land now!</source>
+    <translation>请立即降落！</translation>
+  </message>
+  <message>
+    <source>Land now</source>
+    <translation>请立即降落</translation>
+  </message>
+  <message>
+    <source>Return to launch</source>
+    <translation>返回起飞点</translation>
+  </message>
+  <message>
+    <source>Returning to launch</source>
+    <translation>正在返回起飞点</translation>
+  </message>
+  <message>
+    <source>Return mode activated</source>
+    <translation>返航模式已启用</translation>
+  </message>
+  <message>
+    <source>Landing</source>
+    <translation>正在降落</translation>
+  </message>
+  <message>
+    <source>Landed</source>
+    <translation>已降落</translation>
+  </message>
+  <message>
+    <source>Takeoff</source>
+    <translation>起飞</translation>
+  </message>
+  <message>
+    <source>Taking off</source>
+    <translation>正在起飞</translation>
+  </message>
+  <message>
+    <source>Takeoff complete</source>
+    <translation>起飞完成</translation>
+  </message>
+  <message>
+    <source>Landing complete</source>
+    <translation>降落完成</translation>
+  </message>
+  <message>
+    <source>Armed</source>
+    <translation>已解锁</translation>
+  </message>
+  <message>
+    <source>Disarmed</source>
+    <translation>已上锁</translation>
+  </message>
+  <message>
+    <source>Ready to fly</source>
+    <translation>已具备起飞条件</translation>
+  </message>
+  <message>
+    <source>Not ready to fly</source>
+    <translation>尚不具备起飞条件</translation>
+  </message>
+  <message>
+    <source>Mission started</source>
+    <translation>任务已开始</translation>
+  </message>
+  <message>
+    <source>Mission finished</source>
+    <translation>任务已完成</translation>
+  </message>
+  <message>
+    <source>Mission completed</source>
+    <translation>任务已完成</translation>
+  </message>
+  <message>
+    <source>Mission paused</source>
+    <translation>任务已暂停</translation>
+  </message>
+  <message>
+    <source>Mission resumed</source>
+    <translation>任务已继续</translation>
+  </message>
+  <message>
+    <source>Mission rejected</source>
+    <translation>任务被拒绝</translation>
+  </message>
+  <message>
+    <source>Mission upload failed</source>
+    <translation>任务上传失败</translation>
+  </message>
+  <message>
+    <source>Mission download failed</source>
+    <translation>任务下载失败</translation>
+  </message>
+  <message>
+    <source>No valid mission available</source>
+    <translation>无有效任务</translation>
+  </message>
+  <message>
+    <source>Unable to start mission</source>
+    <translation>无法开始任务</translation>
+  </message>
+  <message>
+    <source>Geofence breached</source>
+    <translation>已越过地理围栏</translation>
+  </message>
+  <message>
+    <source>Geofence violation</source>
+    <translation>地理围栏越界</translation>
+  </message>
+  <message>
+    <source>Geofence violation: returning to launch</source>
+    <translation>地理围栏越界：正在返航</translation>
+  </message>
+  <message>
+    <source>Failsafe activated</source>
+    <translation>故障保护已触发</translation>
+  </message>
+  <message>
+    <source>Failsafe enabled</source>
+    <translation>故障保护已启用</translation>
+  </message>
+  <message>
+    <source>Failsafe cleared</source>
+    <translation>故障保护已解除</translation>
+  </message>
+  <message>
+    <source>Failsafe mode activated</source>
+    <translation>故障保护模式已启用</translation>
+  </message>
+  <message>
+    <source>Low memory</source>
+    <translation>可用内存不足</translation>
+  </message>
+  <message>
+    <source>Logging failed</source>
+    <translation>日志记录失败</translation>
+  </message>
+  <message>
+    <source>No SD card</source>
+    <translation>未检测到存储卡</translation>
+  </message>
+  <message>
+    <source>SD card missing</source>
+    <translation>未检测到存储卡</translation>
+  </message>
+  <message>
+    <source>SD card full</source>
+    <translation>存储卡已满</translation>
+  </message>
+  <message>
+    <source>Downloading logs</source>
+    <translation>正在下载日志</translation>
+  </message>
+  <message>
+    <source>Logging not started</source>
+    <translation>日志记录尚未开始</translation>
+  </message>
+  <message>
+    <source>Logging started</source>
+    <translation>日志记录已开始</translation>
+  </message>
+  <message>
+    <source>Logging stopped</source>
+    <translation>日志记录已停止</translation>
+  </message>
+  <message>
+    <source>Gyros not healthy</source>
+    <translation>陀螺仪状态异常</translation>
+  </message>
+  <message>
+    <source>Gyros not calibrated</source>
+    <translation>陀螺仪尚未校准</translation>
+  </message>
+  <message>
+    <source>Accels not healthy</source>
+    <translation>加速度计状态异常</translation>
+  </message>
+  <message>
+    <source>3D Accel calibration needed</source>
+    <translation>需要进行加速度计六面校准</translation>
+  </message>
+  <message>
+    <source>Accels calibrated requires reboot</source>
+    <translation>加速度计校准已完成，需要重启飞控</translation>
+  </message>
+  <message>
+    <source>Accels inconsistent</source>
+    <translation>加速度计读数不一致</translation>
+  </message>
+  <message>
+    <source>Gyros inconsistent</source>
+    <translation>陀螺仪读数不一致</translation>
+  </message>
+  <message>
+    <source>Temperature cal running</source>
+    <translation>温度校准正在进行</translation>
+  </message>
+  <message>
+    <source>Batch sampling requires reboot</source>
+    <translation>批量采样配置需要重启飞控</translation>
+  </message>
+  <message>
+    <source>Compass calibration running</source>
+    <translation>罗盘校准正在进行</translation>
+  </message>
+  <message>
+    <source>Compass calibrated requires reboot</source>
+    <translation>罗盘校准已完成，需要重启飞控</translation>
+  </message>
+  <message>
+    <source>Compass offsets too high</source>
+    <translation>罗盘偏移量过大</translation>
+  </message>
+  <message>
+    <source>Compasses inconsistent</source>
+    <translation>罗盘读数不一致</translation>
+  </message>
+  <message>
+    <source>AHRS: waiting for home</source>
+    <translation>姿态航向参考系统正在等待返航点</translation>
+  </message>
+  <message>
+    <source>Safety Switch</source>
+    <translation>安全开关</translation>
+  </message>
+  <message>
+    <source>Throttle</source>
+    <translation>油门</translation>
+  </message>
+  <message>
+    <source>VTOL Fwd Throttle is not zero</source>
+    <translation>垂直起降前推油门未归零</translation>
+  </message>
+  <message>
+    <source>Duplicate Aux Switch Options</source>
+    <translation>辅助开关功能设置重复</translation>
+  </message>
+  <message>
+    <source>RC calibrating</source>
+    <translation>正在校准遥控器</translation>
+  </message>
+  <message>
+    <source>Radio failsafe on</source>
+    <translation>遥控信号故障保护已触发</translation>
+  </message>
+  <message>
+    <source>No rally library present</source>
+    <translation>固件不包含集结点功能</translation>
+  </message>
+  <message>
+    <source>Can't check rally without position</source>
+    <translation>没有位置数据，无法检查集结点</translation>
+  </message>
+  <message>
+    <source>No sufficiently close rally point located</source>
+    <translation>附近没有可用的集结点</translation>
+  </message>
+  <message>
+    <source>Mission: Zero takeoff altitude</source>
+    <translation>任务起飞高度为零</translation>
+  </message>
+  <message>
+    <source>Mode requires mission</source>
+    <translation>当前模式需要有效任务</translation>
+  </message>
+  <message>
+    <source>IOMCU is unhealthy</source>
+    <translation>输入输出协处理器状态异常</translation>
+  </message>
+  <message>
+    <source>Param storage failed</source>
+    <translation>参数存储失败</translation>
+  </message>
+  <message>
+    <source>Parameter storage full</source>
+    <translation>参数存储空间已满</translation>
+  </message>
+  <message>
+    <source>Terrain out of memory</source>
+    <translation>地形数据可用内存不足</translation>
+  </message>
+  <message>
+    <source>ADSB out of memory</source>
+    <translation>ADS-B 数据可用内存不足</translation>
+  </message>
+  <message>
+    <source>Terrain disabled</source>
+    <translation>地形功能未启用</translation>
+  </message>
+  <message>
+    <source>Terrain required but disabled</source>
+    <translation>当前操作需要地形功能，但该功能未启用</translation>
+  </message>
+  <message>
+    <source>PiccoloCAN not enabled</source>
+    <translation>PiccoloCAN 未启用</translation>
+  </message>
+  <message>
+    <source>Same rfnd on different CAN ports</source>
+    <translation>不同 CAN 端口配置了同一个测距传感器</translation>
+  </message>
+  <message>
+    <source>Failed to open fence storage</source>
+    <translation>无法打开围栏存储</translation>
+  </message>
+  <message>
+    <source>Memory low for auxiliary authorisation</source>
+    <translation>辅助授权可用内存不足</translation>
+  </message>
+  <message>
+    <source>Too many auxiliary authorisers</source>
+    <translation>辅助授权设备数量过多</translation>
+  </message>
+  <message>
+    <source>Auxiliary authorisation refused</source>
+    <translation>辅助授权被拒绝</translation>
+  </message>
+  <message>
+    <source>Waiting for auxiliary authorisation</source>
+    <translation>正在等待辅助授权</translation>
+  </message>
+  <message>
+    <source>Multiple SERIAL ports configured for RC input</source>
+    <translation>多个串口同时配置为遥控输入</translation>
+  </message>
+  <message>
+    <source>Motors Emergency Stopped</source>
+    <translation>电机已紧急停止</translation>
+  </message>
+  <message>
+    <source>GPS_AUTO_SWITCH==2 but no blending</source>
+    <translation>GPS_AUTO_SWITCH 为 2，但未启用 GPS 融合</translation>
+  </message>
+  <message>
+    <source>CrashDump data detected</source>
+    <translation>检测到崩溃转储数据</translation>
+  </message>
+  <message>
+    <source>Disarm Switch on</source>
+    <translation>上锁开关已开启</translation>
+  </message>
+  <message>
+    <source>System not initialised</source>
+    <translation>系统尚未初始化</translation>
+  </message>
+  <message>
+    <source>System not initialized</source>
+    <translation>系统尚未初始化</translation>
+  </message>
+  <message>
+    <source>Interlock/E-Stop Conflict</source>
+    <translation>电机联锁与紧急停机设置冲突</translation>
+  </message>
+  <message>
+    <source>Motor Interlock Enabled</source>
+    <translation>电机联锁已启用</translation>
+  </message>
+  <message>
+    <source>RC not found</source>
+    <translation>未检测到遥控信号</translation>
+  </message>
+  <message>
+    <source>RC signal lost</source>
+    <translation>遥控信号丢失</translation>
+  </message>
+  <message>
+    <source>RC signal regained</source>
+    <translation>遥控信号已恢复</translation>
+  </message>
+  <message>
+    <source>Altitude disparity</source>
+    <translation>高度数据不一致</translation>
+  </message>
+  <message>
+    <source>EKF attitude is bad</source>
+    <translation>EKF 姿态估计异常</translation>
+  </message>
+  <message>
+    <source>Battery failsafe</source>
+    <translation>电池故障保护已触发</translation>
+  </message>
+  <message>
+    <source>Check FS_THR_VALUE</source>
+    <translation>请检查 FS_THR_VALUE 参数</translation>
+  </message>
+  <message>
+    <source>FS_GCS_ENABLE=2 removed, see FS_OPTIONS</source>
+    <translation>FS_GCS_ENABLE=2 已移除，请检查 FS_OPTIONS 参数</translation>
+  </message>
+  <message>
+    <source>Check ACRO_BAL_ROLL/PITCH</source>
+    <translation>请检查 ACRO_BAL_ROLL 和 ACRO_BAL_PITCH 参数</translation>
+  </message>
+  <message>
+    <source>Check PILOT_SPD_UP</source>
+    <translation>请检查 PILOT_SPD_UP 参数</translation>
+  </message>
+  <message>
+    <source>Motor Interlock not configured</source>
+    <translation>尚未配置电机联锁</translation>
+  </message>
+  <message>
+    <source>Invalid MultiCopter FRAME_CLASS</source>
+    <translation>多旋翼 FRAME_CLASS 参数无效</translation>
+  </message>
+  <message>
+    <source>No terrain data</source>
+    <translation>无地形数据</translation>
+  </message>
+  <message>
+    <source>No rangefinder</source>
+    <translation>无测距传感器数据</translation>
+  </message>
+  <message>
+    <source>RTL_ALT_M above RNGFND_MAX</source>
+    <translation>RTL_ALT_M 高于 RNGFND_MAX</translation>
+  </message>
+  <message>
+    <source>Rangefinder not in firmware</source>
+    <translation>固件不包含测距传感器支持</translation>
+  </message>
+  <message>
+    <source>ADSB threat detected</source>
+    <translation>检测到 ADS-B 碰撞风险</translation>
+  </message>
+  <message>
+    <source>Check Object Avoidance</source>
+    <translation>请检查避障设置</translation>
+  </message>
+  <message>
+    <source>High GPS HDOP</source>
+    <translation>GPS 水平精度因子过大</translation>
+  </message>
+  <message>
+    <source>Need Position Estimate</source>
+    <translation>需要有效的位置估计</translation>
+  </message>
+  <message>
+    <source>Fence enabled, need position estimate</source>
+    <translation>围栏已启用，需要有效的位置估计</translation>
+  </message>
+  <message>
+    <source>GPS glitching</source>
+    <translation>GPS 数据出现异常跳变</translation>
+  </message>
+  <message>
+    <source>GCS failsafe on</source>
+    <translation>地面站通信故障保护已触发</translation>
+  </message>
+  <message>
+    <source>Need Alt Estimate</source>
+    <translation>需要有效的高度估计</translation>
+  </message>
+  <message>
+    <source>AHRS not healthy</source>
+    <translation>姿态航向参考系统状态异常</translation>
+  </message>
+  <message>
+    <source>Leaning</source>
+    <translation>机体倾斜过大</translation>
+  </message>
+  <message>
+    <source>No global position</source>
+    <translation>无全局位置数据</translation>
+  </message>
+  <message>
+    <source>No local position</source>
+    <translation>无局部位置数据</translation>
+  </message>
+  <message>
+    <source>GPS not healthy</source>
+    <translation>GPS 状态异常</translation>
+  </message>
+  <message>
+    <source>GPS not detected</source>
+    <translation>未检测到 GPS</translation>
+  </message>
+  <message>
+    <source>No GPS</source>
+    <translation>无 GPS 数据</translation>
+  </message>
+  <message>
+    <source>GPS fix lost</source>
+    <translation>GPS 定位丢失</translation>
+  </message>
+  <message>
+    <source>GPS fix acquired</source>
+    <translation>GPS 已获得定位</translation>
+  </message>
+  <message>
+    <source>GPS 3D fix</source>
+    <translation>GPS 已获得三维定位</translation>
+  </message>
+  <message>
+    <source>EKF variance</source>
+    <translation>EKF 估计方差过大</translation>
+  </message>
+  <message>
+    <source>EKF failsafe</source>
+    <translation>EKF 故障保护已触发</translation>
+  </message>
+  <message>
+    <source>EKF not healthy</source>
+    <translation>EKF 状态异常</translation>
+  </message>
+  <message>
+    <source>EKF is not ready</source>
+    <translation>EKF 尚未就绪</translation>
+  </message>
+  <message>
+    <source>Barometer not healthy</source>
+    <translation>气压计状态异常</translation>
+  </message>
+  <message>
+    <source>Barometer not calibrated</source>
+    <translation>气压计尚未校准</translation>
+  </message>
+  <message>
+    <source>Baro not healthy</source>
+    <translation>气压计状态异常</translation>
+  </message>
+  <message>
+    <source>Accelerometer not calibrated</source>
+    <translation>加速度计尚未校准</translation>
+  </message>
+  <message>
+    <source>Gyro not calibrated</source>
+    <translation>陀螺仪尚未校准</translation>
+  </message>
+  <message>
+    <source>Compass not calibrated</source>
+    <translation>罗盘尚未校准</translation>
+  </message>
+  <message>
+    <source>Compass not healthy</source>
+    <translation>罗盘状态异常</translation>
+  </message>
+  <message>
+    <source>Compass inconsistent</source>
+    <translation>罗盘读数不一致</translation>
+  </message>
+  <message>
+    <source>Accelerometer inconsistent</source>
+    <translation>加速度计读数不一致</translation>
+  </message>
+  <message>
+    <source>Gyro inconsistent</source>
+    <translation>陀螺仪读数不一致</translation>
+  </message>
+  <message>
+    <source>Not calibrated</source>
+    <translation>尚未校准</translation>
+  </message>
+  <message>
+    <source>Not healthy</source>
+    <translation>状态异常</translation>
+  </message>
+  <message>
+    <source>Not found</source>
+    <translation>未检测到</translation>
+  </message>
+  <message>
+    <source>Not ready</source>
+    <translation>尚未就绪</translation>
+  </message>
+  <message>
+    <source>Not enabled</source>
+    <translation>未启用</translation>
+  </message>
+  <message>
+    <source>Missing</source>
+    <translation>缺失</translation>
+  </message>
+  <message>
+    <source>Disconnected</source>
+    <translation>已断开</translation>
+  </message>
+  <message>
+    <source>Bad fix</source>
+    <translation>定位质量不佳</translation>
+  </message>
+  <message>
+    <source>Failsafe</source>
+    <translation>故障保护</translation>
+  </message>
+  <message>
+    <source>Calibration started</source>
+    <translation>校准已开始</translation>
+  </message>
+  <message>
+    <source>Calibration successful</source>
+    <translation>校准成功</translation>
+  </message>
+  <message>
+    <source>Calibration completed</source>
+    <translation>校准已完成</translation>
+  </message>
+  <message>
+    <source>Calibration done</source>
+    <translation>校准已完成</translation>
+  </message>
+  <message>
+    <source>Calibration failed</source>
+    <translation>校准失败</translation>
+  </message>
+  <message>
+    <source>Calibration cancelled</source>
+    <translation>校准已取消</translation>
+  </message>
+  <message>
+    <source>Calibration canceled</source>
+    <translation>校准已取消</translation>
+  </message>
+  <message>
+    <source>Calibration in progress</source>
+    <translation>正在校准</translation>
+  </message>
+  <message>
+    <source>Please reboot the autopilot</source>
+    <translation>请重启飞控</translation>
+  </message>
+  <message>
+    <source>Reboot required</source>
+    <translation>需要重启</translation>
+  </message>
+  <message>
+    <source>Rebooting</source>
+    <translation>正在重启</translation>
+  </message>
+  <message>
+    <source>Place vehicle level</source>
+    <translation>请将无人机水平放置</translation>
+  </message>
+  <message>
+    <source>Keep vehicle still</source>
+    <translation>请保持无人机静止</translation>
+  </message>
+  <message>
+    <source>Preflight Fail:</source>
+    <translation>飞行前检查失败：</translation>
+  </message>
+  <message>
+    <source>Preflight Warning:</source>
+    <translation>飞行前检查警告：</translation>
+  </message>
+  <message>
+    <source>PreArm:</source>
+    <translation>解锁前检查：</translation>
+  </message>
+  <message>
+    <source>Arm:</source>
+    <translation>解锁检查：</translation>
+  </message>
+  <message>
+    <source>Compass</source>
+    <translation>罗盘</translation>
+  </message>
+  <message>
+    <source>Mag</source>
+    <translation>罗盘</translation>
+  </message>
+  <message>
+    <source>Accel</source>
+    <translation>加速度计</translation>
+  </message>
+  <message>
+    <source>Gyro</source>
+    <translation>陀螺仪</translation>
+  </message>
+  <message>
+    <source>Baro</source>
+    <translation>气压计</translation>
+  </message>
+  <message>
+    <source>Airspeed</source>
+    <translation>空速计</translation>
+  </message>
+  <message>
+    <source>GPS</source>
+    <translation>GPS</translation>
+  </message>
+  <message>
+    <source>AHRS</source>
+    <translation>姿态航向参考系统</translation>
+  </message>
+  <message>
+    <source>Velocity</source>
+    <translation>速度</translation>
+  </message>
+  <message>
+    <source>Position</source>
+    <translation>位置</translation>
+  </message>
+  <message>
+    <source>Height</source>
+    <translation>高度</translation>
+  </message>
+  <message>
+    <source>Yaw</source>
+    <translation>偏航</translation>
+  </message>
+  <message>
+    <source>Roll</source>
+    <translation>横滚</translation>
+  </message>
+  <message>
+    <source>Pitch</source>
+    <translation>俯仰</translation>
+  </message>
+  <message>
+    <source>Level</source>
+    <translation>水平</translation>
+  </message>
+  <message>
+    <source>On its left side</source>
+    <translation>左侧朝下</translation>
+  </message>
+  <message>
+    <source>On its right side</source>
+    <translation>右侧朝下</translation>
+  </message>
+  <message>
+    <source>Nose down</source>
+    <translation>机头朝下</translation>
+  </message>
+  <message>
+    <source>Nose up</source>
+    <translation>机头朝上</translation>
+  </message>
+  <message>
+    <source>Upside down</source>
+    <translation>倒置</translation>
+  </message>
+  <message>
+    <source>Preflight check failed: %1</source>
+    <translation>飞行前检查失败：%1</translation>
+  </message>
+  <message>
+    <source>Preflight check warning: %1</source>
+    <translation>飞行前检查警告：%1</translation>
+  </message>
+  <message>
+    <source>Preflight check: %1</source>
+    <translation>飞行前检查：%1</translation>
+  </message>
+  <message>
+    <source>Pre-arm check: %1</source>
+    <translation>解锁前检查：%1</translation>
+  </message>
+  <message>
+    <source>Arming check: %1</source>
+    <translation>解锁检查：%1</translation>
+  </message>
+  <message>
+    <source>Arming denied: %1</source>
+    <translation>解锁被拒绝：%1</translation>
+  </message>
+  <message>
+    <source>Failed to arm: %1</source>
+    <translation>解锁失败：%1</translation>
+  </message>
+  <message>
+    <source>Failsafe: %1</source>
+    <translation>故障保护：%1</translation>
+  </message>
+  <message>
+    <source>Vehicle %1: %2</source>
+    <translation>无人机 %1：%2</translation>
+  </message>
+  <message>
+    <source>Battery %1: %2. %3</source>
+    <translation>电池 %1：%2。%3</translation>
+  </message>
+  <message>
+    <source>Battery %1: %2</source>
+    <translation>电池 %1：%2</translation>
+  </message>
+  <message>
+    <source>Battery %1 missing</source>
+    <translation>电池 %1 缺失</translation>
+  </message>
+  <message>
+    <source>Battery %1 disconnected</source>
+    <translation>电池 %1 已断开</translation>
+  </message>
+  <message>
+    <source>Manual control regained after %1 s</source>
+    <translation>手动控制信号在 %1 秒后恢复</translation>
+  </message>
+  <message>
+    <source>%1 - Land now!</source>
+    <translation>%1，请立即降落！</translation>
+  </message>
+  <message>
+    <source>Local position lost, GNSS check failed: %1</source>
+    <translation>局部位置丢失，GNSS 检查失败：%1</translation>
+  </message>
+  <message>
+    <source>Compass %1 not healthy</source>
+    <translation>罗盘 %1 状态异常</translation>
+  </message>
+  <message>
+    <source>GPS %1: %2</source>
+    <translation>GPS %1：%2</translation>
+  </message>
+  <message>
+    <source>GPS %1 not healthy</source>
+    <translation>GPS %1 状态异常</translation>
+  </message>
+  <message>
+    <source>GPS %1 not detected</source>
+    <translation>未检测到 GPS %1</translation>
+  </message>
+  <message>
+    <source>Primary but TYPE 0</source>
+    <translation>设为主 GPS，但 TYPE 为 0</translation>
+  </message>
+  <message>
+    <source>GPS positions differ by %1 m</source>
+    <translation>GPS 位置相差 %1 m</translation>
+  </message>
+  <message>
+    <source>GPS and AHRS differ by %1 m</source>
+    <translation>GPS 与姿态航向参考系统的位置相差 %1 m</translation>
+  </message>
+  <message>
+    <source>GPS fix lost for %1 s</source>
+    <translation>GPS 定位已丢失 %1 秒</translation>
+  </message>
+  <message>
+    <source>Check magnetic field: %1, max %2, min %3</source>
+    <translation>检查磁场强度：%1，最大值 %2，最小值 %3</translation>
+  </message>
+  <message>
+    <source>Check magnetic field (XY difference: %1 &gt; %2)</source>
+    <translation>检查磁场强度（XY 差值：%1 &gt; %2）</translation>
+  </message>
+  <message>
+    <source>Check magnetic field (Z difference: %1 &gt; %2)</source>
+    <translation>检查磁场强度（Z 差值：%1 &gt; %2）</translation>
+  </message>
+  <message>
+    <source>EKF %1 variance</source>
+    <translation>EKF %1估计方差过大</translation>
+  </message>
+  <message>
+    <source>%1 (non-finite values)</source>
+    <translation>%1（存在非有限数值）</translation>
+  </message>
+  <message>
+    <source>Bad parameter: %1</source>
+    <translation>参数无效：%1</translation>
+  </message>
+  <message>
+    <source>Check %1</source>
+    <translation>请检查 %1 参数</translation>
+  </message>
+  <message>
+    <source>%1 mode not armable</source>
+    <translation>%1 模式下无法解锁</translation>
+  </message>
+  <message>
+    <source>%1 below failsafe threshold</source>
+    <translation>%1 低于故障保护阈值</translation>
+  </message>
+  <message>
+    <source>%1 (RC%2) is not neutral</source>
+    <translation>%1（RC%2）未回中</translation>
+  </message>
+  <message>
+    <source>Mode channel and RC%1_OPTION conflict</source>
+    <translation>模式通道与 RC%1_OPTION 设置冲突</translation>
+  </message>
+  <message>
+    <source>%1 is greater than %2</source>
+    <translation>%1 大于 %2</translation>
+  </message>
+  <message>
+    <source>%1 is less than %2</source>
+    <translation>%1 小于 %2</translation>
+  </message>
+  <message>
+    <source>SERVO%1_FUNCTION=%2 on disabled channel</source>
+    <translation>已停用的通道设置了 SERVO%1_FUNCTION=%2</translation>
+  </message>
+  <message>
+    <source>Missing mission item: %1</source>
+    <translation>缺少任务项目：%1</translation>
+  </message>
+  <message>
+    <source>Failed to open %1</source>
+    <translation>无法打开 %1</translation>
+  </message>
+  <message>
+    <source>Board voltage %1 V outside range %2-%3 V</source>
+    <translation>飞控供电电压 %1 V 超出 %2～%3 V 范围</translation>
+  </message>
+  <message>
+    <source>Servo voltage too low (%1 V &lt; %2 V)</source>
+    <translation>舵机供电电压过低（%1 V &lt; %2 V）</translation>
+  </message>
+  <message>
+    <source>Heater temperature too low (%1 &lt; %2)</source>
+    <translation>加热器温度过低（%1 &lt; %2）</translation>
+  </message>
+  <message>
+    <source>Main loop slow (%1 Hz &lt; %2 Hz)</source>
+    <translation>主循环频率过低（%1 Hz &lt; %2 Hz）</translation>
+  </message>
+  <message>
+    <source>Internal errors %1, line %2: %3</source>
+    <translation>内部错误 %1，第 %2 行：%3</translation>
+  </message>
+  <message>
+    <source>Obstacle at %1 deg, %2 m (required &gt; %3 m)</source>
+    <translation>%1 度方向有障碍物，距离 %2 m（要求大于 %3 m）</translation>
+  </message>
+  <message>
+    <source>%1 radio minimum too high</source>
+    <translation>%1 遥控通道最小值过高</translation>
+  </message>
+  <message>
+    <source>%1 radio maximum too low</source>
+    <translation>%1 遥控通道最大值过低</translation>
+  </message>
+  <message>
+    <source>%1: %2</source>
+    <translation>%1：%2</translation>
+  </message>
+  <message>
+    <source>%1 not healthy</source>
+    <translation>%1 状态异常</translation>
+  </message>
+  <message>
+    <source>%1 not calibrated</source>
+    <translation>%1 尚未校准</translation>
+  </message>
+  <message>
+    <source>%1 not found</source>
+    <translation>未检测到 %1</translation>
+  </message>
+  <message>
+    <source>%1 too high</source>
+    <translation>%1 过高</translation>
+  </message>
+  <message>
+    <source>%1 too low</source>
+    <translation>%1 过低</translation>
+  </message>
+  <message>
+    <source>Set %1 to %2</source>
+    <translation>将 %1 设置为 %2</translation>
+  </message>
+  <message>
+    <source>Please check %1</source>
+    <translation>请检查 %1</translation>
+  </message>
+  <message>
+    <source>Mission item %1: %2</source>
+    <translation>任务项目 %1：%2</translation>
+  </message>
+  <message>
+    <source>Mission reached item %1</source>
+    <translation>已到达任务航点 %1</translation>
+  </message>
+  <message>
+    <source>Reached command %1</source>
+    <translation>已执行到任务指令 %1</translation>
+  </message>
+  <message>
+    <source>Changing to %1</source>
+    <translation>正在切换到 %1</translation>
+  </message>
+  <message>
+    <source>Calibration started (protocol %1): %2</source>
+    <translation>校准已开始（协议 %1）：%2</translation>
+  </message>
+  <message>
+    <source>Calibration started: %1</source>
+    <translation>校准已开始：%1</translation>
+  </message>
+  <message>
+    <source>Calibration done: %1</source>
+    <translation>校准已完成：%1</translation>
+  </message>
+  <message>
+    <source>Calibration failed: %1</source>
+    <translation>校准失败：%1</translation>
+  </message>
+  <message>
+    <source>Calibration successful: %1</source>
+    <translation>校准成功：%1</translation>
+  </message>
+  <message>
+    <source>Place vehicle %1</source>
+    <translation>请将无人机置于%1姿态</translation>
+  </message>
+  <message>
+    <source>%1 instance %2</source>
+    <translation>%1 %2</translation>
+  </message>
+    <message>
+        <source>Strength (EKF2_MAG_CHK_STR)</source>
+        <translation>磁场强度（EKF2_MAG_CHK_STR）</translation>
+    </message>
+    <message>
+        <source>Inclination (EKF2_MAG_CHK_INC)</source>
+        <translation>磁倾角（EKF2_MAG_CHK_INC）</translation>
+    </message>
+    <message>
+        <source>Wait for WMM</source>
+        <translation>等待世界磁场模型（WMM）</translation>
+    </message>
+    <message>
+        <source>Magnetic field strength test selection</source>
+        <translation>磁场有效性检查选项</translation>
+    </message>
+    <message>
+        <source>Bitmask to set which check is used to decide whether the magnetometer data is valid. If GNSS data is received, the magnetic field is compared to a World Magnetic Model (WMM), otherwise an average value is used. This check is useful to reject occasional hard iron disturbance. Set bits to 1 to enable checks. Checks enabled by the following bit positions 0 : Magnetic field strength. Set tolerance using EKF2_MAG_CHK_STR 1 : Magnetic field inclination. Set tolerance using EKF2_MAG_CHK_INC 2 : Wait for GNSS to find the theoretical strength and inclination using the WMM</source>
+        <translation>设置用于判断磁力计数据是否有效的检查项目（位掩码）。收到 GNSS 数据时，将测量磁场与世界磁场模型（WMM）比较；否则使用平均值。此检查有助于排除偶发的硬铁磁干扰。将对应位设为 1 即可启用：
+第 0 位：检查磁场强度，使用 EKF2_MAG_CHK_STR 设置容差。
+第 1 位：检查磁倾角，使用 EKF2_MAG_CHK_INC 设置容差。
+第 2 位：等待 GNSS 定位后，利用 WMM 获取理论磁场强度和磁倾角。</translation>
+    </message>
+    <message>
+        <source>Enabled</source>
+        <translation>启用</translation>
+    </message>
+    <message>
+        <source>Disabled</source>
+        <translation>禁用</translation>
+    </message>
+    <message>
+        <source>Unassigned</source>
+        <translation>未分配</translation>
+    </message>
+    <message>
+        <source>None</source>
+        <translation>无</translation>
+    </message>
+    <message>
+        <source>Automatic</source>
+        <translation>自动</translation>
+    </message>
+    <message>
+        <source>Manual</source>
+        <translation>手动</translation>
+    </message>
+    <message>
+        <source>Magnetic field strength</source>
+        <translation>磁场强度</translation>
+    </message>
+    <message>
+        <source>Magnetic field inclination</source>
+        <translation>磁倾角</translation>
+    </message>
+</context>
+  <context>
+    <name>APMMainStatusIndicator</name>
+    <message>
+      <source>Ground Control Comm Loss Failsafe</source>
+      <translation>地面站通信中断保护</translation>
+    </message>
+    <message>
+      <source>Vehicle Action</source>
+      <translation>无人机动作</translation>
+    </message>
+    <message>
+      <source>Loss Timeout</source>
+      <translation>失联超时</translation>
+    </message>
+    <message>
+      <source>Failsafe Options</source>
+      <translation>故障保护选项</translation>
+    </message>
+  </context>
+  <context>
+    <name>ArmedIndicator</name>
+    <message>
+      <source>Armed</source>
+      <translation>已解锁</translation>
+    </message>
+    <message>
+      <source>Disarmed</source>
+      <translation>已上锁</translation>
+    </message>
+    <message>
+      <source>Arm</source>
+      <translation>解锁</translation>
+    </message>
+    <message>
+      <source>Disarm</source>
+      <translation>上锁</translation>
+    </message>
+  </context>
+  <context>
+    <name>FactTextFieldSlider2</name>
+    <message>
+      <source>Value: </source>
+      <translation>数值：</translation>
+    </message>
+  </context>
+  <context>
+    <name>FactValueSlider</name>
+    <message>
+      <source>Value Details</source>
+      <translation>数值详情</translation>
+    </message>
+  </context>
+  <context>
+    <name>GPSResilienceIndicator</name>
+    <message>
+      <source>GPS Resilience Status</source>
+      <translation>GPS 抗干扰状态</translation>
+    </message>
+    <message>
+      <source>GPS Jamming</source>
+      <translation>GPS 干扰</translation>
+    </message>
+    <message>
+      <source>n/a</source>
+      <translation>暂无数据</translation>
+    </message>
+    <message>
+      <source>GPS Spoofing</source>
+      <translation>GPS 欺骗</translation>
+    </message>
+    <message>
+      <source>GPS Authentication</source>
+      <translation>GPS 身份验证</translation>
+    </message>
+    <message>
+      <source>GPS 1 Details</source>
+      <translation>GPS 1 详情</translation>
+    </message>
+    <message>
+      <source>Jamming</source>
+      <translation>干扰</translation>
+    </message>
+    <message>
+      <source>Spoofing</source>
+      <translation>欺骗</translation>
+    </message>
+    <message>
+      <source>Authentication</source>
+      <translation>身份验证</translation>
+    </message>
+    <message>
+      <source>GPS 2 Details</source>
+      <translation>GPS 2 详情</translation>
+    </message>
+  </context>
+  <context>
+    <name>NTRIPSourceTableFetcher</name>
+    <message>
+      <source>No reply received</source>
+      <translation>未收到响应</translation>
+    </message>
+    <message>
+      <source>Response does not contain a valid source table</source>
+      <translation>响应中不包含有效的数据源列表</translation>
+    </message>
+  </context>
+  <context>
+    <name>NmeaGpsSettings</name>
+    <message>
+      <source>NMEA GPS</source>
+      <translation>NMEA GPS 接收机</translation>
+    </message>
+    <message>
+      <source>Device</source>
+      <translation>设备</translation>
+    </message>
+    <message>
+      <source>Disabled</source>
+      <translation>禁用</translation>
+    </message>
+    <message>
+      <source>UDP Port</source>
+      <translation>UDP 端口</translation>
+    </message>
+    <message>
+      <source>Serial &lt;none available&gt;</source>
+      <translation>串口〈无可用设备〉</translation>
+    </message>
+    <message>
+      <source>Baudrate</source>
+      <translation>波特率</translation>
+    </message>
+    <message>
+      <source>Custom</source>
+      <translation>自定义</translation>
+    </message>
+    <message>
+      <source>Custom Baud Rate</source>
+      <translation>自定义波特率</translation>
+    </message>
+    <message>
+      <source>NMEA stream UDP port</source>
+      <translation>NMEA 数据流 UDP 端口</translation>
+    </message>
+  </context>
+  <context>
+    <name>NtripConnectionStatus</name>
+    <message>
+      <source>Connection</source>
+      <translation>连接状态</translation>
+    </message>
+    <message>
+      <source>Disconnected</source>
+      <translation>未连接</translation>
+    </message>
+    <message>
+      <source>Connecting…</source>
+      <translation>正在连接…</translation>
+    </message>
+    <message>
+      <source>Reconnecting…</source>
+      <translation>正在重新连接…</translation>
+    </message>
+    <message>
+      <source>Disconnect</source>
+      <translation>断开连接</translation>
+    </message>
+    <message>
+      <source>Connect</source>
+      <translation>连接</translation>
+    </message>
+    <message>
+      <source>%1 messages</source>
+      <translation>%1 条消息</translation>
+    </message>
+    <message>
+      <source>GGA: %1</source>
+      <translation>GGA 数据：%1</translation>
+    </message>
+  </context>
+  <context>
+    <name>NtripMountpointBrowser</name>
+    <message>
+      <source>Mountpoint</source>
+      <translation>挂载点</translation>
+    </message>
+    <message>
+      <source>Browse</source>
+      <translation>浏览</translation>
+    </message>
+    <message>
+      <source>Fetching mountpoints…</source>
+      <translation>正在获取挂载点…</translation>
+    </message>
+    <message>
+      <source>(selected)</source>
+      <translation>（已选择）</translation>
+    </message>
+    <message>
+      <source>Selected</source>
+      <translation>已选择</translation>
+    </message>
+    <message>
+      <source>Select</source>
+      <translation>选择</translation>
+    </message>
+  </context>
+  <context>
+    <name>NtripServerSettings</name>
+    <message>
+      <source>Server</source>
+      <translation>服务器</translation>
+    </message>
+    <message>
+      <source>Hide</source>
+      <translation>隐藏</translation>
+    </message>
+    <message>
+      <source>Show</source>
+      <translation>显示</translation>
+    </message>
+  </context>
+  <context>
+    <name>OnboardLogFtpController</name>
+    <message>
+      <source>Available</source>
+      <translation>可用</translation>
+    </message>
+    <message>
+      <source>Waiting</source>
+      <translation>等待中</translation>
+    </message>
+    <message>
+      <source>Downloading</source>
+      <translation>正在下载</translation>
+    </message>
+    <message>
+      <source>Error</source>
+      <translation>错误</translation>
+    </message>
+    <message>
+      <source>Downloaded</source>
+      <translation>已下载</translation>
+    </message>
+    <message>
+      <source>Canceled</source>
+      <translation>已取消</translation>
+    </message>
+  </context>
+  <context>
+    <name>OnboardLogFtpPage</name>
+    <message>
+      <source>Onboard Logs (FTP) lists log files on the vehicle's SD card via MAVLink FTP. Click Refresh to query the vehicle.</source>
+      <translation>机载日志（FTP）通过 MAVLink FTP 列出无人机存储卡中的日志文件。点击“刷新”查询无人机。</translation>
+    </message>
+    <message>
+      <source>Id</source>
+      <translation>编号</translation>
+    </message>
+    <message>
+      <source>Date</source>
+      <translation>日期</translation>
+    </message>
+    <message>
+      <source>Date Unknown</source>
+      <translation>日期未知</translation>
+    </message>
+    <message>
+      <source>Size</source>
+      <translation>大小</translation>
+    </message>
+    <message>
+      <source>Status</source>
+      <translation>状态</translation>
+    </message>
+    <message>
+      <source>Refresh</source>
+      <translation>刷新</translation>
+    </message>
+    <message>
+      <source>Log Refresh</source>
+      <translation>刷新日志</translation>
+    </message>
+    <message>
+      <source>You must be connected to a vehicle in order to download logs.</source>
+      <translation>请先连接无人机，再下载日志。</translation>
+    </message>
+    <message>
+      <source>Download</source>
+      <translation>下载</translation>
+    </message>
+    <message>
+      <source>Log Download</source>
+      <translation>下载日志</translation>
+    </message>
+    <message>
+      <source>You must select at least one log file to download.</source>
+      <translation>请至少选择一个要下载的日志文件。</translation>
+    </message>
+    <message>
+      <source>Select save directory</source>
+      <translation>选择保存目录</translation>
+    </message>
+    <message>
+      <source>Cancel</source>
+      <translation>取消</translation>
+    </message>
+  </context>
+  <context>
+    <name>PX4MainStatusIndicator</name>
+    <message>
+      <source>Ground Control Comm Loss Failsafe</source>
+      <translation>地面站通信中断保护</translation>
+    </message>
+    <message>
+      <source>Vehicle Action</source>
+      <translation>无人机动作</translation>
+    </message>
+    <message>
+      <source>Loss Timeout</source>
+      <translation>失联超时</translation>
+    </message>
+  </context>
+  <context>
+    <name>RemoteIDGpsLocation</name>
+    <message>
+      <source>NMEA External GPS</source>
+      <translation>外接 NMEA GPS 接收机</translation>
+    </message>
+    <message>
+      <source>Device</source>
+      <translation>设备</translation>
+    </message>
+    <message>
+      <source>Disabled</source>
+      <translation>禁用</translation>
+    </message>
+    <message>
+      <source>UDP Port</source>
+      <translation>UDP 端口</translation>
+    </message>
+    <message>
+      <source>Serial &lt;none available&gt;</source>
+      <translation>串口〈无可用设备〉</translation>
+    </message>
+    <message>
+      <source>Baudrate</source>
+      <translation>波特率</translation>
+    </message>
+  </context>
+  <context>
+    <name>Viewer3DModel</name>
+    <message>
+      <source>Downloading Imageries: </source>
+      <translation>正在下载影像：</translation>
+    </message>
+  </context>
+  <context>
+    <name>Viewer3DProgressBar</name>
+    <message>
+      <source>Progress</source>
+      <translation>进度</translation>
+    </message>
+  </context>
+  <context>
+    <name>CorrectionDiagnostics</name>
+    <message>
+      <source>NTRIP UDP output</source>
+      <translation>NTRIP UDP 输出</translation>
+    </message>
+    <message>
+      <source>Vehicles</source>
+      <translation>无人机</translation>
+    </message>
+    <message>
+      <source>Vehicle link %1</source>
+      <translation>无人机链路 %1</translation>
+    </message>
+    <message>
+      <source>Unselected</source>
+      <translation>未选择</translation>
+    </message>
+    <message>
+      <source>Inactive source</source>
+      <translation>未启用的数据源</translation>
+    </message>
+    <message>
+      <source>Previous source session</source>
+      <translation>上一次数据源会话</translation>
+    </message>
+    <message>
+      <source>Invalid receipt time</source>
+      <translation>接收时间无效</translation>
+    </message>
+    <message>
+      <source>Expired</source>
+      <translation>已过期</translation>
+    </message>
+    <message>
+      <source>Filtered message</source>
+      <translation>已过滤的消息</translation>
+    </message>
+    <message>
+      <source>Source not selected</source>
+      <translation>未选择数据源</translation>
+    </message>
+    <message>
+      <source>Destination unavailable</source>
+      <translation>目标不可用</translation>
+    </message>
+    <message>
+      <source>Queue full</source>
+      <translation>队列已满</translation>
+    </message>
+    <message>
+      <source>Invalid frame</source>
+      <translation>数据帧无效</translation>
+    </message>
+    <message>
+      <source>Connection cancelled</source>
+      <translation>连接已取消</translation>
+    </message>
+    <message>
+      <source>Source changed</source>
+      <translation>数据源已更改</translation>
+    </message>
+    <message>
+      <source>Write failed</source>
+      <translation>写入失败</translation>
+    </message>
+    <message>
+      <source>Incomplete write</source>
+      <translation>写入不完整</translation>
+    </message>
+    <message>
+      <source>Unmatched delivery report</source>
+      <translation>无法匹配的传输报告</translation>
+    </message>
+    <message>
+      <source>Connection ended before the write result was available</source>
+      <translation>尚未收到写入结果，连接已结束</translation>
+    </message>
+    <message>
+      <source>Delivery tracking full</source>
+      <translation>传输跟踪记录已满</translation>
+    </message>
+    <message>
+      <source>Unknown</source>
+      <translation>未知</translation>
+    </message>
+    <message>
+      <source>Local base station</source>
+      <translation>本地基站</translation>
+    </message>
+    <message>
+      <source>NTRIP</source>
+      <translation>NTRIP 差分服务</translation>
+    </message>
+    <message>
+      <source>UDP</source>
+      <translation>UDP 数据流</translation>
+    </message>
+    <message>
+      <source>Unclassified</source>
+      <translation>未分类</translation>
+    </message>
+    <message>
+      <source>Received</source>
+      <translation>已接收</translation>
+    </message>
+    <message>
+      <source>Validated</source>
+      <translation>已验证</translation>
+    </message>
+    <message>
+      <source>Selected</source>
+      <translation>已选择</translation>
+    </message>
+    <message>
+      <source>Queued</source>
+      <translation>已加入队列</translation>
+    </message>
+    <message>
+      <source>Written</source>
+      <translation>已写入</translation>
+    </message>
+    <message>
+      <source>Unconfirmed</source>
+      <translation>未确认</translation>
+    </message>
+    <message>
+      <source>Dropped</source>
+      <translation>已丢弃</translation>
+    </message>
+    <message>
+      <source>Correction Diagnostics</source>
+      <translation>差分数据诊断</translation>
+    </message>
+    <message>
+      <source>Queued bytes have been submitted to an output. Written bytes reached an output transport; they do not confirm that a receiver applied the corrections or obtained a fix. Vehicle writes are unconfirmed.</source>
+      <translation>入队字节数表示已提交给输出的数据。已写入字节数表示数据已到达输出传输层，不能证明接收机已应用差分数据或获得定位结果。无人机链路的写入结果未经确认。</translation>
+    </message>
+    <message>
+      <source>Received/dropped source bytes measure frame-candidate evidence, not raw transport traffic. Recovered frames can overlap rejected candidates. Drop events count separate selection, admission, and delivery losses; one frame may contribute more than once.</source>
+      <translation>已接收／已丢弃的数据源字节数表示候选帧数据量，并非原始通信流量。恢复出的数据帧可能与被拒绝的候选帧重叠。丢弃事件分别统计选择、入队和传输阶段的损失，同一帧可能被重复计数。</translation>
+    </message>
+    <message>
+      <source>%1 — frames: received %2, validated %3, selected %4, queued %5, written %6; drop events %7</source>
+      <translation>%1 — 数据帧：接收 %2，验证 %3，选择 %4，入队 %5，写入 %6；丢弃事件 %7</translation>
+    </message>
+    <message>
+      <source>%1 — queued %2 B, written %3, dropped %4 B, pending %5 B, unconfirmed %6 B</source>
+      <translation>%1 — 入队 %2 字节，写入 %3，丢弃 %4 字节，待处理 %5 字节，未确认 %6 字节</translation>
+    </message>
+    <message>
+      <source>%1 B</source>
+      <translation>%1 字节</translation>
+    </message>
+    <message>
+      <source>unconfirmed</source>
+      <translation>未确认</translation>
+    </message>
+    <message>
+      <source>Show recent correction events</source>
+      <translation>显示近期差分数据事件</translation>
+    </message>
+    <message>
+      <source>%1. %2 — %3, %4 B%5
+Source: %6 (session %7); destination: %8 (session %9)</source>
+      <translation>%1. %2 — %3，%4 字节%5
+数据源：%6（会话 %7）；目标：%8（会话 %9）</translation>
+    </message>
+    <message>
+      <source> — %1</source>
+      <translation> — %1</translation>
+    </message>
+    <message>
+      <source>Current correction streams:</source>
+      <translation>当前差分数据流：</translation>
+    </message>
+    <message>
+      <source>No fresh stream is selected for vehicles.</source>
+      <translation>当前没有为无人机选择有效的新鲜数据流。</translation>
+    </message>
+    <message>
+      <source>Selected for vehicles; fresh</source>
+      <translation>已供无人机使用，数据有效</translation>
+    </message>
+    <message>
+      <source>Fresh; not selected for vehicles</source>
+      <translation>数据有效，未供无人机使用</translation>
+    </message>
+    <message>
+      <source>Active; waiting for fresh corrections</source>
+      <translation>已启用，等待新的差分数据</translation>
+    </message>
+    <message>
+      <source>Unavailable</source>
+      <translation>不可用</translation>
+    </message>
+    <message>
+      <source>%1 — %2: %3</source>
+      <translation>%1 — %2：%3</translation>
+    </message>
+    <message>
+      <source>Default stream</source>
+      <translation>默认数据流</translation>
+    </message>
+  </context>
+  <context>
+    <name>CorrectionRoutingSettings</name>
+    <message>
+      <source>Correction Routing</source>
+      <translation>差分数据路由</translation>
+    </message>
+    <message>
+      <source>Uses one fresh stream, preferring the local base station, then NTRIP, then UDP.</source>
+      <translation>使用一条有效的新鲜数据流，优先选择本地基站，其次为 NTRIP，最后为 UDP。</translation>
+    </message>
+    <message>
+      <source>Stream</source>
+      <translation>数据流</translation>
+    </message>
+    <message>
+      <source>Automatic within source</source>
+      <translation>在当前数据源中自动选择</translation>
+    </message>
+    <message>
+      <source>No fresh corrections: %1</source>
+      <translation>没有新的差分数据：%1</translation>
+    </message>
+    <message>
+      <source>Unavailable: %1</source>
+      <translation>不可用：%1</translation>
+    </message>
+    <message>
+      <source>Selects streams for vehicle links only. NTRIP UDP forwarding uses the NTRIP stream independently.</source>
+      <translation>仅选择供无人机链路使用的数据流。NTRIP UDP 转发会独立使用 NTRIP 数据流。</translation>
+    </message>
+    <message>
+      <source>Forwards all fresh streams to vehicles. Corrections from different base stations may be mixed.</source>
+      <translation>将所有有效的新鲜数据流转发给无人机，可能混合来自不同基站的差分数据。</translation>
+    </message>
+    <message>
+      <source>Uses only the chosen source category, without fallback to other categories. Automatic within source chooses a fresh stream in that category; a pinned stream waits if unavailable.</source>
+      <translation>仅使用所选数据源类别，不回退到其他类别。“在当前数据源中自动选择”会选择该类别中的有效新鲜数据流；固定的数据流不可用时将继续等待。</translation>
+    </message>
+  </context>
+  <context>
+    <name>AirframeCatalog</name>
+    <message>
+      <source>多旋翼</source>
+      <translation>多旋翼</translation>
+    </message>
+    <message>
+      <source>固定翼</source>
+      <translation>固定翼</translation>
+    </message>
+    <message>
+      <source>垂起固定翼</source>
+      <translation>垂起固定翼</translation>
+    </message>
+    <message>
+      <source>无人车</source>
+      <translation>无人车</translation>
+    </message>
+    <message>
+      <source>飞艇</source>
+      <translation>飞艇</translation>
+    </message>
+    <message>
+      <source>直升机</source>
+      <translation>直升机</translation>
+    </message>
+    <message>
+      <source>四旋翼 X 型</source>
+      <translation>四旋翼 X 型</translation>
+    </message>
+    <message>
+      <source>四旋翼 + 型</source>
+      <translation>四旋翼 + 型</translation>
+    </message>
+    <message>
+      <source>四旋翼 H 型</source>
+      <translation>四旋翼 H 型</translation>
+    </message>
+    <message>
+      <source>三旋翼 Y 型</source>
+      <translation>三旋翼 Y 型</translation>
+    </message>
+    <message>
+      <source>六旋翼 X 型</source>
+      <translation>六旋翼 X 型</translation>
+    </message>
+    <message>
+      <source>六旋翼 + 型</source>
+      <translation>六旋翼 + 型</translation>
+    </message>
+    <message>
+      <source>六旋翼同轴</source>
+      <translation>六旋翼同轴</translation>
+    </message>
+    <message>
+      <source>八旋翼 X 型</source>
+      <translation>八旋翼 X 型</translation>
+    </message>
+    <message>
+      <source>八旋翼 + 型</source>
+      <translation>八旋翼 + 型</translation>
+    </message>
+    <message>
+      <source>八旋翼同轴</source>
+      <translation>八旋翼同轴</translation>
+    </message>
+    <message>
+      <source>十二旋翼同轴</source>
+      <translation>十二旋翼同轴</translation>
+    </message>
+    <message>
+      <source>标准固定翼</source>
+      <translation>标准固定翼</translation>
+    </message>
+    <message>
+      <source>飞翼</source>
+      <translation>飞翼</translation>
+    </message>
+    <message>
+      <source>A 尾固定翼</source>
+      <translation>A 尾固定翼</translation>
+    </message>
+    <message>
+      <source>标准垂起固定翼</source>
+      <translation>标准垂起固定翼</translation>
+    </message>
+    <message>
+      <source>尾座式垂起固定翼</source>
+      <translation>尾座式垂起固定翼</translation>
+    </message>
+    <message>
+      <source>倾转旋翼垂起固定翼</source>
+      <translation>倾转旋翼垂起固定翼</translation>
+    </message>
+    <message>
+      <source>地面无人车</source>
+      <translation>地面无人车</translation>
+    </message>
+    <message>
+      <source>气球</source>
+      <translation>气球</translation>
+    </message>
+    <message>
+      <source>自转旋翼机</source>
+      <translation>自转旋翼机</translation>
+    </message>
+    <message>
+      <source>水下机器人</source>
+      <translation>水下机器人</translation>
+    </message>
+    <message>
+      <source>六自由度潜航器</source>
+      <translation>六自由度潜航器</translation>
+    </message>
+    <message>
+      <source>自由飞行器</source>
+      <translation>自由飞行器</translation>
+    </message>
+    <message>
+      <source>仿真机架</source>
+      <translation>仿真机架</translation>
+    </message>
+    <message>
+      <source>水面无人船</source>
+      <translation>水面无人船</translation>
+    </message>
+  </context>
+  <context>
+    <name>AirframeCatalogPage</name>
+    <message>
+      <source>机架</source>
+      <translation>机架</translation>
+    </message>
+    <message>
+      <source>当前飞控未提供此类型的机架配置。</source>
+      <translation>当前飞控未提供此类型的机架配置。</translation>
+    </message>
+    <message>
+      <source>连接飞控后可选择并应用机架。</source>
+      <translation>连接飞控后可选择并应用机架。</translation>
+    </message>
+  </context>
+  <context>
+    <name>AirframeCategoryMenu</name>
+    <message>
+      <source>返回机架类型</source>
+      <translation>返回机架类型</translation>
+    </message>
+    <message>
+      <source>机架类型</source>
+      <translation>机架类型</translation>
+    </message>
+  </context>
+  <context>
+    <name>CaacFigureEightController</name>
+    <message>
+      <source>设置场地后可开始手动八字训练。</source>
+      <translation>设置场地后可开始手动八字训练。</translation>
+    </message>
+    <message>
+      <source>请先结束训练，再修改标准。</source>
+      <translation>请先结束训练，再修改标准。</translation>
+    </message>
+    <message>
+      <source>训练限制包含未知设置。</source>
+      <translation>训练限制包含未知设置。</translation>
+    </message>
+    <message>
+      <source>训练限制开关无效。</source>
+      <translation>训练限制开关无效。</translation>
+    </message>
+    <message>
+      <source>训练限制必须为有效的非负数。</source>
+      <translation>训练限制必须为有效的非负数。</translation>
+    </message>
+    <message>
+      <source>请检查偏差、时长和速度限制的范围。</source>
+      <translation>请检查偏差、时长和速度限制的范围。</translation>
+    </message>
+    <message>
+      <source>请先结束训练，再修改场地。</source>
+      <translation>请先结束训练，再修改场地。</translation>
+    </message>
+    <message>
+      <source>A、B 点需为有效坐标，间距为 4 至 2000 米。</source>
+      <translation>A、B 点需为有效坐标，间距为 4 至 2000 米。</translation>
+    </message>
+    <message>
+      <source>A、B 点间距需为 4 至 2000 米，请将无人机移动到另一标定点后重试。</source>
+      <translation>A、B 点间距需为 4 至 2000 米，请将无人机移动到另一标定点后重试。</translation>
+    </message>
+    <message>
+      <source>请先结束训练，再标定场地。</source>
+      <translation>请先结束训练，再标定场地。</translation>
+    </message>
+    <message>
+      <source>请连接具备 RTK 定位的无人机，完成连接后标定。</source>
+      <translation>请连接具备 RTK 定位的无人机，完成连接后标定。</translation>
+    </message>
+    <message>
+      <source>遥测连接中断，请恢复连接后标定。</source>
+      <translation>遥测连接中断，请恢复连接后标定。</translation>
+    </message>
+    <message>
+      <source>请将无人机放在 A 点或 B 点地面后标定。</source>
+      <translation>请将无人机放在 A 点或 B 点地面后标定。</translation>
+    </message>
+    <message>
+      <source>等待实时 RTK 定位数据，请保持无人机静置。</source>
+      <translation>等待实时 RTK 定位数据，请保持无人机静置。</translation>
+    </message>
+    <message>
+      <source>等待 RTK 固定解后标定当前点。</source>
+      <translation>等待 RTK 固定解后标定当前点。</translation>
+    </message>
+    <message>
+      <source>无人机当前位置无效，请等待 RTK 定位。</source>
+      <translation>无人机当前位置无效，请等待 RTK 定位。</translation>
+    </message>
+    <message>
+      <source>RTK 固定解，可标定无人机当前位置。</source>
+      <translation>RTK 固定解，可标定无人机当前位置。</translation>
+    </message>
+    <message>
+      <source>请先结束训练，再保存场地。</source>
+      <translation>请先结束训练，再保存场地。</translation>
+    </message>
+    <message>
+      <source>请输入场地名称及有效的 A、B 点，间距为 4 至 2000 米。</source>
+      <translation>请输入场地名称及有效的 A、B 点，间距为 4 至 2000 米。</translation>
+    </message>
+    <message>
+      <source>场地数量已达到上限。</source>
+      <translation>场地数量已达到上限。</translation>
+    </message>
+    <message>
+      <source>请先结束训练，再导入场地。</source>
+      <translation>请先结束训练，再导入场地。</translation>
+    </message>
+    <message>
+      <source>无法读取有效的八字场地文件。%1</source>
+      <translation>无法读取有效的八字场地文件。%1</translation>
+    </message>
+    <message>
+      <source>八字场地文件格式或版本无效。</source>
+      <translation>八字场地文件格式或版本无效。</translation>
+    </message>
+    <message>
+      <source>导入文件包含无效场地，未更改已有场地。</source>
+      <translation>导入文件包含无效场地，未更改已有场地。</translation>
+    </message>
+    <message>
+      <source>导入后场地数量超出上限，未更改已有场地。</source>
+      <translation>导入后场地数量超出上限，未更改已有场地。</translation>
+    </message>
+    <message>
+      <source>无法保存八字场地文件。</source>
+      <translation>无法保存八字场地文件。</translation>
+    </message>
+    <message>
+      <source>原地自旋</source>
+      <translation>原地自旋</translation>
+    </message>
+    <message>
+      <source>反向原地自旋</source>
+      <translation>反向原地自旋</translation>
+    </message>
+    <message>
+      <source>八字飞行</source>
+      <translation>八字飞行</translation>
+    </message>
+    <message>
+      <source>已结束</source>
+      <translation>已结束</translation>
+    </message>
+    <message>
+      <source>待开始</source>
+      <translation>待开始</translation>
+    </message>
+    <message>
+      <source>可以开始考试</source>
+      <translation>可以开始考试</translation>
+    </message>
+    <message>
+      <source>正在记录手动八字飞行。</source>
+      <translation>正在记录手动八字飞行。</translation>
+    </message>
+    <message>
+      <source>开始八字飞行</source>
+      <translation>开始八字飞行</translation>
+    </message>
+    <message>
+      <source>请手动逆时针完成 360 度原地自旋，用时 5 至 30 秒。</source>
+      <translation>请手动逆时针完成 360 度原地自旋，用时 5 至 30 秒。</translation>
+    </message>
+    <message>
+      <source>请手动顺时针完成 360 度原地自旋，用时 5 至 30 秒。</source>
+      <translation>请手动顺时针完成 360 度原地自旋，用时 5 至 30 秒。</translation>
+    </message>
+    <message>
+      <source>开始反向原地自旋</source>
+      <translation>开始反向原地自旋</translation>
+    </message>
+    <message>
+      <source>开始原地自旋</source>
+      <translation>开始原地自旋</translation>
+    </message>
+    <message>
+      <source>风速必须为 0 至 100 米/秒的有效数值。</source>
+      <translation>风速必须为 0 至 100 米/秒的有效数值。</translation>
+    </message>
+    <message>
+      <source>地面风速数据无效，请检查传感器。</source>
+      <translation>地面风速数据无效，请检查传感器。</translation>
+    </message>
+    <message>
+      <source>地面风速数据缺失或失效，训练记录已结束，请检查传感器后重新开始。</source>
+      <translation>地面风速数据缺失或失效，训练记录已结束，请检查传感器后重新开始。</translation>
+    </message>
+    <message>
+      <source>飞行器已切换或断开，训练记录已结束。</source>
+      <translation>飞行器已切换或断开，训练记录已结束。</translation>
+    </message>
+    <message>
+      <source>飞行器已上锁，训练记录已结束。</source>
+      <translation>飞行器已上锁，训练记录已结束。</translation>
+    </message>
+    <message>
+      <source>遥测连接中断，训练记录已结束。</source>
+      <translation>遥测连接中断，训练记录已结束。</translation>
+    </message>
+    <message>
+      <source>请先设置有效的 A、B 点场地。</source>
+      <translation>请先设置有效的 A、B 点场地。</translation>
+    </message>
+    <message>
+      <source>地面风速数据缺失或已超过 10 秒，请检查传感器后开始训练。</source>
+      <translation>地面风速数据缺失或已超过 10 秒，请检查传感器后开始训练。</translation>
+    </message>
+    <message>
+      <source>请连接已起飞的飞行器，并等待有效的位置、高度、航向和速度遥测。</source>
+      <translation>请连接已起飞的飞行器，并等待有效的位置、高度、航向和速度遥测。</translation>
+    </message>
+    <message>
+      <source>飞行器尚未进入八字参考轨迹附近，请手动飞入后开始记录。</source>
+      <translation>飞行器尚未进入八字参考轨迹附近，请手动飞入后开始记录。</translation>
+    </message>
+    <message>
+      <source>训练记录已结束。偏差结果仅供训练参考。</source>
+      <translation>训练记录已结束。偏差结果仅供训练参考。</translation>
+    </message>
+    <message>
+      <source>飞行状态或遥测已失效，训练记录已结束，未判定完成。</source>
+      <translation>飞行状态或遥测已失效，训练记录已结束，未判定完成。</translation>
+    </message>
+    <message>
+      <source>位置遥测发生跳变，训练记录已结束，未判定完成。</source>
+      <translation>位置遥测发生跳变，训练记录已结束，未判定完成。</translation>
+    </message>
+    <message>
+      <source>水平偏差超限</source>
+      <translation>水平偏差超限</translation>
+    </message>
+    <message>
+      <source>高度偏差超限</source>
+      <translation>高度偏差超限</translation>
+    </message>
+    <message>
+      <source>航向偏差超限</source>
+      <translation>航向偏差超限</translation>
+    </message>
+    <message>
+      <source>自定义速度超限</source>
+      <translation>自定义速度超限</translation>
+    </message>
+    <message>
+      <source>自定义训练时长超限</source>
+      <translation>自定义训练时长超限</translation>
+    </message>
+    <message>
+      <source>训练记录已达到一小时容量，请结束本次记录。</source>
+      <translation>训练记录已达到一小时容量，请结束本次记录。</translation>
+    </message>
+    <message>
+      <source>已达到自定义时长限制，训练记录已结束。</source>
+      <translation>已达到自定义时长限制，训练记录已结束。</translation>
+    </message>
+    <message>
+      <source>已完成自旋和八字飞行，请查看本次偏差记录。</source>
+      <translation>已完成自旋和八字飞行，请查看本次偏差记录。</translation>
+    </message>
+    <message>
+      <source>自旋航向遥测发生跳变，训练记录已结束。</source>
+      <translation>自旋航向遥测发生跳变，训练记录已结束。</translation>
+    </message>
+    <message>
+      <source>训练记录已达到容量上限。</source>
+      <translation>训练记录已达到容量上限。</translation>
+    </message>
+    <message>
+      <source>原地自旋已超过 30 秒，训练记录已结束。</source>
+      <translation>原地自旋已超过 30 秒，训练记录已结束。</translation>
+    </message>
+    <message>
+      <source>原地自旋少于 5 秒，请降低转速后重新开始。</source>
+      <translation>原地自旋少于 5 秒，请降低转速后重新开始。</translation>
+    </message>
+    <message>
+      <source>已完成 360 度原地自旋，请查看本次偏差记录。</source>
+      <translation>已完成 360 度原地自旋，请查看本次偏差记录。</translation>
+    </message>
+    <message>
+      <source>超出考试区域，请返回</source>
+      <translation>超出考试区域，请返回</translation>
+    </message>
+    <message>
+      <source>高度偏差过大，请调整高度</source>
+      <translation>高度偏差过大，请调整高度</translation>
+    </message>
+    <message>
+      <source>航向偏差过大，请调整航向</source>
+      <translation>航向偏差过大，请调整航向</translation>
+    </message>
+    <message>
+      <source>速度过快，请减速</source>
+      <translation>速度过快，请减速</translation>
+    </message>
+    <message>
+      <source>速度过慢，请适当加速</source>
+      <translation>速度过慢，请适当加速</translation>
+    </message>
+  </context>
+  <context>
+    <name>CaacFigureEightDialog</name>
+    <message>
+      <source>八字飞行 · %1</source>
+      <translation>八字飞行 · %1</translation>
+    </message>
+    <message>
+      <source>场地列表</source>
+      <translation>场地列表</translation>
+    </message>
+    <message>
+      <source>考试偏好</source>
+      <translation>考试偏好</translation>
+    </message>
+    <message>
+      <source>标准设置</source>
+      <translation>标准设置</translation>
+    </message>
+    <message>
+      <source>训练监测</source>
+      <translation>训练监测</translation>
+    </message>
+    <message>
+      <source>电子围栏</source>
+      <translation>电子围栏</translation>
+    </message>
+    <message>
+      <source>视距内</source>
+      <translation>视距内</translation>
+    </message>
+    <message>
+      <source>超视距</source>
+      <translation>超视距</translation>
+    </message>
+    <message>
+      <source>教员</source>
+      <translation>教员</translation>
+    </message>
+    <message>
+      <source>自定义</source>
+      <translation>自定义</translation>
+    </message>
+    <message>
+      <source>最大水平偏差（米）</source>
+      <translation>最大水平偏差（米）</translation>
+    </message>
+    <message>
+      <source>最大高度偏差（米）</source>
+      <translation>最大高度偏差（米）</translation>
+    </message>
+    <message>
+      <source>最大航向偏差（度）</source>
+      <translation>最大航向偏差（度）</translation>
+    </message>
+    <message>
+      <source>训练最长时间（秒）</source>
+      <translation>训练最长时间（秒）</translation>
+    </message>
+    <message>
+      <source>训练最低速度（米/秒）</source>
+      <translation>训练最低速度（米/秒）</translation>
+    </message>
+    <message>
+      <source>训练最高速度（米/秒）</source>
+      <translation>训练最高速度（米/秒）</translation>
+    </message>
+    <message>
+      <source> · 后退八字</source>
+      <translation> · 后退八字</translation>
+    </message>
+    <message>
+      <source> · 前进八字</source>
+      <translation> · 前进八字</translation>
+    </message>
+    <message>
+      <source>临时场地</source>
+      <translation>临时场地</translation>
+    </message>
+    <message>
+      <source>将具备 RTK 定位的无人机放到 A 筒位置，点击标定 A 点；再移至 B 筒位置，点击标定 B 点。</source>
+      <translation>将具备 RTK 定位的无人机放到 A 筒位置，点击标定 A 点；再移至 B 筒位置，点击标定 B 点。</translation>
+    </message>
+    <message>
+      <source>A 筒 · %1</source>
+      <translation>A 筒 · %1</translation>
+    </message>
+    <message>
+      <source>已标定</source>
+      <translation>已标定</translation>
+    </message>
+    <message>
+      <source>未标定</source>
+      <translation>未标定</translation>
+    </message>
+    <message>
+      <source>B 筒 · %1</source>
+      <translation>B 筒 · %1</translation>
+    </message>
+    <message>
+      <source>标定 A 点</source>
+      <translation>标定 A 点</translation>
+    </message>
+    <message>
+      <source>标定 B 点</source>
+      <translation>标定 B 点</translation>
+    </message>
+    <message>
+      <source>已自动在地图上生成八字训练轨迹。A/B 间距 %1 米 · 单圆直径 %2 米。</source>
+      <translation>已自动在地图上生成八字训练轨迹。A/B 间距 %1 米 · 单圆直径 %2 米。</translation>
+    </message>
+    <message>
+      <source>两点标定完成后，自动按实际间距和方位在地图上生成八字训练轨迹。</source>
+      <translation>两点标定完成后，自动按实际间距和方位在地图上生成八字训练轨迹。</translation>
+    </message>
+    <message>
+      <source>小型、中型多旋翼标准单圆直径为 12 米；按图示双圆布局，A/B 外侧端点间距为 24 米。</source>
+      <translation>小型、中型多旋翼标准单圆直径为 12 米；按图示双圆布局，A/B 外侧端点间距为 24 米。</translation>
+    </message>
+    <message>
+      <source>场地名称</source>
+      <translation>场地名称</translation>
+    </message>
+    <message>
+      <source>保存场地</source>
+      <translation>保存场地</translation>
+    </message>
+    <message>
+      <source>导入场地</source>
+      <translation>导入场地</translation>
+    </message>
+    <message>
+      <source>导出场地</source>
+      <translation>导出场地</translation>
+    </message>
+    <message>
+      <source>删除所选场地</source>
+      <translation>删除所选场地</translation>
+    </message>
+    <message>
+      <source>考试类别</source>
+      <translation>考试类别</translation>
+    </message>
+    <message>
+      <source>考试科目</source>
+      <translation>考试科目</translation>
+    </message>
+    <message>
+      <source>单项八字飞行</source>
+      <translation>单项八字飞行</translation>
+    </message>
+    <message>
+      <source>单项原地自旋</source>
+      <translation>单项原地自旋</translation>
+    </message>
+    <message>
+      <source>原地自旋 → 八字飞行</source>
+      <translation>原地自旋 → 八字飞行</translation>
+    </message>
+    <message>
+      <source>视距内：前进水平八字，可使用姿态和位置修正辅助。</source>
+      <translation>视距内：前进水平八字，可使用姿态和位置修正辅助。</translation>
+    </message>
+    <message>
+      <source>超视距：姿态辅助模式下前进水平八字，不使用位置修正辅助，速度无明显变化。</source>
+      <translation>超视距：姿态辅助模式下前进水平八字，不使用位置修正辅助，速度无明显变化。</translation>
+    </message>
+    <message>
+      <source>教员：后退水平八字，航向按运动切线反向评估，速度基本无变化。</source>
+      <translation>教员：后退水平八字，航向按运动切线反向评估，速度基本无变化。</translation>
+    </message>
+    <message>
+      <source>自定义：根据训练需要调整偏差和提醒阈值。</source>
+      <translation>自定义：根据训练需要调整偏差和提醒阈值。</translation>
+    </message>
+    <message>
+      <source>默认适用于小型、中型多旋翼，一级风（0–4 米/秒）。切换类别会保留各类别自己的设置。</source>
+      <translation>默认适用于小型、中型多旋翼，一级风（0–4 米/秒）。切换类别会保留各类别自己的设置。</translation>
+    </message>
+    <message>
+      <source>原地自旋每圈 5–30 秒。教员类别先顺时针、再逆时针，随后进入后退八字。</source>
+      <translation>原地自旋每圈 5–30 秒。教员类别先顺时针、再逆时针，随后进入后退八字。</translation>
+    </message>
+    <message>
+      <source>地面风速来源</source>
+      <translation>地面风速来源</translation>
+    </message>
+    <message>
+      <source>手动输入</source>
+      <translation>手动输入</translation>
+    </message>
+    <message>
+      <source>地面风速传感器</source>
+      <translation>地面风速传感器</translation>
+    </message>
+    <message>
+      <source>手动地面风速（米/秒）</source>
+      <translation>手动地面风速（米/秒）</translation>
+    </message>
+    <message>
+      <source>当前风速 %1 米/秒 · 第 %2 级 · 误差容差 ×%3</source>
+      <translation>当前风速 %1 米/秒 · 第 %2 级 · 误差容差 ×%3</translation>
+    </message>
+    <message>
+      <source>等待有效的地面风速传感器数据；当前不可开始考评。</source>
+      <translation>等待有效的地面风速传感器数据；当前不可开始考评。</translation>
+    </message>
+    <message>
+      <source>当前考评容差：水平 ±%1 米，高度 ±%2 米，航向 %3°。</source>
+      <translation>当前考评容差：水平 ±%1 米，高度 ±%2 米，航向 %3°。</translation>
+    </message>
+    <message>
+      <source>风等级每升一级，允许误差比前一级增加 15%。本软件按 ≤4、&gt;4 且 ≤8、&gt;8 米/秒分级，交界值采用较严格一级。</source>
+      <translation>风等级每升一级，允许误差比前一级增加 15%。本软件按 ≤4、&gt;4 且 ≤8、&gt;8 米/秒分级，交界值采用较严格一级。</translation>
+    </message>
+    <message>
+      <source>传感器接入接口使用米/秒。超过 10 秒无有效数据会结束考评记录；历史读数不作为新考评的风速。</source>
+      <translation>传感器接入接口使用米/秒。超过 10 秒无有效数据会结束考评记录；历史读数不作为新考评的风速。</translation>
+    </message>
+    <message>
+      <source>地图训练走廊半宽（米）</source>
+      <translation>地图训练走廊半宽（米）</translation>
+    </message>
+    <message>
+      <source>在地图上显示八字航迹和训练轨迹</source>
+      <translation>在地图上显示八字航迹和训练轨迹</translation>
+    </message>
+    <message>
+      <source>启用训练时间提醒</source>
+      <translation>启用训练时间提醒</translation>
+    </message>
+    <message>
+      <source>启用训练速度提醒</source>
+      <translation>启用训练速度提醒</translation>
+    </message>
+    <message>
+      <source>保存当前类别标准</source>
+      <translation>保存当前类别标准</translation>
+    </message>
+    <message>
+      <source>恢复默认标准</source>
+      <translation>恢复默认标准</translation>
+    </message>
+    <message>
+      <source>记录时间</source>
+      <translation>记录时间</translation>
+    </message>
+    <message>
+      <source> 秒</source>
+      <translation> 秒</translation>
+    </message>
+    <message>
+      <source>测得速度</source>
+      <translation>测得速度</translation>
+    </message>
+    <message>
+      <source> 米/秒</source>
+      <translation> 米/秒</translation>
+    </message>
+    <message>
+      <source>水平偏差</source>
+      <translation>水平偏差</translation>
+    </message>
+    <message>
+      <source> 米</source>
+      <translation> 米</translation>
+    </message>
+    <message>
+      <source>高度偏差</source>
+      <translation>高度偏差</translation>
+    </message>
+    <message>
+      <source>航向偏差</source>
+      <translation>航向偏差</translation>
+    </message>
+    <message>
+      <source>完成圈数</source>
+      <translation>完成圈数</translation>
+    </message>
+    <message>
+      <source>自旋角度</source>
+      <translation>自旋角度</translation>
+    </message>
+    <message>
+      <source>超差采样数</source>
+      <translation>超差采样数</translation>
+    </message>
+    <message>
+      <source>开始考试</source>
+      <translation>开始考试</translation>
+    </message>
+    <message>
+      <source>结束考试</source>
+      <translation>结束考试</translation>
+    </message>
+    <message>
+      <source>清空记录</source>
+      <translation>清空记录</translation>
+    </message>
+    <message>
+      <source>飞机起飞并获得有效遥测后开始记录。红线为参考航迹，浅绿色为训练走廊，橙线为实际轨迹；关闭窗口后继续记录。</source>
+      <translation>飞机起飞并获得有效遥测后开始记录。红线为参考航迹，浅绿色为训练走廊，橙线为实际轨迹；关闭窗口后继续记录。</translation>
+    </message>
+    <message>
+      <source>沿双圆走廊的外边界向外扩展，生成包围整个训练场的电子围栏。</source>
+      <translation>沿双圆走廊的外边界向外扩展，生成包围整个训练场的电子围栏。</translation>
+    </message>
+    <message>
+      <source>走廊外边界至围栏的距离（米）</source>
+      <translation>走廊外边界至围栏的距离（米）</translation>
+    </message>
+    <message>
+      <source>在地图上显示电子围栏</source>
+      <translation>在地图上显示电子围栏</translation>
+    </message>
+    <message>
+      <source>写入并启用</source>
+      <translation>写入并启用</translation>
+    </message>
+    <message>
+      <source>读取飞控状态</source>
+      <translation>读取飞控状态</translation>
+    </message>
+    <message>
+      <source>备份并替换当前围栏</source>
+      <translation>备份并替换当前围栏</translation>
+    </message>
+    <message>
+      <source>原围栏备份：%1</source>
+      <translation>原围栏备份：%1</translation>
+    </message>
+    <message>
+      <source>启用考试语音（取消全局静音）</source>
+      <translation>启用考试语音（取消全局静音）</translation>
+    </message>
+    <message>
+      <source>启用考试语音提示</source>
+      <translation>启用考试语音提示</translation>
+    </message>
+    <message>
+      <source>试听考试语音</source>
+      <translation>试听考试语音</translation>
+    </message>
+    <message>
+      <source>最近提示：%1</source>
+      <translation>最近提示：%1</translation>
+    </message>
+    <message>
+      <source>导入八字飞行场地</source>
+      <translation>导入八字飞行场地</translation>
+    </message>
+    <message>
+      <source>八字场地 (*.json)</source>
+      <translation>八字场地 (*.json)</translation>
+    </message>
+    <message>
+      <source>导出八字飞行场地</source>
+      <translation>导出八字飞行场地</translation>
+    </message>
+  </context>
+  <context>
+    <name>CaacFigureEightFenceController</name>
+    <message>
+      <source>围栏尚未应用到飞控。</source>
+      <translation>围栏尚未应用到飞控。</translation>
+    </message>
+    <message>
+      <source>等待飞控确认超时，请重新读取围栏状态。</source>
+      <translation>等待飞控确认超时，请重新读取围栏状态。</translation>
+    </message>
+    <message>
+      <source>请先完成 A、B 点标定。</source>
+      <translation>请先完成 A、B 点标定。</translation>
+    </message>
+    <message>
+      <source>请连接无人机并等待连接完成。</source>
+      <translation>请连接无人机并等待连接完成。</translation>
+    </message>
+    <message>
+      <source>请在无人机落地并锁定后设置围栏。</source>
+      <translation>请在无人机落地并锁定后设置围栏。</translation>
+    </message>
+    <message>
+      <source>请等待飞控参数读取或写入完成。</source>
+      <translation>请等待飞控参数读取或写入完成。</translation>
+    </message>
+    <message>
+      <source>当前飞控不支持多边形电子围栏。</source>
+      <translation>当前飞控不支持多边形电子围栏。</translation>
+    </message>
+    <message>
+      <source>飞控正在传输围栏，请稍后重试。</source>
+      <translation>飞控正在传输围栏，请稍后重试。</translation>
+    </message>
+    <message>
+      <source>当前飞控尚不支持本训练围栏的限制动作。</source>
+      <translation>当前飞控尚不支持本训练围栏的限制动作。</translation>
+    </message>
+    <message>
+      <source>已切换无人机，需重新读取或应用围栏。</source>
+      <translation>已切换无人机，需重新读取或应用围栏。</translation>
+    </message>
+    <message>
+      <source>无人机已断开，围栏状态需重新确认。</source>
+      <translation>无人机已断开，围栏状态需重新确认。</translation>
+    </message>
+    <message>
+      <source>飞控未确认围栏参数 %1，请重新读取状态。</source>
+      <translation>飞控未确认围栏参数 %1，请重新读取状态。</translation>
+    </message>
+    <message>
+      <source>飞控围栏已被清除，请重新读取确认。</source>
+      <translation>飞控围栏已被清除，请重新读取确认。</translation>
+    </message>
+    <message>
+      <source>围栏传输失败：%1</source>
+      <translation>围栏传输失败：%1</translation>
+    </message>
+    <message>
+      <source>场地或围栏尺寸已变化，请重新应用到飞控。</source>
+      <translation>场地或围栏尺寸已变化，请重新应用到飞控。</translation>
+    </message>
+    <message>
+      <source>无人机通信中断，围栏状态需重新读取确认。</source>
+      <translation>无人机通信中断，围栏状态需重新读取确认。</translation>
+    </message>
+    <message>
+      <source>无人机已解锁或起飞，已停止后续配置；已发送的设置仍可能完成，请回读确认。</source>
+      <translation>无人机已解锁或起飞，已停止后续配置；已发送的设置仍可能完成，请回读确认。</translation>
+    </message>
+    <message>
+      <source>正在读取飞控现有围栏…</source>
+      <translation>正在读取飞控现有围栏…</translation>
+    </message>
+    <message>
+      <source>飞控围栏已变化，请重新读取或应用。</source>
+      <translation>飞控围栏已变化，请重新读取或应用。</translation>
+    </message>
+    <message>
+      <source>飞控回读围栏与训练边界不一致，未确认应用。</source>
+      <translation>飞控回读围栏与训练边界不一致，未确认应用。</translation>
+    </message>
+    <message>
+      <source>正在读取飞控围栏参数…</source>
+      <translation>正在读取飞控围栏参数…</translation>
+    </message>
+    <message>
+      <source>围栏和越界限制动作已由飞控回读确认。</source>
+      <translation>围栏和越界限制动作已由飞控回读确认。</translation>
+    </message>
+    <message>
+      <source>飞控设置在确认过程中发生变化，请重新读取围栏状态。</source>
+      <translation>飞控设置在确认过程中发生变化，请重新读取围栏状态。</translation>
+    </message>
+    <message>
+      <source>飞控缺少围栏参数 %1。</source>
+      <translation>飞控缺少围栏参数 %1。</translation>
+    </message>
+    <message>
+      <source>已读取飞控围栏；当前飞控尚不满足训练围栏限制要求，未确认启用。</source>
+      <translation>已读取飞控围栏；当前飞控尚不满足训练围栏限制要求，未确认启用。</translation>
+    </message>
+    <message>
+      <source>已读取飞控围栏。</source>
+      <translation>已读取飞控围栏。</translation>
+    </message>
+    <message>
+      <source>飞控围栏或限制动作与当前训练设置不同。</source>
+      <translation>飞控围栏或限制动作与当前训练设置不同。</translation>
+    </message>
+    <message>
+      <source>飞控已有其他围栏；确认替换后将先备份，再应用训练围栏。</source>
+      <translation>飞控已有其他围栏；确认替换后将先备份，再应用训练围栏。</translation>
+    </message>
+    <message>
+      <source>无法保存现有围栏和参数备份，已取消应用。</source>
+      <translation>无法保存现有围栏和参数备份，已取消应用。</translation>
+    </message>
+    <message>
+      <source>正在设置并确认飞控围栏安全准备参数…</source>
+      <translation>正在设置并确认飞控围栏安全准备参数…</translation>
+    </message>
+    <message>
+      <source>正在设置并确认飞控越界限制动作…</source>
+      <translation>正在设置并确认飞控越界限制动作…</translation>
+    </message>
+    <message>
+      <source>正在上传训练电子围栏…</source>
+      <translation>正在上传训练电子围栏…</translation>
+    </message>
+    <message>
+      <source>飞控围栏已重新上传，请读取确认。</source>
+      <translation>飞控围栏已重新上传，请读取确认。</translation>
+    </message>
+    <message>
+      <source>训练围栏上传失败，请重新读取飞控状态。</source>
+      <translation>训练围栏上传失败，请重新读取飞控状态。</translation>
+    </message>
+    <message>
+      <source>正在回读确认训练电子围栏…</source>
+      <translation>正在回读确认训练电子围栏…</translation>
+    </message>
+    <message>
+      <source>飞控围栏限制参数已变化，请重新读取确认。</source>
+      <translation>飞控围栏限制参数已变化，请重新读取确认。</translation>
+    </message>
+    <message>
+      <source>围栏已写入，启用未确认。</source>
+      <translation>围栏已写入，启用未确认。</translation>
+    </message>
+    <message>
+      <source> 飞控可能已接收部分设置，请回读确认。</source>
+      <translation> 飞控可能已接收部分设置，请回读确认。</translation>
+    </message>
+  </context>
+  <context>
+    <name>CaacFigureEightIllustration</name>
+    <message>
+      <source>A筒</source>
+      <translation>A筒</translation>
+    </message>
+    <message>
+      <source>B筒</source>
+      <translation>B筒</translation>
+    </message>
+    <message>
+      <source>起飞位置</source>
+      <translation>起飞位置</translation>
+    </message>
+    <message>
+      <source>场地示意</source>
+      <translation>场地示意</translation>
+    </message>
+  </context>
+  <context>
+    <name>CaacStartupController</name>
+    <message>
+      <source>正在初始化系统…</source>
+      <translation>正在初始化系统…</translation>
+    </message>
+    <message>
+      <source>正在加载主界面…</source>
+      <translation>正在加载主界面…</translation>
+    </message>
+    <message>
+      <source>正在初始化视频系统…</source>
+      <translation>正在初始化视频系统…</translation>
+    </message>
+    <message>
+      <source>正在初始化设备与连接…</source>
+      <translation>正在初始化设备与连接…</translation>
+    </message>
+    <message>
+      <source>正在准备主界面…</source>
+      <translation>正在准备主界面…</translation>
+    </message>
+    <message>
+      <source>系统已就绪</source>
+      <translation>系统已就绪</translation>
+    </message>
+    <message>
+      <source>系统已就绪，图传暂不可用</source>
+      <translation>系统已就绪，图传暂不可用</translation>
+    </message>
+  </context>
+  <context>
+    <name>CaacStartupWindow</name>
+    <message>
+      <source>飞虎教培地面站</source>
+      <translation>飞虎教培地面站</translation>
+    </message>
+    <message>
+      <source>关闭</source>
+      <translation>关闭</translation>
+    </message>
+  </context>
+  <context>
+    <name>CompassHeadingController</name>
+    <message>
+      <source>Compass magnetic heading</source>
+      <translation>罗盘磁航向</translation>
+    </message>
+  </context>
+  <context>
+    <name>DualAntennaSummary</name>
+    <message>
+      <source>不支持</source>
+      <translation>不支持</translation>
+    </message>
+    <message>
+      <source>已启用</source>
+      <translation>已启用</translation>
+    </message>
+    <message>
+      <source>未启用</source>
+      <translation>未启用</translation>
+    </message>
+    <message>
+      <source>GPS 航向</source>
+      <translation>GPS 航向</translation>
+    </message>
+    <message>
+      <source>GPS 航向，罗盘备用</source>
+      <translation>GPS 航向，罗盘备用</translation>
+    </message>
+    <message>
+      <source>未使用 GPS 航向（%1）</source>
+      <translation>未使用 GPS 航向（%1）</translation>
+    </message>
+    <message>
+      <source>未提供</source>
+      <translation>未提供</translation>
+    </message>
+    <message>
+      <source>GPS 状态</source>
+      <translation>GPS 状态</translation>
+    </message>
+    <message>
+      <source>双天线定向</source>
+      <translation>双天线定向</translation>
+    </message>
+    <message>
+      <source>航向融合策略</source>
+      <translation>航向融合策略</translation>
+    </message>
+    <message>
+      <source>罗盘航向读数</source>
+      <translation>罗盘航向读数</translation>
+    </message>
+    <message>
+      <source>双天线测得航向</source>
+      <translation>双天线测得航向</translation>
+    </message>
+    <message>
+      <source>GPS 1 / 2 卫星数</source>
+      <translation>GPS 1 / 2 卫星数</translation>
+    </message>
+    <message>
+      <source>GPS 1 / 2 定位状态</source>
+      <translation>GPS 1 / 2 定位状态</translation>
+    </message>
+    <message>
+      <source>配置天线间距</source>
+      <translation>配置天线间距</translation>
+    </message>
+    <message>
+      <source>双天线航向偏移</source>
+      <translation>双天线航向偏移</translation>
+    </message>
+    <message>
+      <source>罗盘航向由主路磁场和姿态数据计算，以磁北为基准。双天线航向来自 GPS 测向数据，优先显示 GPS1，有效数据缺失时使用 GPS2。配置间距不代表实时测量距离。</source>
+      <translation>罗盘航向由主路磁场和姿态数据计算，以磁北为基准。双天线航向来自 GPS 测向数据，优先显示 GPS1，有效数据缺失时使用 GPS2。配置间距不代表实时测量距离。</translation>
+    </message>
+    <message>
+      <source>无接收机</source>
+      <translation>无接收机</translation>
+    </message>
+    <message>
+      <source>未定位</source>
+      <translation>未定位</translation>
+    </message>
+    <message>
+      <source>二维定位</source>
+      <translation>二维定位</translation>
+    </message>
+    <message>
+      <source>三维定位</source>
+      <translation>三维定位</translation>
+    </message>
+    <message>
+      <source>差分定位</source>
+      <translation>差分定位</translation>
+    </message>
+    <message>
+      <source>RTK 浮点</source>
+      <translation>RTK 浮点</translation>
+    </message>
+    <message>
+      <source>RTK 固定</source>
+      <translation>RTK 固定</translation>
+    </message>
+    <message>
+      <source>静态定位</source>
+      <translation>静态定位</translation>
+    </message>
+    <message>
+      <source>PPP 定位</source>
+      <translation>PPP 定位</translation>
+    </message>
+    <message>
+      <source>未知（%1）</source>
+      <translation>未知（%1）</translation>
+    </message>
+  </context>
+  <context>
+    <name>GpsAntennaPositionPreview</name>
+    <message>
+      <source>GPS %1 安装位置实时预览</source>
+      <translation>GPS %1 安装位置实时预览</translation>
+    </message>
+    <message>
+      <source>俯视图</source>
+      <translation>俯视图</translation>
+    </message>
+    <message>
+      <source>Y 右 →</source>
+      <translation>Y 右 →</translation>
+    </message>
+    <message>
+      <source>↑ X 前</source>
+      <translation>↑ X 前</translation>
+    </message>
+    <message>
+      <source>侧视图</source>
+      <translation>侧视图</translation>
+    </message>
+    <message>
+      <source>X 前 →</source>
+      <translation>X 前 →</translation>
+    </message>
+    <message>
+      <source>Z 下 ↓</source>
+      <translation>Z 下 ↓</translation>
+    </message>
+    <message>
+      <source>X：%1　Y：%2　Z：%3 cm</source>
+      <translation>X：%1　Y：%2　Z：%3 cm</translation>
+    </message>
+    <message>
+      <source>十字：机体原点；圆点：GPS。范围 ±%1 cm，自动缩放。随输入预览，确认后保存。</source>
+      <translation>十字：机体原点；圆点：GPS。范围 ±%1 cm，自动缩放。随输入预览，确认后保存。</translation>
+    </message>
+  </context>
+  <context>
+    <name>GpsHeadingCompensationPreview</name>
+    <message>
+      <source>安装方向关系 · 俯视图</source>
+      <translation>安装方向关系 · 俯视图</translation>
+    </message>
+    <message>
+      <source>机头方向</source>
+      <translation>机头方向</translation>
+    </message>
+    <message>
+      <source>主</source>
+      <translation>主</translation>
+    </message>
+    <message>
+      <source>次</source>
+      <translation>次</translation>
+    </message>
+    <message>
+      <source>主：主 GPS 天线　次：次 GPS 天线
+主 → 次：天线指向</source>
+      <translation>主：主 GPS 天线　次：次 GPS 天线
+主 → 次：天线指向</translation>
+    </message>
+    <message>
+      <source>安装补偿角：%1°</source>
+      <translation>安装补偿角：%1°</translation>
+    </message>
+    <message>
+      <source>请输入 0～360° 的安装补偿角</source>
+      <translation>请输入 0～360° 的安装补偿角</translation>
+    </message>
+    <message>
+      <source>绿色箭头由主 GPS 天线指向次 GPS 天线。橙色补偿角按飞控定义，从机头顺时针量至“次 → 主”方向。位置及间距仅作示意；随输入预览，确认后保存。</source>
+      <translation>绿色箭头由主 GPS 天线指向次 GPS 天线。橙色补偿角按飞控定义，从机头顺时针量至“次 → 主”方向。位置及间距仅作示意；随输入预览，确认后保存。</translation>
+    </message>
+  </context>
+  <context>
+    <name>Maps.SettingsUI.json</name>
+    <message>
+      <source>Tokens</source>
+      <translation>访问令牌</translation>
+    </message>
+  </context>
+  <context>
+    <name>PeripheralParameterSection</name>
+    <message>
+      <source>正在等待飞控确认…</source>
+      <translation>正在等待飞控确认…</translation>
+    </message>
+    <message>
+      <source>参数未更改。</source>
+      <translation>参数未更改。</translation>
+    </message>
+    <message>
+      <source>禁用</source>
+      <translation>禁用</translation>
+    </message>
+    <message>
+      <source>启用</source>
+      <translation>启用</translation>
+    </message>
+    <message>
+      <source>无</source>
+      <translation>无</translation>
+    </message>
+    <message>
+      <source>自动识别</source>
+      <translation>自动识别</translation>
+    </message>
+    <message>
+      <source>GPS 1 接口</source>
+      <translation>GPS 1 接口</translation>
+    </message>
+    <message>
+      <source>GPS 2 接口</source>
+      <translation>GPS 2 接口</translation>
+    </message>
+    <message>
+      <source>返航</source>
+      <translation>返航</translation>
+    </message>
+    <message>
+      <source>降落</source>
+      <translation>降落</translation>
+    </message>
+    <message>
+      <source>定高</source>
+      <translation>定高</translation>
+    </message>
+    <message>
+      <source>保持</source>
+      <translation>保持</translation>
+    </message>
+    <message>
+      <source>仅报告</source>
+      <translation>仅报告</translation>
+    </message>
+    <message>
+      <source>终止飞行</source>
+      <translation>终止飞行</translation>
+    </message>
+    <message>
+      <source>智能返航或返航</source>
+      <translation>智能返航或返航</translation>
+    </message>
+    <message>
+      <source>智能返航或降落</source>
+      <translation>智能返航或降落</translation>
+    </message>
+    <message>
+      <source>制动或降落</source>
+      <translation>制动或降落</translation>
+    </message>
+    <message>
+      <source>全部检查</source>
+      <translation>全部检查</translation>
+    </message>
+    <message>
+      <source>气压计</source>
+      <translation>气压计</translation>
+    </message>
+    <message>
+      <source>罗盘</source>
+      <translation>罗盘</translation>
+    </message>
+    <message>
+      <source>惯性传感器</source>
+      <translation>惯性传感器</translation>
+    </message>
+    <message>
+      <source>参数</source>
+      <translation>参数</translation>
+    </message>
+    <message>
+      <source>遥控通道</source>
+      <translation>遥控通道</translation>
+    </message>
+    <message>
+      <source>供电电压</source>
+      <translation>供电电压</translation>
+    </message>
+    <message>
+      <source>电池</source>
+      <translation>电池</translation>
+    </message>
+    <message>
+      <source>空速</source>
+      <translation>空速</translation>
+    </message>
+    <message>
+      <source>日志</source>
+      <translation>日志</translation>
+    </message>
+    <message>
+      <source>严格</source>
+      <translation>严格</translation>
+    </message>
+    <message>
+      <source>默认</source>
+      <translation>默认</translation>
+    </message>
+    <message>
+      <source>宽松</source>
+      <translation>宽松</translation>
+    </message>
+    <message>
+      <source>禁用／无动作</source>
+      <translation>禁用／无动作</translation>
+    </message>
+    <message>
+      <source>所有模式下均降落</source>
+      <translation>所有模式下均降落</translation>
+    </message>
+    <message>
+      <source>当前模式需要定位时切换降落模式</source>
+      <translation>当前模式需要定位时切换降落模式</translation>
+    </message>
+    <message>
+      <source>当前模式需要定位时切换定高模式</source>
+      <translation>当前模式需要定位时切换定高模式</translation>
+    </message>
+    <message>
+      <source>所有模式下均切换降落模式</source>
+      <translation>所有模式下均切换降落模式</translation>
+    </message>
+    <message>
+      <source>按任务降落，否则返航</source>
+      <translation>按任务降落，否则返航</translation>
+    </message>
+    <message>
+      <source>按任务降落或返航路径执行，否则返航</source>
+      <translation>按任务降落或返航路径执行，否则返航</translation>
+    </message>
+    <message>
+      <source>日志可用</source>
+      <translation>日志可用</translation>
+    </message>
+    <message>
+      <source>硬件安全开关</source>
+      <translation>硬件安全开关</translation>
+    </message>
+    <message>
+      <source>GPS 配置</source>
+      <translation>GPS 配置</translation>
+    </message>
+    <message>
+      <source>GPS 定位</source>
+      <translation>GPS 定位</translation>
+    </message>
+    <message>
+      <source>飞控供电电压</source>
+      <translation>飞控供电电压</translation>
+    </message>
+    <message>
+      <source>电池电量</source>
+      <translation>电池电量</translation>
+    </message>
+    <message>
+      <source>系统</source>
+      <translation>系统</translation>
+    </message>
+    <message>
+      <source>任务</source>
+      <translation>任务</translation>
+    </message>
+    <message>
+      <source>测距传感器</source>
+      <translation>测距传感器</translation>
+    </message>
+    <message>
+      <source>相机</source>
+      <translation>相机</translation>
+    </message>
+    <message>
+      <source>辅助授权</source>
+      <translation>辅助授权</translation>
+    </message>
+    <message>
+      <source>视觉里程计</source>
+      <translation>视觉里程计</translation>
+    </message>
+    <message>
+      <source>遥控失联时继续自动任务</source>
+      <translation>遥控失联时继续自动任务</translation>
+    </message>
+    <message>
+      <source>数传失联时继续自动任务</source>
+      <translation>数传失联时继续自动任务</translation>
+    </message>
+    <message>
+      <source>遥控失联时继续引导模式</source>
+      <translation>遥控失联时继续引导模式</translation>
+    </message>
+    <message>
+      <source>故障保护触发时继续已有降落</source>
+      <translation>故障保护触发时继续已有降落</translation>
+    </message>
+    <message>
+      <source>数传失联时继续人工操控模式</source>
+      <translation>数传失联时继续人工操控模式</translation>
+    </message>
+    <message>
+      <source>释放夹爪</source>
+      <translation>释放夹爪</translation>
+    </message>
+    <message>
+      <source>保持模式下启用故障保护</source>
+      <translation>保持模式下启用故障保护</translation>
+    </message>
+    <message>
+      <source>关闭自动启用</source>
+      <translation>关闭自动启用</translation>
+    </message>
+    <message>
+      <source>起飞时自动启用</source>
+      <translation>起飞时自动启用</translation>
+    </message>
+    <message>
+      <source>自动启用，降落时取消高度下限</source>
+      <translation>自动启用，降落时取消高度下限</translation>
+    </message>
+    <message>
+      <source>仅在解锁时自动启用</source>
+      <translation>仅在解锁时自动启用</translation>
+    </message>
+    <message>
+      <source>无动作</source>
+      <translation>无动作</translation>
+    </message>
+    <message>
+      <source>保持并上锁</source>
+      <translation>保持并上锁</translation>
+    </message>
+    <message>
+      <source>智能返航或保持</source>
+      <translation>智能返航或保持</translation>
+    </message>
+    <message>
+      <source>继续</source>
+      <translation>继续</translation>
+    </message>
+    <message>
+      <source>滑翔</source>
+      <translation>滑翔</translation>
+    </message>
+    <message>
+      <source>打开降落伞</source>
+      <translation>打开降落伞</translation>
+    </message>
+    <message>
+      <source>盘旋</source>
+      <translation>盘旋</translation>
+    </message>
+    <message>
+      <source>盘旋；任务／引导／悬停模式下保持原模式</source>
+      <translation>盘旋；任务／引导／悬停模式下保持原模式</translation>
+    </message>
+    <message>
+      <source>FBWA 模式，油门为零</source>
+      <translation>FBWA 模式，油门为零</translation>
+    </message>
+    <message>
+      <source>仅警告</source>
+      <translation>仅警告</translation>
+    </message>
+    <message>
+      <source>垂直降落</source>
+      <translation>垂直降落</translation>
+    </message>
+    <message>
+      <source>垂直起降返航</source>
+      <translation>垂直起降返航</translation>
+    </message>
+    <message>
+      <source>先飞回返航点，再执行任务降落段</source>
+      <translation>先飞回返航点，再执行任务降落段</translation>
+    </message>
+    <message>
+      <source>直接执行任务降落段</source>
+      <translation>直接执行任务降落段</translation>
+    </message>
+    <message>
+      <source>直接执行任务返航路径</source>
+      <translation>直接执行任务返航路径</translation>
+    </message>
+    <message>
+      <source>仅用于复飞</source>
+      <translation>仅用于复飞</translation>
+    </message>
+    <message>
+      <source>已收到飞控保存确认。</source>
+      <translation>已收到飞控保存确认。</translation>
+    </message>
+    <message>
+      <source>未收到全部保存确认，请读取参数核对。</source>
+      <translation>未收到全部保存确认，请读取参数核对。</translation>
+    </message>
+    <message>
+      <source>读取</source>
+      <translation>读取</translation>
+    </message>
+    <message>
+      <source>请输入有效数值。</source>
+      <translation>请输入有效数值。</translation>
+    </message>
+    <message>
+      <source>请输入 %1 至 %2 之间的数值。</source>
+      <translation>请输入 %1 至 %2 之间的数值。</translation>
+    </message>
+    <message>
+      <source>启用双天线航向融合</source>
+      <translation>启用双天线航向融合</translation>
+    </message>
+    <message>
+      <source>当前值：%1</source>
+      <translation>当前值：%1</translation>
+    </message>
+    <message>
+      <source>不支持</source>
+      <translation>不支持</translation>
+    </message>
+    <message>
+      <source>当前飞控未提供此参数。</source>
+      <translation>当前飞控未提供此参数。</translation>
+    </message>
+    <message>
+      <source>确认保存</source>
+      <translation>确认保存</translation>
+    </message>
+  </context>
+  <context>
+    <name>VehiclePeripheralSetup</name>
+    <message>
+      <source>GPS 设置</source>
+      <translation>GPS 设置</translation>
+    </message>
+    <message>
+      <source>雷达设置</source>
+      <translation>雷达设置</translation>
+    </message>
+    <message>
+      <source>飞控微调</source>
+      <translation>飞控微调</translation>
+    </message>
+    <message>
+      <source>禁用</source>
+      <translation>禁用</translation>
+    </message>
+    <message>
+      <source>自动识别</source>
+      <translation>自动识别</translation>
+    </message>
+    <message>
+      <source>u-blox 移动基站</source>
+      <translation>u-blox 移动基站</translation>
+    </message>
+    <message>
+      <source>u-blox 移动站</source>
+      <translation>u-blox 移动站</translation>
+    </message>
+    <message>
+      <source>DroneCAN 移动基站</source>
+      <translation>DroneCAN 移动基站</translation>
+    </message>
+    <message>
+      <source>DroneCAN 移动站</source>
+      <translation>DroneCAN 移动站</translation>
+    </message>
+    <message>
+      <source>Unicore 双天线</source>
+      <translation>Unicore 双天线</translation>
+    </message>
+    <message>
+      <source>Septentrio 双天线</source>
+      <translation>Septentrio 双天线</translation>
+    </message>
+    <message>
+      <source>请连接飞控并等待参数读取完成。不支持的项目不可用。</source>
+      <translation>请连接飞控并等待参数读取完成。不支持的项目不可用。</translation>
+    </message>
+    <message>
+      <source>请先停止飞行并上锁，再修改设置。</source>
+      <translation>请先停止飞行并上锁，再修改设置。</translation>
+    </message>
+    <message>
+      <source>编辑后点击确认保存。需要重启的参数保存后会提示重启飞控。</source>
+      <translation>编辑后点击确认保存。需要重启的参数保存后会提示重启飞控。</translation>
+    </message>
+    <message>
+      <source>双天线定向</source>
+      <translation>双天线定向</translation>
+    </message>
+    <message>
+      <source>需要支持双天线测向的接收机，并正确配置接收机类型、天线安装位置和安装补偿。勾选后点击确认保存。</source>
+      <translation>需要支持双天线测向的接收机，并正确配置接收机类型、天线安装位置和安装补偿。勾选后点击确认保存。</translation>
+    </message>
+    <message>
+      <source>APM 启用时选择 GPS 航向，关闭时切回罗盘；也可在下方选择罗盘备用等航向来源。</source>
+      <translation>APM 启用时选择 GPS 航向，关闭时切回罗盘；也可在下方选择罗盘备用等航向来源。</translation>
+    </message>
+    <message>
+      <source>航向来源</source>
+      <translation>航向来源</translation>
+    </message>
+    <message>
+      <source>启用双天线定向</source>
+      <translation>启用双天线定向</translation>
+    </message>
+    <message>
+      <source>无</source>
+      <translation>无</translation>
+    </message>
+    <message>
+      <source>罗盘</source>
+      <translation>罗盘</translation>
+    </message>
+    <message>
+      <source>GPS</source>
+      <translation>GPS</translation>
+    </message>
+    <message>
+      <source>GPS，罗盘备用</source>
+      <translation>GPS，罗盘备用</translation>
+    </message>
+    <message>
+      <source>外部导航</source>
+      <translation>外部导航</translation>
+    </message>
+    <message>
+      <source>GPS 航向融合</source>
+      <translation>GPS 航向融合</translation>
+    </message>
+    <message>
+      <source>设置 GPS 安装位置</source>
+      <translation>设置 GPS 安装位置</translation>
+    </message>
+    <message>
+      <source>设置双天线安装补偿</source>
+      <translation>设置双天线安装补偿</translation>
+    </message>
+    <message>
+      <source>GPS 1</source>
+      <translation>GPS 1</translation>
+    </message>
+    <message>
+      <source>GPS 2</source>
+      <translation>GPS 2</translation>
+    </message>
+    <message>
+      <source>GPS %1 接收机</source>
+      <translation>GPS %1 接收机</translation>
+    </message>
+    <message>
+      <source>选择实际连接的接收机类型或串口。CAN 接收机也需在飞控中启用对应的 CAN 驱动。</source>
+      <translation>选择实际连接的接收机类型或串口。CAN 接收机也需在飞控中启用对应的 CAN 驱动。</translation>
+    </message>
+    <message>
+      <source>接收机类型</source>
+      <translation>接收机类型</translation>
+    </message>
+    <message>
+      <source>GPS 串口</source>
+      <translation>GPS 串口</translation>
+    </message>
+    <message>
+      <source>GPS %1 安装位置（天线偏移）</source>
+      <translation>GPS %1 安装位置（天线偏移）</translation>
+    </message>
+    <message>
+      <source>相对于机体重心：X 向前、Y 向右、Z 向下为正，单位为厘米（cm）。</source>
+      <translation>相对于机体重心：X 向前、Y 向右、Z 向下为正，单位为厘米（cm）。</translation>
+    </message>
+    <message>
+      <source>相对于共同机体原点，通常选机体重心；请与 IMU 安装位置使用同一基准。X 向前、Y 向右、Z 向下为正，单位为厘米（cm）。</source>
+      <translation>相对于共同机体原点，通常选机体重心；请与 IMU 安装位置使用同一基准。X 向前、Y 向右、Z 向下为正，单位为厘米（cm）。</translation>
+    </message>
+    <message>
+      <source>前后偏移 X</source>
+      <translation>前后偏移 X</translation>
+    </message>
+    <message>
+      <source>左右偏移 Y</source>
+      <translation>左右偏移 Y</translation>
+    </message>
+    <message>
+      <source>上下偏移 Z</source>
+      <translation>上下偏移 Z</translation>
+    </message>
+    <message>
+      <source>双天线安装航向补偿</source>
+      <translation>双天线安装航向补偿</translation>
+    </message>
+    <message>
+      <source>补偿双天线测向基准方向与机头方向之间的固定夹角，范围 0～360°。0° 表示不加补偿；具体数值按接收机天线方向及飞控约定确定。</source>
+      <translation>补偿双天线测向基准方向与机头方向之间的固定夹角，范围 0～360°。0° 表示不加补偿；具体数值按接收机天线方向及飞控约定确定。</translation>
+    </message>
+    <message>
+      <source>安装补偿值</source>
+      <translation>安装补偿值</translation>
+    </message>
+    <message>
+      <source>双天线安装方向补偿</source>
+      <translation>双天线安装方向补偿</translation>
+    </message>
+    <message>
+      <source>飞控根据天线基线确定安装方向，可由两路 GPS 安装位置计算。使用自定义基站时，填写主天线相对于第二天线的位置，单位 cm。X 向前、Y 向右、Z 向下为正。</source>
+      <translation>飞控根据天线基线确定安装方向，可由两路 GPS 安装位置计算。使用自定义基站时，填写主天线相对于第二天线的位置，单位 cm。X 向前、Y 向右、Z 向下为正。</translation>
+    </message>
+    <message>
+      <source>基站位置来源</source>
+      <translation>基站位置来源</translation>
+    </message>
+    <message>
+      <source>由两路 GPS 天线偏移计算</source>
+      <translation>由两路 GPS 天线偏移计算</translation>
+    </message>
+    <message>
+      <source>自定义相对偏移</source>
+      <translation>自定义相对偏移</translation>
+    </message>
+    <message>
+      <source>相对前后偏移 X</source>
+      <translation>相对前后偏移 X</translation>
+    </message>
+    <message>
+      <source>相对左右偏移 Y</source>
+      <translation>相对左右偏移 Y</translation>
+    </message>
+    <message>
+      <source>相对上下偏移 Z</source>
+      <translation>相对上下偏移 Z</translation>
+    </message>
+    <message>
+      <source>当前飞控未提供独立的安装航向补偿参数。请设置两根天线相对于机体原点的位置，由飞控根据基线确定安装方向。</source>
+      <translation>当前飞控未提供独立的安装航向补偿参数。请设置两根天线相对于机体原点的位置，由飞控根据基线确定安装方向。</translation>
+    </message>
+    <message>
+      <source>将测距传感器朝下安装并避免遮挡。接口与协议请按传感器型号和飞控接线配置。</source>
+      <translation>将测距传感器朝下安装并避免遮挡。接口与协议请按传感器型号和飞控接线配置。</translation>
+    </message>
+    <message>
+      <source>未提供</source>
+      <translation>未提供</translation>
+    </message>
+    <message>
+      <source>底部实时测距</source>
+      <translation>底部实时测距</translation>
+    </message>
+    <message>
+      <source>测距传感器设置</source>
+      <translation>测距传感器设置</translation>
+    </message>
+    <message>
+      <source>传感器类型（0 为禁用）</source>
+      <translation>传感器类型（0 为禁用）</translation>
+    </message>
+    <message>
+      <source>安装方向</source>
+      <translation>安装方向</translation>
+    </message>
+    <message>
+      <source>向前</source>
+      <translation>向前</translation>
+    </message>
+    <message>
+      <source>向右</source>
+      <translation>向右</translation>
+    </message>
+    <message>
+      <source>向后</source>
+      <translation>向后</translation>
+    </message>
+    <message>
+      <source>向左</source>
+      <translation>向左</translation>
+    </message>
+    <message>
+      <source>向上</source>
+      <translation>向上</translation>
+    </message>
+    <message>
+      <source>向下（底部测距）</source>
+      <translation>向下（底部测距）</translation>
+    </message>
+    <message>
+      <source>最小有效距离</source>
+      <translation>最小有效距离</translation>
+    </message>
+    <message>
+      <source>最大有效距离</source>
+      <translation>最大有效距离</translation>
+    </message>
+    <message>
+      <source>TFmini / 雷达串口</source>
+      <translation>TFmini / 雷达串口</translation>
+    </message>
+    <message>
+      <source>TFmini / 雷达型号</source>
+      <translation>TFmini / 雷达型号</translation>
+    </message>
+    <message>
+      <source>TF02 Pro 驱动</source>
+      <translation>TF02 Pro 驱动</translation>
+    </message>
+    <message>
+      <source>Lightware 串口</source>
+      <translation>Lightware 串口</translation>
+    </message>
+    <message>
+      <source>Lightware 型号</source>
+      <translation>Lightware 型号</translation>
+    </message>
+    <message>
+      <source>Lightware I²C 驱动</source>
+      <translation>Lightware I²C 驱动</translation>
+    </message>
+    <message>
+      <source>底部测距融合</source>
+      <translation>底部测距融合</translation>
+    </message>
+    <message>
+      <source>按条件启用</source>
+      <translation>按条件启用</translation>
+    </message>
+    <message>
+      <source>启用</source>
+      <translation>启用</translation>
+    </message>
+    <message>
+      <source>选择实际传感器型号及向下安装方向后确认保存。</source>
+      <translation>选择实际传感器型号及向下安装方向后确认保存。</translation>
+    </message>
+    <message>
+      <source>仅显示飞控支持的驱动。测距融合用于估计器，传感器驱动需单独配置；不能用融合开关代替硬件驱动。</source>
+      <translation>仅显示飞控支持的驱动。测距融合用于估计器，传感器驱动需单独配置；不能用融合开关代替硬件驱动。</translation>
+    </message>
+    <message>
+      <source>用于减小无人机在无风、姿态模式下的持续飘移。记录飘移方向，降落并上锁后，按对应方向微调并确认保存，再试飞核对效果。</source>
+      <translation>用于减小无人机在无风、姿态模式下的持续飘移。记录飘移方向，降落并上锁后，按对应方向微调并确认保存，再试飞核对效果。</translation>
+    </message>
+    <message>
+      <source>当前横滚角</source>
+      <translation>当前横滚角</translation>
+    </message>
+    <message>
+      <source>当前俯仰角</source>
+      <translation>当前俯仰角</translation>
+    </message>
+    <message>
+      <source>每次修正角度</source>
+      <translation>每次修正角度</translation>
+    </message>
+    <message>
+      <source>选择实际飘移方向（以机头方向为前），系统施加反向修正。</source>
+      <translation>选择实际飘移方向（以机头方向为前），系统施加反向修正。</translation>
+    </message>
+    <message>
+      <source>向前飘移</source>
+      <translation>向前飘移</translation>
+    </message>
+    <message>
+      <source>向左飘移</source>
+      <translation>向左飘移</translation>
+    </message>
+    <message>
+      <source>↑ 机头</source>
+      <translation>↑ 机头</translation>
+    </message>
+    <message>
+      <source>向右飘移</source>
+      <translation>向右飘移</translation>
+    </message>
+    <message>
+      <source>向后飘移</source>
+      <translation>向后飘移</translation>
+    </message>
+    <message>
+      <source>飘移修正量</source>
+      <translation>飘移修正量</translation>
+    </message>
+    <message>
+      <source>方向按钮只调整下方待保存数值，确认后才写入飞控。也可手动修改修正角度。</source>
+      <translation>方向按钮只调整下方待保存数值，确认后才写入飞控。也可手动修改修正角度。</translation>
+    </message>
+    <message>
+      <source>横滚零点</source>
+      <translation>横滚零点</translation>
+    </message>
+    <message>
+      <source>俯仰零点</source>
+      <translation>俯仰零点</translation>
+    </message>
+  </context>
 </TS>

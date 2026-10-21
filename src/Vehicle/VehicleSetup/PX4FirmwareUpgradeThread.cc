@@ -113,6 +113,9 @@ QVariantList PX4FirmwareUpgradeThreadWorker::_buildPortDescriptors() const
     QVariantList list;
 
     for (const QGCSerialPortInfo& info : QGCSerialPortInfo::availablePorts()) {
+        if (QGCSerialPortInfo::isSlcanInterface(info.description())) {
+            continue;
+        }
         QGCSerialPortInfo::BoardType_t boardType;
         QString boardName;
         const bool recognized = info.getBoardInfo(boardType, boardName);
@@ -158,6 +161,9 @@ void PX4FirmwareUpgradeThreadWorker::_findBoardOnce(void)
     bool                            foundTarget = false;
 
     for (const QGCSerialPortInfo& info: QGCSerialPortInfo::availablePorts()) {
+        if (QGCSerialPortInfo::isSlcanInterface(info.description())) {
+            continue;
+        }
         qCDebug(PX4FirmwareUpgradeThreadVerboseLog) << "Serial Port --------------";
         qCDebug(PX4FirmwareUpgradeThreadVerboseLog) << "\tport name:" << info.portName();
         qCDebug(PX4FirmwareUpgradeThreadVerboseLog) << "\tdescription:" << info.description();

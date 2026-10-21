@@ -27,7 +27,7 @@ Flow {
 
         QGCCheckBox {
             id:         checkbox
-            text:       modelData
+            text:       OnlineMessageTranslator.parameterText(modelData, OnlineMessageTranslator.revision)
             checked:    fact.value & fact.bitmaskValues[index]
 
             onClicked: {

@@ -46,7 +46,7 @@ Rectangle {
                 horizontalAlignment: Text.AlignHCenter
                 text:           setupComplete ?
                     qsTr("Your vehicle configuration summary appears below. Select components on the left to review or fine-tune settings.") :
-                    qsTr("WARNING: Configuration tasks remain before this vehicle is ready to fly. Open the red-marked components on the left to finish setup.")
+                    qsTr("WARNING: Complete the remaining setup tasks before flying. Open the overview cards marked with a red dot, or expand the setup menu and select items marked with an orange dot.")
 
                 property bool setupComplete: QGroundControl.multiVehicleManager.activeVehicle ? QGroundControl.multiVehicleManager.activeVehicle.autopilotPlugin.setupComplete : false
             }

@@ -37,6 +37,7 @@
 #include "QGCVersionCheck.h"
 #include "SettingsManager.h"
 #include "Vehicle.h"
+#include "VehicleMessageTranslator.h"
 #include "VideoManager.h"
 #include "qgc_version.h"
 
@@ -219,6 +220,8 @@ void QGCApplication::setLanguage()
         }
     }
 
+    VehicleMessageTranslator::setLanguage(_locale);
+
     if (_qmlAppEngine) {
         _qmlAppEngine->retranslate();
     }
@@ -270,6 +273,15 @@ void QGCApplication::_initAuthorizedApp()
             _startupClosing = true;
             quit();
         });
+        connect(_startup, &CaacStartupController::finishedChanged, this, [this]() {
+            if (!_startup->videoAvailable()) {
+                QTimer::singleShot(0, this, [this]() {
+                    showAppMessage(tr("视频系统初始化失败，本次运行已停用图传和录像。地图、飞控连接和参数设置仍可使用。"
+                                      "请保留应用日志，以便检查视频组件。"),
+                                   tr("视频不可用"));
+                });
+            }
+        });
         if (!_startup->show()) {
             _startupClosing = true;
             QTimer::singleShot(0, this, &QCoreApplication::quit);
@@ -304,17 +316,18 @@ void QGCApplication::_continueStartup(int stage)
                     });
             _startup->setStage(CaacStartupController::Stage::VideoBackend);
             break;
-        case 2:
-            if (!VideoManager::instance()->waitForVideoBackendReady()) {
-                _startup->fail(tr("视频系统初始化失败，请关闭后重新启动。"));
-                return;
-            }
+        case 2: {
+            const bool videoAvailable = VideoManager::instance()->waitForVideoBackendReady();
             if (_startupClosing) {
                 return;
             }
-            _startup->markBackendReady();
+            if (!videoAvailable) {
+                VideoManager::instance()->disableVideoForSession();
+            }
+            _startup->completeVideoInitialization(videoAvailable);
             _startup->setStage(CaacStartupController::Stage::Services);
             break;
+        }
         case 3:
             _initForNormalAppBoot();
             _startup->setStage(CaacStartupController::Stage::FirstFrame);
@@ -522,12 +535,13 @@ void QGCApplication::showCriticalVehicleMessage(const QString& message)
 
 void QGCApplication::showAppMessage(const QString& message, const QString& title)
 {
-    const QString dialogTitle = title.isEmpty() ? tr("Notice") : title;
+    const QString dialogTitle = title.isEmpty() ? tr("Notice") : VehicleMessageTranslator::translate(title);
+    const QString displayMessage = VehicleMessageTranslator::translate(message);
 
     if (runningUnitTests()) {
         // Logged under QGCAppMessageLog so tests can assert expected dialogs via
         // expectAppMessage() without matching against the general QGCApplication category.
-        qCDebug(QGCAppMessageLog) << "showAppMessage:" << dialogTitle << "-" << message;
+        qCDebug(QGCAppMessageLog) << "showAppMessage:" << dialogTitle << "-" << displayMessage;
         if (!_uiTestMode) {
             // Headless test: there is no QML root to host the dialog and the delayed-message
             // timer would retry forever, so the log is the only record.

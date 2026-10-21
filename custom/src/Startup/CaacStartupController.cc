@@ -70,9 +70,10 @@ void CaacStartupController::setStage(Stage stage)
     }
 }
 
-void CaacStartupController::markBackendReady()
+void CaacStartupController::completeVideoInitialization(bool available)
 {
-    _backendReady = true;
+    _videoAvailable = available;
+    _videoInitializationFinished = true;
     _tryComplete();
 }
 
@@ -90,10 +91,10 @@ void CaacStartupController::markMainFrameReady()
 
 void CaacStartupController::_tryComplete()
 {
-    if (_closing || _failed || _finishing || !_backendReady || !_servicesReady || !_mainFrameReady) {
+    if (_closing || _failed || _finishing || !_videoInitializationFinished || !_servicesReady || !_mainFrameReady) {
         return;
     }
-    _setProgress(100, tr("系统已就绪"));
+    _setProgress(100, _videoAvailable ? tr("系统已就绪") : tr("系统已就绪，图传暂不可用"));
     _finishing = true;
     if (_window) {
         // Arm after synchronization so an older queued swap cannot reveal the main window before the 100% frame.

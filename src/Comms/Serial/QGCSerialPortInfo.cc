@@ -317,6 +317,9 @@ bool QGCSerialPortInfo::isSystemPort(const QSerialPortInfo &port)
 
 bool QGCSerialPortInfo::canFlash() const
 {
+    if (isSlcanInterface(description())) {
+        return false;
+    }
     BoardType_t boardType;
     QString name;
     if (!getBoardInfo(boardType, name)) {
@@ -329,4 +332,11 @@ bool QGCSerialPortInfo::canFlash() const
     };
 
     return flashable.contains(boardType);
+}
+
+bool QGCSerialPortInfo::isSlcanInterface(const QString& description)
+{
+    static const QRegularExpression slcan(QStringLiteral("(^|[^a-z0-9])slcan([^a-z0-9]|$)"),
+                                          QRegularExpression::CaseInsensitiveOption);
+    return description.contains(slcan);
 }
