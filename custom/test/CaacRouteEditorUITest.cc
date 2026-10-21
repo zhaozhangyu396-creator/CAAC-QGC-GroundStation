@@ -978,7 +978,7 @@ void CaacRouteEditorUITest::_planningUtilities()
     map->setProperty("center", QVariant::fromValue(QGeoCoordinate(30, 120)));
     map->setProperty("zoomLevel", 16.0);
     QTRY_VERIFY_WITH_TIMEOUT(map->property("mapReady").toBool(), TestTimeout::mediumMs());
-    QTRY_COMPARE_WITH_TIMEOUT(master->missionController()->plannedHomePosition().altitude(), 0.0,
+    QTRY_COMPARE_WITH_TIMEOUT(master->missionController()->plannedHomePosition().altitude(), 20.0,
                               TestTimeout::mediumMs());
     const auto before = master->saveToJson();
     QVERIFY(clickButton(QStringLiteral("caacGlobalSettingsButton")));

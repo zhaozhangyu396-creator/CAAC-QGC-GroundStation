@@ -233,7 +233,6 @@ void PX4AirframeSetupUITest::_testAirframePrereqPages()
     const PrereqCheck checks[] = {
         { .objectName = "vehicleConfig_comp_Sensors",     .expectPrereqShown = true,  .checkedSectionObjectName = "vehicleConfig_section_Compass" },
         { .objectName = "vehicleConfig_comp_Power",       .expectPrereqShown = true,  .checkedSectionObjectName = "" },
-        { .objectName = "vehicleConfig_comp_Safety",      .expectPrereqShown = true,  .checkedSectionObjectName = "" },
         { .objectName = "vehicleConfig_comp_PIDTuning",   .expectPrereqShown = true,  .checkedSectionObjectName = "" },
         { .objectName = "vehicleConfig_comp_FlightModes", .expectPrereqShown = true,  .checkedSectionObjectName = "" },
         { .objectName = "vehicleConfig_comp_Radio",       .expectPrereqShown = false, .checkedSectionObjectName = "" },
@@ -243,6 +242,15 @@ void PX4AirframeSetupUITest::_testAirframePrereqPages()
     for (const PrereqCheck &check : checks) {
         _verifyAirframePrereq(QLatin1String(check.objectName), check.expectPrereqShown, QLatin1String(check.checkedSectionObjectName));
         if (QTest::currentTestFailed()) return;
+    }
+    if (QGCCorePlugin::instance()->directMissionItemEditing()) {
+        QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("vehicleConfig_comp_Safety"), 0));
+        QVERIFY(
+            clickButtonScrolled(QStringLiteral("toolbar_safety"), QStringLiteral("caacSettingsNavigationScroller")));
+        QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacSafetySettings")));
+        QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("vehicleConfig_messagePanel"), 0));
+    } else {
+        _verifyAirframePrereq(QStringLiteral("vehicleConfig_comp_Safety"), true, QString());
     }
     });
 }

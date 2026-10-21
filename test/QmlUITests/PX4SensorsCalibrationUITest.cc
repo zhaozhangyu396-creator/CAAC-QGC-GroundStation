@@ -64,10 +64,7 @@ void PX4SensorsCalibrationUITest::_testMotorSafetyGate()
                         QTRY_VERIFY(slider->isEnabled());
                         slider->setProperty("value", 20);
                         QVERIFY(QMetaObject::invokeMethod(slider, "moved"));
-                        _navigateToSensorsPanel();
-                        if (QTest::currentTestFailed()) {
-                            return;
-                        }
+                        QVERIFY(clickSidebarButton(QStringLiteral("vehicleConfig_comp_Sensors")));
                         clickSidebarButton(QStringLiteral("vehicleConfig_section_Accelerometer"));
                         if (QTest::currentTestFailed()) {
                             return;

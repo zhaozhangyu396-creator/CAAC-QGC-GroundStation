@@ -31,11 +31,10 @@ QQuickItem* findFactControl(QQuickItem* root, const Fact* fact)
         return root;
     }
     if (root->property("fact").value<Fact*>() == fact) {
-        for (QQuickItem* child : root->childItems()) {
-            if (child->isVisible() && (child->inherits("QQuickControl") || child->inherits("QQuickTextInput")) &&
-                (child->objectName().endsWith(QStringLiteral("_value")) ||
-                 child->objectName().endsWith(QStringLiteral("_choice")))) {
-                return child;
+        for (const QString& suffix : {QStringLiteral("_value"), QStringLiteral("_choice")}) {
+            if (auto* control = root->findChild<QQuickItem*>(root->objectName() + suffix);
+                control && control->isVisible()) {
+                return control;
             }
         }
     }
