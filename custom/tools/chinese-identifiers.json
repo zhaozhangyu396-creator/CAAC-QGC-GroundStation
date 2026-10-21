@@ -168,5 +168,50 @@
     "context": "Joystick.SettingsGroup.json",
     "source": "Stick Exponential",
     "reason": "用户指定摇杆指数统一显示为技术缩写 EXP"
+  },
+  {
+    "context": "Firmware Class",
+    "source": "ArduPilot",
+    "reason": "飞控固件项目名称，保留官方拼写"
+  },
+  {
+    "context": "FirmwareUpgrade",
+    "source": "ArduPilot",
+    "reason": "飞控固件项目名称，保留官方拼写"
+  },
+  {
+    "context": "MockLinkSettings",
+    "source": "ArduPilot",
+    "reason": "飞控固件项目名称，保留官方拼写"
+  },
+  {
+    "context": "VehicleMessages",
+    "source": "GPS",
+    "reason": "全球定位系统标准缩写"
+  },
+  {
+    "context": "VehicleMessages",
+    "source": "GPS %1: %2",
+    "reason": "GPS 标准缩写及设备编号和已单独翻译的动态状态占位符"
+  },
+  {
+    "context": "GpsAntennaPositionPreview",
+    "source": "X：%1　Y：%2　Z：%3 cm",
+    "reason": "机体坐标轴、数值占位符及厘米标准单位符号"
+  },
+  {
+    "context": "VehiclePeripheralSetup",
+    "source": "GPS",
+    "reason": "全球定位系统标准缩写"
+  },
+  {
+    "context": "VehiclePeripheralSetup",
+    "source": "GPS 1",
+    "reason": "GPS 标准缩写及第一接收机编号"
+  },
+  {
+    "context": "VehiclePeripheralSetup",
+    "source": "GPS 2",
+    "reason": "GPS 标准缩写及第二接收机编号"
   }
 ]

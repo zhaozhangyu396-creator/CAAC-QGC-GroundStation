@@ -30940,7 +30940,7 @@ altitude</source>
   </message>
   <message>
     <source>%1 instance %2</source>
-    <translation>%1 %2</translation>
+    <translation>%1 实例 %2</translation>
   </message>
     <message>
         <source>Strength (EKF2_MAG_CHK_STR)</source>
