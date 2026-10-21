@@ -345,29 +345,40 @@ void CaacPlanningInteractionUITest::_homeAltitudeAutoSave()
     auto* master = plan->property("_planMasterController").value<PlanMasterController*>();
     QVERIFY(master);
     auto* mission = master->missionController();
-    mission->setHomePosition(QGeoCoordinate(30, 120, 0));
+    mission->setHomePosition(QGeoCoordinate(30, 120, 2062));
     auto* home = mission->visualItems()->value<MissionSettingsItem*>(0);
     QVERIFY(home);
+    home->setDirty(false);
     const QList<double> firstAltitude{2061};
     QVERIFY(QMetaObject::invokeMethod(home, "_terrainDataReceived", Qt::DirectConnection, Q_ARG(bool, true),
                                       Q_ARG(QList<double>, firstAltitude)));
-    QTRY_COMPARE_WITH_TIMEOUT(mission->plannedHomePosition().altitude(), 2061.0, TestTimeout::mediumMs());
-    QCOMPARE(home->plannedHomePositionAltitude()->rawValue().toDouble(), 2061.0);
-    QVERIFY(home->dirty());
-    mission->setHomePosition(QGeoCoordinate(30.0001, 120, 2061));
+    QCOMPARE(mission->plannedHomePosition().altitude(), 2062.0);
+    QCOMPARE(home->plannedHomePositionAltitude()->rawValue().toDouble(), 2062.0);
+    QVERIFY(!home->dirty());
+
+    mission->setHomePosition(QGeoCoordinate(30.0001, 120, 2070));
     home->setDirty(false);
-    const QList<double> secondAltitude{2070};
+    const QList<double> secondAltitude{2080};
     QVERIFY(QMetaObject::invokeMethod(home, "_terrainDataReceived", Qt::DirectConnection, Q_ARG(bool, true),
                                       Q_ARG(QList<double>, secondAltitude)));
-    QTRY_COMPARE_WITH_TIMEOUT(mission->plannedHomePosition().altitude(), 2070.0, TestTimeout::mediumMs());
-    QCOMPARE(home->plannedHomePositionAltitude()->rawValue().toDouble(), 2070.0);
+    QCOMPARE(mission->plannedHomePosition().altitude(), 2070.0);
+    QVERIFY(!home->dirty());
+
+    const QList<double> missingAltitude;
+    QVERIFY(QMetaObject::invokeMethod(home, "_terrainDataReceived", Qt::DirectConnection, Q_ARG(bool, false),
+                                      Q_ARG(QList<double>, missingAltitude)));
+    home->plannedHomePositionAltitude()->setRawValue(qQNaN());
+    const QList<double> resolvedAltitude{2090};
+    QVERIFY(QMetaObject::invokeMethod(home, "_terrainDataReceived", Qt::DirectConnection, Q_ARG(bool, true),
+                                      Q_ARG(QList<double>, resolvedAltitude)));
+    QTRY_COMPARE_WITH_TIMEOUT(mission->plannedHomePosition().altitude(), 2090.0, TestTimeout::mediumMs());
+    QCOMPARE(home->plannedHomePositionAltitude()->rawValue().toDouble(), 2090.0);
     QCOMPARE(mission->plannedHomePosition().latitude(), 30.0001);
-    QVERIFY(home->dirty());
     QVERIFY(clickButton(QStringLiteral("caacGlobalSettingsButton")));
     auto* altitude =
         findVisibleItemScrolled(QStringLiteral("caacHomeAltitude"), QStringLiteral("caacGlobalSettingsScroller"));
     QVERIFY(altitude);
-    QCOMPARE(altitude->property("text").toString().toDouble(), 2070.0);
+    QCOMPARE(altitude->property("text").toString().toDouble(), 2090.0);
 }
 
 void CaacPlanningInteractionUITest::_mapContextClear()
