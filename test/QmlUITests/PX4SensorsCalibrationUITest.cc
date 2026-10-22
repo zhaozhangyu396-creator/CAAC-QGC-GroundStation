@@ -69,11 +69,14 @@ void PX4SensorsCalibrationUITest::_testCompassSettings()
                         QVERIFY(priority);
                         QVERIFY(QMetaObject::invokeMethod(priority, "activated", Q_ARG(int, 3)));
                         vehicle->setArmed(true, false);
+                        QTRY_VERIFY_WITH_TIMEOUT(vehicle->armed(), TestTimeout::mediumMs());
                         auto* save = findVisibleItemScrolled(QStringLiteral("sensorsSetup_saveCompassSettings"),
                                                              QStringLiteral("sensorsSetup_buttonScroller"));
-                        QVERIFY(save && !save->isEnabled());
+                        QVERIFY(save);
+                        QTRY_VERIFY_WITH_TIMEOUT(!save->isEnabled(), TestTimeout::mediumMs());
                         QCOMPARE(externalPriority->rawValue().toInt(), 100);
                         vehicle->setArmed(false, false);
+                        QTRY_VERIFY_WITH_TIMEOUT(!vehicle->armed(), TestTimeout::mediumMs());
                         QVERIFY(click(QStringLiteral("sensorsSetup_saveCompassSettings")));
                         QTRY_COMPARE(mock->paramValue(1, QStringLiteral("CAL_MAG1_PRIO")).toInt(), 75);
                         QCOMPARE(externalRotation->rawValue().toInt(), 0);
