@@ -823,6 +823,7 @@ QVariantMap CaacRouteEditorController::snapWaypointDrag(QObject* object, const Q
             return result;
         }
     }
+    QVariantMap routeEdgeResult;
     if (intersectionSnap) {
         double closest = tolerance;
         QGeoCoordinate intersection;
@@ -854,13 +855,12 @@ QVariantMap CaacRouteEditorController::snapWaypointDrag(QObject* object, const Q
             }
         }
         if (intersection.isValid()) {
-            result[QStringLiteral("coordinate")] = QVariant::fromValue(intersection);
-            result[QStringLiteral("guides")] =
+            routeEdgeResult[QStringLiteral("coordinate")] = QVariant::fromValue(intersection);
+            routeEdgeResult[QStringLiteral("guides")] =
                 QVariantList{QVariantMap{{QStringLiteral("from"), QVariant::fromValue(from->coordinate())},
                                          {QStringLiteral("to"), QVariant::fromValue(to->coordinate())},
                                          {QStringLiteral("intersection"), QVariant::fromValue(intersection)},
                                          {QStringLiteral("kind"), 4}}};
-            return result;
         }
     }
     const auto perpendicular = [](const QPointF& point) { return QPointF(-point.y(), point.x()); };
@@ -889,7 +889,7 @@ QVariantMap CaacRouteEditorController::snapWaypointDrag(QObject* object, const Q
         addGuide(opposite / 2, perpendicular(opposite), 2);
     }
     if (candidates.isEmpty()) {
-        return result;
+        return routeEdgeResult.isEmpty() ? result : routeEdgeResult;
     }
     std::stable_sort(candidates.begin(), candidates.end(), [](const Guide& a, const Guide& b) {
         // Pairwise epsilon equality is not transitive and violates the sort ordering contract.
@@ -897,24 +897,36 @@ QVariantMap CaacRouteEditorController::snapWaypointDrag(QObject* object, const Q
     });
     auto snapped = candidates.first().projection;
     QList<Guide> active{candidates.first()};
-    for (int i = 1; i < candidates.size(); ++i) {
-        const auto& a = candidates.first();
-        const auto& b = candidates[i];
-        const double determinant = a.direction.x() * b.direction.y() - a.direction.y() * b.direction.x();
-        if (std::abs(determinant) < 0.5) {
-            continue;
+    if (intersectionSnap) {
+        double closest = tolerance;
+        const double minimumDeterminant = std::sin(qDegreesToRadians(1.0));
+        for (int i = 0; i < candidates.size(); ++i) {
+            for (int j = i + 1; j < candidates.size(); ++j) {
+                const auto& a = candidates[i];
+                const auto& b = candidates[j];
+                const double determinant = a.direction.x() * b.direction.y() - a.direction.y() * b.direction.x();
+                if (std::abs(determinant) < minimumDeterminant) {
+                    continue;
+                }
+                const auto offset = b.anchor - a.anchor;
+                const auto intersection =
+                    a.anchor +
+                    a.direction * ((offset.x() * b.direction.y() - offset.y() * b.direction.x()) / determinant);
+                const double distance = QLineF(raw, intersection).length();
+                if (distance > closest ||
+                    std::any_of(references.cbegin(), references.cend(), [&](const QPointF& point) {
+                        return QLineF(point, intersection).length() < tolerance * 0.5;
+                    })) {
+                    continue;
+                }
+                closest = distance;
+                snapped = intersection;
+                active = {a, b};
+            }
         }
-        const auto offset = b.anchor - a.anchor;
-        const auto intersection =
-            a.anchor + a.direction * ((offset.x() * b.direction.y() - offset.y() * b.direction.x()) / determinant);
-        if (QLineF(raw, intersection).length() > tolerance ||
-            std::any_of(references.cbegin(), references.cend(),
-                        [&](const QPointF& point) { return QLineF(point, intersection).length() < tolerance * 0.5; })) {
-            continue;
-        }
-        snapped = intersection;
-        active.append(b);
-        break;
+    }
+    if (active.size() == 1 && !routeEdgeResult.isEmpty()) {
+        return routeEdgeResult;
     }
     QVariantList guides;
     for (const auto& guide : active) {
@@ -923,6 +935,11 @@ QVariantMap CaacRouteEditorController::snapWaypointDrag(QObject* object, const Q
             {QStringLiteral("from"), QVariant::fromValue(unproject(guide.anchor - guide.direction * extent))},
             {QStringLiteral("to"), QVariant::fromValue(unproject(guide.anchor + guide.direction * extent))},
             {QStringLiteral("kind"), guide.kind}});
+    }
+    if (active.size() == 2) {
+        auto firstGuide = guides.first().toMap();
+        firstGuide.insert(QStringLiteral("intersection"), QVariant::fromValue(unproject(snapped)));
+        guides[0] = firstGuide;
     }
     result.insert(QStringLiteral("coordinate"), QVariant::fromValue(unproject(snapped)));
     result.insert(QStringLiteral("guides"), guides);

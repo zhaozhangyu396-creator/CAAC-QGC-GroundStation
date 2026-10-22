@@ -513,6 +513,7 @@ void CaacFlightDataUITest::_dashboardInteractions()
     Vehicle* vehicle = nullptr;
     auto mock = connectMockLinkAndWaitReady([]() { return MockLink::startPX4MockLink(); }, vehicle);
     QVERIFY(mock && vehicle);
+    const auto disconnect = qScopeGuard([&]() { disconnectMockLink(mock); });
     auto* dashboard = findVisibleItem(_rootItem, QStringLiteral("caacFlightDashboard"));
     auto* footer = findVisibleItem(_rootItem, QStringLiteral("caacFlightTelemetryBar"));
     auto* arrow = findVisibleItem(_rootItem, QStringLiteral("caacTelemetryHeadingArrow"));
@@ -544,15 +545,21 @@ void CaacFlightDataUITest::_dashboardInteractions()
             findVisibleItem(_rootItem, QStringLiteral("caacDashboard") + QLatin1String(key) + QStringLiteral("Value")));
     }
     const auto beforeWidth = dashboard->width();
+    const auto beforeHeight = dashboard->height();
     QVERIFY(clickButton(QStringLiteral("caacDashboardZoomButton")));
     QTRY_VERIFY_WITH_TIMEOUT(dashboard->width() > beforeWidth, TestTimeout::mediumMs());
     QVERIFY(clickButton(QStringLiteral("caacDashboardZoomButton")));
     QTRY_VERIFY_WITH_TIMEOUT(std::abs(dashboard->width() - beforeWidth) < 1, TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(std::abs(dashboard->height() - beforeHeight) < 1, TestTimeout::mediumMs());
+    QSignalSpy rendered(_window, &QQuickWindow::frameSwapped);
+    _window->update();
+    QTRY_VERIFY_WITH_TIMEOUT(!rendered.isEmpty(), TestTimeout::mediumMs());
     auto* drag = findVisibleItem(_rootItem, QStringLiteral("caacDashboardDragArea"));
     QVERIFY(drag);
     const auto press = drag->mapToScene(QPointF(drag->width() / 2, drag->height() / 3)).toPoint();
     const auto before = dashboard->mapToScene(QPointF());
     QTest::mousePress(_window, Qt::LeftButton, Qt::NoModifier, press);
+    QCOMPARE(_window->mouseGrabberItem(), drag);
     for (int i = 1; i <= 4; ++i) {
         QTest::mouseMove(_window, press - QPoint(i * 15, i * 8));
     }
@@ -568,7 +575,6 @@ void CaacFlightDataUITest::_dashboardInteractions()
     if (const auto screenshot = qgetenv("CAAC_DASHBOARD_UI_SCREENSHOT"); !screenshot.isEmpty()) {
         QVERIFY(_window->grabWindow().save(QString::fromUtf8(screenshot)));
     }
-    disconnectMockLink(mock);
 }
 
 void CaacFlightDataUITest::_liveFlightData()

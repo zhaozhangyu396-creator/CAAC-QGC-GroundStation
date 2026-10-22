@@ -3,6 +3,7 @@
 
 #include <QtCore/QScopeGuard>
 #include <QtCore/QTemporaryDir>
+#include <QtCore/QtMath>
 #include <QtTest/QSignalSpy>
 
 #include "CaacCorePlugin.h"
@@ -41,6 +42,7 @@ private slots:
     void _perpendicularAndSymmetry();
     void _edgeMidpoints();
     void _routeIntersections();
+    void _guideIntersections();
     void _pointRelationsAndVertex();
     void _synchronizeWaypointDefaults();
     void _displayNumbersAndLoopSelection();
@@ -469,6 +471,61 @@ void CaacPlanningToolsTest::_routeIntersections()
         const auto closed = editor.snapWaypointDrag(moved, raw, 1);
         QVERIFY(QGCGeo::geodesicDistance(closed.value("coordinate").value<QGeoCoordinate>(), closingTarget) < 0.01);
         QCOMPARE(closed.value("guides").toList().first().toMap().value("kind").toInt(), 4);
+    }
+}
+
+void CaacPlanningToolsTest::_guideIntersections()
+{
+    auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
+    QVERIFY(plugin);
+    const auto preferences = plugin->planningPreferences();
+    const auto restore = qScopeGuard([&]() { plugin->updatePlanningPreferences(preferences); });
+    QVERIFY(plugin->updatePlanningPreferences({{"horizontalSnap", false},
+                                               {"verticalSnap", true},
+                                               {"angleSnap", true},
+                                               {"snapAngle", 15.0},
+                                               {"symmetrySnap", false},
+                                               {"midpointSnap", false},
+                                               {"intersectionSnap", true}}));
+    for (const auto& origin : {QGeoCoordinate(30, 120, 20), QGeoCoordinate(80, 179.999, 20)}) {
+        const auto coordinate = [&](double east, double north) {
+            return QGCGeo::geodesicDestination(origin, qRadiansToDegrees(std::atan2(east, north)),
+                                               std::hypot(east, north));
+        };
+        const double east = 100 * std::sin(qDegreesToRadians(15.0));
+        const double north = 100 * std::cos(qDegreesToRadians(15.0));
+        const auto target = coordinate(east, north);
+        auto raw = coordinate(east - 0.8, north - 0.1);
+        raw.setAltitude(42);
+        PlanMasterController master;
+        master.start();
+        CaacRouteEditorController editor;
+        editor.setPlanMasterController(&master);
+        auto* mission = master.missionController();
+        mission->setHomePosition(coordinate(-100, -100));
+        // A closer parallel guide and a nearby route edge must not mask the 15-degree intersection.
+        for (const auto& point : {origin, coordinate(100, 100), coordinate(east, -60), coordinate(east - 0.79, -50),
+                                  coordinate(-80, north - 0.05), coordinate(80, north - 0.05)}) {
+            QVERIFY(editor.addWaypoint(point));
+        }
+        auto* moved = mission->visualItems()->value<SimpleMissionItem*>(2);
+        const auto before = master.saveToJson();
+        const auto result = editor.snapWaypointDrag(moved, raw, 1);
+        const auto snapped = result.value("coordinate").value<QGeoCoordinate>();
+        QVERIFY2(
+            QGCGeo::geodesicDistance(snapped, target) < 0.001,
+            qPrintable(QStringLiteral("Intersection offset: %1 m").arg(QGCGeo::geodesicDistance(snapped, target))));
+        QCOMPARE(snapped.altitude(), 42.0);
+        const auto guides = result.value("guides").toList();
+        QCOMPARE(guides.size(), 2);
+        QCOMPARE(guides.first().toMap().value("intersection").value<QGeoCoordinate>(), snapped);
+        QCOMPARE(master.saveToJson(), before);
+        QVERIFY(plugin->updatePlanningPreferences({{"intersectionSnap", false}}));
+        const auto disabled = editor.snapWaypointDrag(moved, raw, 1);
+        QVERIFY(QGCGeo::geodesicDistance(disabled.value("coordinate").value<QGeoCoordinate>(), target) > 0.1);
+        QCOMPARE(disabled.value("guides").toList().size(), 1);
+        QVERIFY(!disabled.value("guides").toList().first().toMap().contains("intersection"));
+        QVERIFY(plugin->updatePlanningPreferences({{"intersectionSnap", true}}));
     }
 }
 

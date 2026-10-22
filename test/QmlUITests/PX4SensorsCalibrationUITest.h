@@ -24,6 +24,7 @@ private slots:
     void _testAccelCalibration();
     void _testAccelCalibrationCancel();
     void _testMotorSafetyGate();
+    void _testCompassSettings();
 
 private:
     /// Navigate from the Fly view to the Sensors page of the Configure view.

@@ -4,6 +4,7 @@
 #include <QtCore/QMap>
 #include <QtCore/QObject>
 #include <QtCore/QPair>
+#include <QtCore/QScopedValueRollback>
 #include <QtCore/QString>
 #include <QtCore/QTimer>
 #include <QtQmlIntegration/QtQmlIntegration>
@@ -93,6 +94,12 @@ public:
     void writeParametersToStream(QTextStream &stream) const;
 
     bool pendingWrites() const;
+
+    /// Scope parameter writes that already arrange their own vehicle reboot.
+    [[nodiscard]] QScopedValueRollback<bool> suppressRebootPrompt()
+    {
+        return QScopedValueRollback<bool>(_rebootPromptSuppressed, true);
+    }
 
 #ifdef QGC_UNITTEST_BUILD
     /// Test-only: deterministically force the pendingWrites state on or off,
@@ -210,6 +217,7 @@ private:
 
     double _loadProgress = 0;                   ///< Parameter load progess, [0.0,1.0]
     bool _parametersReady = false;              ///< true: parameter load complete
+    bool _rebootPromptSuppressed = false;
     bool _parameterDownloadSkipped = false;     ///< true: parameter download was intentionally skipped
     bool _missingParameters = false;            ///< true: default component parameter missing from initial load
     bool _initialLoadComplete = false;          ///< true: Initial load of all parameters complete, whether successful or not

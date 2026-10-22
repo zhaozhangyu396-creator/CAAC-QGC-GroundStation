@@ -547,7 +547,7 @@ void ParameterManager::_factRawValueUpdated(const QVariant &rawValue)
 
     if (fact->vehicleRebootRequired() && _vehicle) {
         _vehicle->setRebootRequired();
-        if (qgcApp()) {
+        if (qgcApp() && !_rebootPromptSuppressed) {
             qgcApp()->showVehicleRebootMessage(_vehicle);
         }
     }

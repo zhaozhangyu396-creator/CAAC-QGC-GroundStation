@@ -636,6 +636,12 @@ void ParameterManagerTest::_rebootRequiredNoticeDebounced()
 
     const QRegularExpression notice("Vehicle reboot required for changes to take effect");
     const double originalValue = fact->rawValue().toDouble();
+    {
+        const auto suppressRebootPrompt = paramManager->suppressRebootPrompt();
+        fact->setRawValue(originalValue + 0.05);
+    }
+    QVERIFY(_vehicle->rebootRequired());
+    QCOMPARE(rebootRequiredSpy.count(), 1);
     expectAppMessage(notice);
     fact->setRawValue(originalValue + 0.1);
     verifyExpectedLogMessage();

@@ -43,67 +43,15 @@ Item {
     property string preCalibrationDialogHelp
 
     property Fact cal_mag0_id:      controller.getParameterFact(-1, "CAL_MAG0_ID")
-    property Fact cal_mag1_id:      controller.getParameterFact(-1, "CAL_MAG1_ID")
-    property Fact cal_mag2_id:      controller.getParameterFact(-1, "CAL_MAG2_ID")
-    property Fact cal_mag0_rot:     controller.getParameterFact(-1, "CAL_MAG0_ROT")
-    property Fact cal_mag1_rot:     controller.getParameterFact(-1, "CAL_MAG1_ROT")
-    property Fact cal_mag2_rot:     controller.getParameterFact(-1, "CAL_MAG2_ROT")
-
     property Fact cal_gyro0_id:     controller.getParameterFact(-1, "CAL_GYRO0_ID")
     property Fact cal_acc0_id:      controller.getParameterFact(-1, "CAL_ACC0_ID")
 
     property Fact sens_board_rot:   controller.getParameterFact(-1, "SENS_BOARD_ROT")
     property Fact sens_dpres_off:   controller.getParameterFact(-1, "SENS_DPRES_OFF")
 
-    // Id > = signals compass available, rot < 0 signals internal compass
-    property bool showCompass0Rot: cal_mag0_id.value > 0 && cal_mag0_rot.value >= 0
-    property bool showCompass1Rot: cal_mag1_id.value > 0 && cal_mag1_rot.value >= 0
-    property bool showCompass2Rot: cal_mag2_id.value > 0 && cal_mag2_rot.value >= 0
-
     property bool   _sensorsHaveFixedOrientation:       QGroundControl.corePlugin.options.sensorsHaveFixedOrientation
-    property string _calMagIdParamFormat:               "CAL_MAG#_ID"
-    property string _calMagRotParamFormat:              "CAL_MAG#_ROT"
-    property bool 	_allMagsDisabled:                   controller.parameterExists(-1, "SYS_HAS_MAG") ? controller.getParameterFact(-1, "SYS_HAS_MAG").value === 0 : false
+    property bool   _allMagsDisabled:                   controller.parameterExists(-1, "SYS_HAS_MAG") ? controller.getParameterFact(-1, "SYS_HAS_MAG").value === 0 : false
     property bool   _boardOrientationChangeAllowed:     !_sensorsHaveFixedOrientation && _showBoardOrientation
-    property bool   _compassOrientationChangeAllowed:   !_sensorsHaveFixedOrientation
-    property int    _arbitrarilyLargeMaxMagIndex:       50
-
-    function currentMagParamCount() {
-        if (_allMagsDisabled) {
-            return 0
-        } else {
-            for (var index=0; index<_arbitrarilyLargeMaxMagIndex; index++) {
-                var magIdParam = _calMagIdParamFormat.replace("#", index)
-                if (!controller.parameterExists(-1, magIdParam)) {
-                    return index
-                }
-            }
-            console.warn("SensorSetup.qml:currentMagParamCount internal error")
-            return -1
-        }
-    }
-
-    function currentExternalMagCount() {
-        if (_allMagsDisabled) {
-            return 0
-        } else {
-            var externalMagCount = 0
-            for (var index=0; index<_arbitrarilyLargeMaxMagIndex; index++) {
-                var magIdParam = _calMagIdParamFormat.replace("#", index)
-                if (controller.parameterExists(-1, magIdParam)) {
-                    var calMagIdFact = controller.getParameterFact(-1, magIdParam)
-                    var calMagRotFact = controller.getParameterFact(-1, _calMagRotParamFormat.replace("#", index))
-                    if (calMagIdFact.value > 0 && calMagRotFact.value >= 0) {
-                        externalMagCount++
-                    }
-                } else {
-                    return externalMagCount
-                }
-            }
-            console.warn("SensorSetup.qml:currentExternalMagCount internal error")
-            return 0
-        }
-    }
 
     function orientationsButtonVisible() {
         // Deliberately independent of _showBoardOrientation: that is a
@@ -283,6 +231,179 @@ Item {
         }
     }
 
+    component CompassSettings: ColumnLayout {
+        id: root
+        objectName: "sensorsSetup_compassSettings"
+
+        required property FactPanelController parameterController
+        property bool calibrationActive: false
+        readonly property bool editable: !!parameterController && !!parameterController.vehicle && !parameterController.vehicle.armed && !calibrationActive
+        property var _compassItems: []
+        readonly property int detectedCount: _compassItems.filter(compass => compass.detected).length
+        readonly property bool modified: _compassItems.some(compass => compass.detected && compass.modified)
+        spacing: ScreenTools.defaultFontPixelHeight / 2
+
+        function canPrefer(external) {
+            for (const compass of _compassItems) {
+                if (compass?.detected && compass.priorityFact && compass.rotationFact
+                    && compass.external === external && compass.effectiveValue > 0) { return true }
+            }
+            return false
+        }
+
+        function preferExternal(external) {
+            if (!editable || !canPrefer(external)) { return }
+            for (const compass of _compassItems) {
+                if (compass?.detected && compass.priorityFact && compass.rotationFact && compass.effectiveValue > 0) {
+                    compass.pendingValue = compass.external === external ? 100 : 50
+                }
+            }
+        }
+
+        function save() {
+            if (!editable) { return }
+            for (const compass of _compassItems) {
+                if (compass?.detected && compass.modified && compass.settingFact) {
+                    compass.settingFact.rawValue = compass.pendingValue
+                    compass.pendingValue = -2
+                }
+            }
+        }
+
+        QGCLabel {
+            Layout.fillWidth: true
+            wrapMode: Text.WordWrap
+            font.bold: true
+            text: qsTr("罗盘优先级与启用设置")
+        }
+        QGCLabel {
+            Layout.fillWidth: true
+            wrapMode: Text.WordWrap
+            text: qsTr("数值越大越优先。优先设置只调整已启用的罗盘；关闭的罗盘不会自动开启。修改后请确认保存。")
+        }
+        SettingsActionButton {
+            objectName: "sensorsSetup_preferExternalCompass"
+            Layout.fillWidth: true
+            text: qsTr("优先外置罗盘")
+            enabled: root.editable && root.canPrefer(true)
+            onClicked: root.preferExternal(true)
+        }
+        SettingsActionButton {
+            objectName: "sensorsSetup_preferInternalCompass"
+            Layout.fillWidth: true
+            text: qsTr("优先内置罗盘")
+            enabled: root.editable && root.canPrefer(false)
+            onClicked: root.preferExternal(false)
+        }
+        Repeater {
+            model: 4
+            onItemAdded: (index, item) => root._compassItems = root._compassItems.concat(item)
+            onItemRemoved: (index, item) => root._compassItems = root._compassItems.filter(compass => compass !== item)
+
+            ColumnLayout {
+                id: compass
+                required property int index
+                readonly property string prefix: "CAL_MAG" + index
+                readonly property Fact deviceFact: root.parameterController.getParameterFact(-1, prefix + "_ID", false)
+                readonly property Fact rotationFact: root.parameterController.getParameterFact(-1, prefix + "_ROT", false)
+                readonly property Fact priorityFact: root.parameterController.getParameterFact(-1, prefix + "_PRIO", false)
+                readonly property Fact enabledFact: root.parameterController.getParameterFact(-1, prefix + "_EN", false)
+                readonly property Fact settingFact: priorityFact || enabledFact
+                readonly property bool detected: !!deviceFact && Number(deviceFact.rawValue) !== 0
+                // PX4 reserves rotation -1 for internal magnetometers.
+                readonly property bool external: !!rotationFact && Number(rotationFact.rawValue) >= 0
+                property int pendingValue: -2
+                property int lastEnabledPriority: 50
+                readonly property int currentValue: settingFact ? Number(settingFact.rawValue) : 0
+                readonly property int effectiveValue: pendingValue === -2 ? currentValue : pendingValue
+                readonly property bool modified: pendingValue !== -2 && pendingValue !== currentValue
+                readonly property var priorityOptions: {
+                    const options = [
+                        {label: qsTr("最低（1）"), value: 1},
+                        {label: qsTr("低（25）"), value: 25},
+                        {label: qsTr("中（50）"), value: 50},
+                        {label: qsTr("高（75）"), value: 75},
+                        {label: qsTr("最高（100）"), value: 100}
+                    ]
+                    if (!options.some(option => option.value === effectiveValue)) {
+                        options.unshift({label: effectiveValue < 0 ? qsTr("未初始化")
+                            : effectiveValue === 0 ? qsTr("已关闭") : qsTr("当前（%1）").arg(effectiveValue),
+                            value: effectiveValue})
+                    }
+                    return options
+                }
+
+                Layout.fillWidth: true
+                visible: detected
+                spacing: ScreenTools.defaultFontPixelHeight / 3
+                enabled: root.editable
+
+                QGCLabel {
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    text: qsTr("罗盘 %1 · %2").arg(compass.index + 1).arg(compass.rotationFact
+                        ? (compass.external ? qsTr("外置罗盘") : qsTr("内置罗盘")) : qsTr("类型未知"))
+                }
+                QGCCheckBox {
+                    objectName: "sensorsSetup_compassEnabled_" + compass.index
+                    Layout.fillWidth: true
+                    text: qsTr("启用此罗盘")
+                    enabled: !!compass.settingFact
+                    checked: compass.effectiveValue > 0
+                    onClicked: {
+                        if (!root.editable || !compass.settingFact) { return }
+                        if (checked) {
+                            compass.pendingValue = compass.priorityFact ? compass.lastEnabledPriority : 1
+                        } else {
+                            if (compass.effectiveValue > 0) { compass.lastEnabledPriority = compass.effectiveValue }
+                            compass.pendingValue = 0
+                        }
+                    }
+                }
+                QGCComboBox {
+                    objectName: "sensorsSetup_compassPriority_" + compass.index
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: 0
+                    visible: !!compass.priorityFact
+                    enabled: compass.effectiveValue > 0
+                    textRole: "label"
+                    model: compass.priorityOptions
+                    currentIndex: Math.max(0, compass.priorityOptions.findIndex(option => option.value === compass.effectiveValue))
+                    onModelChanged: Qt.callLater(function() {
+                        currentIndex = Qt.binding(function() {
+                            return Math.max(0, compass.priorityOptions.findIndex(option => option.value === compass.effectiveValue))
+                        })
+                    })
+                    onActivated: (index) => {
+                        if (root.editable && index >= 0 && index < compass.priorityOptions.length) {
+                            compass.pendingValue = compass.priorityOptions[index].value
+                        }
+                    }
+                }
+                QGCLabel {
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    visible: !compass.priorityFact
+                    text: compass.enabledFact ? qsTr("当前固件支持启用开关，不支持单独设置优先级。")
+                        : qsTr("当前固件未提供此罗盘的启用和优先级参数。")
+                }
+            }
+        }
+        QGCLabel {
+            Layout.fillWidth: true
+            wrapMode: Text.WordWrap
+            visible: root.detectedCount === 0
+            text: qsTr("尚无已识别的罗盘，请先连接飞控并完成罗盘校准。")
+        }
+        SettingsActionButton {
+            objectName: "sensorsSetup_saveCompassSettings"
+            Layout.fillWidth: true
+            text: qsTr("确认保存")
+            enabled: root.editable && root.modified
+            onClicked: root.save()
+        }
+    }
+
     Component {
         id: orientationControlsComponent
 
@@ -302,7 +423,7 @@ Item {
                 Layout.fillWidth: true
                 wrapMode: Text.WordWrap
                 text: qsTr("Adjust orientations as needed.\n\nROTATION_NONE indicates component points in direction of flight.")
-                visible: _boardOrientationChangeAllowed || (_compassOrientationChangeAllowed && currentExternalMagCount() !== 0)
+                visible: _boardOrientationChangeAllowed
             }
 
             ColumnLayout {
@@ -329,40 +450,6 @@ Item {
                     text: qsTr("Confirm and Save")
                     enabled: boardOrientation.modified
                     onClicked: boardOrientation.applyPendingValue()
-                }
-            }
-
-            Repeater {
-                model: _compassOrientationChangeAllowed ? currentMagParamCount() : 0
-
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    visible: calMagIdFact.value > 0 && calMagRotFact.value >= 0
-
-                    property Fact calMagIdFact: controller.getParameterFact(-1, _calMagIdParamFormat.replace("#", index))
-                    property Fact calMagRotFact: controller.getParameterFact(-1, _calMagRotParamFormat.replace("#", index))
-
-                    QGCLabel {
-                        Layout.fillWidth: true
-                        wrapMode: Text.WordWrap
-                        text: qsTr("Mag %1 Orientation").arg(index)
-                    }
-
-                    FactComboBox {
-                        id: magOrientation
-                        objectName: "sensorsSetup_magOrientation_" + index
-                        Layout.fillWidth: true
-                        Layout.minimumWidth: 0
-                        fact: parent.calMagRotFact
-                        deferred: true
-                    }
-                    SettingsActionButton {
-                        objectName: "sensorsSetup_saveMagOrientation_" + index
-                        Layout.fillWidth: true
-                        text: qsTr("Confirm and Save")
-                        enabled: magOrientation.modified
-                        onClicked: magOrientation.applyPendingValue()
-                    }
                 }
             }
         }
@@ -502,6 +589,13 @@ Item {
         additionalControls: Component {
             ColumnLayout {
                 spacing: ScreenTools.defaultFontPixelHeight / 2
+                CompassSettings {
+                    Layout.fillWidth: true
+                    visible: _root.sectionVisible("Compass")
+                        && (_root.sectionIdFilter === "" || _root.sectionIdFilter === "Compass")
+                    parameterController: controller
+                    calibrationActive: controller.calibrationActive || _root._inlinePreparationActive
+                }
                 SettingsActionButton {
                     id: gyroCalibrationButton
                     objectName: "sensorsSetup_calibrateGyro"

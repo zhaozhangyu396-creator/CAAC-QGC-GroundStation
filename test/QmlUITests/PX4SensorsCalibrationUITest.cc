@@ -19,6 +19,67 @@
 
 UT_REGISTER_TEST(PX4SensorsCalibrationUITest, TestLabel::Integration)
 
+void PX4SensorsCalibrationUITest::_testCompassSettings()
+{
+    runWithMockLink([] { return MockLink::startPX4MockLink(); },
+                    [&](QPointer<MockLink> mock, Vehicle* vehicle) {
+                        auto* parameters = vehicle->parameterManager();
+                        auto* internalPriority = parameters->getParameter(-1, QStringLiteral("CAL_MAG0_PRIO"));
+                        auto* externalPriority = parameters->getParameter(-1, QStringLiteral("CAL_MAG1_PRIO"));
+                        auto* externalRotation = parameters->getParameter(-1, QStringLiteral("CAL_MAG1_ROT"));
+                        QVERIFY(internalPriority && externalPriority && externalRotation);
+                        externalRotation->setRawValue(0);
+                        externalPriority->setRawValue(75);
+                        QTRY_COMPARE(mock->paramValue(1, QStringLiteral("CAL_MAG1_ROT")).toInt(), 0);
+                        QTRY_COMPARE(mock->paramValue(1, QStringLiteral("CAL_MAG1_PRIO")).toInt(), 75);
+                        _navigateToSensorsPanel();
+                        if (QTest::currentTestFailed()) {
+                            return;
+                        }
+                        QVERIFY(clickButtonScrolled(QStringLiteral("sensorsSetup_setOrientation"),
+                                                    QStringLiteral("sensorsSetup_buttonScroller")));
+                        QVERIFY(findVisibleItem(_rootItem, QStringLiteral("sensorsSetup_boardOrientation")));
+                        QVERIFY(!findItem(_rootItem, QStringLiteral("sensorsSetup_magOrientation_1")));
+                        QVERIFY(!findItem(_rootItem, QStringLiteral("sensorsSetup_saveMagOrientation_1")));
+                        QVERIFY(clickSidebarButton(QStringLiteral("vehicleConfig_section_Compass")));
+                        const auto click = [&](const QString& name) {
+                            return clickButtonScrolled(name, QStringLiteral("sensorsSetup_buttonScroller"));
+                        };
+                        QVERIFY(click(QStringLiteral("sensorsSetup_preferExternalCompass")));
+                        QCOMPARE(externalPriority->rawValue().toInt(), 75);
+                        QVERIFY(click(QStringLiteral("sensorsSetup_saveCompassSettings")));
+                        QTRY_COMPARE(mock->paramValue(1, QStringLiteral("CAL_MAG1_PRIO")).toInt(), 100);
+                        QCOMPARE(internalPriority->rawValue().toInt(), 50);
+
+                        QVERIFY(click(QStringLiteral("sensorsSetup_compassEnabled_1")));
+                        QVERIFY(click(QStringLiteral("sensorsSetup_saveCompassSettings")));
+                        QTRY_COMPARE(mock->paramValue(1, QStringLiteral("CAL_MAG1_PRIO")).toInt(), 0);
+                        QVERIFY(click(QStringLiteral("sensorsSetup_preferInternalCompass")));
+                        QVERIFY(click(QStringLiteral("sensorsSetup_saveCompassSettings")));
+                        QTRY_COMPARE(mock->paramValue(1, QStringLiteral("CAL_MAG0_PRIO")).toInt(), 100);
+                        QCOMPARE(externalPriority->rawValue().toInt(), 0);
+
+                        QVERIFY(click(QStringLiteral("sensorsSetup_compassEnabled_1")));
+                        QVERIFY(click(QStringLiteral("sensorsSetup_preferExternalCompass")));
+                        QVERIFY(click(QStringLiteral("sensorsSetup_saveCompassSettings")));
+                        QTRY_COMPARE(mock->paramValue(1, QStringLiteral("CAL_MAG1_PRIO")).toInt(), 100);
+                        QTRY_COMPARE(mock->paramValue(1, QStringLiteral("CAL_MAG0_PRIO")).toInt(), 50);
+                        auto* priority = findVisibleItemScrolled(QStringLiteral("sensorsSetup_compassPriority_1"),
+                                                                 QStringLiteral("sensorsSetup_buttonScroller"));
+                        QVERIFY(priority);
+                        QVERIFY(QMetaObject::invokeMethod(priority, "activated", Q_ARG(int, 3)));
+                        vehicle->setArmed(true, false);
+                        auto* save = findVisibleItemScrolled(QStringLiteral("sensorsSetup_saveCompassSettings"),
+                                                             QStringLiteral("sensorsSetup_buttonScroller"));
+                        QVERIFY(save && !save->isEnabled());
+                        QCOMPARE(externalPriority->rawValue().toInt(), 100);
+                        vehicle->setArmed(false, false);
+                        QVERIFY(click(QStringLiteral("sensorsSetup_saveCompassSettings")));
+                        QTRY_COMPARE(mock->paramValue(1, QStringLiteral("CAL_MAG1_PRIO")).toInt(), 75);
+                        QCOMPARE(externalRotation->rawValue().toInt(), 0);
+                    });
+}
+
 void PX4SensorsCalibrationUITest::_testMotorSafetyGate()
 {
     if (!QGCCorePlugin::instance()->directMissionItemEditing()) {

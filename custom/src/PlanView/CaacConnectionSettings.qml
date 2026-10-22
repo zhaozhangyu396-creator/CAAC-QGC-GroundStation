@@ -118,20 +118,16 @@ Item {
                     Layout.fillWidth: true
                     Layout.minimumWidth: 0
                     Layout.preferredHeight: ScreenTools.defaultFontPixelHeight * 2.8
-                    text: root.connected ? qsTr("断开") : qsTr("连接")
+                    text: qsTr("连接")
                     pointSize: ScreenTools.defaultFontPointSize * 1.15
                     fontWeight: Font.Bold
                     backgroundColor: Qt.lighter(palette.settingsAccent, 1.3)
                     backRadius: ScreenTools.defaultFontPixelHeight * 0.45
                     showBorder: false
-                    enabled: root.port !== "" || root.connected
+                    enabled: root.port !== "" && !root.connected
                     onClicked: {
-                        if (root.connected) {
-                            root.manager.disconnectLinkConfiguration(root.configuration)
-                        } else {
-                            const configuration = root.saveConfiguration(automatic.checked)
-                            if (configuration) { root.manager.createConnectedLink(configuration) }
-                        }
+                        const configuration = root.saveConfiguration(automatic.checked)
+                        if (configuration) { root.manager.createConnectedLink(configuration) }
                     }
                 }
                 QGCButton {
@@ -145,6 +141,14 @@ Item {
                     Accessible.name: qsTr("刷新串口")
                     onClicked: root.refreshPorts()
                 }
+            }
+            QGCButton {
+                objectName: "caacSerialDisconnectButton"
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                text: qsTr("断开连接")
+                enabled: root.connected
+                onClicked: root.manager.disconnectLinkConfiguration(root.configuration)
             }
             SettingsFormRow {
                 QGCCheckBoxSlider {

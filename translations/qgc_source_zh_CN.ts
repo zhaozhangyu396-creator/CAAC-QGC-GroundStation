@@ -3848,7 +3848,7 @@ Please place your vehicle in water, click the button, and wait. Note that the th
     <message>
       <location filename="../src/AutoPilotPlugins/PX4/AirframeComponent.qml" line="109"/>
       <source>Clicking 'Apply' will save the changes you have made to your airframe configuration.&lt;br&gt;&lt;br&gt;                                                                        All vehicle parameters other than Radio Calibration will be reset.&lt;br&gt;&lt;br&gt;                                                                        Your vehicle will also be restarted in order to complete the process.</source>
-      <translation>单击“应用”将保存您对机身配置所做的更改。&lt;br&gt;&lt;br&gt;除无线电校准之外的所有无人机参数都将被重置。&lt;br&gt;&lt;br&gt;您的无人机也将重新启动以完成该过程。</translation>
+      <translation>单击“确认”将保存您对机身配置所做的更改。&lt;br&gt;&lt;br&gt;除无线电校准之外的所有无人机参数都将被重置。&lt;br&gt;&lt;br&gt;您的无人机也将重新启动以完成该过程。</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/PX4/AirframeComponent.qml" line="96"/>
@@ -20695,7 +20695,7 @@ Click 'Ok' to upload the Plan anyway.</source>
     <message>
       <location filename="../src/QmlControls/QGCPopupDialog.qml" line="148"/>
       <source>Apply</source>
-      <translation>申请</translation>
+      <translation>确认</translation>
     </message>
     <message>
       <location filename="../src/QmlControls/QGCPopupDialog.qml" line="151"/>
@@ -23107,7 +23107,91 @@ ROTATION_NONE indicates component points in direction of flight.</source>
       <source>飞控朝向</source>
       <translation>飞控朝向</translation>
     </message>
-</context>
+    <message>
+      <source>罗盘优先级与启用设置</source>
+      <translation>罗盘优先级与启用设置</translation>
+    </message>
+    <message>
+      <source>数值越大越优先。优先设置只调整已启用的罗盘；关闭的罗盘不会自动开启。修改后请确认保存。</source>
+      <translation>数值越大越优先。优先设置只调整已启用的罗盘；关闭的罗盘不会自动开启。修改后请确认保存。</translation>
+    </message>
+    <message>
+      <source>优先外置罗盘</source>
+      <translation>优先外置罗盘</translation>
+    </message>
+    <message>
+      <source>优先内置罗盘</source>
+      <translation>优先内置罗盘</translation>
+    </message>
+    <message>
+      <source>最低（1）</source>
+      <translation>最低（1）</translation>
+    </message>
+    <message>
+      <source>低（25）</source>
+      <translation>低（25）</translation>
+    </message>
+    <message>
+      <source>中（50）</source>
+      <translation>中（50）</translation>
+    </message>
+    <message>
+      <source>高（75）</source>
+      <translation>高（75）</translation>
+    </message>
+    <message>
+      <source>最高（100）</source>
+      <translation>最高（100）</translation>
+    </message>
+    <message>
+      <source>未初始化</source>
+      <translation>未初始化</translation>
+    </message>
+    <message>
+      <source>已关闭</source>
+      <translation>已关闭</translation>
+    </message>
+    <message>
+      <source>当前（%1）</source>
+      <translation>当前（%1）</translation>
+    </message>
+    <message>
+      <source>罗盘 %1 · %2</source>
+      <translation>罗盘 %1 · %2</translation>
+    </message>
+    <message>
+      <source>外置罗盘</source>
+      <translation>外置罗盘</translation>
+    </message>
+    <message>
+      <source>内置罗盘</source>
+      <translation>内置罗盘</translation>
+    </message>
+    <message>
+      <source>类型未知</source>
+      <translation>类型未知</translation>
+    </message>
+    <message>
+      <source>启用此罗盘</source>
+      <translation>启用此罗盘</translation>
+    </message>
+    <message>
+      <source>当前固件支持启用开关，不支持单独设置优先级。</source>
+      <translation>当前固件支持启用开关，不支持单独设置优先级。</translation>
+    </message>
+    <message>
+      <source>当前固件未提供此罗盘的启用和优先级参数。</source>
+      <translation>当前固件未提供此罗盘的启用和优先级参数。</translation>
+    </message>
+    <message>
+      <source>尚无已识别的罗盘，请先连接飞控并完成罗盘校准。</source>
+      <translation>尚无已识别的罗盘，请先连接飞控并完成罗盘校准。</translation>
+    </message>
+    <message>
+      <source>确认保存</source>
+      <translation>确认保存</translation>
+    </message>
+  </context>
   <context>
     <name>SerialConfiguration</name>
     <message>
@@ -28179,7 +28263,7 @@ altitude</source>
     </message>
     <message>
       <source>Route intersection snapping</source>
-      <translation>航线交点吸附</translation>
+      <translation>航线与辅助线交点捕捉</translation>
     </message>
   </context>
   <context>
@@ -29235,8 +29319,8 @@ altitude</source>
       <translation>连接设置</translation>
     </message>
     <message>
-      <source>断开</source>
-      <translation>断开</translation>
+      <source>断开连接</source>
+      <translation>断开连接</translation>
     </message>
     <message>
       <source>连接</source>

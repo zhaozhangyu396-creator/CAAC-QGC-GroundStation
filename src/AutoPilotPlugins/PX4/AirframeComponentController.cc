@@ -72,6 +72,9 @@ AirframeComponentController::~AirframeComponentController()
 
 void AirframeComponentController::changeAutostart(void)
 {
+    if (!_vehicle || _vehicle->armed()) {
+        return;
+    }
     if (MultiVehicleManager::instance()->vehicles()->count() > 1) {
         QGC::showAppMessage(tr("You cannot change airframe configuration while connected to multiple vehicles."));
 		return;
@@ -88,6 +91,7 @@ void AirframeComponentController::changeAutostart(void)
     connect(sysAutoConfigFact, &Fact::vehicleUpdated, this, &AirframeComponentController::_waitParamWriteSignal);
 
     // We use forceSetValue to ensure params are sent even if the previous value is that same as the new value
+    const auto suppressRebootPrompt = _vehicle->parameterManager()->suppressRebootPrompt();
     sysAutoStartFact->forceSetRawValue(_autostartId);
     sysAutoConfigFact->forceSetRawValue(1);
 }
