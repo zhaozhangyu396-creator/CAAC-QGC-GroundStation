@@ -319,7 +319,7 @@ Column {
                 : qsTr("Waypoint %1 → %2 · Distance: %3 m").arg(root._dragLeg.previousNumber)
                     .arg(root._draggedWaypoint.waypointNumber).arg(root._dragLeg.distance.toFixed(2))
                     + "\n" + (root._dragLeg.angle !== undefined
-                        ? qsTr("Interior angle: %1°").arg(root._dragLeg.angle.toFixed(2))
+                        ? qsTr("Interior angle: %1°").arg(root._dragLeg.angle.toFixed(0))
                         : qsTr("Interior angle: unavailable (no incoming leg)"))
                     + "\n" + (root._dragLeg.bearing !== undefined
                         ? qsTr("Bearing: %1°").arg(root._dragLeg.bearing.toFixed(2))
@@ -883,7 +883,7 @@ Column {
                         color: card._textColor
                         text: card._leg.distance !== undefined ? qsTr("Distance: %1 m · Angle: %2")
                             .arg(card._leg.distance.toFixed(1)).arg(card._leg.angle !== undefined
-                                ? qsTr("%1°").arg(card._leg.angle.toFixed(1)) : "—") : ""
+                                ? qsTr("%1°").arg(card._leg.angle.toFixed(0)) : "—") : ""
                         wrapMode: Text.WordWrap
                     }
                 }

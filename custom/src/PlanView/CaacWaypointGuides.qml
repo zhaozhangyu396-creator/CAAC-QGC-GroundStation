@@ -109,7 +109,7 @@ Item {
                 readonly property real angle: vertex.angle
                 x: Math.cos(vertex._start + vertex._sweep / 2) * vertex._radius * 2 - width / 2
                 y: Math.sin(vertex._start + vertex._sweep / 2) * vertex._radius * 2 - height / 2
-                text: vertex.angle.toFixed(1) + "°"
+                text: vertex.angle.toFixed(0) + "°"
                 color: palette.text
                 style: Text.Outline
                 styleColor: palette.windowShadeDark
