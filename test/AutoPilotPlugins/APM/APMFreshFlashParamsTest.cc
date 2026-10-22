@@ -9,6 +9,7 @@
 #include "MockLink.h"
 #include "MultiVehicleManager.h"
 #include "ParameterManager.h"
+#include "QGCCorePlugin.h"
 #include "Vehicle.h"
 #include "VehicleComponent.h"
 
@@ -70,12 +71,17 @@ void APMFreshFlashParamsTest::_testFreshFlashParams()
     QFETCH(bool, hasFrameClass);
     QFETCH(bool, hasRadio);
 
-    // Fresh-flash vehicles must show the setup-incomplete app message on connect
-    expectAppMessage(QRegularExpression(QStringLiteral("Configuration tasks remain before this vehicle is ready to fly")));
+    const bool showSetupMessage = QGCCorePlugin::instance()->showSetupIncompleteMessage();
+    if (showSetupMessage) {
+        expectAppMessage(
+            QRegularExpression(QStringLiteral("Configuration tasks remain before this vehicle is ready to fly")));
+    }
 
     _connectAPMMockLink(vehicleKey, MockConfiguration::OptionAPMStartFreshParams);
     if (QTest::currentTestFailed()) return;
-    verifyExpectedLogMessage();
+    if (showSetupMessage) {
+        verifyExpectedLogMessage();
+    }
 
     ParameterManager *mgr = _vehicle->parameterManager();
 

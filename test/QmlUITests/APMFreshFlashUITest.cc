@@ -77,15 +77,23 @@ void APMFreshFlashUITest::_verifySetupIndicator(const QString& compObjectName, b
 
 void APMFreshFlashUITest::_testFreshFlashSetupState()
 {
-    // Fresh-flash vehicles must show the setup-incomplete app message on connect
-    expectAppMessage(
-        QRegularExpression(QStringLiteral("Configuration tasks remain before this vehicle is ready to fly")));
+    const bool showSetupMessage = QGCCorePlugin::instance()->showSetupIncompleteMessage();
+    if (QGCCorePlugin::instance()->directMissionItemEditing()) {
+        QVERIFY(!showSetupMessage);
+    }
+    if (showSetupMessage) {
+        expectAppMessage(
+            QRegularExpression(QStringLiteral("Configuration tasks remain before this vehicle is ready to fly")));
+    }
     runWithMockLink(
         [] { return MockLink::startAPMArduCopterMockLink(MockConfiguration::OptionAPMStartFreshParams); },
         [&](QPointer<MockLink> mockLink, Vehicle* vehicle) {
-            // Dismiss the setup-incomplete message dialog before interacting with the UI
-            QVERIFY2(acceptDialog(5000), "Setup-incomplete app message dialog never shown");
-            verifyExpectedLogMessage();
+            if (showSetupMessage) {
+                QVERIFY2(acceptDialog(5000), "Setup-incomplete app message dialog never shown");
+                verifyExpectedLogMessage();
+            } else {
+                QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("popupDialog_frame"), 0));
+            }
             if (QTest::currentTestFailed())
                 return;
 
@@ -139,6 +147,7 @@ void APMFreshFlashUITest::_testFreshFlashSetupState()
 
             // Frame is the required prerequisite for Sensors and Radio; Frame itself has none
             AutoPilotPlugin* autopilot = vehicle->autopilotPlugin();
+            QVERIFY(!autopilot->setupComplete());
             QCOMPARE(autopilot->prerequisiteSetup(sensorsComp), frameComp->name());
             QCOMPARE(autopilot->prerequisiteSetup(radioComp), frameComp->name());
             QVERIFY2(autopilot->prerequisiteSetup(frameComp).isEmpty(), "Frame unexpectedly has a prerequisite");

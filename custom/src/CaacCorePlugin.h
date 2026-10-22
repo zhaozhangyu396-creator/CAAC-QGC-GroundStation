@@ -79,6 +79,8 @@ public:
 
     bool directMissionItemEditing() const override { return true; }
 
+    bool showSetupIncompleteMessage() const override { return false; }
+
     bool showPlanInformation() const override { return false; }
 
     bool keepCurrentPlanOnVehicleChange(PlanMasterController* controller) const override;

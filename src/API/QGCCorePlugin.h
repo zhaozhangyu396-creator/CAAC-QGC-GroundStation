@@ -167,6 +167,8 @@ public:
 
     virtual bool directMissionItemEditing() const { return false; }
 
+    virtual bool showSetupIncompleteMessage() const { return true; }
+
     /// Controls whether the plan tree includes the plan information group.
     virtual bool showPlanInformation() const { return true; }
 

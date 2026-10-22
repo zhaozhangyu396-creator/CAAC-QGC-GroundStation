@@ -1,6 +1,8 @@
 #include "AutoPilotPlugin.h"
-#include "FirmwarePlugin.h"
+
 #include "AppMessages.h"
+#include "FirmwarePlugin.h"
+#include "QGCCorePlugin.h"
 #include "QGCLoggingCategory.h"
 #include "Vehicle.h"
 #include "VehicleComponent.h"
@@ -56,7 +58,7 @@ void AutoPilotPlugin::parametersReadyPreChecks()
         }
     }
 
-    if (!_setupComplete) {
+    if (!_setupComplete && QGCCorePlugin::instance()->showSetupIncompleteMessage()) {
         QGC::showAppMessage(tr("Configuration tasks remain before this vehicle is ready to fly. See Vehicle Configuration for details."));
     }
 }
