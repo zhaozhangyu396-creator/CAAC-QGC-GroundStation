@@ -54,10 +54,16 @@ class CaacSimulationUITest : public QmlUITestBase
 private slots:
     void _levelFlightTelemetry();
     void _uploadAndFlightControls();
-    void _closedRouteAndSimulationToggle();
-    void _fourLoopsFromUnsavedSettings();
     void _repeatFromLanding();
     void _usbJoystickModeSwitch();
+};
+
+class CaacSimulationFlowUITest : public QmlUITestBase
+{
+    Q_OBJECT
+private slots:
+    void _closedRouteAndSimulationToggle();
+    void _fourLoopsFromUnsavedSettings();
 };
 
 class CaacDefaultHomeUITest : public QmlUITestBase
@@ -728,7 +734,7 @@ void CaacSimulationUITest::_usbJoystickModeSwitch()
     QVERIFY(simulation->manualControlActive());
 }
 
-void CaacSimulationUITest::_fourLoopsFromUnsavedSettings()
+void CaacSimulationFlowUITest::_fourLoopsFromUnsavedSettings()
 {
     std::fprintf(stderr, "CAAC four-loop step: start UI\n");
     startUI();
@@ -772,12 +778,17 @@ void CaacSimulationUITest::_fourLoopsFromUnsavedSettings()
     QVERIFY(clickButton(QStringLiteral("caacGlobalSettingsButton")));
     const auto scroller = QStringLiteral("caacGlobalSettingsScroller");
     QVERIFY(clickButtonScrolled(QStringLiteral("caacSimClosedRoute"), scroller));
-    for (const auto& choice :
-         {qMakePair("caacSimLoopMode", 1), qMakePair("caacSimStartPoint", 1), qMakePair("caacSimEndBehavior", 1),
-          qMakePair("caacSimReturnPoint", 4), qMakePair("caacSimClimbMode", 0)}) {
+    for (const auto& choice : {qMakePair("caacSimLoopMode", 1), qMakePair("caacSimStartPoint", 1),
+                               qMakePair("caacSimEndBehavior", 2), qMakePair("caacSimClimbMode", 0)}) {
         auto* combo = findVisibleItemScrolled(QLatin1String(choice.first), scroller);
         QVERIFY(combo && combo->setProperty("currentIndex", choice.second));
     }
+    auto* ending = findVisibleItemScrolled(QStringLiteral("caacSimEndBehavior"), scroller);
+    QVERIFY(ending);
+    QCOMPARE(ending->property("count").toInt(), 3);
+    QCOMPARE(ending->property("currentText").toString(),
+             QCoreApplication::translate("CaacSimulationSettings", "Return to takeoff point and hover"));
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacSimReturnPoint")));
     QVERIFY(clickButtonScrolled(QStringLiteral("caacSimLoopCount"), scroller));
     QTest::keyClick(_window, Qt::Key_A, Qt::ControlModifier);
     QTest::keyClick(_window, Qt::Key_4);
@@ -797,7 +808,8 @@ void CaacSimulationUITest::_fourLoopsFromUnsavedSettings()
     QVERIFY(editor->simulationSettings().value("closed").toBool());
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacSimulationPreview_closure")));
     QCOMPARE(editor->simulationSettings().value("startSequence").toInt(), 1);
-    QCOMPARE(editor->simulationSettings().value("returnSequence").toInt(), 4);
+    QCOMPARE(editor->simulationSettings().value("endBehavior").toInt(), 2);
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacSimulationPreview_return")));
     QCOMPARE(editor->simulationSettings().value("climbMode").toInt(), 0);
     QCOMPARE(editor->simulationSettings().value("verticalSpeed").toDouble(), 2.0);
     auto* vehicle = simulation->vehicle();
@@ -834,11 +846,12 @@ void CaacSimulationUITest::_fourLoopsFromUnsavedSettings()
     QTRY_COMPARE_WITH_TIMEOUT(simulation->status(),
                               QCoreApplication::translate("CaacSimulationController", "Simulation mission finished"),
                               60000);
-    QTRY_COMPARE_WITH_TIMEOUT(arrivals, QList<int>({5, 4, 4, 5}), TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(arrivals, QList<int>({5, 4, 4, 4}), TestTimeout::mediumMs());
     std::fprintf(stderr, "CAAC four-loop step: all four loops completed\n");
     QCOMPARE(simulation->remainingLoops(), 0);
-    QVERIFY(QGCGeo::geodesicDistance(vehicle->coordinate(), points[3]) < 0.2);
+    QTRY_VERIFY_WITH_TIMEOUT(QGCGeo::geodesicDistance(vehicle->coordinate(), home) < 0.2, TestTimeout::mediumMs());
     QVERIFY(vehicle->airborne());
+    QTRY_COMPARE_WITH_TIMEOUT(vehicle->altitudeRelative()->rawValue().toDouble(), 6.0, TestTimeout::mediumMs());
 }
 
 void CaacSimulationUITest::_levelFlightTelemetry()
@@ -972,7 +985,7 @@ void CaacDefaultHomeUITest::_defaultStartPosition()
     }
 }
 
-void CaacSimulationUITest::_closedRouteAndSimulationToggle()
+void CaacSimulationFlowUITest::_closedRouteAndSimulationToggle()
 {
     const auto step = [](const char* label) {
         std::fprintf(stderr, "CAAC closed-route step: %s\n", label);
@@ -1057,17 +1070,49 @@ void CaacSimulationUITest::_closedRouteAndSimulationToggle()
         int loopMode;
         int cycles;
         int returnPoint;
+        bool homeHover = false;
+        bool plannedLanding = false;
+        bool absoluteAltitude = false;
     };
 
-    const QList<FlowCase> flowCases{{false, 1, 0, 1, -1}, {false, 2, 1, 2, 3}, {false, 2, 2, 1, -1}, {true, 3, 0, 1, 0},
-                                    {true, 1, 1, 1, -1},  {true, 3, 1, 2, 1},  {true, 2, 2, 1, -1}};
+    const QList<FlowCase> flowCases{{false, 1, 0, 1, -1},
+                                    {false, 2, 1, 2, 3},
+                                    {false, 2, 2, 1, -1},
+                                    {true, 3, 0, 1, 0},
+                                    {true, 1, 1, 1, -1},
+                                    {true, 3, 1, 2, 1},
+                                    {true, 2, 2, 1, -1},
+                                    {false, 2, 0, 1, 1, true, true},
+                                    {true, 3, 1, 2, 1, true, false, true},
+                                    {false, 1, 2, 1, 2, true}};
     for (const auto& flow : flowCases) {
+        auto* finalWaypoint = mission->visualItems()->value<SimpleMissionItem*>(flow.closed ? flow.start : 3);
+        QVERIFY(finalWaypoint);
+        if (flow.absoluteAltitude) {
+            finalWaypoint->setAltitudeFrame(QGroundControlQmlGlobal::AltitudeFrameAbsolute);
+            finalWaypoint->altitude()->setRawValue(27);
+        }
+        if (flow.plannedLanding) {
+            auto* landing = qobject_cast<SimpleMissionItem*>(
+                mission->insertSimpleMissionItem(home, mission->visualItems()->count(), false));
+            QVERIFY(landing);
+            landing->setCommand(MAV_CMD_NAV_LAND);
+        }
+        const auto restoreRoute = qScopeGuard([&]() {
+            if (flow.plannedLanding) {
+                mission->removeVisualItem(mission->visualItems()->count() - 1);
+            }
+            if (flow.absoluteAltitude) {
+                finalWaypoint->setAltitudeFrame(QGroundControlQmlGlobal::AltitudeFrameRelative);
+                finalWaypoint->altitude()->setRawValue(2);
+            }
+        });
         auto variant = settings;
         variant["closed"] = flow.closed;
         variant["startSequence"] = flow.start;
         variant["loopMode"] = flow.loopMode;
         variant["loopCount"] = flow.cycles;
-        variant["endBehavior"] = flow.returnPoint < 0 ? 0 : 1;
+        variant["endBehavior"] = flow.homeHover ? 2 : flow.returnPoint < 0 ? 0 : 1;
         variant["returnSequence"] = qMax(flow.returnPoint, 0);
         QVERIFY(editor.setSimulationSettings(variant));
         const auto beforePreview = master->saveToJson();
@@ -1094,7 +1139,8 @@ void CaacSimulationUITest::_closedRouteAndSimulationToggle()
             QVERIFY(hasSegment(QStringLiteral("loop"), coordinates.last(), selectedStart));
         }
         const auto finish = flow.closed ? selectedStart : coordinates.last();
-        const auto returned = flow.returnPoint == 0 ? home : coordinates.at(qMax(flow.returnPoint - 1, 0));
+        const auto returned =
+            flow.homeHover || flow.returnPoint == 0 ? home : coordinates.at(qMax(flow.returnPoint - 1, 0));
         if (flow.loopMode != 2 && flow.returnPoint >= 0 && QGCGeo::geodesicDistance(finish, returned) >= 0.01) {
             QVERIFY(hasSegment(QStringLiteral("return"), finish, returned));
         }
@@ -1115,6 +1161,14 @@ void CaacSimulationUITest::_closedRouteAndSimulationToggle()
             wire.y = static_cast<int32_t>(std::llround(item->param6() * 1e7));
             wire.z = item->param7();
             compiled.insert(wire.seq, wire);
+        }
+        QCOMPARE(master->saveToJson(), beforePreview);
+        if (flow.homeHover) {
+            QCOMPARE(compiled.last().command, MAV_CMD_NAV_LOITER_UNLIM);
+            QCOMPARE(compiled.last().frame, flow.absoluteAltitude ? MAV_FRAME_GLOBAL : MAV_FRAME_GLOBAL_RELATIVE_ALT);
+            for (const auto& item : compiled) {
+                QVERIFY(item.command != MAV_CMD_NAV_LAND && item.command != MAV_CMD_NAV_RETURN_TO_LAUNCH);
+            }
         }
         CaacSimulationEngine engine;
         QString error;
@@ -1147,16 +1201,28 @@ void CaacSimulationUITest::_closedRouteAndSimulationToggle()
                     ++expected;
                 }
                 const int finalBodyPoint = flow.closed ? flow.start : coordinates.size();
-                if (flow.returnPoint > 0 && flow.returnPoint != finalBodyPoint && i == flow.returnPoint - 1) {
+                if (!flow.homeHover && flow.returnPoint > 0 && flow.returnPoint != finalBodyPoint &&
+                    i == flow.returnPoint - 1) {
                     ++expected;
                 }
                 QCOMPARE(visits.at(i), expected);
             }
-            const int finalPoint =
-                flow.returnPoint < 0 ? (flow.closed ? flow.start : coordinates.size()) : flow.returnPoint;
+            const int finalPoint = flow.homeHover         ? 0
+                                   : flow.returnPoint < 0 ? (flow.closed ? flow.start : coordinates.size())
+                                                          : flow.returnPoint;
             QVERIFY(QGCGeo::geodesicDistance(engine.state().position,
                                              finalPoint == 0 ? home : coordinates.at(finalPoint - 1)) < 0.02);
-            QCOMPARE(engine.state().airborne, finalPoint != 0);
+            QCOMPARE(engine.state().airborne, flow.homeHover || finalPoint != 0);
+            if (flow.homeHover) {
+                QCOMPARE(engine.state().position.altitude(), flow.absoluteAltitude ? 27.0 : 22.0);
+                const auto position = engine.state().position;
+                engine.advance(20);
+                QCOMPARE(engine.state().position, position);
+                QCOMPARE(engine.state().northSpeed, 0.0);
+                QCOMPARE(engine.state().eastSpeed, 0.0);
+                QCOMPARE(engine.state().climbSpeed, 0.0);
+                QVERIFY(engine.state().airborne);
+            }
         }
     }
     auto readSettings = settings;
@@ -1962,6 +2028,7 @@ void CaacSimulationUITest::_uploadAndFlightControls()
 }
 
 UT_REGISTER_TEST(CaacSimulationUITest, TestLabel::Integration, TestLabel::Vehicle)
+UT_REGISTER_TEST(CaacSimulationFlowUITest, TestLabel::Integration, TestLabel::Vehicle)
 UT_REGISTER_TEST(CaacDefaultHomeUITest, TestLabel::Integration, TestLabel::Vehicle)
 UT_REGISTER_TEST(CaacMissionUpdateUITest, TestLabel::Integration, TestLabel::Vehicle)
 #include "CaacSimulationUITest.moc"

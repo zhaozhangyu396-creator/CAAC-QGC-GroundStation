@@ -55,7 +55,7 @@ ColumnLayout {
             specifyYaw: yawMode.currentIndex === 1, yaw: yawMode.currentIndex === 1 ? number(yaw.text) : _settings.yaw, closed: closed.checked,
             loopMode: loop.currentIndex, loopCount: loop.currentIndex === 1 ? number(loopCount.text) : _settings.loopCount, endBehavior: ending.currentIndex,
             startSequence: start.currentIndex >= 0 ? _points[start.currentIndex].sequence : NaN,
-            returnSequence: ending.currentIndex === 0 ? _settings.returnSequence
+            returnSequence: ending.currentIndex !== 1 ? _settings.returnSequence
                 : returning.currentIndex >= 0 ? _points[returning.currentIndex].sequence : NaN,
             takeoffHeight: takeoffHeight}
     }
@@ -143,7 +143,7 @@ ColumnLayout {
             QGCLabel { text: qsTr("End behavior") }
             QGCComboBox {
                 id: ending; objectName: "caacSimEndBehavior"; Layout.fillWidth: true
-                model: [qsTr("Hover in place"), qsTr("Return")]; currentIndex: root._settings.endBehavior; onActivated: root.draftDirty = true
+                model: [qsTr("Hover in place"), qsTr("Return"), qsTr("Return to takeoff point and hover")]; currentIndex: root._settings.endBehavior; onActivated: root.draftDirty = true
             }
             QGCLabel { text: qsTr("Return point"); visible: ending.currentIndex === 1 }
             QGCComboBox {
@@ -154,7 +154,7 @@ ColumnLayout {
         }
         QGCLabel {
             Layout.fillWidth: true; wrapMode: Text.WordWrap
-            text: qsTr("Count 1 executes once. Takeoff runs once; loops begin at the selected waypoint. Returning to a waypoint ends in a hover; returning home lands in this simulation.")
+            text: qsTr("Count 1 executes once. Takeoff runs once; loops begin at the selected waypoint. Returning to a waypoint ends in a hover; returning home lands in this simulation. Return to takeoff point and hover keeps the final route altitude without landing.")
         }
     }
 }

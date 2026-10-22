@@ -523,6 +523,7 @@ void CaacSimulationEngineTest::_settingsHistoryAndFile()
     settings["turnMode"] = 3;
     settings["climbMode"] = 0;
     settings["closed"] = true;
+    settings["endBehavior"] = 2;
     QVERIFY(editor.setSimulationSettings(settings));
     const auto after = planController()->saveToJson();
     QVERIFY(before != after);
@@ -531,6 +532,10 @@ void CaacSimulationEngineTest::_settingsHistoryAndFile()
     QVERIFY(editor.redo());
     QCOMPARE(editor.simulationSettings(), settings);
     auto invalid = settings;
+    invalid["endBehavior"] = 3;
+    QVERIFY(!editor.setSimulationSettings(invalid));
+    QCOMPARE(planController()->saveToJson(), after);
+    invalid["endBehavior"] = 1;
     invalid["verticalSpeed"] = 0;
     QVERIFY(!editor.setSimulationSettings(invalid));
     QCOMPARE(planController()->saveToJson(), after);

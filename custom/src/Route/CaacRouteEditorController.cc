@@ -224,8 +224,11 @@ QVariantList CaacRouteEditorController::simulationPreviewSegments(const QVariant
                (settings.value("loopMode").toInt() == 1 && settings.value("loopCount").toInt() > 1)) {
         append(last, first, QStringLiteral("loop"));
     }
-    if (settings.value("loopMode").toInt() != 2 && settings.value("endBehavior").toInt() == 1) {
-        append(last, returning, QStringLiteral("return"));
+    if (settings.value("loopMode").toInt() != 2) {
+        const int endBehavior = settings.value("endBehavior").toInt();
+        if (endBehavior == 1 || endBehavior == 2) {
+            append(last, endBehavior == 2 ? mission->plannedHomePosition() : returning, QStringLiteral("return"));
+        }
     }
     return result;
 }

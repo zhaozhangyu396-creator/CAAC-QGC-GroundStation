@@ -27375,12 +27375,16 @@ altitude</source>
         <translation>返航</translation>
     </message>
     <message>
+        <source>Return to takeoff point and hover</source>
+        <translation>返回起飞点悬停</translation>
+    </message>
+    <message>
         <source>Return point</source>
         <translation>返航点</translation>
     </message>
     <message>
-        <source>Count 1 executes once. Takeoff runs once; loops begin at the selected waypoint. Returning to a waypoint ends in a hover; returning home lands in this simulation.</source>
-        <translation>次数为 1 时执行一轮。起飞仅执行一次，循环从所选航点开始。返回航点后悬停；本模拟中返回起飞点后降落。</translation>
+        <source>Count 1 executes once. Takeoff runs once; loops begin at the selected waypoint. Returning to a waypoint ends in a hover; returning home lands in this simulation. Return to takeoff point and hover keeps the final route altitude without landing.</source>
+        <translation>次数为 1 时执行一轮。起飞仅执行一次，循环从所选航点开始。返回航点后悬停；本模拟中返回起飞点后降落。“返回起飞点悬停”将保持最后航段的高度返回起飞点上方，不降落。</translation>
     </message>
     <message>
         <source>Simulation wind</source>

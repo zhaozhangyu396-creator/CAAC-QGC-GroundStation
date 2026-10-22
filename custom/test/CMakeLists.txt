@@ -171,9 +171,21 @@ add_qgc_test(
     "QGC_TEST_LOCALE=set:zh_CN"
     "QGC_TEST_REALTIME_PLAN_TIMEOUTS=set:1"
 )
+add_qgc_test(
+    CaacSimulationFlowUITest
+    LABELS
+    Integration
+    Vehicle
+    NoSanitizer
+    TIMEOUT
+    180
+    ENV_MODIFICATION
+    "QGC_TEST_LOCALE=set:zh_CN"
+    "QGC_TEST_REALTIME_PLAN_TIMEOUTS=set:1"
+)
 if(WIN32)
     set_property(
-        TEST CaacSimulationUITest
+        TEST CaacSimulationUITest CaacSimulationFlowUITest
         APPEND
         PROPERTY ENVIRONMENT_MODIFICATION "QT_QPA_PLATFORM=set:windows"
     )

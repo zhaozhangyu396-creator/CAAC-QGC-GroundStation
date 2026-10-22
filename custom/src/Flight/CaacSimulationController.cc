@@ -110,10 +110,10 @@ QString CaacSimulationController::validateSettings(const QVariantMap& settings)
         } else if (key == "turnMode") {
             maximum = 3;
             integer = true;
-        } else if (key == "climbMode" || key == "endBehavior") {
+        } else if (key == "climbMode") {
             maximum = 1;
             integer = true;
-        } else if (key == "loopMode") {
+        } else if (key == "loopMode" || key == "endBehavior") {
             maximum = 2;
             integer = true;
         } else if (key == "loopCount") {
@@ -954,7 +954,8 @@ bool CaacSimulationController::_prepareFlightPlan()
     }
     bool nativeEnd = false;
     auto* last = items->value<SimpleMissionItem*>(items->count() - 1);
-    const bool plannedLanding = last && last->command() == MAV_CMD_NAV_LAND;
+    const bool returnHomeHover = _settings.value("endBehavior").toInt() == 2;
+    const bool plannedLanding = last && last->command() == MAV_CMD_NAV_LAND && !returnHomeHover;
     const auto landingCoordinate = plannedLanding ? last->coordinate() : QGeoCoordinate();
     const auto landingFrame = plannedLanding ? last->altitudeFrame() : QGroundControlQmlGlobal::AltitudeFrameRelative;
     const double landingAltitude = plannedLanding ? last->editableAlt() : 0;
@@ -1077,7 +1078,15 @@ bool CaacSimulationController::_prepareFlightPlan()
         landing->altitude()->setRawValue(landingAltitude);
         landing->missionItem().setParam4(landingYaw);
     } else if (!nativeEnd) {
-        if (_settings.value("endBehavior").toInt() == 1 && !selectedReturn) {
+        if (returnHomeHover) {
+            auto* hover = append(MAV_CMD_NAV_LOITER_UNLIM, finishPoint);
+            if (!hover) {
+                _fail(tr("Unable to prepare the simulation hover."));
+                return false;
+            }
+            hover->setCoordinate(_home);
+            waypointOrigins.remove(hover);
+        } else if (_settings.value("endBehavior").toInt() == 1 && !selectedReturn) {
             if (!append(MAV_CMD_NAV_RETURN_TO_LAUNCH, nullptr)) {
                 _fail(tr("Unable to prepare the simulation return."));
                 return false;
