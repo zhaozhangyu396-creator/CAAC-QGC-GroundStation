@@ -1162,7 +1162,7 @@ Column {
             if (root._pickingHome) {
                 const coordinate = root.editorMap.toCoordinate(position, false)
                 const home = root.planMasterController.missionController.plannedHomePosition
-                if (editorController.updatePlannedHome(coordinate.latitude, coordinate.longitude, home.altitude)) {
+                if (editorController.updatePlannedHome(coordinate.latitude, coordinate.longitude, home.altitude, false)) {
                     root._pickingHome = false
                 }
             } else if (root.measurePick > 0) {

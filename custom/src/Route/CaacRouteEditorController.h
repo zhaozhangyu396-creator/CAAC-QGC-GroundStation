@@ -106,7 +106,8 @@ public:
     Q_INVOKABLE bool translateRoute(const QGeoCoordinate& reference, const QGeoCoordinate& target,
                                     bool includeHome = true);
     Q_INVOKABLE bool moveRouteBy(double bearing, double distance, bool includeHome = true);
-    Q_INVOKABLE bool updatePlannedHome(double latitude, double longitude, double amslAltitude);
+    Q_INVOKABLE bool updatePlannedHome(double latitude, double longitude, double amslAltitude,
+                                       bool manualAltitude = true);
     Q_INVOKABLE bool setMissionFlightSpeed(bool specified, double speed);
     Q_INVOKABLE bool syncWaypointDefaults(const QVariantMap& properties);
 
@@ -137,12 +138,15 @@ private:
         QVariantMap simulation;
         QVariant orientation;
         int selection = 0;
+        bool manualHomeAltitude = false;
     };
 
     Snapshot _snapshot() const;
     void _capture();
     void _scheduleCapture();
     void _watchItems();
+    void _watchVehicleHome();
+    void _syncPlannedHomeAltitude();
     bool _restore(int index);
     bool _rotationCoordinates(QList<QGeoCoordinate>& coordinates, QList<QObject*>& items);
     void _setCenter(const QGeoCoordinate& coordinate);
@@ -154,6 +158,8 @@ private:
     QGeoCoordinate _rotationCenter;
     QList<Snapshot> _history;
     QList<QMetaObject::Connection> _itemConnections;
+    QList<QMetaObject::Connection> _vehicleConnections;
+    bool _synchronizingHome = false;
     QTimer _captureTimer;
     int _historyIndex = -1;
     int _editDepth = 0;

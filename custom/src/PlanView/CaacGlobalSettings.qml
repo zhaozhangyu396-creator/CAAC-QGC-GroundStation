@@ -26,42 +26,17 @@ Item {
     readonly property var _home: _points.length ? _points[0].coordinate : QtPositioning.coordinate()
     readonly property var _missionItems: editor.planMasterController ? editor.planMasterController.missionController.visualItems : null
     readonly property var _speedSection: _missionItems && _missionItems.count ? _missionItems.get(0).speedSection : null
-    readonly property var _homeItem: _missionItems && _missionItems.count ? _missionItems.get(0) : null
-    readonly property var _vehicle: QGroundControl.multiVehicleManager.activeVehicle
     readonly property string _homePositionKey: _home.isValid ? _home.latitude + ":" + _home.longitude : ""
-    readonly property real _availableHomeAltitude: {
-        if (!_home.isValid) { return NaN }
-        if (_vehicle && _vehicle.homePosition.isValid && _home.distanceTo(_vehicle.homePosition) < 2
-            && isFinite(_vehicle.homePosition.altitude)) { return _vehicle.homePosition.altitude }
-        if (_vehicle && !_vehicle.airborne && _vehicle.coordinate.isValid && _home.distanceTo(_vehicle.coordinate) < 2
-            && isFinite(_vehicle.altitudeAMSL.rawValue)) { return Number(_vehicle.altitudeAMSL.rawValue) }
-        if (isFinite(_home.altitude)) { return _home.altitude }
-        if (_homeItem && isFinite(_homeItem.terrainAltitude)) { return _homeItem.terrainAltitude }
-        return _home.altitude
-    }
+    readonly property real _availableHomeAltitude: _home.isValid ? _home.altitude : NaN
     function fillHomeAltitude() {
         if (homeAltitude && !homeAltitude.manuallyEdited) {
             homeAltitude.text = isFinite(_availableHomeAltitude) ? _availableHomeAltitude.toString() : ""
         }
     }
-    property bool _savingHome: false
-    function saveHomeAutomatically() {
-        fillHomeAltitude()
-        if (_savingHome || !_home.isValid || !homeAltitude || homeAltitude.manuallyEdited
-            || !isFinite(_availableHomeAltitude) || (editor._draggedWaypoint && editor._draggedWaypoint.sequenceNumber === 0)) { return }
-        if (_homeItem && Math.abs(_home.altitude - _availableHomeAltitude) < 0.001) { return }
-        _savingHome = true
-        try {
-            routeController.updatePlannedHome(_home.latitude, _home.longitude, _availableHomeAltitude)
-        } finally {
-            _savingHome = false
-        }
-    }
-    on_AvailableHomeAltitudeChanged: { fillHomeAltitude(); Qt.callLater(saveHomeAutomatically) }
+    on_AvailableHomeAltitudeChanged: fillHomeAltitude()
     on_HomePositionKeyChanged: {
         if (homeAltitude) { homeAltitude.manuallyEdited = false }
         fillHomeAltitude()
-        Qt.callLater(saveHomeAutomatically)
     }
     function number(value) { return value.trim().length ? Number(value) : NaN }
     component NumberField: QGCTextField {

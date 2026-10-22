@@ -511,6 +511,10 @@ void CaacCorePlugin::destroyQmlApplicationEngine(QQmlApplicationEngine* engine)
 void CaacCorePlugin::postSaveToJson(PlanMasterController* controller, QJsonObject& json)
 {
     QJsonObject metadata{{QStringLiteral("version"), 1}};
+    auto* items = controller->missionController()->visualItems();
+    if (items && items->count() && items->get(0)->property("caacHomeAltitudeManual").toBool()) {
+        metadata[QStringLiteral("manualHomeAltitude")] = true;
+    }
     const auto center = controller->property("caacRotationCenter").value<QGeoCoordinate>();
     if (center.isValid()) {
         metadata[QStringLiteral("centerLatitude")] = center.latitude();
@@ -532,6 +536,12 @@ void CaacCorePlugin::postSaveToJson(PlanMasterController* controller, QJsonObjec
 void CaacCorePlugin::postLoadFromJson(PlanMasterController* controller, QJsonObject& json)
 {
     const auto metadata = json.value(QStringLiteral("caac")).toObject();
+    auto* items = controller->missionController()->visualItems();
+    if (items && items->count()) {
+        items->get(0)->setProperty("caacHomeAltitudeManual",
+                                   metadata.value(QStringLiteral("version")).toInt() == 1 &&
+                                       metadata.value(QStringLiteral("manualHomeAltitude")).toBool());
+    }
     QGeoCoordinate center;
     if (metadata.value(QStringLiteral("version")).toInt() == 1 &&
         metadata.value(QStringLiteral("centerLatitude")).isDouble() &&

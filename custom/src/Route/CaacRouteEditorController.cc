@@ -23,6 +23,8 @@
 #include "QGCGeo.h"
 #include "SimpleMissionItem.h"
 #include "SpeedSection.h"
+#include "Vehicle.h"
+#include "VehicleGPSFactGroup.h"
 
 CaacRouteEditorController::CaacRouteEditorController(QObject* parent)
     : QObject(parent)
@@ -368,6 +370,16 @@ void CaacRouteEditorController::setPlanMasterController(PlanMasterController* co
     if (controller) {
         _rotationCenter = controller->property("caacRotationCenter").value<QGeoCoordinate>();
         controller->installEventFilter(this);
+        connect(controller, &PlanMasterController::managerVehicleChanged, this,
+                &CaacRouteEditorController::_watchVehicleHome);
+        connect(controller, &PlanMasterController::syncInProgressChanged, this,
+                &CaacRouteEditorController::_syncPlannedHomeAltitude);
+        connect(controller, &PlanMasterController::offlineChanged, this,
+                &CaacRouteEditorController::_syncPlannedHomeAltitude);
+        connect(controller->missionController(), &MissionController::plannedHomePositionChanged, this,
+                &CaacRouteEditorController::_syncPlannedHomeAltitude, Qt::QueuedConnection);
+        connect(controller->missionController(), &MissionController::syncInProgressChanged, this,
+                &CaacRouteEditorController::_syncPlannedHomeAltitude);
         connect(controller->missionController(), &MissionController::planViewStateChanged, this,
                 &CaacRouteEditorController::selectionChanged);
         connect(controller, &QObject::destroyed, this, [this]() {
@@ -380,6 +392,7 @@ void CaacRouteEditorController::setPlanMasterController(PlanMasterController* co
                 _clearRotationPreview();
             }
             _watchItems();
+            QTimer::singleShot(0, this, &CaacRouteEditorController::_syncPlannedHomeAltitude);
             if (!_restoring) {
                 _editDepth = 0;
                 clearHistory();
@@ -391,6 +404,7 @@ void CaacRouteEditorController::setPlanMasterController(PlanMasterController* co
                 &CaacRouteEditorController::clearHistory);
         _watchItems();
     }
+    _watchVehicleHome();
     clearHistory();
     _clearError();
     emit planMasterControllerChanged();
@@ -1078,7 +1092,7 @@ bool CaacRouteEditorController::applyWaypointRelation(int targetIndex, int refer
             return false;
         }
     } else if (targetIndex == 0) {
-        if (!updatePlannedHome(coordinate.latitude(), coordinate.longitude(), coordinate.altitude())) {
+        if (!updatePlannedHome(coordinate.latitude(), coordinate.longitude(), coordinate.altitude(), false)) {
             return false;
         }
     } else {
@@ -1185,7 +1199,7 @@ bool CaacRouteEditorController::centerHomeOnRoute()
     const auto previous = mission->plannedHomePosition();
     beginEdit();
     const auto finish = qScopeGuard([this]() { endEdit(); });
-    if (!updatePlannedHome(center.latitude(), center.longitude(), previous.altitude())) {
+    if (!updatePlannedHome(center.latitude(), center.longitude(), previous.altitude(), false)) {
         return false;
     }
     for (int i = 1; i < model->count(); ++i) {
@@ -1213,7 +1227,7 @@ bool CaacRouteEditorController::useWaypointAsHome(QObject* object)
     const double altitude = mission->plannedHomePosition().altitude();
     beginEdit();
     const auto finish = qScopeGuard([this]() { endEdit(); });
-    if (!updatePlannedHome(position.latitude(), position.longitude(), altitude)) {
+    if (!updatePlannedHome(position.latitude(), position.longitude(), altitude, false)) {
         return false;
     }
     mission->removeVisualItem(mission->visualItemIndexForObject(item));
@@ -1559,7 +1573,7 @@ bool CaacRouteEditorController::setRelativeEndpoint(int referenceIndex, double a
     _masterController->setUserSelectedManualCreation(true);
     if (!landing) {
         const auto altitude = mission->plannedHomePosition().altitude();
-        if (!updatePlannedHome(coordinate->latitude(), coordinate->longitude(), altitude)) {
+        if (!updatePlannedHome(coordinate->latitude(), coordinate->longitude(), altitude, false)) {
             return false;
         }
         auto takeoffCoordinate = *coordinate;
@@ -1692,7 +1706,8 @@ bool CaacRouteEditorController::moveRouteBy(double bearing, double distance, boo
                   : _fail(tr("Enter a valid bearing and positive distance."));
 }
 
-bool CaacRouteEditorController::updatePlannedHome(double latitude, double longitude, double amslAltitude)
+bool CaacRouteEditorController::updatePlannedHome(double latitude, double longitude, double amslAltitude,
+                                                  bool manualAltitude)
 {
     if (!_canEdit()) {
         return false;
@@ -1706,10 +1721,89 @@ bool CaacRouteEditorController::updatePlannedHome(double latitude, double longit
     }
     beginEdit();
     const auto finish = qScopeGuard([this]() { endEdit(); });
+    if (manualAltitude) {
+        home->setProperty("caacHomeAltitudeManual", true);
+    }
     _missionController()->setHomePosition(coordinate);
     home->plannedHomePositionAltitude()->setRawValue(amslAltitude);
     home->setDirty(true);
     return true;
+}
+
+void CaacRouteEditorController::_watchVehicleHome()
+{
+    for (const auto& connection : _vehicleConnections) {
+        disconnect(connection);
+    }
+    _vehicleConnections.clear();
+    auto* vehicle = _masterController ? _masterController->managerVehicle() : nullptr;
+    if (vehicle) {
+        _vehicleConnections.append(connect(vehicle, &Vehicle::homePositionChanged, this,
+                                           &CaacRouteEditorController::_syncPlannedHomeAltitude));
+        _vehicleConnections.append(
+            connect(vehicle, &Vehicle::coordinateChanged, this, &CaacRouteEditorController::_syncPlannedHomeAltitude));
+        if (auto* gps = vehicle->gpsFactGroup()) {
+            _vehicleConnections.append(connect(gps->lock(), &Fact::rawValueChanged, this,
+                                               &CaacRouteEditorController::_syncPlannedHomeAltitude));
+        }
+        _vehicleConnections.append(connect(vehicle->altitudeAMSL(), &Fact::rawValueChanged, this,
+                                           &CaacRouteEditorController::_syncPlannedHomeAltitude));
+    }
+    _syncPlannedHomeAltitude();
+}
+
+void CaacRouteEditorController::_syncPlannedHomeAltitude()
+{
+    auto* mission = _missionController();
+    auto* vehicle = _masterController ? _masterController->managerVehicle() : nullptr;
+    if (_synchronizingHome || _restoring || _rotationPreviewActive || !mission || !vehicle ||
+        _masterController->offline() || _masterController->property("flyView").toBool() ||
+        _masterController->syncInProgress()) {
+        return;
+    }
+    auto* items = mission->visualItems();
+    auto* home = items && items->count() ? items->value<MissionSettingsItem*>(0) : nullptr;
+    if (!home || home->property("caacHomeAltitudeManual").toBool()) {
+        return;
+    }
+    const auto planned = mission->plannedHomePosition();
+    // Imported or explicitly entered finite heights remain authoritative. Zero is the upstream
+    // placeholder used when a first waypoint creates a planned home without an AMSL source.
+    if (planned.isValid() && std::isfinite(planned.altitude()) && planned.altitude() != 0) {
+        return;
+    }
+    auto source = vehicle->homePosition();
+    if (!source.isValid() || !std::isfinite(source.altitude())) {
+        auto* gps = vehicle->gpsFactGroup();
+        if (vehicle->airborne() || !gps || gps->lock()->rawValue().toInt() < 3) {
+            return;
+        }
+        source = vehicle->coordinate();
+        source.setAltitude(vehicle->altitudeAMSL()->rawValue().toDouble());
+    }
+    if (!source.isValid() || !std::isfinite(source.altitude()) ||
+        source.altitude() < home->plannedHomePositionAltitude()->rawMin().toDouble() ||
+        source.altitude() > home->plannedHomePositionAltitude()->rawMax().toDouble()) {
+        return;
+    }
+    // The first-waypoint fallback places home 30 m away. Allow that offset, while leaving
+    // a route planned for a different location untouched.
+    if (planned.isValid() && planned.distanceTo(source) > 50) {
+        return;
+    }
+    if (!planned.isValid() && items->count() != 1) {
+        return;
+    }
+    auto resolved = planned.isValid() ? planned : source;
+    resolved.setAltitude(source.altitude());
+    if (resolved == planned) {
+        return;
+    }
+    _synchronizingHome = true;
+    const auto finish = qScopeGuard([this]() { _synchronizingHome = false; });
+    mission->setHomePosition(resolved);
+    home->plannedHomePositionAltitude()->setRawValue(resolved.altitude());
+    home->setDirty(true);
 }
 
 CaacRouteEditorController::Snapshot CaacRouteEditorController::_snapshot() const
@@ -1721,6 +1815,7 @@ CaacRouteEditorController::Snapshot CaacRouteEditorController::_snapshot() const
         _masterController ? _masterController->property("caacSimulationSettings").toMap() : QVariantMap();
     auto* mission = _missionController();
     if (mission && mission->visualItems() && mission->visualItems()->count() > 0) {
+        result.manualHomeAltitude = mission->visualItems()->get(0)->property("caacHomeAltitudeManual").toBool();
         mission->save(result.mission);
         result.selection = mission->currentPlanViewVIIndex();
     }
@@ -1784,7 +1879,8 @@ void CaacRouteEditorController::_capture()
     }
     if (_historyIndex >= 0 && _history[_historyIndex].mission == state.mission &&
         _history[_historyIndex].center == state.center && _history[_historyIndex].simulation == state.simulation &&
-        _history[_historyIndex].orientation == state.orientation) {
+        _history[_historyIndex].orientation == state.orientation &&
+        _history[_historyIndex].manualHomeAltitude == state.manualHomeAltitude) {
         return;
     }
     _history = _history.mid(0, _historyIndex + 1);
@@ -1882,6 +1978,7 @@ bool CaacRouteEditorController::_restore(int index)
     auto* home = _missionController()->visualItems()->value<MissionSettingsItem*>(0);
     // Loading a takeoff coordinate can replace the home altitude with an unset coordinate altitude.
     if (home && savedHome.size() == 3 && savedHome.at(2).isDouble()) {
+        home->setProperty("caacHomeAltitudeManual", state.manualHomeAltitude);
         home->plannedHomePositionAltitude()->setRawValue(savedHome.at(2).toDouble());
     }
     _setCenter(state.center);

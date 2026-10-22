@@ -1,10 +1,15 @@
+#include <QtCore/QJsonArray>
 #include <QtCore/QRegularExpression>
+#include <QtCore/QTemporaryDir>
 
 #include "CaacMissionUpdateController.h"
+#include "CaacRouteEditorController.h"
+#include "Fact.h"
 #include "FirmwarePlugin.h"
 #include "MissionController.h"
 #include "MissionItem.h"
 #include "MissionManager.h"
+#include "MissionSettingsItem.h"
 #include "MissionTest.h"
 #include "MockLinkMissionItemHandler.h"
 #include "PlanMasterController.h"
@@ -15,11 +20,76 @@ class CaacMissionUpdateControllerTest : public MissionTest
 {
     Q_OBJECT
 private slots:
+    void _connectedHomeAltitude();
     void _uploadConfirmation_data();
     void _uploadConfirmation();
     void _update_data();
     void _update();
 };
+
+void CaacMissionUpdateControllerTest::_connectedHomeAltitude()
+{
+    QVERIFY(vehicle());
+    QVERIFY(waitForInitialConnect());
+    QTRY_VERIFY_WITH_TIMEOUT(vehicle()->homePosition().isValid(), TestTimeout::mediumMs());
+    PlanMasterController plan;
+    plan.setFlyView(false);
+    plan.start();
+    QTRY_COMPARE_WITH_TIMEOUT(plan.managerVehicle(), vehicle(), TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(!plan.syncInProgress(), TestTimeout::mediumMs());
+    auto* mission = plan.missionController();
+    mission->removeAll();
+    CaacRouteEditorController editor;
+    editor.setPlanMasterController(&plan);
+    const auto reported = vehicle()->homePosition();
+    QTRY_COMPARE_WITH_TIMEOUT(mission->plannedHomePosition(), reported, TestTimeout::shortMs());
+
+    auto planned = reported.atDistanceAndAzimuth(30, 0);
+    planned.setAltitude(0);
+    QVERIFY(editor.updatePlannedHome(planned.latitude(), planned.longitude(), 0, false));
+    QTRY_COMPARE_WITH_TIMEOUT(mission->plannedHomePosition().altitude(), reported.altitude(), TestTimeout::shortMs());
+    QCOMPARE(mission->plannedHomePosition().latitude(), planned.latitude());
+    QCOMPARE(mission->plannedHomePosition().longitude(), planned.longitude());
+    QVERIFY(editor.addWaypoint(reported.atDistanceAndAzimuth(40, 90)));
+    const auto serialized = plan.saveToJson()
+                                .object()
+                                .value(QStringLiteral("mission"))
+                                .toObject()
+                                .value(QStringLiteral("plannedHomePosition"))
+                                .toArray();
+    QCOMPARE(serialized.at(2).toDouble(), reported.altitude());
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+    const auto file = directory.filePath(QStringLiteral("connected-home.plan"));
+    QVERIFY(plan.saveToFile(file));
+    plan.loadFromFile(file);
+    QCOMPARE(mission->plannedHomePosition().altitude(), reported.altitude());
+
+    auto* home = mission->visualItems()->value<MissionSettingsItem*>(0);
+    QVERIFY(home);
+    const QList<double> terrain{reported.altitude() + 25};
+    QVERIFY(QMetaObject::invokeMethod(home, "_terrainDataReceived", Qt::DirectConnection, Q_ARG(bool, true),
+                                      Q_ARG(QList<double>, terrain)));
+    QCOMPARE(mission->plannedHomePosition().altitude(), reported.altitude());
+    QVERIFY(editor.updatePlannedHome(planned.latitude(), planned.longitude(), 0));
+    QVERIFY(plan.saveToFile(file));
+    plan.loadFromFile(file);
+    vehicle()->homePositionChanged(reported);
+    QTRY_VERIFY_WITH_TIMEOUT(mission->visualItems()->get(0)->property("caacHomeAltitudeManual").toBool(),
+                             TestTimeout::shortMs());
+    QCOMPARE(mission->plannedHomePosition().altitude(), 0.0);
+    QVERIFY(editor.updatePlannedHome(planned.latitude(), planned.longitude(), reported.altitude() + 10));
+    vehicle()->homePositionChanged(reported);
+    QCOMPARE(mission->plannedHomePosition().altitude(), reported.altitude() + 10);
+
+    mission->removeAll();
+    auto remote = reported.atDistanceAndAzimuth(1000, 90);
+    remote.setAltitude(0);
+    mission->setHomePosition(remote);
+    vehicle()->homePositionChanged(reported);
+    QCOMPARE(mission->plannedHomePosition(), remote);
+    editor.setPlanMasterController(nullptr);
+}
 
 void CaacMissionUpdateControllerTest::_uploadConfirmation_data()
 {
