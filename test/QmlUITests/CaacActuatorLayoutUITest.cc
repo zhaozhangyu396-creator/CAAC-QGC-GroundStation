@@ -1,6 +1,7 @@
 #include <QtCore/QFile>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QScopeGuard>
+#include <QtGui/QScreen>
 #include <QtQuick/QQuickItem>
 #include <QtQuick/QQuickWindow>
 #include <QtTest/QSignalSpy>
@@ -64,14 +65,33 @@ void CaacActuatorLayoutUITest::_narrowPanels()
             auto* viewport = findVisibleItem(_rootItem, QStringLiteral("vehicleSetup_scroller"));
             QVERIFY(viewport);
             const auto originalSize = _window->size();
-            const auto restore = qScopeGuard([this, originalSize] { _window->resize(originalSize); });
+            const auto originalPosition = _window->position();
+            const auto restore = qScopeGuard([this, originalSize, originalPosition] {
+                _window->resize(originalSize);
+                _window->setPosition(originalPosition);
+            });
+            QSize maximumSize(1400, qMax(720, _window->minimumHeight()));
+#ifdef Q_OS_WIN
+            QVERIFY(_window->screen());
+            const auto available = _window->screen()->availableGeometry();
+            const auto margins = _window->frameMargins();
+            maximumSize = QSize(available.width() - margins.left() - margins.right(),
+                                available.height() - margins.top() - margins.bottom());
+            _window->setPosition(available.topLeft() + QPoint(margins.left(), margins.top()));
+#endif
+            const auto targetSize = [this, maximumSize](int width) {
+                return QSize(width, qMax(720, _window->minimumHeight()))
+                    .boundedTo(maximumSize)
+                    .expandedTo(_window->minimumSize());
+            };
             const auto fits = [](QQuickItem* item, QQuickItem* container) {
                 const auto bounds = item->mapRectToItem(container, item->boundingRect());
                 return item->width() > 0 && bounds.left() >= -1 && bounds.right() <= container->width() + 1;
             };
             for (int width : {1000, 1400}) {
-                _window->resize(width, qMax(720, _window->minimumHeight()));
-                QTRY_COMPARE_WITH_TIMEOUT(_window->width(), width, TestTimeout::shortMs());
+                const auto size = targetSize(width);
+                _window->resize(size);
+                QTRY_COMPARE_WITH_TIMEOUT(_window->size(), size, TestTimeout::shortMs());
                 for (int outputIndex : {0, 1}) {
                     actuators->selectActuatorOutput(outputIndex);
                     QTRY_COMPARE_WITH_TIMEOUT(static_cast<QObject*>(actuators->selectedActuatorOutput()),
@@ -100,7 +120,7 @@ void CaacActuatorLayoutUITest::_narrowPanels()
             QCOMPARE(outputWrites.count(), 0);
             QCOMPARE(rtlWrites.count(), 0);
 
-            _window->resize(1000, qMax(720, _window->minimumHeight()));
+            _window->resize(targetSize(1000));
             QVERIFY(clickButtonScrolled(QStringLiteral("toolbar_safety"),
                                         QStringLiteral("caacSettingsNavigationScroller")));
             auto* choice = findVisibleItemScrolled(QStringLiteral("caacSafety_RTL_TYPE_choice"),

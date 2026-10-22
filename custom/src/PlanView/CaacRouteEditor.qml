@@ -1206,7 +1206,6 @@ Column {
             }
             root._draggedWaypoint = null
             root._dragGuides = []
-            if (item && item.sequenceNumber === 0) { globalSettings.saveHomeAutomatically() }
             editorController.endEdit()
             const vehicle = root._managerVehicle
             if (item && (item.command === 16 || item.command === 21) && root._dragStartCoordinate.isValid
