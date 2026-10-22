@@ -8,6 +8,10 @@ import QGroundControl.FactControls
 
 Loader {
 	property var fact
+	property bool constrainedWidth: QGroundControl.corePlugin.directMissionItemEditing
+	Layout.minimumWidth: 0
+	Layout.preferredWidth: constrainedWidth ? ScreenTools.defaultFontPixelWidth * 9 : -1
+	Layout.fillWidth: constrainedWidth
 	id:                     loader
 
 	Component {
@@ -15,7 +19,8 @@ Loader {
 		FactComboBox {
 			fact:           loader.fact
 			indexModel:     false
-			sizeToContents: true
+			sizeToContents: !loader.constrainedWidth
+			wrapCurrentText: loader.constrainedWidth
 		}
 	}
 	Component {

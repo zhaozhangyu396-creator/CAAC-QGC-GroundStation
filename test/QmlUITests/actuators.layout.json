@@ -1,0 +1,193 @@
+{
+  "version": 2,
+  "outputs_v1": [
+    {
+      "label": "MAIN",
+      "subgroups": [
+        {
+          "label": "MAIN",
+          "per-channel-parameters": [
+            {
+              "label": "Function",
+              "name": "PWM_MAIN_FUNC${i}",
+              "function": "function"
+            }
+          ],
+          "channels": [
+            {
+              "label": "MAIN 1",
+              "param-index": 1
+            },
+            {
+              "label": "MAIN 2",
+              "param-index": 2
+            },
+            {
+              "label": "MAIN 3",
+              "param-index": 3
+            },
+            {
+              "label": "MAIN 4",
+              "param-index": 4
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "UAVCAN",
+      "parameters": [
+        {
+          "label": "Configure",
+          "name": "RTL_TYPE",
+          "function": "enable"
+        }
+      ],
+      "subgroups": [
+        {
+          "label": "ESCs",
+          "per-channel-parameters": [
+            {
+              "label": "Function",
+              "name": "PWM_MAIN_FUNC${i}",
+              "function": "function"
+            }
+          ],
+          "channels": [
+            {
+              "label": "ESC 1",
+              "param-index": 5
+            },
+            {
+              "label": "ESC 2",
+              "param-index": 6
+            },
+            {
+              "label": "ESC 3",
+              "param-index": 7
+            },
+            {
+              "label": "ESC 4",
+              "param-index": 8
+            }
+          ]
+        },
+        {
+          "label": "Servos",
+          "per-channel-parameters": [
+            {
+              "label": "Function",
+              "name": "PWM_MAIN_FUNC${i}",
+              "function": "function"
+            }
+          ],
+          "channels": [
+            {
+              "label": "Servo 1",
+              "param-index": 9
+            },
+            {
+              "label": "Servo 2",
+              "param-index": 10
+            },
+            {
+              "label": "Servo 3",
+              "param-index": 11
+            },
+            {
+              "label": "Servo 4",
+              "param-index": 12
+            },
+            {
+              "label": "Servo 5",
+              "param-index": 13
+            },
+            {
+              "label": "Servo 6",
+              "param-index": 14
+            },
+            {
+              "label": "Servo 7",
+              "param-index": 15
+            },
+            {
+              "label": "Servo 8",
+              "param-index": 16
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "functions_v1": {
+    "0": {
+      "label": "Disabled"
+    },
+    "101": {
+      "label": "Motor 1"
+    },
+    "102": {
+      "label": "Motor 2"
+    },
+    "103": {
+      "label": "Motor 3"
+    },
+    "104": {
+      "label": "Motor 4"
+    }
+  },
+  "mixer_v1": {
+    "actuator-types": {
+      "motor": {
+        "label-index-offset": 1,
+        "function-min": 101,
+        "function-max": 104,
+        "values": {
+          "min": 0,
+          "max": 1,
+          "default": 0
+        }
+      },
+      "DEFAULT": {
+        "values": {
+          "min": -1,
+          "max": 1,
+          "default": -1
+        }
+      }
+    },
+    "config": [
+      {
+        "type": "multirotor",
+        "actuators": [
+          {
+            "group-label": "Motors",
+            "count": "CA_ROTOR_COUNT",
+            "actuator-type": "motor",
+            "per-item-parameters": [
+              {
+                "label": "Position X",
+                "function": "posx",
+                "name": "CA_ROTOR${i}_PX",
+                "index-offset": 0
+              },
+              {
+                "label": "Position Y",
+                "function": "posy",
+                "name": "CA_ROTOR${i}_PY",
+                "index-offset": 0
+              },
+              {
+                "label": "Direction CCW",
+                "function": "spin-dir",
+                "name": "CA_ROTOR${i}_KM",
+                "show-as": "true-if-positive",
+                "index-offset": 0
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

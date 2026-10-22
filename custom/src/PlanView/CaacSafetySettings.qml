@@ -107,8 +107,13 @@ Item {
             Layout.minimumWidth: 0
             visible: !!row.fact && row.fact.enumStrings.length > 0
             model: row.fact ? row.fact.enumStrings : []
+            wrapCurrentText: true
             currentIndex: row.fact ? row.fact.enumIndex : -1
-            textTransform: (text) => row.fact ? FailsafeEnums.displayString(row.fact.name, text) : text
+            textTransform: (text) => {
+                const translated = row.fact ? FailsafeEnums.displayString(row.fact.name, text) : text
+                return translated !== text ? translated
+                    : OnlineMessageTranslator.parameterText(text, OnlineMessageTranslator.revision)
+            }
             QGCPalette { id: choicePalette; colorGroupEnabled: choice.enabled }
             contentItem: QGCLabel {
                 objectName: row.objectName + "_choiceText"

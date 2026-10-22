@@ -8,6 +8,7 @@ import QGroundControl.Controls
 
 T.ComboBox {
     property bool sizeToContents: false
+    property bool wrapCurrentText: false
     property string alternateText: ""
     property var textTransform: null
 
@@ -23,7 +24,8 @@ T.ComboBox {
     implicitWidth: Math.max(background.implicitWidth,
                             (control.sizeToContents ? _largestTextWidth : contentItem.implicitWidth) + leftPadding + rightPadding + padding)
     implicitHeight: Math.max(background.implicitHeight,
-                             Math.max(contentItem.implicitHeight, indicator ? indicator.implicitHeight : 0) + topPadding + bottomPadding)
+                             Math.max(wrapCurrentText ? contentItem.contentHeight : contentItem.implicitHeight,
+                                      indicator ? indicator.implicitHeight : 0) + topPadding + bottomPadding)
     baselineOffset: contentItem.y + text.baselineOffset
     leftPadding: padding + (!control.mirrored || !indicator || !indicator.visible ? 0 : indicator.width + spacing)
     rightPadding: padding + (control.mirrored || !indicator || !indicator.visible ? 0 : indicator.width)
@@ -75,7 +77,10 @@ T.ComboBox {
     // The items in the popup
     delegate: ItemDelegate {
         width: _popupWidth
-        height: Math.round(popupItemMetrics.height * 1.75)
+        height: control.wrapCurrentText
+                ? Math.max(contentItem.implicitHeight + topPadding + bottomPadding,
+                           Math.round(popupItemMetrics.height * 1.75))
+                : Math.round(popupItemMetrics.height * 1.75)
 
         property string _text: control.textRole ?
                                     (model.hasOwnProperty(control.textRole) ? model[control.textRole] : modelData[control.textRole]) :
@@ -92,6 +97,7 @@ T.ComboBox {
             font: control.font
             color: control.currentIndex === index ? qgcPal.buttonHighlightText : qgcPal.buttonText
             verticalAlignment: Text.AlignVCenter
+            wrapMode: control.wrapCurrentText ? Text.WordWrap : Text.NoWrap
         }
 
         background: Rectangle {
@@ -125,7 +131,8 @@ T.ComboBox {
         text: control.alternateText === "" ? control.displayString(control.currentText) : control.alternateText
         font: control.font
         color: qgcPal.buttonText
-        elide: Text.ElideRight
+        elide: control.wrapCurrentText ? Text.ElideNone : Text.ElideRight
+        wrapMode: control.wrapCurrentText ? Text.WordWrap : Text.NoWrap
     }
 
     background: Rectangle {

@@ -5231,7 +5231,7 @@ Requires MS_OPT_FLOW_EN to be enabled to be used.</source>
     </message>
     <message>
       <source>Return to a planned mission landing, if available, using the mission path, else return to home via the reverse mission path. Do not consider rally points.</source>
-      <translation>使用任务路径返回计划的任务着陆（如果可用），否则通过反向任务路径返回家园。不考虑集结点。</translation>
+      <translation>优先沿任务航线返回计划降落点；未设置时，沿任务航线反向返航。不使用备降点。</translation>
     </message>
     <message>
       <source>Return-to-Launch speed default</source>

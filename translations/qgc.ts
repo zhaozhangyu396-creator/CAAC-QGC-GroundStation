@@ -3608,7 +3608,95 @@ Please place your vehicle in water, click the button, and wait. Note that the th
         <source>Actuators</source>
         <translation type="unfinished"></translation>
     </message>
-</context>
+    <message>
+        <source>Motors</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Servos</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>ESCs</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Function</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Configure</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Position X</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Position Y</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Position Z</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Direction CCW</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Axis X</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Axis Y</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Axis Z</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Min</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Max</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Disarmed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failsafe</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Bitrate</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Trim</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Reversible</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Motor %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Servo %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>ESC %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    </context>
 <context>
     <name>ActuatorFact</name>
     <message>

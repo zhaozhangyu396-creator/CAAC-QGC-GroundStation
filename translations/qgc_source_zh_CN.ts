@@ -3628,7 +3628,7 @@ Please place your vehicle in water, click the button, and wait. Note that the th
     <message>
       <location filename="../src/AutoPilotPlugins/PX4/ActuatorComponent.qml" line="37"/>
       <source>Geometry</source>
-      <translation>几何学</translation>
+      <translation>几何布局</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/PX4/ActuatorComponent.qml" line="179"/>
@@ -3668,7 +3668,7 @@ Please place your vehicle in water, click the button, and wait. Note that the th
     <message>
       <location filename="../src/AutoPilotPlugins/PX4/ActuatorComponent.qml" line="387"/>
       <source>Motor Order Identification and Assignment</source>
-      <translation>电机订单识别和分配</translation>
+      <translation>电机顺序识别与分配</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/PX4/ActuatorComponent.qml" line="402"/>
@@ -3689,6 +3689,94 @@ Please place your vehicle in water, click the button, and wait. Note that the th
       <location filename="../src/AutoPilotPlugins/PX4/ActuatorComponent.cc" line="14"/>
       <source>Actuators</source>
       <translation>执行器</translation>
+    </message>
+    <message>
+      <source>Motors</source>
+      <translation>电机</translation>
+    </message>
+    <message>
+      <source>Servos</source>
+      <translation>舵机</translation>
+    </message>
+    <message>
+      <source>ESCs</source>
+      <translation>电子调速器</translation>
+    </message>
+    <message>
+      <source>Function</source>
+      <translation>功能</translation>
+    </message>
+    <message>
+      <source>Configure</source>
+      <translation>配置</translation>
+    </message>
+    <message>
+      <source>Position X</source>
+      <translation>X 位置</translation>
+    </message>
+    <message>
+      <source>Position Y</source>
+      <translation>Y 位置</translation>
+    </message>
+    <message>
+      <source>Position Z</source>
+      <translation>Z 位置</translation>
+    </message>
+    <message>
+      <source>Direction CCW</source>
+      <translation>逆时针旋转</translation>
+    </message>
+    <message>
+      <source>Axis X</source>
+      <translation>X 轴方向</translation>
+    </message>
+    <message>
+      <source>Axis Y</source>
+      <translation>Y 轴方向</translation>
+    </message>
+    <message>
+      <source>Axis Z</source>
+      <translation>Z 轴方向</translation>
+    </message>
+    <message>
+      <source>Min</source>
+      <translation>最小值</translation>
+    </message>
+    <message>
+      <source>Max</source>
+      <translation>最大值</translation>
+    </message>
+    <message>
+      <source>Disarmed</source>
+      <translation>未解锁输出</translation>
+    </message>
+    <message>
+      <source>Failsafe</source>
+      <translation>失控保护输出</translation>
+    </message>
+    <message>
+      <source>Bitrate</source>
+      <translation>通信速率</translation>
+    </message>
+    <message>
+      <source>Trim</source>
+      <translation>微调</translation>
+    </message>
+    <message>
+      <source>Reversible</source>
+      <translation>允许反转</translation>
+    </message>
+    <message>
+      <source>Motor %1</source>
+      <translation>电机 %1</translation>
+    </message>
+    <message>
+      <source>Servo %1</source>
+      <translation>舵机 %1</translation>
+    </message>
+    <message>
+      <source>ESC %1</source>
+      <translation>电调 %1</translation>
     </message>
   </context>
   <context>

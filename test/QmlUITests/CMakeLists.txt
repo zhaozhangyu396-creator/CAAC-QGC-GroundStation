@@ -13,6 +13,7 @@ target_sources(
             ${CMAKE_CURRENT_SOURCE_DIR}/TopLevelViewsTest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/TopLevelViewsTest.h
             ${CMAKE_CURRENT_SOURCE_DIR}/PX4VehicleConfigUITest.cc
+            ${CMAKE_CURRENT_SOURCE_DIR}/CaacActuatorLayoutUITest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/PX4VehicleConfigUITest.h
             ${CMAKE_CURRENT_SOURCE_DIR}/APMVehicleConfigUITest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/APMVehicleConfigUITest.h
@@ -71,9 +72,20 @@ add_qgc_test(FirmwareUpgradeUITest LABELS Integration NoSanitizer)
 add_qgc_test(PX4VehicleConfigUITest LABELS Integration NoSanitizer TIMEOUT 180)
 if(QGC_CUSTOM_BUILD)
     add_qgc_test(CaacSetupMenuUITest LABELS Integration NoSanitizer TIMEOUT 120)
+    add_qgc_test(CaacActuatorLayoutUITest LABELS Integration NoSanitizer)
+    set_property(
+        TEST CaacActuatorLayoutUITest
+        APPEND
+        PROPERTY ENVIRONMENT_MODIFICATION "QGC_TEST_LOCALE=set:zh_CN"
+    )
+    qt_add_resources(
+        ${CMAKE_PROJECT_NAME} actuator_layout_test_data
+        PREFIX "/unittest"
+        FILES actuators.layout.json
+    )
     if(WIN32)
         set_property(
-            TEST CaacSetupMenuUITest
+            TEST CaacSetupMenuUITest CaacActuatorLayoutUITest
             APPEND
             PROPERTY ENVIRONMENT_MODIFICATION "QT_QPA_PLATFORM=set:windows"
         )

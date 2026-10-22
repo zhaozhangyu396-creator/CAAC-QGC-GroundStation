@@ -17,11 +17,137 @@ SetupPage {
 
     property var _showAdvanced:              advanced
     readonly property real _margins:         ScreenTools.defaultFontPixelHeight
+    readonly property bool _constrainedWidth: QGroundControl.corePlugin.directMissionItemEditing
+
+    function actuatorLabel(value) {
+        const label = String(value)
+        switch (label) {
+        case "Motors": return qsTr("Motors")
+        case "Servos": return qsTr("Servos")
+        case "ESCs": return qsTr("ESCs")
+        case "Function": return qsTr("Function")
+        case "Configure": return qsTr("Configure")
+        case "Position X": return qsTr("Position X")
+        case "Position Y": return qsTr("Position Y")
+        case "Position Z": return qsTr("Position Z")
+        case "Direction CCW": return qsTr("Direction CCW")
+        case "Axis X": return qsTr("Axis X")
+        case "Axis Y": return qsTr("Axis Y")
+        case "Axis Z": return qsTr("Axis Z")
+        case "Min": return qsTr("Min")
+        case "Max": return qsTr("Max")
+        case "Disarmed": return qsTr("Disarmed")
+        case "Failsafe": return qsTr("Failsafe")
+        case "Bitrate": return qsTr("Bitrate")
+        case "Trim": return qsTr("Trim")
+        case "Reversible": return qsTr("Reversible")
+        }
+        const channel = /^(Motor|Servo|ESC) (\d+)$/.exec(label)
+        if (channel) {
+            switch (channel[1]) {
+            case "Motor": return qsTr("Motor %1").arg(channel[2])
+            case "Servo": return qsTr("Servo %1").arg(channel[2])
+            case "ESC": return qsTr("ESC %1").arg(channel[2])
+            }
+        }
+        return label
+    }
+
+    component ActuatorChannelGrid: GridLayout {
+        id: root
+        required property var group
+        required property bool showAdvanced
+        required property var labelText
+        property bool constrainedWidth: QGroundControl.corePlugin.directMissionItemEditing
+        readonly property int visibleColumnCount: {
+            let count = 0
+            for (let i = 0; i < group.channelConfigs.count; ++i) {
+                const config = group.channelConfigs.get(i)
+                if (config.visible && (showAdvanced || !config.advanced)) { ++count }
+            }
+            return count
+        }
+        readonly property bool stacked: constrainedWidth
+            && width < ScreenTools.defaultFontPixelWidth * (10 + 10 * visibleColumnCount)
+        columns: stacked ? 1 : 1 + group.channelConfigs.count
+        rows: stacked ? group.channels.count * (group.channelConfigs.count + 1) : 1 + group.channels.count
+        columnSpacing: ScreenTools.defaultFontPixelWidth
+        rowSpacing: ScreenTools.defaultFontPixelHeight * 0.5
+        Layout.fillWidth: constrainedWidth
+        Layout.minimumWidth: 0
+
+        QGCLabel { visible: !root.stacked; text: ""; Layout.row: 0; Layout.column: 0 }
+        Repeater {
+            model: root.group.channelConfigs
+            QGCLabel {
+                text: root.labelText(object.label)
+                visible: !root.stacked && object.visible && (root.showAdvanced || !object.advanced)
+                Layout.row: 0
+                Layout.column: 1 + index
+                Layout.fillWidth: root.constrainedWidth
+                Layout.minimumWidth: 0
+                wrapMode: Text.WordWrap
+            }
+        }
+        Repeater {
+            model: root.group.channels
+            QGCLabel {
+                objectName: root.objectName + "_channel_" + index
+                text: root.labelText(object.label) + ":"
+                font.bold: root.stacked
+                Layout.row: root.stacked ? index * (root.group.channelConfigs.count + 1) : 1 + index
+                Layout.column: 0
+                Layout.fillWidth: root.constrainedWidth
+                Layout.minimumWidth: 0
+                wrapMode: Text.WordWrap
+            }
+        }
+        Repeater {
+            model: root.group.channels
+            Repeater {
+                property int channelIndex: index
+                model: object.configInstances
+                Item {
+                    id: cell
+                    objectName: root.objectName + "_cell_" + channelIndex + "_" + index
+                    visible: object.config.visible && (root.showAdvanced || !object.config.advanced)
+                        && (typeof object.visible === "undefined" || object.visible)
+                    enabled: typeof object.enabled === "undefined" || object.enabled
+                    Layout.row: root.stacked ? channelIndex * (root.group.channelConfigs.count + 1) + 1 + index
+                                            : 1 + channelIndex
+                    Layout.column: root.stacked ? 0 : 1 + index
+                    Layout.fillWidth: root.constrainedWidth
+                    Layout.minimumWidth: 0
+                    implicitWidth: root.constrainedWidth ? ScreenTools.defaultFontPixelWidth * 10 : field.implicitWidth
+                    implicitHeight: Math.max(label.visible ? label.implicitHeight : 0, field.implicitHeight)
+                    QGCLabel {
+                        id: label
+                        text: root.labelText(object.config.label)
+                        visible: root.stacked
+                        width: Math.min(cell.width * 0.4, ScreenTools.defaultFontPixelWidth * 10)
+                        anchors.verticalCenter: parent.verticalCenter
+                        wrapMode: Text.WordWrap
+                    }
+                    ActuatorFact {
+                        id: field
+                        objectName: cell.objectName + "_fact"
+                        fact: object.fact
+                        constrainedWidth: root.constrainedWidth
+                        x: label.visible ? label.width + ScreenTools.defaultFontPixelWidth : 0
+                        width: root.constrainedWidth ? Math.max(0, cell.width - x) : implicitWidth
+                        height: implicitHeight
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+            }
+        }
+    }
 
     Component {
         id: pageComponent
 
         Grid {
+            objectName: "actuatorSetup_layout"
             columns: QGroundControl.corePlugin.directMissionItemEditing ? 1 : 2
             width: QGroundControl.corePlugin.directMissionItemEditing ? availableWidth : implicitWidth
             spacing:                        ScreenTools.defaultFontPixelWidth * 4
@@ -30,7 +156,7 @@ SetupPage {
 
             ColumnLayout {
                 spacing:                    ScreenTools.defaultFontPixelHeight
-                implicitWidth:              _leftColumnWidth
+                width:                      _leftColumnWidth
 
                 // mixer ui
                 RowLayout {
@@ -53,6 +179,7 @@ SetupPage {
                 }
 
                 Rectangle {
+                    objectName: "actuatorSetup_geometry"
                     implicitWidth:          _leftColumnWidth
                     implicitHeight:         mixerUi.height + (_margins * 2)
                     color:                  qgcPal.windowShade
@@ -60,6 +187,7 @@ SetupPage {
 
                     Column {
                         id:                 mixerUi
+                        width: actuatorPage._constrainedWidth ? Math.max(0, parent.width - actuatorPage._margins * 2) : implicitWidth
                         spacing:            _margins
                         anchors {
                             left:           parent.left
@@ -71,10 +199,15 @@ SetupPage {
                             model:          actuators.mixer.groups
                             ColumnLayout {
                                 property var mixerGroup: object
+                                width: actuatorPage._constrainedWidth ? mixerUi.width : implicitWidth
 
                                 RowLayout {
+                                    Layout.fillWidth: actuatorPage._constrainedWidth
                                     QGCLabel {
-                                        text:                    mixerGroup.label
+                                        text:                    actuatorPage.actuatorLabel(mixerGroup.label)
+                                        Layout.fillWidth: actuatorPage._constrainedWidth
+                                        Layout.minimumWidth: 0
+                                        wrapMode: Text.WordWrap
                                         font.bold:               true
                                         rightPadding:            ScreenTools.defaultFontPixelWidth * 3
                                     }
@@ -85,60 +218,26 @@ SetupPage {
                                     }
                                 }
 
-                                GridLayout {
-                                    rows:       1 + mixerGroup.channels.count
-                                    columns:    1 + mixerGroup.channelConfigs.count
-
-                                    QGCLabel {
-                                        text:   ""
-                                    }
-
-                                    // param config labels
-                                    Repeater {
-                                        model:              mixerGroup.channelConfigs
-                                        QGCLabel {
-                                            text:           object.label
-                                            visible:        object.visible && (_showAdvanced || !object.advanced)
-                                            Layout.row:     0
-                                            Layout.column:  1 + index
-                                        }
-                                    }
-                                    // param instances
-                                    Repeater {
-                                        model:              mixerGroup.channels
-                                        QGCLabel {
-                                            text:           object.label + ":"
-                                            Layout.row:     1 + index
-                                            Layout.column:  0
-                                        }
-                                    }
-                                    Repeater {
-                                        model:              mixerGroup.channels
-                                        Repeater {
-                                            property var channel: object
-                                            property var channelIndex: index
-
-                                            model: object.configInstances
-
-                                            ActuatorFact {
-                                                fact:           object.fact
-                                                Layout.row:     1 + channelIndex
-                                                Layout.column:  1 + index
-                                                visible:        object.config.visible && (_showAdvanced || !object.config.advanced) && object.visible
-                                                enabled:        object.enabled
-                                            }
-                                        }
-                                    }
+                                ActuatorChannelGrid {
+                                    objectName: "actuatorSetup_geometryGrid_" + index
+                                    group: mixerGroup
+                                    showAdvanced: actuatorPage._showAdvanced
+                                    labelText: actuatorPage.actuatorLabel
                                 }
+
 
                                 // extra group config params
                                 Repeater {
                                     model: mixerGroup.configParams
 
                                     RowLayout {
+                                        Layout.fillWidth: actuatorPage._constrainedWidth
                                         spacing:     ScreenTools.defaultFontPixelWidth
                                         QGCLabel {
-                                            text:    object.label + ":"
+                                            text:    actuatorPage.actuatorLabel(object.label) + ":"
+                                            Layout.preferredWidth: actuatorPage._constrainedWidth ? parent.width * 0.4 : -1
+                                            Layout.minimumWidth: 0
+                                            wrapMode: Text.WordWrap
                                             visible: _showAdvanced || !object.advanced
                                         }
                                         ActuatorFact {
@@ -165,7 +264,8 @@ SetupPage {
                     cache:                  false
 
                     property var refreshFlag:         actuators.imageRefreshFlag
-                    readonly property real imageSize: 9 * ScreenTools.defaultFontPixelHeight
+                    readonly property real imageSize: actuatorPage._constrainedWidth
+                        ? Math.min(availableWidth, 9 * ScreenTools.defaultFontPixelHeight) : 9 * ScreenTools.defaultFontPixelHeight
 
                     MouseArea {
                         anchors.fill:  parent
@@ -190,6 +290,7 @@ SetupPage {
 
                     Column {
                         id:                   actuatorTesting
+                        width: actuatorPage._constrainedWidth ? Math.max(0, parent.width - actuatorPage._margins * 2) : implicitWidth
                         spacing:              _margins
                         anchors {
                             left:             parent.left
@@ -199,10 +300,13 @@ SetupPage {
 
                         QGCLabel {
                             text: qsTr("Configure some outputs in order to test them.")
+                            width: actuatorPage._constrainedWidth ? parent.width : implicitWidth
+                            wrapMode: Text.WordWrap
                             visible: actuators.actuatorTest.actuators.count == 0
                         }
 
-                        Row {
+                        RowLayout {
+                            width: actuatorPage._constrainedWidth ? actuatorTesting.width : implicitWidth
                             spacing: ScreenTools.defaultFontPixelWidth
                             visible: actuators.actuatorTest.actuators.count > 0
 
@@ -234,12 +338,16 @@ SetupPage {
                             }
 
                             QGCLabel {
+                                Layout.fillWidth: actuatorPage._constrainedWidth
+                                Layout.minimumWidth: 0
+                                wrapMode: Text.WordWrap
                                 color:  qgcPal.warningText
                                 text: safetySwitch.checked ? qsTr("Careful: Actuator sliders are enabled") : qsTr("Propellers are removed - Enable sliders")
                             }
                         } // Row
 
-                        Row {
+                        Flow {
+                            width: actuatorPage._constrainedWidth ? actuatorTesting.width : implicitWidth
                             spacing: ScreenTools.defaultFontPixelWidth * 2
                             enabled: safetySwitch.checked
 
@@ -323,6 +431,8 @@ SetupPage {
 
             // Right column
             Column {
+                id: outputColumn
+                width: actuatorPage._constrainedWidth ? availableWidth : implicitWidth
                 QGCLabel {
                     text:               qsTr("Actuator Outputs")
                     font.pointSize:     ScreenTools.mediumFontPointSize
@@ -330,6 +440,8 @@ SetupPage {
                 }
                 QGCLabel {
                     text:          qsTr("One or more actuator still needs to be assigned to an output.")
+                    width: actuatorPage._constrainedWidth ? parent.width : implicitWidth
+                    wrapMode: Text.WordWrap
                     visible:       actuators.hasUnsetRequiredFunctions
                     color:         qgcPal.warningText
                     bottomPadding: ScreenTools.defaultFontPixelHeight
@@ -338,11 +450,13 @@ SetupPage {
 
                 // actuator output selection tabs
                 QGCTabBar {
+                    id: outputTabs
+                    width: actuatorPage._constrainedWidth ? outputColumn.width : implicitWidth
                     Repeater {
                         model: actuators.actuatorOutputs
                         QGCTabButton {
                             text:      '   ' + object.label + '   '
-                            width:     implicitWidth
+                            width:     actuatorPage._constrainedWidth ? outputTabs.width / Math.max(1, outputTabs.count) : implicitWidth
                         }
                     }
                     onCurrentIndexChanged: {
@@ -353,6 +467,8 @@ SetupPage {
                 // actuator outputs
                 Rectangle {
                     id:                             selActuatorOutput
+                    objectName: "actuatorSetup_outputs"
+                    width: actuatorPage._constrainedWidth ? outputColumn.width : implicitWidth
                     implicitWidth:                  actuatorGroupColumn.width + (_margins * 2)
                     implicitHeight:                 actuatorGroupColumn.height + (_margins * 2)
                     color:                          qgcPal.windowShade
@@ -361,6 +477,7 @@ SetupPage {
 
                     Column {
                         id:               actuatorGroupColumn
+                        width: actuatorPage._constrainedWidth ? Math.max(0, parent.width - actuatorPage._margins * 2) : implicitWidth
                         spacing:          _margins
                         anchors.centerIn: parent
 
@@ -423,14 +540,19 @@ SetupPage {
                         }
 
                         Column {
+                            width: actuatorPage._constrainedWidth ? actuatorGroupColumn.width : implicitWidth
                             enabled:          !safetySwitch.checked && !actuators.motorAssignmentActive
                             spacing:          _margins
 
                             RowLayout {
+                                width: actuatorPage._constrainedWidth ? parent.width : implicitWidth
                                 property var enableParam:     selActuatorOutput.actuatorOutput.enableParam
                                 QGCLabel {
                                     visible:                  parent.enableParam != null
-                                    text:                     parent.enableParam ? parent.enableParam.label + ":" : ""
+                                    text:                     parent.enableParam ? actuatorPage.actuatorLabel(parent.enableParam.label) + ":" : ""
+                                    Layout.preferredWidth: actuatorPage._constrainedWidth ? parent.width * 0.4 : -1
+                                    Layout.minimumWidth: 0
+                                    wrapMode: Text.WordWrap
                                 }
                                 ActuatorFact {
                                     visible:                  parent.enableParam != null
@@ -444,12 +566,17 @@ SetupPage {
 
                                 ColumnLayout {
                                     property var subgroup: object
+                                    width: actuatorPage._constrainedWidth ? actuatorGroupColumn.width : implicitWidth
                                     visible:               selActuatorOutput.actuatorOutput.groupsVisible
 
                                     RowLayout {
+                                        Layout.fillWidth: actuatorPage._constrainedWidth
                                         visible: subgroup.label != ""
                                         QGCLabel {
-                                            text:                    subgroup.label
+                                            text:                    actuatorPage.actuatorLabel(subgroup.label)
+                                            Layout.fillWidth: actuatorPage._constrainedWidth
+                                            Layout.minimumWidth: 0
+                                            wrapMode: Text.WordWrap
                                             font.bold:               true
                                             rightPadding:            ScreenTools.defaultFontPixelWidth * 3
                                         }
@@ -460,56 +587,25 @@ SetupPage {
                                         }
                                     }
 
-                                    GridLayout {
-                                        rows:      1 + subgroup.channels.count
-                                        columns:   1 + subgroup.channelConfigs.count
-
-                                        QGCLabel {
-                                            text: ""
-                                        }
-
-                                        // param config labels
-                                        Repeater {
-                                            model: subgroup.channelConfigs
-                                            QGCLabel {
-                                                text:           object.label
-                                                visible:        object.visible && (_showAdvanced || !object.advanced)
-                                                Layout.row:     0
-                                                Layout.column:  1 + index
-                                            }
-                                        }
-                                        // param instances
-                                        Repeater {
-                                            model: subgroup.channels
-                                            QGCLabel {
-                                                text:            object.label + ":"
-                                                Layout.row:      1 + index
-                                                Layout.column:   0
-                                            }
-                                        }
-                                        Repeater {
-                                            model: subgroup.channels
-                                            Repeater {
-                                                property var channel:      object
-                                                property var channelIndex: index
-                                                model:                     object.configInstances
-                                                ActuatorFact {
-                                                    fact:           object.fact
-                                                    Layout.row:     1 + channelIndex
-                                                    Layout.column:  1 + index
-                                                    visible:        object.config.visible && (_showAdvanced || !object.config.advanced)
-                                                }
-                                            }
-                                        }
+                                    ActuatorChannelGrid {
+                                        objectName: "actuatorSetup_outputGrid_" + index
+                                        group: subgroup
+                                        showAdvanced: actuatorPage._showAdvanced
+                                        labelText: actuatorPage.actuatorLabel
                                     }
+
 
                                     // extra subgroup config params
                                     Repeater {
                                         model: subgroup.configParams
 
                                         RowLayout {
+                                            Layout.fillWidth: actuatorPage._constrainedWidth
                                             QGCLabel {
-                                                text: object.label + ":"
+                                                text: actuatorPage.actuatorLabel(object.label) + ":"
+                                                Layout.preferredWidth: actuatorPage._constrainedWidth ? parent.width * 0.4 : -1
+                                                Layout.minimumWidth: 0
+                                                wrapMode: Text.WordWrap
                                             }
                                             ActuatorFact {
                                                 fact: object.fact
@@ -525,8 +621,12 @@ SetupPage {
                                 model: selActuatorOutput.actuatorOutput.configParams
 
                                 RowLayout {
+                                    width: actuatorPage._constrainedWidth ? parent.width : implicitWidth
                                     QGCLabel {
-                                        text: object.label + ":"
+                                        text: actuatorPage.actuatorLabel(object.label) + ":"
+                                        Layout.preferredWidth: actuatorPage._constrainedWidth ? parent.width * 0.4 : -1
+                                        Layout.minimumWidth: 0
+                                        wrapMode: Text.WordWrap
                                     }
                                     ActuatorFact {
                                         fact: object.fact
@@ -538,8 +638,12 @@ SetupPage {
                             Repeater {
                                 model: selActuatorOutput.actuatorOutput.notes
                                 ColumnLayout {
+                                    width: actuatorPage._constrainedWidth ? parent.width : implicitWidth
                                     spacing: ScreenTools.defaultFontPixelHeight
                                     QGCLabel {
+                                        Layout.fillWidth: actuatorPage._constrainedWidth
+                                        Layout.minimumWidth: 0
+                                        wrapMode: Text.WordWrap
                                         text:       modelData
                                         color:      qgcPal.warningText
                                     }
