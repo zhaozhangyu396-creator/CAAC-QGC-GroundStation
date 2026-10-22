@@ -98,6 +98,7 @@ Item {
     PlanMasterController {
         id: planMasterController
         flyView: false
+        property bool caacHomeDragActive: false
 
         Component.onCompleted: {
             _planMasterController.start()

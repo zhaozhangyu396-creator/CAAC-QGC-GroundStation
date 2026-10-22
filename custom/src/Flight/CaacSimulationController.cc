@@ -370,6 +370,9 @@ bool CaacSimulationController::start(PlanMasterController* plan)
         _setStatus(tr("Stop the current simulation and disconnect other aircraft before starting."));
         return false;
     }
+    if (auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance())) {
+        plugin->initializeDefaultPlan(plan);
+    }
     _home = plan->missionController()->plannedHomePosition();
     _settings = defaults();
     _options = {};
@@ -490,6 +493,9 @@ bool CaacSimulationController::upload(PlanMasterController* plan, bool preserveP
         _setStatus(QCoreApplication::translate(
             "PlanMasterController", "Confirm or cancel the orientation preview before saving or uploading."));
         return false;
+    }
+    if (auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance())) {
+        plugin->initializeDefaultPlan(plan);
     }
     auto* mission = plan->missionController();
     const auto home = mission->plannedHomePosition();
@@ -682,6 +688,14 @@ void CaacSimulationController::_tick()
                 emit statusChanged();
                 break;
             }
+        }
+    }
+    if (_planningPlan && !_planningPlan->syncInProgress() && !_uploadSent &&
+        !_planningPlan->property("caacHomeDragActive").toBool() &&
+        !_planningPlan->property("caacRotationPreviewActive").toBool()) {
+        const auto home = _planningPlan->missionController()->plannedHomePosition();
+        if (home != _home && _engine.updateHome(home)) {
+            _home = home;
         }
     }
     _publish();

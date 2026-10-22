@@ -20,6 +20,9 @@ Item {
         return true
     }
     function prepareUpload() {
+        if (editor.planMasterController) {
+            QGroundControl.corePlugin.initializeDefaultPlan(editor.planMasterController)
+        }
         return (!simulationInputsEdited && !simulationSettings.draftDirty) || saveSimulationSettings()
     }
     readonly property var _points: routeController.coordinateItems
@@ -112,7 +115,8 @@ Item {
                     Layout.fillWidth: true
                     text: qsTr("Save home position")
                     primary: true
-                    onClicked: root.routeController.updatePlannedHome(homeLatitude.coordinate, homeLongitude.coordinate, root.number(homeAltitude.text))
+                    onClicked: root.routeController.updatePlannedHome(homeLatitude.coordinate, homeLongitude.coordinate,
+                        root.number(homeAltitude.text), homeAltitude.manuallyEdited)
                 }
             }
             CaacSettingsSection {

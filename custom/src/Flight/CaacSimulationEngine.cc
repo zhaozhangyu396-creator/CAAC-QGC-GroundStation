@@ -36,6 +36,18 @@ void CaacSimulationEngine::initialize(const QGeoCoordinate& home, const Options&
     _takeoffAtCurrentPosition = false;
 }
 
+bool CaacSimulationEngine::updateHome(const QGeoCoordinate& home)
+{
+    if (!home.isValid() || !std::isfinite(home.altitude()) || std::abs(home.altitude()) > 100000) {
+        return false;
+    }
+    _home = home;
+    if (!_state.airborne) {
+        _state.position.setAltitude(home.altitude());
+    }
+    return true;
+}
+
 bool CaacSimulationEngine::setHorizontalSpeed(double speed)
 {
     if (!std::isfinite(speed) || speed <= 0 || speed > 100) {

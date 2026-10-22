@@ -25,6 +25,7 @@
 #include "LinkInterface.h"
 #include "MissionController.h"
 #include "MissionManager.h"
+#include "MissionSettingsItem.h"
 #include "MultiVehicleManager.h"
 #include "ParameterManager.h"
 #include "PlanMasterController.h"
@@ -464,17 +465,49 @@ QGeoCoordinate CaacCorePlugin::defaultHomePosition()
 
 void CaacCorePlugin::initializeDefaultPlan(PlanMasterController* controller) const
 {
-    if (!controller || controller->property("flyView").toBool() || !controller->offline() ||
+    if (!controller || controller->property("flyView").toBool() ||
+        controller->property("caacHomeDragActive").toBool() ||
+        (!controller->offline() && (!_simulation || !_simulation->ownsVehicle(controller->managerVehicle()))) ||
         controller->syncInProgress()) {
         return;
     }
     auto* mission = controller->missionController();
-    if (mission->visualItems()->count() != 1 || mission->homePositionSet()) {
+    auto* items = mission->visualItems();
+    auto* home = items->count() ? items->value<MissionSettingsItem*>(0) : nullptr;
+    if (!home || home->property("caacHomeAltitudeManual").toBool()) {
+        return;
+    }
+    auto coordinate = mission->plannedHomePosition();
+    const bool hadHome = coordinate.isValid();
+    if (!hadHome) {
+        if (items->count() != 1) {
+            return;
+        }
+        coordinate = defaultHomePosition();
+    } else {
+        const bool hasAltitude = std::isfinite(coordinate.altitude()) && coordinate.altitude() != 0;
+        if (hasAltitude && !home->property("caacHomeAltitudeAutoRefresh").toBool()) {
+            return;
+        }
+        double altitude = home->terrainAltitude();
+        if (!std::isfinite(altitude)) {
+            if (hasAltitude) {
+                return;
+            }
+            // The configured training-field height is only a local fallback, never a global terrain estimate.
+            if (coordinate.distanceTo(defaultHomePosition()) > 50) {
+                return;
+            }
+            altitude = defaultHomePosition().altitude();
+        }
+        coordinate.setAltitude(altitude);
+    }
+    if (coordinate == mission->plannedHomePosition()) {
         return;
     }
     const bool wasDirty = mission->dirty();
-    mission->setHomePosition(defaultHomePosition());
-    mission->setDirty(wasDirty);
+    mission->setHomePosition(coordinate);
+    mission->setDirty(hadHome || wasDirty);
 }
 
 bool CaacCorePlugin::keepCurrentPlanOnVehicleChange(PlanMasterController* controller) const

@@ -39,6 +39,7 @@ private slots:
     void _turnModes();
     void _loopsAndReturn();
     void _positionUpdatePreservesProgress();
+    void _homeUpdatePreservesProgress();
     void _windComponents();
     void _rejectInvalidMissionAtomically();
     void _settingsHistoryAndFile();
@@ -316,6 +317,35 @@ void CaacSimulationEngineTest::_levelFlightPitch()
         engine.advanceHoldAltitude(25, 0.1);
         QCOMPARE(engine.state().pitch, 0.0);
     }
+}
+
+void CaacSimulationEngineTest::_homeUpdatePreservesProgress()
+{
+    const QGeoCoordinate home(30, 120, 100);
+    CaacSimulationEngine engine;
+    engine.initialize(home, {});
+    auto moved = home.atDistanceAndAzimuth(20, 90);
+    moved.setAltitude(105);
+    QVERIFY(engine.updateHome(moved));
+    QCOMPARE(engine.home(), moved);
+    QCOMPARE(engine.state().position.latitude(), home.latitude());
+    QCOMPARE(engine.state().position.longitude(), home.longitude());
+    QCOMPARE(engine.state().position.altitude(), 105.0);
+    QVERIFY(!engine.state().airborne);
+    QString error;
+    const QMap<uint16_t, mavlink_mission_item_int_t> mission{{0, waypoint(0, home.atDistanceAndAzimuth(100, 0), 20)}};
+    QVERIFY(engine.load(mission, moved, {}, error));
+    engine.advance(1);
+    const auto before = engine.state();
+    QVERIFY(before.airborne);
+    moved.setAltitude(110);
+    QVERIFY(engine.updateHome(moved));
+    QCOMPARE(engine.state().position, before.position);
+    QCOMPARE(engine.state().sequence, before.sequence);
+    QCOMPARE(engine.state().airborne, before.airborne);
+    QVERIFY(engine.loaded());
+    QVERIFY(!engine.updateHome(QGeoCoordinate()));
+    QCOMPARE(engine.home(), moved);
 }
 
 void CaacSimulationEngineTest::_climbGeometry()

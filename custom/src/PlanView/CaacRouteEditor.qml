@@ -1192,6 +1192,9 @@ Column {
         }
         function onMissionItemDragStarted(item) {
             waypointPopup.close()
+            if (item && item.sequenceNumber === 0) {
+                root.planMasterController.caacHomeDragActive = true
+            }
             editorController.cancelRouteOrientation()
             root._dragStartCoordinate = item ? QtPositioning.coordinate(item.coordinate.latitude, item.coordinate.longitude, item.coordinate.altitude)
                 : QtPositioning.coordinate()
@@ -1200,7 +1203,9 @@ Column {
             editorController.beginEdit()
         }
         function onMissionItemDragFinished(item) {
+            root.planMasterController.caacHomeDragActive = false
             if (item && item.sequenceNumber === 0 && item.coordinate.isValid) {
+                editorController.refreshPlannedHomeAltitude()
                 item.dirty = true
                 root.planMasterController.missionController.setCurrentPlanViewSeqNum(0, true)
             }

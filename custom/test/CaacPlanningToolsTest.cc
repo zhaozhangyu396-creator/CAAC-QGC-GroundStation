@@ -22,6 +22,8 @@ class CaacPlanningToolsTest : public OfflineMissionTest
     Q_OBJECT
 private slots:
     void _defaultPlannedHome();
+    void _missingHomeAltitude_data();
+    void _missingHomeAltitude();
     void _templateTransactions();
     void _translationPreservesMission();
     void _invalidInputsAreAtomic();
@@ -31,6 +33,7 @@ private slots:
     void _orientationPreview();
     void _quickWaypointOperations();
     void _relativeEndpointEditing();
+    void _relativeOverwrite();
     void _batchWaypointDeletion();
     void _centerHomeOnRoute();
     void _dragSnapping_data();
@@ -84,6 +87,51 @@ void CaacPlanningToolsTest::_defaultPlannedHome()
     master->setFlyView(true);
     plugin->initializeDefaultPlan(master);
     QVERIFY(!mission->homePositionSet());
+}
+
+void CaacPlanningToolsTest::_missingHomeAltitude_data()
+{
+    QTest::addColumn<double>("distance");
+    QTest::addColumn<double>("altitude");
+    QTest::addColumn<double>("terrain");
+    QTest::addColumn<bool>("manual");
+    QTest::addColumn<double>("expected");
+    QTest::newRow("default-field-zero") << 0.0 << 0.0 << qQNaN() << false << 2062.0;
+    QTest::newRow("nearby-field-missing") << 30.0 << qQNaN() << qQNaN() << false << 2062.0;
+    QTest::newRow("terrain-at-home") << 1000.0 << 0.0 << 1800.0 << false << 1800.0;
+    QTest::newRow("unknown-remote-height") << 1000.0 << 0.0 << qQNaN() << false << 0.0;
+    QTest::newRow("explicit-sea-level") << 0.0 << 0.0 << 1800.0 << true << 0.0;
+    QTest::newRow("existing-positive-height") << 0.0 << 1900.0 << 1800.0 << false << 1900.0;
+}
+
+void CaacPlanningToolsTest::_missingHomeAltitude()
+{
+    QFETCH(double, distance);
+    QFETCH(double, altitude);
+    QFETCH(double, terrain);
+    QFETCH(bool, manual);
+    QFETCH(double, expected);
+    auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
+    QVERIFY(plugin);
+    auto* mission = missionController();
+    auto coordinate = CaacCorePlugin::defaultHomePosition().atDistanceAndAzimuth(distance, 90);
+    coordinate.setAltitude(altitude);
+    mission->setHomePosition(coordinate);
+    QVERIFY(mission->insertSimpleMissionItem(coordinate.atDistanceAndAzimuth(30, 0), 1, false));
+    auto* home = mission->visualItems()->value<MissionSettingsItem*>(0);
+    QVERIFY(home);
+    home->setProperty("caacHomeAltitudeManual", manual);
+    if (std::isfinite(terrain)) {
+        const QList<double> heights{terrain};
+        QVERIFY(QMetaObject::invokeMethod(home, "_terrainDataReceived", Qt::DirectConnection, Q_ARG(bool, true),
+                                          Q_ARG(QList<double>, heights)));
+    }
+    plugin->initializeDefaultPlan(planController());
+    QCOMPARE(mission->plannedHomePosition().altitude(), expected);
+    QCOMPARE(home->plannedHomePositionAltitude()->rawValue().toDouble(), expected);
+    QCOMPARE(mission->plannedHomePosition().latitude(), coordinate.latitude());
+    QCOMPARE(mission->plannedHomePosition().longitude(), coordinate.longitude());
+    QCOMPARE(home->property("caacHomeAltitudeManual").toBool(), manual);
 }
 
 void CaacPlanningToolsTest::_nearlyCoincidentSnapGuides()
@@ -601,6 +649,44 @@ void CaacPlanningToolsTest::_batchWaypointDeletion()
     QCOMPARE(mission->plannedHomePosition(), home);
     QVERIFY(editor.undo());
     QCOMPARE(master.saveToJson(), original);
+}
+
+void CaacPlanningToolsTest::_relativeOverwrite()
+{
+    auto* mission = missionController();
+    const QGeoCoordinate home(30, 120, 20);
+    mission->setHomePosition(home);
+    CaacRouteEditorController editor;
+    editor.setPlanMasterController(planController());
+    QVERIFY(editor.addWaypoint(home.atDistanceAndAzimuth(30, 0)));
+    QVERIFY(editor.addWaypoint(home.atDistanceAndAzimuth(60, 0)));
+    auto* point = mission->visualItems()->value<SimpleMissionItem*>(2);
+    QVERIFY(point);
+    point->setAltitudeFrame(QGroundControlQmlGlobal::AltitudeFrameAbsolute);
+    point->altitude()->setRawValue(123);
+    point->missionItem().setParam1(7);
+    point->missionItem().setParam4(45);
+    editor.clearHistory();
+    const auto before = planController()->saveToJson();
+    QVERIFY(editor.insertRelativeWaypoint(0, 2, 90, 50, false, true));
+    QCOMPARE(mission->visualItems()->count(), 3);
+    QCOMPARE(mission->visualItems()->get(2), point);
+    QCOMPARE(point->altitude()->rawValue().toDouble(), 123.0);
+    QCOMPARE(point->altitudeFrame(), QGroundControlQmlGlobal::AltitudeFrameAbsolute);
+    QCOMPARE(point->missionItem().param1(), 7.0);
+    QCOMPARE(point->missionItem().param4(), 45.0);
+    QVERIFY(std::abs(QGCGeo::geodesicDistance(home, point->coordinate()) - 50) < 0.01);
+    QVERIFY(std::abs(QGCGeo::geodesicAzimuth(home, point->coordinate()) - 90) < 0.01);
+    const auto after = planController()->saveToJson();
+    QVERIFY(editor.undo());
+    QCOMPARE(planController()->saveToJson(), before);
+    QVERIFY(editor.redo());
+    QCOMPARE(planController()->saveToJson(), after);
+    QVERIFY(!editor.insertRelativeWaypoint(0, 0, 90, 50, false, true));
+    QVERIFY(!editor.insertRelativeWaypoint(0, 2, 90, 0, false, true));
+    QCOMPARE(planController()->saveToJson(), after);
+    QVERIFY(editor.insertRelativeWaypoint(1, 2, 180, 25, true, true));
+    QCOMPARE(mission->visualItems()->count(), 3);
 }
 
 void CaacPlanningToolsTest::_relativeEndpointEditing()

@@ -5,6 +5,7 @@
 #include <memory>
 #include <utility>
 
+#include <QtCore/QJsonArray>
 #include <QtCore/QLineF>
 #include <QtCore/QRegularExpression>
 #include <QtCore/QScopeGuard>
@@ -25,12 +26,14 @@
 #include "CaacRouteEditorController.h"
 #include "CaacSimulationController.h"
 #include "CaacSimulationEngine.h"
+#include "FlightPathSegment.h"
 #include "Joystick.h"
 #include "JoystickManager.h"
 #include "JoystickManagerSettings.h"
 #include "JoystickSettings.h"
 #include "MissionController.h"
 #include "MissionManager.h"
+#include "MissionSettingsItem.h"
 #include "MockJoystick.h"
 #include "MockLink.h"
 #include "MockLinkMissionItemHandler.h"
@@ -62,6 +65,8 @@ class CaacDefaultHomeUITest : public QmlUITestBase
     Q_OBJECT
 private slots:
     void _defaultStartPosition();
+    void _missingAltitudeSimulation_data();
+    void _missingAltitudeSimulation();
 };
 
 class CaacMissionUpdateUITest : public QmlUITestBase
@@ -70,6 +75,122 @@ class CaacMissionUpdateUITest : public QmlUITestBase
 private slots:
     void _updateWaypointsDuringFlight();
 };
+
+void CaacDefaultHomeUITest::_missingAltitudeSimulation_data()
+{
+    QTest::addColumn<bool>("terrainAvailable");
+    QTest::newRow("configured-training-field") << false;
+    QTest::newRow("terrain-at-another-location") << true;
+}
+
+void CaacDefaultHomeUITest::_missingAltitudeSimulation()
+{
+    QFETCH(bool, terrainAvailable);
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    auto* panel = findVisibleItem(_rootItem, QStringLiteral("caacRouteEditor"));
+    QVERIFY(panel);
+    auto* master = panel->property("planMasterController").value<PlanMasterController*>();
+    auto* editor = panel->property("routeController").value<CaacRouteEditorController*>();
+    auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
+    QVERIFY(master && editor && plugin);
+    auto* mission = master->missionController();
+    auto expected = CaacCorePlugin::defaultHomePosition();
+    if (terrainAvailable) {
+        expected = expected.atDistanceAndAzimuth(1000, 90);
+        expected.setAltitude(1800);
+    }
+    auto missing = expected;
+    missing.setAltitude(0);
+    mission->setHomePosition(missing);
+    QVERIFY(editor->addWaypoint(expected.atDistanceAndAzimuth(30, 0)));
+    QVERIFY(editor->addWaypoint(expected.atDistanceAndAzimuth(60, 0)));
+    for (int i = 1; i <= 2; ++i) {
+        mission->visualItems()->value<SimpleMissionItem*>(i)->altitude()->setRawValue(20);
+    }
+    auto* home = mission->visualItems()->value<MissionSettingsItem*>(0);
+    QVERIFY(home);
+    if (terrainAvailable) {
+        const QList<double> heights{expected.altitude()};
+        QVERIFY(QMetaObject::invokeMethod(home, "_terrainDataReceived", Qt::DirectConnection, Q_ARG(bool, true),
+                                          Q_ARG(QList<double>, heights)));
+    }
+    auto* simulation = plugin->simulation();
+    QVERIFY(simulation);
+    const auto stop = qScopeGuard([simulation]() { simulation->stop(); });
+    QVERIFY(clickToolSelectDropdownButton(QStringLiteral("toolbar_simulation")));
+    QTRY_VERIFY_WITH_TIMEOUT(simulation->vehicle() && simulation->vehicle()->isInitialConnectComplete(),
+                             TestTimeout::longMs());
+    QTRY_COMPARE_WITH_TIMEOUT(mission->plannedHomePosition(), expected, TestTimeout::mediumMs());
+    QVERIFY(clickButton(QStringLiteral("caacGlobalSettingsButton")));
+    auto* field =
+        findVisibleItemScrolled(QStringLiteral("caacHomeAltitude"), QStringLiteral("caacGlobalSettingsScroller"));
+    QVERIFY(field);
+    QTRY_COMPARE_WITH_TIMEOUT(field->property("text").toString().toDouble(), expected.altitude(),
+                              TestTimeout::mediumMs());
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacApplyHome"), QStringLiteral("caacGlobalSettingsScroller")));
+    QVERIFY(!home->property("caacHomeAltitudeManual").toBool());
+    const auto saved = master->saveToJson()
+                           .object()
+                           .value(QStringLiteral("mission"))
+                           .toObject()
+                           .value(QStringLiteral("plannedHomePosition"))
+                           .toArray();
+    QCOMPARE(saved.at(2).toDouble(), expected.altitude());
+    QSignalSpy uploaded(simulation, &CaacSimulationController::missionUploaded);
+    QVERIFY(simulation->upload(master));
+    QTRY_COMPARE_WITH_TIMEOUT(uploaded.count(), 1, TestTimeout::longMs());
+    QVERIFY(simulation->missionReady());
+    QTRY_COMPARE_WITH_TIMEOUT(simulation->vehicle()->homePosition().altitude(), expected.altitude(),
+                              TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(simulation->vehicle()->altitudeAMSL()->rawValue().toDouble(), expected.altitude(),
+                              TestTimeout::mediumMs());
+    const auto aircraftPosition = simulation->vehicle()->coordinate();
+    auto moved = expected.atDistanceAndAzimuth(20, 90);
+    moved.setAltitude(expected.altitude());
+    auto* map = qobject_cast<QQuickItem*>(panel->property("editorMap").value<QObject*>());
+    QVERIFY(map);
+    const QVariant homeObject = QVariant::fromValue(static_cast<QObject*>(home));
+    QVERIFY(QMetaObject::invokeMethod(map, "missionItemDragStarted", Q_ARG(QVariant, homeObject)));
+    mission->setHomePosition(moved);
+    QVERIFY(QMetaObject::invokeMethod(map, "missionItemDragFinished", Q_ARG(QVariant, homeObject)));
+    const QList<double> movedTerrain{expected.altitude() + 5};
+    QVERIFY(QMetaObject::invokeMethod(home, "_terrainDataReceived", Qt::DirectConnection, Q_ARG(bool, true),
+                                      Q_ARG(QList<double>, movedTerrain)));
+    moved.setAltitude(expected.altitude() + 5);
+    expected = moved;
+    QTRY_COMPARE_WITH_TIMEOUT(mission->plannedHomePosition(), expected, TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(std::abs(simulation->vehicle()->homePosition().altitude() - expected.altitude()) < 0.01,
+                             TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(simulation->vehicle()->homePosition().distanceTo(expected) < 0.03,
+                             TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(field->property("text").toString().toDouble(), expected.altitude(),
+                              TestTimeout::mediumMs());
+    QVERIFY(simulation->vehicle()->coordinate().distanceTo(aircraftPosition) < 0.03);
+    QVERIFY(simulation->missionReady());
+    QCOMPARE(uploaded.count(), 1);
+    const auto findLeg = [&]() -> FlightPathSegment* {
+        auto* legs = mission->simpleFlightPathSegments();
+        for (int i = 0; i < legs->count(); ++i) {
+            auto* leg = legs->value<FlightPathSegment*>(i);
+            if (leg && std::abs(leg->coord1AMSLAlt() - expected.altitude() - 20) < 0.01 &&
+                std::abs(leg->coord2AMSLAlt() - expected.altitude() - 20) < 0.01) {
+                return leg;
+            }
+        }
+        return nullptr;
+    };
+    QTRY_VERIFY_WITH_TIMEOUT(findLeg(), TestTimeout::mediumMs());
+    auto* leg = findLeg();
+    QVERIFY(leg->setProperty("amslTerrainHeights", QVariantList{expected.altitude()}));
+    QVERIFY(QMetaObject::invokeMethod(leg, "_updateTerrainCollision", Qt::DirectConnection));
+    QVERIFY(!leg->terrainCollision());
+    QVERIFY(leg->setProperty("amslTerrainHeights", QVariantList{expected.altitude() + 30}));
+    QVERIFY(QMetaObject::invokeMethod(leg, "_updateTerrainCollision", Qt::DirectConnection));
+    QVERIFY(leg->terrainCollision());
+}
 
 void CaacSimulationUITest::_repeatFromLanding()
 {

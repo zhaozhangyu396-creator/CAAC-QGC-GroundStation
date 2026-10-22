@@ -6223,6 +6223,10 @@ Click Ok to start the auto-tuning process.
       <source>Set the landing point in the original editor for complex missions.</source>
       <translation>复杂任务请在原任务编辑器中设置降落点。</translation>
     </message>
+    <message>
+        <source>Select an ordinary waypoint to overwrite.</source>
+        <translation>请选择要覆盖的普通航点。</translation>
+    </message>
 </context>
   <context>
     <name>CaacWaypointDialog</name>
@@ -26039,6 +26043,18 @@ If a vehicle still has this key configured, you will no longer be able to commun
     <message>
         <source>Set landing point</source>
         <translation>设置降落点</translation>
+    </message>
+    <message>
+        <source>Overwrite</source>
+        <translation>覆盖</translation>
+    </message>
+    <message>
+        <source>Overwrite waypoint</source>
+        <translation>覆盖航点</translation>
+    </message>
+    <message>
+        <source>Overwrite changes the selected waypoint position and preserves its altitude and settings.</source>
+        <translation>覆盖所选航点的位置，并保留其高度和其他设置。</translation>
     </message>
 </context>
 <context>

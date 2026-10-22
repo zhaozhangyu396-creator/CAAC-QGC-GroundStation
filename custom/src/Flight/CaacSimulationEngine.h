@@ -45,6 +45,7 @@ public:
     };
 
     void initialize(const QGeoCoordinate& home, const Options& options);
+    bool updateHome(const QGeoCoordinate& home);
     bool load(const QMap<uint16_t, mavlink_mission_item_int_t>& mission, const QGeoCoordinate& home,
               const Options& options, QString& error, const QMap<int, WaypointOptions>& waypointOptions = {});
     bool updateMission(const QMap<uint16_t, mavlink_mission_item_int_t>& mission, const QGeoCoordinate& home,

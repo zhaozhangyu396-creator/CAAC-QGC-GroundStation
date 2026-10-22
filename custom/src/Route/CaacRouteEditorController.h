@@ -93,7 +93,7 @@ public:
     Q_INVOKABLE bool alignRouteAround(const QGeoCoordinate& center, int fromIndex, int toIndex, double targetBearing,
                                       bool includeHome = true);
     Q_INVOKABLE bool insertRelativeWaypoint(int referenceIndex, int afterIndex, double angle, double distance,
-                                            bool interiorAngle);
+                                            bool interiorAngle, bool overwrite = false);
     Q_INVOKABLE bool setRelativeEndpoint(int referenceIndex, double angle, double distance, bool landing,
                                          bool interiorAngle = false);
     Q_INVOKABLE void beginEdit();
@@ -108,6 +108,7 @@ public:
     Q_INVOKABLE bool moveRouteBy(double bearing, double distance, bool includeHome = true);
     Q_INVOKABLE bool updatePlannedHome(double latitude, double longitude, double amslAltitude,
                                        bool manualAltitude = true);
+    Q_INVOKABLE bool refreshPlannedHomeAltitude();
     Q_INVOKABLE bool setMissionFlightSpeed(bool specified, double speed);
     Q_INVOKABLE bool syncWaypointDefaults(const QVariantMap& properties);
 

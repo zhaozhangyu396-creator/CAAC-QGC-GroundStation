@@ -1490,9 +1490,9 @@ bool CaacRouteEditorController::alignRouteAround(const QGeoCoordinate& center, i
 }
 
 bool CaacRouteEditorController::insertRelativeWaypoint(int referenceIndex, int afterIndex, double angle,
-                                                       double distance, bool interiorAngle)
+                                                       double distance, bool interiorAngle, bool overwrite)
 {
-    if (!_canChangeOrder()) {
+    if (!(overwrite ? _canEdit() : _canChangeOrder())) {
         return false;
     }
     auto* mission = _missionController();
@@ -1504,6 +1504,10 @@ bool CaacRouteEditorController::insertRelativeWaypoint(int referenceIndex, int a
     if (!reference || (referenceIndex > 0 && (!reference->isSimpleItem() || !reference->specifiesCoordinate() ||
                                               reference->isStandaloneCoordinate()))) {
         return _fail(tr("Select a simple coordinate reference point."));
+    }
+    auto* destination = overwrite ? model->value<SimpleMissionItem*>(afterIndex) : nullptr;
+    if (overwrite && (afterIndex == 0 || !destination || destination->command() != MAV_CMD_NAV_WAYPOINT)) {
+        return _fail(tr("Select an ordinary waypoint to overwrite."));
     }
     std::optional<QGeoCoordinate> coordinate;
     if (interiorAngle) {
@@ -1529,7 +1533,12 @@ bool CaacRouteEditorController::insertRelativeWaypoint(int referenceIndex, int a
     beginEdit();
     const auto finish = qScopeGuard([this]() { endEdit(); });
     _masterController->setUserSelectedManualCreation(true);
-    mission->insertSimpleMissionItem(*coordinate, afterIndex + 1, true);
+    if (overwrite) {
+        destination->setCoordinate(*coordinate);
+        mission->setCurrentPlanViewSeqNum(destination->sequenceNumber(), true);
+    } else {
+        mission->insertSimpleMissionItem(*coordinate, afterIndex + 1, true);
+    }
     return true;
 }
 
@@ -1730,6 +1739,26 @@ bool CaacRouteEditorController::updatePlannedHome(double latitude, double longit
     return true;
 }
 
+bool CaacRouteEditorController::refreshPlannedHomeAltitude()
+{
+    if (!_canEdit()) {
+        return false;
+    }
+    auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
+    if (!plugin || !plugin->simulation()->ownsVehicle(_masterController->managerVehicle())) {
+        return false;
+    }
+    auto* model = _missionController()->visualItems();
+    auto* home = model->count() ? model->value<MissionSettingsItem*>(0) : nullptr;
+    if (!home || !home->coordinate().isValid()) {
+        return false;
+    }
+    home->setProperty("caacHomeAltitudeManual", false);
+    home->setProperty("caacHomeAltitudeAutoRefresh", true);
+    _syncPlannedHomeAltitude();
+    return true;
+}
+
 void CaacRouteEditorController::_watchVehicleHome()
 {
     for (const auto& connection : _vehicleConnections) {
@@ -1757,8 +1786,13 @@ void CaacRouteEditorController::_syncPlannedHomeAltitude()
     auto* mission = _missionController();
     auto* vehicle = _masterController ? _masterController->managerVehicle() : nullptr;
     if (_synchronizingHome || _restoring || _rotationPreviewActive || !mission || !vehicle ||
-        _masterController->offline() || _masterController->property("flyView").toBool() ||
-        _masterController->syncInProgress()) {
+        _masterController->property("flyView").toBool() || _masterController->syncInProgress()) {
+        return;
+    }
+    if (_masterController->offline() || _masterController->property("caacSimulationPlanning").toBool()) {
+        if (auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance())) {
+            plugin->initializeDefaultPlan(_masterController);
+        }
         return;
     }
     auto* items = mission->visualItems();
@@ -1848,6 +1882,10 @@ void CaacRouteEditorController::_watchItems()
         auto* item = model->value<VisualMissionItem*>(i);
         if (!item) {
             continue;
+        }
+        if (i == 0) {
+            _itemConnections.append(connect(item, &VisualMissionItem::terrainAltitudeChanged, this,
+                                            &CaacRouteEditorController::_syncPlannedHomeAltitude));
         }
         _itemConnections.append(
             connect(item, &VisualMissionItem::dirtyChanged, this, &CaacRouteEditorController::_scheduleCapture));

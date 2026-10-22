@@ -12,8 +12,10 @@ Item {
     required property var routeController
     readonly property bool _compact: width < ScreenTools.defaultFontPixelWidth * 38
     readonly property var _points: routeController ? routeController.coordinateItems : []
+    readonly property var _waypoints: _points.filter(point => point.index > 0 && point.command === 16)
     property var _referenceItem: null
     property var _insertAfterItem: null
+    property var _overwriteItem: null
 
     function selectedIndex(combo) {
         return combo.currentIndex >= 0 && combo.currentIndex < _points.length ? _points[combo.currentIndex].index : -1
@@ -32,6 +34,8 @@ Item {
     function restoreSelections() {
         reference.currentIndex = itemIndex(_referenceItem)
         insertAfter.currentIndex = itemIndex(_insertAfterItem)
+        const index = _waypoints.findIndex(point => itemAt(point.index) === _overwriteItem)
+        overwritePoint.currentIndex = index >= 0 ? index : (_waypoints.length ? 0 : -1)
     }
 
     function addWaypoint() {
@@ -40,6 +44,13 @@ Item {
                 angle.text.trim().length ? Number(angle.text) : NaN,
                 distance.text.trim().length ? Number(distance.text) : NaN, target.currentIndex === 2,
                 angleType.currentIndex === 1)
+        }
+        if (generationMethod.currentIndex === 1) {
+            const index = overwritePoint.currentIndex
+            return routeController.insertRelativeWaypoint(selectedIndex(reference),
+                index >= 0 && index < _waypoints.length ? _waypoints[index].index : -1,
+                angle.text.trim().length ? Number(angle.text) : NaN,
+                distance.text.trim().length ? Number(distance.text) : NaN, angleType.currentIndex === 1, true)
         }
         const afterIndex = selectedIndex(insertAfter)
         const added = routeController.insertRelativeWaypoint(selectedIndex(reference), afterIndex,
@@ -156,18 +167,41 @@ Item {
                 rowSpacing: ScreenTools.defaultFontPixelHeight
                 columnSpacing: ScreenTools.defaultFontPixelWidth
                 QGCLabel { text: qsTr("Generation method") }
-                QGCLabel { text: target.currentIndex === 0 ? qsTr("Insert") : qsTr("Set position"); Layout.fillWidth: true }
-                QGCLabel { text: qsTr("Insert after"); visible: target.currentIndex === 0 }
+                QGCComboBox {
+                    id: generationMethod
+                    objectName: "caacRelativeGenerationMethod"
+                    visible: target.currentIndex === 0
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: 0
+                    model: [qsTr("Insert"), qsTr("Overwrite")]
+                }
+                QGCLabel { text: qsTr("Set position"); visible: target.currentIndex > 0; Layout.fillWidth: true }
+                QGCLabel { text: qsTr("Insert after"); visible: insertAfter.visible }
                 QGCComboBox {
                     id: insertAfter
                     objectName: "caacRelativeInsertAfter"
-                    visible: target.currentIndex === 0
+                    visible: target.currentIndex === 0 && generationMethod.currentIndex === 0
                     Layout.fillWidth: true
                     Layout.minimumWidth: 0
                     model: root._points
                     textRole: "label"
                     onModelChanged: Qt.callLater(root.restoreSelections)
                     onActivated: root._insertAfterItem = root.itemAt(root.selectedIndex(insertAfter))
+                }
+                QGCLabel { text: qsTr("Overwrite waypoint"); visible: overwritePoint.visible }
+                QGCComboBox {
+                    id: overwritePoint
+                    objectName: "caacRelativeOverwritePoint"
+                    visible: target.currentIndex === 0 && generationMethod.currentIndex === 1
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: 0
+                    model: root._waypoints
+                    textRole: "label"
+                    onModelChanged: Qt.callLater(root.restoreSelections)
+                    onActivated: (index) => {
+                        root._overwriteItem = index >= 0 && index < root._waypoints.length
+                            ? root.itemAt(root._waypoints[index].index) : null
+                    }
                 }
             }
             QGCLabel {
@@ -179,7 +213,9 @@ Item {
             QGCLabel {
                 Layout.fillWidth: true
                 wrapMode: Text.WordWrap
-                text: target.currentIndex === 0 ? qsTr("Press Space to add a waypoint") : qsTr("Set the selected endpoint from the reference point, angle and distance.")
+                text: target.currentIndex > 0 ? qsTr("Set the selected endpoint from the reference point, angle and distance.")
+                    : generationMethod.currentIndex === 1 ? qsTr("Overwrite changes the selected waypoint position and preserves its altitude and settings.")
+                    : qsTr("Press Space to add a waypoint")
                 font.pointSize: ScreenTools.smallFontPointSize
             }
         }
@@ -191,8 +227,9 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        text: target.currentIndex === 0 ? qsTr("Add") : target.currentIndex === 1 ? qsTr("Set takeoff point") : qsTr("Set landing point")
-        enabled: root._points.length > 0
+        text: target.currentIndex > 0 ? (target.currentIndex === 1 ? qsTr("Set takeoff point") : qsTr("Set landing point"))
+            : generationMethod.currentIndex === 1 ? qsTr("Overwrite") : qsTr("Add")
+        enabled: root._points.length > 0 && (target.currentIndex > 0 || generationMethod.currentIndex === 0 || root._waypoints.length > 0)
         primary: true
         onClicked: root.addWaypoint()
     }
@@ -201,6 +238,7 @@ Item {
         sequence: "Space"
         enabled: root.visible && root.enabled && addButton.enabled && !angle.activeFocus && !distance.activeFocus
             && !target.popup.visible && !reference.popup.visible && !angleType.popup.visible && !insertAfter.popup.visible
+            && !generationMethod.popup.visible && !overwritePoint.popup.visible
         onActivated: root.addWaypoint()
     }
 }

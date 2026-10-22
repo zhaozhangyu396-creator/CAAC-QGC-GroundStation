@@ -23850,4 +23850,26 @@ Source: %6 (session %7); destination: %8 (session %9)</source>
         <translation>显示障碍物距离</translation>
     </message>
 </context>
+<context>
+    <name>CaacRelativeEditor</name>
+    <message>
+        <source>Overwrite</source>
+        <translation>覆盖</translation>
+    </message>
+    <message>
+        <source>Overwrite waypoint</source>
+        <translation>覆盖航点</translation>
+    </message>
+    <message>
+        <source>Overwrite changes the selected waypoint position and preserves its altitude and settings.</source>
+        <translation>覆盖所选航点的位置，并保留其高度和其他设置。</translation>
+    </message>
+</context>
+<context>
+    <name>CaacRouteEditorController</name>
+    <message>
+        <source>Select an ordinary waypoint to overwrite.</source>
+        <translation>请选择要覆盖的普通航点。</translation>
+    </message>
+</context>
 </TS>
