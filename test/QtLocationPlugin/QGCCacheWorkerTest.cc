@@ -1,9 +1,11 @@
 #include "QGCCacheWorkerTest.h"
 
+#include <cmath>
+
+#include <QtCore/QSemaphore>
 #include <QtCore/QTemporaryDir>
 #include <QtPositioning/QGeoCoordinate>
 #include <QtTest/QTest>
-#include <cmath>
 
 #include "BaseClasses/TerrainTest.h"
 #include "ElevationMapProvider.h"
@@ -55,6 +57,35 @@ void QGCCacheWorkerTest::_testStartAndStop()
     worker.stop();
     QVERIFY(worker.wait(TestTimeout::mediumMs()));
     QVERIFY(!worker.isRunning());
+
+    // Hold the new thread before run() so shutdown deterministically precedes its first instruction.
+    QSemaphore started;
+    QSemaphore enterRun;
+    const auto gate = connect(
+        &worker, &QThread::started, &worker,
+        [&]() {
+            started.release();
+            enterRun.acquire();
+        },
+        Qt::DirectConnection);
+    const bool enqueued = worker.enqueueTask(new QGCMapTask(QGCMapTask::TaskType::taskInit));
+    const bool entered = enqueued && started.tryAcquire(1, TestTimeout::mediumMs());
+    worker.stop();
+    enterRun.release();
+    const bool stopped = worker.wait(TestTimeout::shortMs());
+    disconnect(gate);
+    if (!stopped) {
+        // A broken startup must still be stopped before the fixture and semaphores are destroyed.
+        worker.stop();
+        QVERIFY(worker.wait(TestTimeout::mediumMs()));
+    }
+    QVERIFY(enqueued);
+    QVERIFY(entered);
+    QVERIFY2(stopped, "A stop requested before run() must not be cleared by thread startup.");
+
+    QVERIFY(_startWorker(worker));
+    worker.stop();
+    QVERIFY(worker.wait(TestTimeout::mediumMs()));
 }
 
 void QGCCacheWorkerTest::_testEnqueueBeforeInit()
