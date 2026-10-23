@@ -19,6 +19,9 @@ private:
 
 class CyberJapanMapProvider : public MapProvider
 {
+public:
+    bool isUserSelectable() const final { return false; }
+
 protected:
     CyberJapanMapProvider(const QString &mapName, const QString &mapTypeId, const QString &imageFormat)
         : MapProvider(
@@ -89,6 +92,8 @@ public:
 class LINZBasemapMapProvider : public MapProvider
 {
 public:
+    bool isUserSelectable() const final { return false; }
+
     LINZBasemapMapProvider()
         : MapProvider(
             QStringLiteral("LINZ Basemap"),
@@ -123,6 +128,8 @@ private:
 class OpenStreetMapProvider : public MapProvider
 {
 public:
+    bool isUserSelectable() const final { return false; }
+
     OpenStreetMapProvider()
         : MapProvider(
             QStringLiteral("Street Map"),
@@ -139,6 +146,9 @@ private:
 
 class StatkartMapProvider : public MapProvider
 {
+public:
+    bool isUserSelectable() const final { return false; }
+
 protected:
     StatkartMapProvider(const QString &mapName, const QString &mapTypeId)
         : MapProvider(
@@ -178,6 +188,8 @@ public:
 class SvalbardMapProvider : public MapProvider
 {
 public:
+    bool isUserSelectable() const final { return false; }
+
     SvalbardMapProvider()
         : MapProvider(
             QStringLiteral("Svalbard Topo"),
@@ -196,6 +208,8 @@ private:
 class EniroMapProvider : public MapProvider
 {
 public:
+    bool isUserSelectable() const final { return false; }
+
     EniroMapProvider()
         : MapProvider(
             QStringLiteral("Eniro Topo"),
@@ -212,6 +226,9 @@ private:
 
 class MapQuestMapProvider : public MapProvider
 {
+public:
+    bool isUserSelectable() const final { return false; }
+
 protected:
     MapQuestMapProvider(const QString &mapName, const QString &mapTypeId, MapProvider::MapStyle mapType)
         : MapProvider(
@@ -251,6 +268,9 @@ public:
 
 class VWorldMapProvider : public MapProvider
 {
+public:
+    bool isUserSelectable() const final { return false; }
+
 protected:
     VWorldMapProvider(const QString &mapName, const QString &mapTypeId, const QString &imageFormat, quint32 averageSize, MapProvider::MapStyle mapStyle)
         : MapProvider(

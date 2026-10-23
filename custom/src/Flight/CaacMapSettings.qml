@@ -49,6 +49,7 @@ Rectangle {
                 Layout.fillWidth: true
                 Layout.minimumWidth: 0
                 model: root._providers
+                textTransform: (value) => MapNames.displayName(value)
                 currentIndex: root._providers.indexOf(root._settings.mapProvider.rawValue)
                 onActivated: (index) => {
                     const provider = root._providers[index]

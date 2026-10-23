@@ -15,6 +15,7 @@ protected:
         , _mapTypeId(mapTypeId) {}
 
 public:
+    bool isUserSelectable() const final { return false; }
     QByteArray getToken() const final;
 
 private:

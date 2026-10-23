@@ -1,7 +1,11 @@
 #include "TileMathTest.h"
 
+#include <cmath>
+#include <numbers>
+
 #include <QtCore/QtMath>
 
+#include "Gcj02TileReprojector.h"
 #include "TileMath.h"
 
 using namespace TileMath;
@@ -133,6 +137,125 @@ void TileMathTest::_isValidKey()
     QVERIFY(!isValidKey(TileKey{8, 0, 3}));
     QVERIFY(!isValidKey(TileKey{0, -1, 3}));
     QVERIFY(!isValidKey(TileKey{0, 8, 3}));
+}
+
+namespace {
+QPointF slippyPixel(const QGeoCoordinate& coordinate, int zoom)
+{
+    const double side = std::ldexp(256.0, zoom);
+    return {(coordinate.longitude() + 180.0) / 360.0 * side,
+            (1.0 - std::asinh(std::tan(qDegreesToRadians(coordinate.latitude()))) / std::numbers::pi) * side / 2.0};
+}
+
+QImage markerTile(const QPoint& key, const QPointF& marker)
+{
+    QImage image(256, 256, QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::darkBlue);
+    for (int row = 0; row < 256; ++row) {
+        for (int column = 0; column < 256; ++column) {
+            const QPointF delta = QPointF(key.x() * 256.0 + column + 0.5, key.y() * 256.0 + row + 0.5) - marker;
+            if (QPointF::dotProduct(delta, delta) <= 16.0) {
+                image.setPixel(column, row, qRgb(255, 0, 255));
+            }
+        }
+    }
+    return image;
+}
+}  // namespace
+
+void TileMathTest::_gcjReferenceCoordinates()
+{
+    const QGeoCoordinate wgs(39.908823, 116.397470, 42.0);
+    const QGeoCoordinate gcj = Gcj02TileReprojector::wgs84ToGcj02(wgs);
+    QCOMPARE_LT(qAbs(gcj.latitude() - 39.91022649807321), 1e-9);
+    QCOMPARE_LT(qAbs(gcj.longitude() - 116.4037135824225), 1e-9);
+    QCOMPARE(gcj.altitude(), wgs.altitude());
+    for (const auto& outside : {QGeoCoordinate(47.3977419, 8.5455938), QGeoCoordinate(-33.8688, 151.2093),
+                                QGeoCoordinate(30.0, 72.0), QGeoCoordinate(56.0, 116.0)}) {
+        QCOMPARE(Gcj02TileReprojector::wgs84ToGcj02(outside), outside);
+    }
+    QVERIFY(!Gcj02TileReprojector::wgs84ToGcj02(QGeoCoordinate()).isValid());
+}
+
+void TileMathTest::_gcjTileAlignment()
+{
+    const QGeoCoordinate wgs(39.908823, 116.397470);
+    // Independent reference GCJ coordinate: a source marker must return to the WGS pixel.
+    const QGeoCoordinate gcj(39.91022649807321, 116.4037135824225);
+    for (const int zoom : {16, 23}) {
+        const int sourceZoom = qMin(zoom, 20);
+        const QPointF destination = slippyPixel(wgs, zoom);
+        const int x = int(destination.x()) / 256;
+        const int y = int(destination.y()) / 256;
+        const auto plan = Gcj02TileReprojector::createPlan(x, y, zoom, sourceZoom);
+        QVERIFY(plan.isValid());
+        QVERIFY(Gcj02TileReprojector::needsReprojection(x, y, zoom));
+        QCOMPARE(plan.sourceZoom, sourceZoom);
+        QHash<QPoint, QImage> sources;
+        const QPointF marker = slippyPixel(gcj, sourceZoom);
+        for (const auto& key : plan.sourceTiles) {
+            sources.insert(key, markerTile(key, marker));
+        }
+        const QImage corrected = Gcj02TileReprojector::reproject(plan, sources);
+        QCOMPARE(corrected.size(), QSize(256, 256));
+        const QPoint local(int(destination.x()) % 256, int(destination.y()) % 256);
+        const QRgb pixel = corrected.pixel(local);
+        QCOMPARE_GT(qRed(pixel), 240);
+        QCOMPARE_GT(qBlue(pixel), 240);
+        QCOMPARE_LT(qGreen(pixel), 10);
+        QCOMPARE(qRed(corrected.pixel((local.x() + 64) % 256, local.y())), 0);
+        sources.remove(plan.sourceTiles.first());
+        QVERIFY(Gcj02TileReprojector::reproject(plan, sources).isNull());
+    }
+
+    const auto key = tileForWorld(geoToWorld(QGeoCoordinate(47.3977419, 8.5455938)), 13);
+    QVERIFY(!Gcj02TileReprojector::needsReprojection(key.x, key.y, key.zoom));
+    const auto plan = Gcj02TileReprojector::createPlan(key.x, key.y, key.zoom);
+    QVERIFY(plan.isValid());
+    QHash<QPoint, QImage> sources;
+    for (const auto& source : plan.sourceTiles) {
+        QImage image(256, 256, QImage::Format_ARGB32_Premultiplied);
+        for (int row = 0; row < 256; ++row) {
+            for (int column = 0; column < 256; ++column) {
+                image.setPixel(column, row, qRgb(column, row, (source.x() + source.y()) % 256));
+            }
+        }
+        sources.insert(source, image);
+    }
+    QCOMPARE(Gcj02TileReprojector::reproject(plan, sources), sources.value(QPoint(key.x, key.y)));
+}
+
+void TileMathTest::_gcjRegionBoundary()
+{
+    const auto key = tileForWorld(geoToWorld(QGeoCoordinate(30.0, 137.8347)), 23);
+    const auto plan = Gcj02TileReprojector::createPlan(key.x, key.y, key.zoom);
+    QVERIFY(plan.isValid());
+    QVERIFY(Gcj02TileReprojector::needsReprojection(key.x, key.y, key.zoom));
+    // The boundary has two distant source groups; coverage must not fetch their huge bounding rectangle.
+    QCOMPARE_LT(plan.sourceTiles.size(), 16);
+    bool shifted = false;
+    bool unchanged = false;
+    for (int column = 0; column < 256; ++column) {
+        const double delta = plan.sourcePixels.at(128 * 256 + column).x() - (key.x * 256.0 + column);
+        shifted |= qAbs(delta) > 100.0;
+        unchanged |= qAbs(delta) < 1e-4;
+    }
+    QVERIFY(shifted);
+    QVERIFY(unchanged);
+    QHash<QPoint, QImage> sources;
+    for (const auto& source : plan.sourceTiles) {
+        QImage image(256, 256, QImage::Format_ARGB32_Premultiplied);
+        image.fill(Qt::cyan);
+        sources.insert(source, image);
+    }
+    const QImage corrected = Gcj02TileReprojector::reproject(plan, sources);
+    QVERIFY(!corrected.isNull());
+    for (int column = 0; column < 256; ++column) {
+        QCOMPARE(corrected.pixel(column, 128), qRgb(0, 255, 255));
+    }
+    QVERIFY(!Gcj02TileReprojector::createPlan(-1, 0, 3).isValid());
+    QVERIFY(!Gcj02TileReprojector::createPlan(0, 0, 24).isValid());
+    QVERIFY(!Gcj02TileReprojector::createPlan(0, 0, 3, 4).isValid());
 }
 
 UT_REGISTER_TEST_LIGHTWEIGHT(TileMathTest, TestLabel::Unit)

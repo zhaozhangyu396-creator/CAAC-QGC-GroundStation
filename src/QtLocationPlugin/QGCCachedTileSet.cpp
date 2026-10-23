@@ -152,7 +152,8 @@ void QGCCachedTileSet::_prepareDownload()
         request.setOriginatingObject(this);
         request.setAttribute(QNetworkRequest::User, tile->hash);
 
-        QNetworkReply* const reply = _networkManager->get(request);
+        QNetworkReply* const reply =
+            QGeoTileFetcherQGC::getTileReply(_networkManager, request, tile->type, tile->x, tile->y, tile->z);
         reply->setParent(this);
         QGCNetworkHelper::ignoreSslErrorsIfNeeded(reply);
         (void) connect(reply, &QNetworkReply::finished, this, &QGCCachedTileSet::_networkReplyFinished);

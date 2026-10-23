@@ -5,6 +5,7 @@ import QtQuick
 QtObject {
     function displayName(rawName) {
         const types = {
+            "Gaode": qsTr("Gaode"),
             "Road": qsTr("Road"), "Street": qsTr("Street"), "Street Map": qsTr("Street map"),
             "Streets": qsTr("Streets"), "StreetsBasic": qsTr("Basic streets"),
             "World Street": qsTr("World street map"), "World Satellite": qsTr("World satellite map"),
@@ -29,7 +30,7 @@ QtObject {
             const provider = rawName.substring(0, separator)
             const type = rawName.substring(separator + 1)
             if (types[type]) {
-                return provider + " · " + types[type]
+                return (types[provider] || provider) + " · " + types[type]
             }
         }
         return rawName

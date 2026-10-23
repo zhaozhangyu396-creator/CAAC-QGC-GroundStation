@@ -1,10 +1,12 @@
 #include "MapProviderTest.h"
 
-#include <QtCore/QtMath>
-
 #include <array>
 #include <memory>
 
+#include <QtCore/QUrlQuery>
+#include <QtCore/QtMath>
+
+#include "GaodeMapProvider.h"
 #include "GenericMapProvider.h"
 #include "MapProvider.h"
 #include "QGCTileSet.h"
@@ -52,6 +54,39 @@ void MapProviderTest::_testProviderLayerUrls()
         std::make_shared<StatkartTopoMapProvider>(), std::make_shared<StatkartBaseMapProvider>(),
         std::make_shared<MapQuestMapMapProvider>(),  std::make_shared<VWorldStreetMapProvider>()};
     QVERIFY(providers[provider]->getTileURL(53, 23, 6).path().endsWith(expectedPath));
+}
+
+void MapProviderTest::_testGaodeUrls_data()
+{
+    QTest::addColumn<bool>("satellite");
+    QTest::addColumn<QString>("style");
+    QTest::newRow("road") << false << QStringLiteral("7");
+    QTest::newRow("satellite") << true << QStringLiteral("6");
+}
+
+void MapProviderTest::_testGaodeUrls()
+{
+    QFETCH(bool, satellite);
+    QFETCH(QString, style);
+    const std::shared_ptr<MapProvider> provider =
+        satellite ? std::static_pointer_cast<MapProvider>(std::make_shared<GaodeSatelliteMapProvider>())
+                  : std::static_pointer_cast<MapProvider>(std::make_shared<GaodeRoadMapProvider>());
+    const QUrl url = provider->getTileURL(27216, 13846, 15);
+    QCOMPARE(url.scheme(), QStringLiteral("https"));
+    QVERIFY(url.host().endsWith(QStringLiteral(".is.autonavi.com")));
+    QCOMPARE(url.path(), QStringLiteral("/appmaptile"));
+    const QUrlQuery query(url);
+    QCOMPARE(query.queryItemValue(QStringLiteral("style")), style);
+    QCOMPARE(query.queryItemValue(QStringLiteral("x")), QStringLiteral("27216"));
+    QCOMPARE(query.queryItemValue(QStringLiteral("y")), QStringLiteral("13846"));
+    QCOMPARE(query.queryItemValue(QStringLiteral("z")), QStringLiteral("15"));
+    QCOMPARE(query.queryItemValue(QStringLiteral("lang")), QStringLiteral("zh_cn"));
+    QVERIFY(provider->requiresGcj02Reprojection());
+    QVERIFY(provider->isUserSelectable());
+    QVERIFY(provider->getTileURL(-1, 0, 15).isEmpty());
+    QVERIFY(provider->getTileURL(0, 1 << 15, 15).isEmpty());
+    QVERIFY(provider->getTileURL(0, 0, -1).isEmpty());
+    QVERIFY(provider->getTileURL(0, 0, 21).isEmpty());
 }
 
 void MapProviderTest::_testGetImageFormatPng()

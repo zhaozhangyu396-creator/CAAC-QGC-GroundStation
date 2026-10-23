@@ -125,7 +125,8 @@ void TileImageSource::cancelRequest(int requestId)
 void TileImageSource::_fetchFromNetwork(int requestId, const TileMath::TileKey& key)
 {
     const QNetworkRequest request = QGeoTileFetcherQGC::getNetworkRequest(_mapId, key.x, key.y, key.zoom);
-    QNetworkReply* const reply = _networkManager->get(request);
+    QNetworkReply* const reply =
+        QGeoTileFetcherQGC::getTileReply(_networkManager, request, _mapId, key.x, key.y, key.zoom);
     _activeReplies.insert(requestId, reply);
 
     connect(reply, &QNetworkReply::finished, this, [this, requestId, key, reply] {

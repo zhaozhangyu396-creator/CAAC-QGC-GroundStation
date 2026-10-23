@@ -1,18 +1,18 @@
 #include "QGCMapUrlEngine.h"
 
-#include "QGCTileSet.h"
-
-#include <QtCore/QtMinMax>
 #include <QtCore/QUrl>
+#include <QtCore/QtMinMax>
 
 #include "BingMapProvider.h"
 #include "ElevationMapProvider.h"
 #include "EsriMapProvider.h"
+#include "GaodeMapProvider.h"
 #include "GenericMapProvider.h"
 #include "GoogleMapProvider.h"
 #include "MapboxMapProvider.h"
-#include "TianDiTuProvider.h"
 #include "QGCLoggingCategory.h"
+#include "QGCTileSet.h"
+#include "TianDiTuProvider.h"
 
 QGC_LOGGING_CATEGORY(QGCMapUrlEngineLog, "QtLocationPlugin.QGCMapUrlEngine")
 
@@ -71,7 +71,10 @@ const QList<SharedMapProvider> UrlFactory::_providers = {
     std::make_shared<CustomURLMapProvider>(),
 
     std::make_shared<CopernicusElevationProvider>(),
-    std::make_shared<TerrariumElevationProvider>()};
+    std::make_shared<TerrariumElevationProvider>(),
+
+    std::make_shared<GaodeRoadMapProvider>(),
+    std::make_shared<GaodeSatelliteMapProvider>()};
 
 QString UrlFactory::getImageFormat(int qtMapId, QByteArrayView image)
 {

@@ -18,4 +18,7 @@ private slots:
     void _zoomForMetersPerPixel();
     void _mercatorScale();
     void _isValidKey();
+    void _gcjReferenceCoordinates();
+    void _gcjTileAlignment();
+    void _gcjRegionBoundary();
 };

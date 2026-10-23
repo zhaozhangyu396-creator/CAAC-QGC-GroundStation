@@ -9,6 +9,9 @@ class UrlFactoryTest : public UnitTest
 private slots:
     void _testGetProviderTypesNotEmpty();
     void _testGetProviderTypesContainsBing();
+    void _testVisibleMapProviders();
+    void _testLegacyMapIdsPreserved();
+    void _testRemovedProviderSettingsMigration();
     void _testGetElevationProviderTypes();
     void _testMapIdFromProviderTypeValid();
     void _testProviderTypeFromMapIdRoundtrip();

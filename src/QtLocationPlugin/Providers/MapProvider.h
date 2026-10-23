@@ -56,6 +56,10 @@ public:
     virtual bool isElevationProvider() const { return false; }
     virtual bool isBingProvider() const { return false; }
 
+    virtual bool requiresGcj02Reprojection() const { return false; }
+
+    virtual int maximumNativeZoom() const { return QGC_MAX_MAP_ZOOM; }
+
     /// False hides the provider from user-facing provider selection lists
     virtual bool isUserSelectable() const { return true; }
 

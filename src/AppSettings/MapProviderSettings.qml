@@ -17,6 +17,7 @@ SettingsGroupLayout {
     LabelledComboBox {
         label: qsTr("Provider")
         model: _mapEngineManager.mapProviderList
+        textTransform: (value) => MapNames.displayName(value)
 
         onActivated: (index) => {
             _mapProviderFact.rawValue = comboBox.textAt(index)

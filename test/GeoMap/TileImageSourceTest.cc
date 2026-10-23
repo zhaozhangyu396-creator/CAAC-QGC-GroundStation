@@ -1,18 +1,28 @@
 #include "TileImageSourceTest.h"
 
+#include <cmath>
+#include <cstring>
+#include <functional>
+#include <memory>
+#include <numbers>
+
+#include <QtConcurrent/QtConcurrentRun>
 #include <QtCore/QBuffer>
 #include <QtCore/QFile>
 #include <QtCore/QScopeGuard>
+#include <QtCore/QSemaphore>
+#include <QtCore/QThreadPool>
 #include <QtCore/QTimer>
+#include <QtCore/QUrlQuery>
 #include <QtGui/QImage>
 #include <QtNetwork/QNetworkAccessManager>
 #include <QtNetwork/QNetworkReply>
 #include <QtTest/QSignalSpy>
 
-#include <cstring>
-
+#include "Gcj02TileReprojector.h"
 #include "QGCMapUrlEngine.h"
 #include "QGeoFileTileCacheQGC.h"
+#include "QGeoTileFetcherQGC.h"
 #include "TileImageSource.h"
 #include "TileMath.h"
 #include "UnitTestTileGenerator.h"
@@ -40,10 +50,13 @@ class CannedReply : public QNetworkReply
 {
 public:
     CannedReply(const QNetworkRequest& request, const QByteArray& body, NetworkError cannedError, QObject* parent,
-                bool hold)
-        : QNetworkReply(parent), _body(body), _cannedError(cannedError)
+                bool hold, int status = 200)
+        : QNetworkReply(parent)
+        , _body(body)
+        , _cannedError(cannedError)
     {
         setRequest(request);
+        setAttribute(QNetworkRequest::HttpStatusCodeAttribute, status);
         setOperation(QNetworkAccessManager::GetOperation);
         (void) open(ReadOnly);
         if (!hold) {
@@ -61,7 +74,9 @@ public:
         emit finished();
     }
 
-    void abort() final {}
+    void abort() final { aborted = true; }
+
+    bool aborted = false;
 
     qint64 bytesAvailable() const final { return (_body.size() - _offset) + QNetworkReply::bytesAvailable(); }
 
@@ -90,8 +105,11 @@ public:
     using QNetworkAccessManager::QNetworkAccessManager;
 
     QByteArray body;
+    std::function<QByteArray(const QNetworkRequest&)> bodyFactory;
+    QList<QNetworkRequest> requests;
     QNetworkReply::NetworkError error = QNetworkReply::NoError;
     int requestCount = 0;
+    int httpStatus = 200;
     bool holdReplies = false;     ///< replies stay open until finished manually
     QList<CannedReply*> replies;  ///< creation order, only tracked while holding
 
@@ -99,7 +117,9 @@ protected:
     QNetworkReply* createRequest(Operation, const QNetworkRequest& request, QIODevice*) final
     {
         requestCount++;
-        CannedReply* const reply = new CannedReply(request, body, error, this, holdReplies);
+        requests.append(request);
+        const QByteArray response = bodyFactory ? bodyFactory(request) : body;
+        CannedReply* const reply = new CannedReply(request, response, error, this, holdReplies, httpStatus);
         if (holdReplies) {
             replies.append(reply);
         }
@@ -120,6 +140,43 @@ QByteArray pngBody()
     return data;
 }
 
+QPointF slippyPixel(const QGeoCoordinate& coordinate, int zoom)
+{
+    const double side = std::ldexp(256.0, zoom);
+    return {
+        (coordinate.longitude() + 180.0) / 360.0 * side,
+        (1.0 - std::asinh(std::tan(coordinate.latitude() * std::numbers::pi / 180.0)) / std::numbers::pi) * side / 2.0};
+}
+
+QByteArray gcjMarkerBody(const QNetworkRequest& request)
+{
+    const QUrlQuery query(request.url());
+    const int x = query.queryItemValue(QStringLiteral("x")).toInt();
+    const int y = query.queryItemValue(QStringLiteral("y")).toInt();
+    const int zoom = query.queryItemValue(QStringLiteral("z")).toInt();
+    const QPointF marker = slippyPixel({39.91022649807321, 116.4037135824225}, zoom);
+    QImage image(256, 256, QImage::Format_RGB32);
+    image.fill(Qt::darkBlue);
+    for (int row = 0; row < 256; ++row) {
+        for (int column = 0; column < 256; ++column) {
+            const QPointF delta = QPointF(x * 256.0 + column + 0.5, y * 256.0 + row + 0.5) - marker;
+            if (QPointF::dotProduct(delta, delta) <= 16.0) {
+                image.setPixel(column, row, qRgb(255, 0, 255));
+            }
+        }
+    }
+    QByteArray bytes;
+    QBuffer buffer(&bytes);
+    if (!buffer.open(QIODevice::WriteOnly) || !image.save(&buffer, "PNG")) {
+        return {};
+    }
+    return bytes;
+}
+
+TileMath::TileKey beijingKey(int zoom)
+{
+    return TileMath::tileForWorld(TileMath::geoToWorld({39.908823, 116.397470}), zoom);
+}
 }  // namespace
 
 void TileImageSourceTest::_tileDelivered()
@@ -406,6 +463,175 @@ void TileImageSourceTest::_cancelAbortsNetworkFetch()
     nam.replies.at(0)->finishNow();
     QVERIFY_NO_SIGNAL_WAIT(readySpy, TestTimeout::shortMs());
     QVERIFY(failedSpy.isEmpty());
+}
+
+void TileImageSourceTest::_gaodeCorrectionDeliveredAndCached_data()
+{
+    QTest::addColumn<QString>("type");
+    QTest::addColumn<int>("zoom");
+    QTest::newRow("road") << QStringLiteral("Gaode Road") << 16;
+    QTest::newRow("satellite") << QStringLiteral("Gaode Satellite") << 16;
+    QTest::newRow("overzoom") << QStringLiteral("Gaode Road") << 23;
+}
+
+void TileImageSourceTest::_gaodeCorrectionDeliveredAndCached()
+{
+    QFETCH(QString, type);
+    QFETCH(int, zoom);
+    const auto key = beijingKey(zoom);
+    const QPointF pixel = slippyPixel({39.908823, 116.397470}, zoom);
+    const QPoint local(int(pixel.x()) % 256, int(pixel.y()) % 256);
+    MockNam nam;
+    nam.bodyFactory = gcjMarkerBody;
+    TileImageSource source(type, nullptr, &nam);
+    QSignalSpy readySpy(&source, &TileImageSource::tileImageReady);
+    QSignalSpy failedSpy(&source, &TileImageSource::tileImageFailed);
+    UnitTestTileGenerator::setForcedMissCount(2);
+    const auto guard = qScopeGuard([] { UnitTestTileGenerator::setForcedMissCount(0); });
+
+    source.requestTileImage(key);
+    QTRY_COMPARE_WITH_TIMEOUT(readySpy.count(), 1, TestTimeout::mediumMs());
+    const QImage online = readySpy.first().at(1).value<QImage>();
+    QCOMPARE(online.size(), QSize(256, 256));
+    QCOMPARE_GT(qRed(online.pixel(local)), 240);
+    QCOMPARE_GT(qBlue(online.pixel(local)), 240);
+    QCOMPARE_LT(qGreen(online.pixel(local)), 10);
+    QCOMPARE(qRed(online.pixel((local.x() + 64) % 256, local.y())), 0);
+    const int networkRequests = nam.requestCount;
+    QCOMPARE_GT(networkRequests, 0);
+    for (const auto& request : nam.requests) {
+        QCOMPARE(QUrlQuery(request.url()).queryItemValue(QStringLiteral("z")).toInt(), qMin(zoom, 20));
+        QCOMPARE(request.url().scheme(), QStringLiteral("https"));
+    }
+
+    source.requestTileImage(key);
+    QTRY_COMPARE_WITH_TIMEOUT(readySpy.count(), 2, TestTimeout::mediumMs());
+    QCOMPARE(nam.requestCount, networkRequests);
+    QCOMPARE(readySpy.last().at(1).value<QImage>(), online);
+    QVERIFY(failedSpy.isEmpty());
+}
+
+void TileImageSourceTest::_gaodeNonChinaPreservesBytes()
+{
+    const int mapId = UrlFactory::getQtMapIdFromProviderType(QStringLiteral("Gaode Road"));
+    const QNetworkRequest request = QGeoTileFetcherQGC::getNetworkRequest(mapId, kKey.x, kKey.y, kKey.zoom);
+    QVERIFY(request.url().isValid());
+    MockNam nam;
+    nam.body = pngBody();
+    QNetworkReply* const reply = QGeoTileFetcherQGC::getTileReply(&nam, request, mapId, kKey.x, kKey.y, kKey.zoom);
+    QVERIFY(reply);
+    QSignalSpy finishedSpy(reply, &QNetworkReply::finished);
+    QTRY_COMPARE_WITH_TIMEOUT(finishedSpy.count(), 1, TestTimeout::mediumMs());
+    QCOMPARE(reply->error(), QNetworkReply::NoError);
+    QCOMPARE(reply->readAll(), nam.body);
+    QCOMPARE(nam.requestCount, 1);
+}
+
+void TileImageSourceTest::_gaodeFailedSourceNotCached_data()
+{
+    QTest::addColumn<int>("failure");
+    QTest::newRow("network-failure") << 0;
+    QTest::newRow("invalid-source-image") << 1;
+    QTest::newRow("http-failure") << 2;
+}
+
+void TileImageSourceTest::_gaodeFailedSourceNotCached()
+{
+    QFETCH(int, failure);
+    const auto key = beijingKey(17 + failure);
+    MockNam nam;
+    nam.error = failure == 0 ? QNetworkReply::ContentNotFoundError : QNetworkReply::NoError;
+    nam.httpStatus = failure == 2 ? 403 : 200;
+    nam.body = QByteArrayLiteral("not a source tile");
+    if (failure == 2) {
+        nam.bodyFactory = gcjMarkerBody;
+    }
+    TileImageSource source(QStringLiteral("Gaode Road"), nullptr, &nam);
+    QSignalSpy readySpy(&source, &TileImageSource::tileImageReady);
+    QSignalSpy failedSpy(&source, &TileImageSource::tileImageFailed);
+    UnitTestTileGenerator::setForcedMissCount(2);
+    const auto guard = qScopeGuard([] { UnitTestTileGenerator::setForcedMissCount(0); });
+
+    expectLogMessage("GeoMap.TileImageSource", QtWarningMsg, QRegularExpression(QStringLiteral("network error")));
+    source.requestTileImage(key);
+    QTRY_COMPARE_WITH_TIMEOUT(failedSpy.count(), 1, TestTimeout::mediumMs());
+    verifyExpectedLogMessage();
+    QVERIFY(readySpy.isEmpty());
+    const int failedRequests = nam.requestCount;
+
+    nam.error = QNetworkReply::NoError;
+    nam.httpStatus = 200;
+    nam.bodyFactory = gcjMarkerBody;
+    source.requestTileImage(key);
+    QTRY_COMPARE_WITH_TIMEOUT(readySpy.count(), 1, TestTimeout::mediumMs());
+    QCOMPARE_GT(nam.requestCount, failedRequests);
+    QCOMPARE(failedSpy.count(), 1);
+}
+
+void TileImageSourceTest::_gaodeCancelAbortsAllSources()
+{
+    const auto key = beijingKey(20);
+    MockNam nam;
+    nam.bodyFactory = gcjMarkerBody;
+    nam.holdReplies = true;
+    TileImageSource source(QStringLiteral("Gaode Road"), nullptr, &nam);
+    QSignalSpy readySpy(&source, &TileImageSource::tileImageReady);
+    QSignalSpy failedSpy(&source, &TileImageSource::tileImageFailed);
+    UnitTestTileGenerator::setForcedMissCount(1);
+    const auto guard = qScopeGuard([] { UnitTestTileGenerator::setForcedMissCount(0); });
+
+    const int requestId = source.requestTileImage(key);
+    QTRY_VERIFY_WITH_TIMEOUT(!nam.replies.isEmpty(), TestTimeout::mediumMs());
+    source.cancelRequest(requestId);
+    QCOMPARE(source.pendingCount(), 0);
+    for (auto* reply : nam.replies) {
+        QVERIFY(reply->aborted);
+        reply->finishNow();
+    }
+    QVERIFY_NO_SIGNAL_WAIT(readySpy, TestTimeout::shortMs());
+    QVERIFY(failedSpy.isEmpty());
+}
+
+void TileImageSourceTest::_gaodeCancelDuringPlanning()
+{
+    auto* const pool = QThreadPool::globalInstance();
+    const int previousThreads = pool->maxThreadCount();
+    pool->setMaxThreadCount(1);
+    const auto entered = std::make_shared<QSemaphore>();
+    const auto release = std::make_shared<QSemaphore>();
+    const auto blocker = QtConcurrent::run([entered, release]() {
+        entered->release();
+        release->acquire();
+    });
+    const auto guard = qScopeGuard([&]() {
+        release->release();
+        pool->setMaxThreadCount(previousThreads);
+    });
+    QVERIFY(entered->tryAcquire(1, TestTimeout::mediumMs()));
+
+    const auto key = beijingKey(16);
+    const int mapId = UrlFactory::getQtMapIdFromProviderType(QStringLiteral("Gaode Road"));
+    auto request = QGeoTileFetcherQGC::getNetworkRequest(mapId, key.x, key.y, key.zoom);
+    request.setAttribute(QNetworkRequest::User, QStringLiteral("offline-target-hash"));
+    MockNam nam;
+    nam.bodyFactory = gcjMarkerBody;
+    QNetworkReply* const reply = QGeoTileFetcherQGC::getTileReply(&nam, request, mapId, key.x, key.y, key.zoom);
+    QSignalSpy finishedSpy(reply, &QNetworkReply::finished);
+    QSignalSpy readySpy(reply, &QIODevice::readyRead);
+    // _start is queued; its CPU future cannot run until the held worker is released.
+    QCoreApplication::processEvents();
+    QCOMPARE(reply->request().attribute(QNetworkRequest::User).toString(), QStringLiteral("offline-target-hash"));
+    reply->abort();
+    QCOMPARE(finishedSpy.count(), 1);
+    QCOMPARE(reply->error(), QNetworkReply::OperationCanceledError);
+    QCOMPARE(nam.requestCount, 0);
+    release->release();
+    QVERIFY(pool->waitForDone(TestTimeout::mediumMs()));
+    QVERIFY(blocker.isFinished());
+    QCoreApplication::processEvents();
+    QCOMPARE(finishedSpy.count(), 1);
+    QCOMPARE(nam.requestCount, 0);
+    QVERIFY(readySpy.isEmpty());
 }
 
 UT_REGISTER_TEST(TileImageSourceTest, TestLabel::Integration)

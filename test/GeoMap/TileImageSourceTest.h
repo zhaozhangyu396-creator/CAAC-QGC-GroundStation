@@ -18,4 +18,11 @@ private slots:
     void _bingPlaceholderNotDelivered();
     void _cachedUnusableTileFallsBackToNetwork();
     void _cancelAbortsNetworkFetch();
+    void _gaodeCorrectionDeliveredAndCached_data();
+    void _gaodeCorrectionDeliveredAndCached();
+    void _gaodeNonChinaPreservesBytes();
+    void _gaodeFailedSourceNotCached_data();
+    void _gaodeFailedSourceNotCached();
+    void _gaodeCancelAbortsAllSources();
+    void _gaodeCancelDuringPlanning();
 };

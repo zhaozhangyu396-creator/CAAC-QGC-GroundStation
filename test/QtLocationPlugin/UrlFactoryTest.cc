@@ -1,6 +1,11 @@
 #include "UrlFactoryTest.h"
 
+#include <QtCore/QScopeGuard>
+#include <QtCore/QSettings>
+
+#include "FlightMapSettings.h"
 #include "MapProvider.h"
+#include "QGCMapEngineManager.h"
 #include "QGCMapUrlEngine.h"
 #include "QGCTileSet.h"
 
@@ -24,6 +29,90 @@ void UrlFactoryTest::_testGetProviderTypesContainsBing()
     QVERIFY(types.contains(kBingRoad));
     QVERIFY(types.contains(kBingSatellite));
     QVERIFY(types.contains(kBingHybrid));
+}
+
+void UrlFactoryTest::_testVisibleMapProviders()
+{
+    QStringList expected = {QStringLiteral("Bing"), QStringLiteral("OpenAIP"), QStringLiteral("CustomURL"),
+                            QStringLiteral("Gaode")};
+    if (UrlFactory::getProviderTypes().contains(QStringLiteral("Google Street Map"))) {
+        expected.prepend(QStringLiteral("Google"));
+    }
+    QCOMPARE(QGCMapEngineManager::mapProviderList(), expected);
+    QCOMPARE(QGCMapEngineManager::mapTypeList(QStringLiteral("Gaode")),
+             QStringList({QStringLiteral("Road"), QStringLiteral("Satellite")}));
+    QCOMPARE(QGCMapEngineManager::mapTypeList(QStringLiteral("OpenAIP")), QStringList({QStringLiteral("OpenAIP")}));
+    const QStringList removed = {
+        QStringLiteral("TianDiTu"),  QStringLiteral("Statkart"), QStringLiteral("Svalbard"), QStringLiteral("Eniro"),
+        QStringLiteral("Esri"),      QStringLiteral("Mapbox"),   QStringLiteral("MapQuest"), QStringLiteral("VWorld"),
+        QStringLiteral("Japan-GSI"), QStringLiteral("LINZ"),     QStringLiteral("Street"),
+    };
+    for (const auto& provider : removed) {
+        QVERIFY2(QGCMapEngineManager::mapTypeList(provider).isEmpty(), qPrintable(provider));
+    }
+    const auto visibleTypes = QGCMapEngineManager::mapList();
+    for (const auto& provider : UrlFactory::getProviders()) {
+        QCOMPARE(visibleTypes.contains(provider->getMapName()), provider->isUserSelectable());
+    }
+}
+
+void UrlFactoryTest::_testLegacyMapIdsPreserved()
+{
+    const int googleOffset = UrlFactory::getProviderTypes().contains(QStringLiteral("Google Street Map")) ? 5 : 0;
+    QCOMPARE(UrlFactory::getQtMapIdFromProviderType(kBingRoad), googleOffset + 1);
+    QCOMPARE(UrlFactory::getQtMapIdFromProviderType(QStringLiteral("OpenAIP")), googleOffset + 33);
+    QCOMPARE(UrlFactory::getQtMapIdFromProviderType(QStringLiteral("CustomURL Custom")), googleOffset + 34);
+    QCOMPARE(UrlFactory::getQtMapIdFromProviderType(kTerrarium), googleOffset + 36);
+    QCOMPARE(UrlFactory::getQtMapIdFromProviderType(QStringLiteral("Gaode Road")), googleOffset + 37);
+    QCOMPARE(UrlFactory::getQtMapIdFromProviderType(QStringLiteral("Gaode Satellite")), googleOffset + 38);
+    const auto hidden = UrlFactory::getMapProviderFromProviderType(QStringLiteral("Street Map"));
+    QVERIFY(hidden);
+    QVERIFY(!hidden->isUserSelectable());
+    QCOMPARE(UrlFactory::getProviderTypeFromQtMapId(hidden->getMapId()), QStringLiteral("Street Map"));
+}
+
+void UrlFactoryTest::_testRemovedProviderSettingsMigration()
+{
+    QSettings storage;
+    const QString providerKey = QStringLiteral("FlightMap/mapProvider");
+    const QString typeKey = QStringLiteral("FlightMap/mapType");
+    const auto originalProvider = storage.value(providerKey);
+    const auto originalType = storage.value(typeKey);
+    const auto restore = qScopeGuard([&]() {
+        for (const auto& entry : {qMakePair(providerKey, originalProvider), qMakePair(typeKey, originalType)}) {
+            if (entry.second.isValid()) {
+                storage.setValue(entry.first, entry.second);
+            } else {
+                storage.remove(entry.first);
+            }
+        }
+    });
+    FlightMapSettings settings;
+    auto* provider = settings.mapProvider();
+    auto* type = settings.mapType();
+    // Unit-test SettingsFacts use defaults instead of persisted values.
+    provider->setRawValue(QStringLiteral("Esri"));
+    type->setRawValue(QStringLiteral("World Satellite"));
+    QCOMPARE(provider->rawValue().toString(), QStringLiteral("Bing"));
+    QCOMPARE(type->rawValue().toString(), QStringLiteral("Hybrid"));
+
+    const auto openAipTypes = QGCMapEngineManager::mapTypeList(QStringLiteral("OpenAIP"));
+    QVERIFY(!openAipTypes.isEmpty());
+    provider->setRawValue(QStringLiteral("OpenAIP"));
+    type->setRawValue(openAipTypes.first());
+    QCOMPARE(provider->rawValue().toString(), QStringLiteral("OpenAIP"));
+    QCOMPARE(type->rawValue().toString(), openAipTypes.first());
+    type->setRawValue(QStringLiteral("Invalid type"));
+    QCOMPARE(provider->rawValue().toString(), QStringLiteral("OpenAIP"));
+    QCOMPARE(type->rawValue().toString(), openAipTypes.first());
+
+    provider->setRawValue(QStringLiteral("Gaode"));
+    type->setRawValue(QStringLiteral("Satellite"));
+    QCOMPARE(provider->rawValue().toString(), QStringLiteral("Gaode"));
+    QCOMPARE(type->rawValue().toString(), QStringLiteral("Satellite"));
+    type->setRawValue(QStringLiteral("Invalid type"));
+    QCOMPARE(provider->rawValue().toString(), QStringLiteral("Gaode"));
+    QCOMPARE(type->rawValue().toString(), QGCMapEngineManager::mapTypeList(QStringLiteral("Gaode")).first());
 }
 
 void UrlFactoryTest::_testGetElevationProviderTypes()

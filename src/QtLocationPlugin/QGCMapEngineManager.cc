@@ -193,14 +193,14 @@ QString QGCMapEngineManager::loadSetting(const QString &key, const QString &defa
 
 QStringList QGCMapEngineManager::mapTypeList(const QString &provider)
 {
-    QStringList mapStringList = mapList();
-    mapStringList = mapStringList.filter(QRegularExpression(provider));
-
-    static const QRegularExpression providerType = QRegularExpression(uR"(^([^\ ]*) (.*)$)"_s);
-    (void) mapStringList.replaceInStrings(providerType, "\\2");
-    (void) mapStringList.removeDuplicates();
-
-    return mapStringList;
+    QStringList types;
+    for (const auto& mapName : mapList()) {
+        if (mapName.section(' ', 0, 0) == provider) {
+            types.append(mapName.contains(' ') ? mapName.section(' ', 1) : mapName);
+        }
+    }
+    types.removeDuplicates();
+    return types;
 }
 
 void QGCMapEngineManager::deleteTileSet(QGCCachedTileSet *tileSet)
@@ -458,7 +458,13 @@ QString QGCMapEngineManager::getUniqueName() const
 
 QStringList QGCMapEngineManager::mapList()
 {
-    return UrlFactory::getProviderTypes();
+    QStringList types;
+    for (const auto& provider : UrlFactory::getProviders()) {
+        if (provider->isUserSelectable()) {
+            types.append(provider->getMapName());
+        }
+    }
+    return types;
 }
 
 QStringList QGCMapEngineManager::mapProviderList()

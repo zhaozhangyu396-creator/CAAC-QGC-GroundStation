@@ -1,10 +1,14 @@
 #include "QGeoTileFetcherQGC.h"
 
+#include <algorithm>
+#include <chrono>
+
 #include <QtLocation/private/qgeotiledmappingmanagerengine_p.h>
 #include <QtLocation/private/qgeotilespec_p.h>
 #include <QtNetwork/QNetworkRequest>
-#include <chrono>
 
+#include "Gcj02TileReply.h"
+#include "Gcj02TileReprojector.h"
 #include "MapProvider.h"
 #include "QGCLoggingCategory.h"
 #include "QGCMapUrlEngine.h"
@@ -25,7 +29,11 @@ QGeoTileFetcherQGC::QGeoTileFetcherQGC(QNetworkAccessManager* networkManager, co
                                        QGeoTiledMappingManagerEngineQGC* parent)
     : QGeoTileFetcher(parent), m_networkManager(networkManager)
 {
-    Q_ASSERT(networkManager);
+    if (!networkManager) {
+        qCWarning(QGeoTileFetcherQGCLog) << "Network manager not available";
+        return;
+    }
+    Q_UNUSED(parameters);
 
     qCDebug(QGeoTileFetcherQGCLog) << this;
 
@@ -107,7 +115,12 @@ QNetworkRequest QGeoTileFetcherQGC::getNetworkRequest(int mapId, int x, int y, i
     }
 
     QNetworkRequest request;
-    request.setUrl(mapProvider->getTileURL(x, y, zoom));
+    if (zoom > mapProvider->maximumNativeZoom() && zoom <= QGC_MAX_MAP_ZOOM) {
+        const int difference = zoom - mapProvider->maximumNativeZoom();
+        request.setUrl(mapProvider->getTileURL(x >> difference, y >> difference, mapProvider->maximumNativeZoom()));
+    } else {
+        request.setUrl(mapProvider->getTileURL(x, y, zoom));
+    }
     request.setPriority(QNetworkRequest::NormalPriority);
     request.setTransferTimeout(10000);
     // request.setOriginatingObject(this);
@@ -140,4 +153,18 @@ QNetworkRequest QGeoTileFetcherQGC::getNetworkRequest(int mapId, int x, int y, i
     // request.setAttribute(QNetworkRequest::AutoDeleteReplyOnFinishAttribute, true);
 
     return request;
+}
+
+QNetworkReply* QGeoTileFetcherQGC::getTileReply(QNetworkAccessManager* manager, const QNetworkRequest& request,
+                                                int mapId, int x, int y, int zoom)
+{
+    if (!manager) {
+        return nullptr;
+    }
+    const auto provider = UrlFactory::getMapProviderFromQtMapId(mapId);
+    if (provider && provider->requiresGcj02Reprojection() &&
+        (zoom > provider->maximumNativeZoom() || Gcj02TileReprojector::needsReprojection(x, y, zoom))) {
+        return new Gcj02TileReply(manager, request, mapId, x, y, zoom, std::min(zoom, provider->maximumNativeZoom()));
+    }
+    return manager->get(request);
 }

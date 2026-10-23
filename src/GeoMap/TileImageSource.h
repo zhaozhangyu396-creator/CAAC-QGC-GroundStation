@@ -26,8 +26,8 @@ class QNetworkReply;
 /// Thin adapter over QGC's existing map tile infrastructure: tile requests hit
 /// the shared tile cache database first, fall back to a provider network fetch
 /// on miss (URL/headers from the provider registry), and store fetched tiles
-/// back into the cache. Patches are slippy-tile addressed, so one request maps
-/// to exactly one provider tile.
+/// back into the cache. Patches and cached imagery are WGS84 slippy-tile addressed;
+/// providers using another grid are reprojected by the shared tile fetcher.
 ///
 /// Results are always delivered asynchronously. No signal is emitted for a
 /// cancelled request. No internal retries: a failed request stays failed, and

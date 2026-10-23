@@ -14,6 +14,7 @@
 #include "QGCMapUrlEngine.h"
 #include "QGCNetworkHelper.h"
 #include "QGeoFileTileCacheQGC.h"
+#include "QGeoTileFetcherQGC.h"
 
 QGC_LOGGING_CATEGORY(QGeoTiledMapReplyQGCLog, "QtLocationPlugin.QGeoTiledMapReplyQGC")
 
@@ -221,7 +222,8 @@ void QGeoTiledMapReplyQGC::_cacheError(QGCMapTask::TaskType type, QStringView er
 
     _request.setOriginatingObject(this);
 
-    _networkReply = _networkManager->get(_request);
+    _networkReply = QGeoTileFetcherQGC::getTileReply(_networkManager, _request, tileSpec().mapId(), tileSpec().x(),
+                                                     tileSpec().y(), tileSpec().zoom());
     if (!_networkReply) {
         setError(QGeoTiledMapReply::CommunicationError, tr("Failed to Create Network Reply"));
         return;

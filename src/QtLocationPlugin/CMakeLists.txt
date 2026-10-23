@@ -3,10 +3,13 @@
 # Custom map tile providers and caching engine
 # ============================================================================
 
-qt_add_plugin(QGCLocation
+qt_add_plugin(
+    QGCLocation
     STATIC
-    CLASS_NAME QGeoServiceProviderFactoryQGC
-    OUTPUT_TARGETS QGCLocation_targets
+    CLASS_NAME
+    QGeoServiceProviderFactoryQGC
+    OUTPUT_TARGETS
+    QGCLocation_targets
     Providers/BingMapProvider.cpp
     Providers/BingMapProvider.h
     Providers/ElevationMapProvider.cpp
@@ -15,6 +18,8 @@ qt_add_plugin(QGCLocation
     Providers/EsriMapProvider.h
     Providers/GenericMapProvider.cpp
     Providers/GenericMapProvider.h
+    Providers/GaodeMapProvider.cpp
+    Providers/GaodeMapProvider.h
     Providers/GoogleMapProvider.cpp
     Providers/GoogleMapProvider.h
     Providers/MapboxMapProvider.cpp
@@ -23,6 +28,10 @@ qt_add_plugin(QGCLocation
     Providers/MapProvider.h
     Providers/TianDiTuProvider.cpp
     Providers/TianDiTuProvider.h
+    Gcj02TileReply.cpp
+    Gcj02TileReply.h
+    Gcj02TileReprojector.cpp
+    Gcj02TileReprojector.h
     QGCCachedTileSet.cpp
     QGCCachedTileSet.h
     QGCCacheTile.h
@@ -60,39 +69,37 @@ if(IOS)
     target_compile_definitions(QGCLocation PRIVATE QGC_NO_GOOGLE_MAPS)
 endif()
 
-target_link_libraries(QGCLocation
-    PRIVATE
-        Qt6::Positioning
-        QGCCompression
-        QGCDatabase
-        QGCFileSystem
-        QGCFormat
-        QGCLogging
-        QGCNetwork
-    PUBLIC
-        Qt6::Core
-        Qt6::Location
-        Qt6::LocationPrivate
-        Qt6::Network
+target_link_libraries(
+    QGCLocation
+    PRIVATE Qt6::Positioning
+            Qt6::Gui
+            Qt6::Concurrent
+            QGCCompression
+            QGCDatabase
+            QGCFileSystem
+            QGCFormat
+            QGCLogging
+            QGCNetwork
+    PUBLIC Qt6::Core Qt6::Location Qt6::LocationPrivate Qt6::Network
 )
 
-target_include_directories(QGCLocation
-    PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}
-        ${CMAKE_CURRENT_SOURCE_DIR}/Providers
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/..
-        ${CMAKE_CURRENT_SOURCE_DIR}/../FactSystem
-        ${CMAKE_CURRENT_SOURCE_DIR}/../QmlControls
-        ${CMAKE_CURRENT_SOURCE_DIR}/../Terrain
-        ${CMAKE_CURRENT_SOURCE_DIR}/../Terrain/Providers
-        ${CMAKE_CURRENT_SOURCE_DIR}/../Settings
-        ${CMAKE_CURRENT_SOURCE_DIR}/../Utilities
+target_include_directories(
+    QGCLocation
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/Providers
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..
+            ${CMAKE_CURRENT_SOURCE_DIR}/../FactSystem
+            ${CMAKE_CURRENT_SOURCE_DIR}/../QmlControls
+            ${CMAKE_CURRENT_SOURCE_DIR}/../Terrain
+            ${CMAKE_CURRENT_SOURCE_DIR}/../Terrain/Providers
+            ${CMAKE_CURRENT_SOURCE_DIR}/../Settings
+            ${CMAKE_CURRENT_SOURCE_DIR}/../Utilities
 )
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE QGCLocation)
 
-target_precompile_headers(QGCLocation PRIVATE
+target_precompile_headers(
+    QGCLocation
+    PRIVATE
     <QtCore/QDir>
     <QtCore/QLoggingCategory>
     <QtCore/QObject>
@@ -104,9 +111,9 @@ target_precompile_headers(QGCLocation PRIVATE
     <QtQml/QQmlEngine>
 )
 
-qt_add_resources(${CMAKE_PROJECT_NAME} qtlocationplugin_resources
+qt_add_resources(
+    ${CMAKE_PROJECT_NAME} qtlocationplugin_resources
     PREFIX "/res"
     BASE "${CMAKE_SOURCE_DIR}/resources"
-    FILES
-        "${CMAKE_SOURCE_DIR}/resources/notile.png"
+    FILES "${CMAKE_SOURCE_DIR}/resources/notile.png"
 )

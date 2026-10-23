@@ -7,6 +7,9 @@ static constexpr const quint32 AVERAGE_MAPBOX_STREET_MAP  = 5648;
 
 class MapboxMapProvider : public MapProvider
 {
+public:
+    bool isUserSelectable() const final { return false; }
+
 protected:
     MapboxMapProvider(const QString &mapName, const QString &mapTypeId, quint32 averageSize, MapProvider::MapStyle mapType)
         : MapProvider(

@@ -9,6 +9,8 @@ class MapProviderTest : public UnitTest
 private slots:
     void _testProviderLayerUrls_data();
     void _testProviderLayerUrls();
+    void _testGaodeUrls_data();
+    void _testGaodeUrls();
     void _testGetImageFormatPng();
     void _testGetImageFormatJpeg();
     void _testGetImageFormatGif();

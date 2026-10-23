@@ -9,6 +9,9 @@ static constexpr const quint32 AVERAGE_TIANDITU_SAT_MAP    = 19597;
 
 class TianDiTuProvider : public MapProvider
 {
+public:
+    bool isUserSelectable() const final { return false; }
+
 protected:
     TianDiTuProvider(const QString &mapName, const QString &mapTypeCode, const QString &imageFormat, quint32 averageSize,
                     MapProvider::MapStyle mapType)
