@@ -4,7 +4,7 @@
 
 PX4FlightBehavior::PX4FlightBehavior(Vehicle* vehicle, AutoPilotPlugin* autopilot, QObject* parent)
     : VehicleComponent(vehicle, autopilot, AutoPilotPlugin::UnknownVehicleComponent, parent)
-    , _name(tr("Flight Behavior"))
+    , _name(tr("Flight Parameters"))
 {
 }
 

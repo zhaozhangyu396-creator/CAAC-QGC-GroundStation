@@ -17231,8 +17231,8 @@ Is this really what you want?</source>
     <name>PX4FlightBehavior</name>
     <message>
       <location filename="../src/AutoPilotPlugins/PX4/PX4FlightBehavior.cc" line="7"/>
-      <source>Flight Behavior</source>
-      <translation>飞行行为</translation>
+      <source>Flight Parameters</source>
+      <translation>飞行参数</translation>
     </message>
     <message>
       <location filename="../src/AutoPilotPlugins/PX4/PX4FlightBehavior.cc" line="18"/>

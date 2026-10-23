@@ -19,7 +19,9 @@ Rectangle {
 
     color: qgcPal.windowShade
     radius: ScreenTools.defaultFontPixelWidth * 0.5
-    Layout.preferredWidth: mainLayout.implicitWidth + (mainLayout.anchors.margins * 2)
+    Layout.minimumWidth: 0
+    Layout.preferredWidth: Math.min(mainLayout.implicitWidth + mainLayout.anchors.margins * 2,
+                                   ScreenTools.defaultFontPixelWidth * 45)
 
     // -------------------------------------------------------------------------
     // Internal state
@@ -174,10 +176,14 @@ Rectangle {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         anchors.left: parent.left
+        anchors.right: parent.right
         anchors.margins: ScreenTools.defaultFontPixelWidth / 2
         spacing: ScreenTools.defaultFontPixelHeight * 0.5
 
         QGCLabel {
+            Layout.fillWidth: true
+            Layout.minimumWidth: 0
+            wrapMode: Text.WordWrap
             visible: _isFirmwareLog
             text: qsTr("Fields: %1  Parameters: %2  Events: %3")
                   .arg(logParser.plottableFields.length)
@@ -185,7 +191,10 @@ Rectangle {
                   .arg(logParser.events.length)
         }
 
-        RowLayout {
+        Flow {
+            id: timeAxisOptions
+            Layout.fillWidth: true
+            Layout.minimumWidth: 0
             visible: _isFirmwareLog
                      && logParser.startTime
                      && !isNaN(logParser.startTime.getTime())
@@ -197,6 +206,8 @@ Rectangle {
             ButtonGroup { id: _xAxisButtonGroup }
 
             QGCRadioButton {
+                width: Math.min(implicitWidth, timeAxisOptions.width)
+                wrapMode: Text.WordWrap
                 text: qsTr("Elapsed")
                 checked: !control.xAxisShowLocalTime
                 ButtonGroup.group: _xAxisButtonGroup
@@ -204,6 +215,8 @@ Rectangle {
             }
 
             QGCRadioButton {
+                width: Math.min(implicitWidth, timeAxisOptions.width)
+                wrapMode: Text.WordWrap
                 text: qsTr("Local time")
                 checked: control.xAxisShowLocalTime
                 ButtonGroup.group: _xAxisButtonGroup
@@ -211,9 +224,14 @@ Rectangle {
             }
         }
 
-        RowLayout {
+        GridLayout {
+            id: searchLayout
+            Layout.fillWidth: true
+            Layout.minimumWidth: 0
+            columns: width >= ScreenTools.defaultFontPixelWidth * 50 ? 3 : 2
             visible: _isFirmwareLog
-            spacing: ScreenTools.defaultFontPixelWidth * 0.5
+            columnSpacing: ScreenTools.defaultFontPixelWidth * 0.5
+            rowSpacing: ScreenTools.defaultFontPixelHeight * 0.5
 
             QGCLabel {
                 text: qsTr("Fields")
@@ -222,7 +240,9 @@ Rectangle {
 
             QGCTextField {
                 id: _fieldSearchField
+                objectName: "logViewer_fieldsSearch"
                 Layout.fillWidth: true
+                Layout.minimumWidth: 0
                 textColor: qgcPal.textFieldText
                 placeholderTextColor: Qt.rgba(qgcPal.textFieldText.r, qgcPal.textFieldText.g, qgcPal.textFieldText.b, 0.7)
                 placeholderText: qsTr("Search fields")
@@ -245,6 +265,11 @@ Rectangle {
             }
 
             QGCButton {
+                objectName: "logViewer_clearSelected"
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                Layout.columnSpan: searchLayout.columns === 2 ? 2 : 1
+                wrapMode: Text.WordWrap
                 text: qsTr("Clear Selected")
                 enabled: logViewerController.selectedFields.length > 0
 
@@ -258,15 +283,18 @@ Rectangle {
 
         QGCListView {
             id: _fieldsListView
+            objectName: "logViewer_fieldsList"
             Layout.fillHeight: true
             Layout.fillWidth: true
-            Layout.preferredWidth: _maxFieldRowWidth + ScreenTools.defaultFontPixelWidth
+            Layout.minimumWidth: 0
+            contentWidth: Math.max(width, _maxFieldRowWidth + ScreenTools.defaultFontPixelWidth)
+            flickableDirection: Flickable.AutoFlickDirection
             visible: _isFirmwareLog
             model: _filteredFieldRows
             spacing: ScreenTools.defaultFontPixelHeight * 0.25
 
             delegate: Loader {
-                width: _fieldsListView.width - ScreenTools.defaultFontPixelWidth
+                width: Math.max(_fieldsListView.width - ScreenTools.defaultFontPixelWidth, _maxFieldRowWidth)
                 sourceComponent: modelData.rowType === "group" ? _groupRowComponent : _fieldRowComponent
                 property var rowData: modelData
             }

@@ -1,5 +1,7 @@
 #include "PX4VehicleConfigUITest.h"
 
+#include <cmath>
+
 #include <QtCore/QPointer>
 #include <QtCore/QScopeGuard>
 #include <QtGui/QFont>
@@ -431,6 +433,43 @@ void CaacSetupMenuUITest::_setupPages()
             QVERIFY(!safety->property("checked").toBool());
             QVERIFY(!slider->isEnabled());
             QCOMPARE(slider->property("value").toDouble(), 0.0);
+            const auto flightParametersName = QCoreApplication::translate("PX4FlightBehavior", "Flight Parameters");
+            QVERIFY(
+                clickSidebarButton(QStringLiteral("vehicleConfig_comp_") + QString(flightParametersName).remove(' ')));
+            auto* flightPage = findVisibleItem(_rootItem, QStringLiteral("px4FlightParametersPage"));
+            QVERIFY(flightPage);
+            QCOMPARE(flightPage->property("pageName").toString(), flightParametersName);
+            auto* title = findVisibleItem(flightPage, QStringLiteral("vehicleSetup_title"));
+            auto* viewport = findVisibleItem(flightPage, QStringLiteral("vehicleSetup_scroller"));
+            auto* loader = findItem(flightPage, QStringLiteral("setupPage_contentLoader"));
+            QVERIFY(title && viewport && loader);
+            auto* content = loader->property("item").value<QQuickItem*>();
+            QVERIFY(content);
+            QCOMPARE(title->property("text").toString(), flightParametersName);
+            for (const qreal width : {320.0, 640.0}) {
+                QVERIFY(flightPage->setProperty("availableWidth", width));
+                for (const auto& name : {QStringLiteral("px4ResponsivenessSliderEnabled"),
+                                         QStringLiteral("px4HorizontalVelocitySliderEnabled"),
+                                         QStringLiteral("px4VerticalVelocitySliderEnabled")}) {
+                    auto* checkbox = findItem(flightPage, name);
+                    QVERIFY2(checkbox, qPrintable(name));
+                    auto* text = checkbox->property("contentItem").value<QQuickItem*>();
+                    QVERIFY(text);
+                    const auto fits = [&] {
+                        for (auto* ancestor = checkbox; ancestor; ancestor = ancestor->parentItem()) {
+                            ancestor->ensurePolished();
+                        }
+                        const auto bounds = checkbox->mapRectToItem(content, checkbox->boundingRect());
+                        return std::abs(content->width() - width) < 1 && checkbox->width() > 0 &&
+                               checkbox->width() <= width + 1 && bounds.left() >= -1 && bounds.right() <= width + 1 &&
+                               text->property("paintedWidth").toReal() <= text->width() + 1 &&
+                               text->property("paintedHeight").toReal() <= text->height() + 1 &&
+                               (width > 320 || text->property("lineCount").toInt() > 1);
+                    };
+                    QTRY_VERIFY2_WITH_TIMEOUT(fits(), qPrintable(name), TestTimeout::shortMs());
+                    QCOMPARE(viewport->property("contentX").toReal(), 0.0);
+                }
+            }
             QVERIFY(clickButtonScrolled(QStringLiteral("toolbar_safety"),
                                         QStringLiteral("caacSettingsNavigationScroller")));
             auto* panel = findVisibleItem(_rootItem, QStringLiteral("caacSafetySettings"));

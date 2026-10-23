@@ -31,7 +31,7 @@ Rectangle {
         ["PowerComponent", "Power", "/qmlimages/Battery.svg"],
         ["PX4TuningComponent", "PID Tuning", "/qmlimages/TuningComponentIcon.png"],
         ["JoystickComponent", "Joystick", "/qmlimages/Joystick.png"],
-        ["PX4FlightBehavior", "Flight Behavior", "/qmlimages/TuningComponentIcon.png"],
+        ["PX4FlightBehavior", "Flight Parameters", "/qmlimages/TuningComponentIcon.png"],
         ["VehicleConfigView", "Parameters", "/qmlimages/subMenuButtonImage.png"]
     ]
 

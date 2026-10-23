@@ -6,35 +6,13 @@ import QtQuick.Layouts
 
 import QGroundControl
 import QGroundControl.Controls
-import QGroundControl.FactControls
 
 Item {
     id: root
     objectName: "caacPreferences"
     readonly property var plugin: QGroundControl.corePlugin
     readonly property var settings: plugin.planningPreferences
-    readonly property var vehicle: QGroundControl.multiVehicleManager.activeVehicle
-    readonly property bool parametersReady: QGroundControl.multiVehicleManager.parameterReadyVehicleAvailable
     QGCPalette { id: palette; colorGroupEnabled: root.enabled }
-    function resetController() {
-        if (controllerLoader) {
-            controllerLoader.sourceComponent = null
-            if (vehicle && parametersReady) { controllerLoader.sourceComponent = controllerComponent }
-        }
-    }
-    onVehicleChanged: resetController()
-    onParametersReadyChanged: resetController()
-    Component.onCompleted: resetController()
-    Component { id: controllerComponent; FactPanelController { } }
-    Loader { id: controllerLoader }
-    function parameter(names) {
-        const controller = controllerLoader.item
-        if (!controller || controller.vehicle !== vehicle || !parametersReady) { return null }
-        for (const name of names) {
-            if (controller.parameterExists(-1, name)) { return controller.getParameterFact(-1, name, false) }
-        }
-        return null
-    }
     component SnapSwitch: SettingsFormRow {
         id: row
         required property string settingKey
@@ -74,61 +52,6 @@ Item {
             }
         }
     }
-    component ParameterField: SettingsFormRow {
-        id: row
-        required property string label
-        required property var names
-        readonly property var fact: root.parameter(names)
-        property bool edited: false
-        Layout.fillWidth: true
-        ColumnLayout {
-            Layout.fillWidth: true
-            QGCLabel { text: row.label; font.bold: true; Layout.fillWidth: true; wrapMode: Text.WordWrap }
-            QGCLabel {
-                text: row.fact ? row.fact.name + " · " + row.fact.units : qsTr("This parameter is unavailable on the connected aircraft.")
-                Layout.fillWidth: true
-                wrapMode: Text.WordWrap
-                font.pointSize: ScreenTools.smallFontPointSize
-            }
-            RowLayout {
-                Layout.fillWidth: true
-                QGCTextField {
-                    id: value
-                    Layout.fillWidth: true
-                    Layout.minimumWidth: 0
-                    enabled: !!row.fact
-                    text: row.fact ? row.fact.valueString : ""
-                    onTextEdited: row.edited = true
-                }
-                QGCButton {
-                    text: qsTr("Read")
-                    enabled: !!row.fact
-                    heightFactor: 0.15
-                    onClicked: {
-                        row.edited = false
-                        value.text = row.fact.valueString
-                        root.plugin.refreshFlightPreferenceParameter(row.fact.name)
-                    }
-                }
-                QGCButton {
-                    text: qsTr("Write")
-                    enabled: !!row.fact && row.edited
-                    heightFactor: 0.15
-                    onClicked: {
-                        const error = row.fact.validate(value.text, false)
-                        if (error.length) { value.showValidationError(error); return }
-                        value.clearValidationError()
-                        row.fact.value = value.text
-                        row.edited = false
-                    }
-                }
-            }
-        }
-        Connections {
-            target: row.fact
-            function onValueChanged() { if (!row.edited) { value.text = row.fact.valueString } }
-        }
-    }
     ColumnLayout {
         anchors.fill: parent
         spacing: ScreenTools.defaultFontPixelHeight * 0.5
@@ -138,7 +61,6 @@ Item {
             background: Rectangle { color: palette.windowShade }
             PreferenceTab { objectName: "caacPreferencesPlanningTab"; text: qsTr("Waypoint drawing") }
             PreferenceTab { objectName: "caacPreferencesUITab"; text: qsTr("Ground station UI") }
-            PreferenceTab { objectName: "caacPreferencesFlightTab"; text: qsTr("Flight parameters") }
         }
         QGCFlickable {
             objectName: "caacPreferencesScroller"
@@ -224,20 +146,6 @@ Item {
                         }
                     }
 
-                }
-                ColumnLayout {
-                    objectName: "caacPreferenceFlightParameters"
-                    visible: tabs.currentIndex === 2
-                    Layout.fillWidth: true
-                    QGCLabel { text: qsTr("Flight parameters"); font.bold: true }
-                    QGCLabel {
-                        Layout.fillWidth: true
-                        wrapMode: Text.WordWrap
-                        text: root.parametersReady ? qsTr("Values use the aircraft parameter units and limits.") : qsTr("Connect an aircraft to read or write flight parameters.")
-                    }
-                    ParameterField { label: qsTr("Waypoint acceptance radius"); names: ["NAV_ACC_RAD", "WPNAV_RADIUS"] }
-                    ParameterField { label: qsTr("Horizontal cruise speed"); names: ["MPC_XY_CRUISE", "WPNAV_SPEED"] }
-                    ParameterField { label: qsTr("Horizontal acceleration"); names: ["MPC_ACC_HOR", "WPNAV_ACCEL"] }
                 }
             }
         }

@@ -812,6 +812,93 @@ void CaacPlanningInteractionUITest::_newSettingsPages()
             QVERIFY(capture(QStringLiteral("caacAnalyzeInline")));
             QVERIFY(clickButton(QStringLiteral("analyze_backToMenu")));
             QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("analyze_panel"), 0));
+            for (const auto& tool : {qMakePair("Log Viewer", "logViewer_"), qMakePair("GeoTag Images", "geoTag_")}) {
+                const QString prefix = QLatin1String(tool.second);
+                const auto buttonName =
+                    QStringLiteral("analyzeButton_") + QCoreApplication::translate("QGCCorePlugin", tool.first);
+                QVERIFY(clickButtonScrolled(buttonName, QStringLiteral("analyze_buttonList")));
+                auto* page = findVisibleItem(_rootItem, prefix + QStringLiteral("page"));
+                auto* scroller = findItem(page, prefix + QStringLiteral("scroller"));
+                QVERIFY(page && scroller);
+                const auto fitsWidth = [&](QQuickItem* item) {
+                    for (auto* ancestor = item; ancestor; ancestor = ancestor->parentItem()) {
+                        ancestor->ensurePolished();
+                    }
+                    const auto bounds = item->mapRectToItem(scroller, item->boundingRect());
+                    return item->width() > 0 && item->height() > 0 && bounds.left() >= -1 &&
+                           bounds.right() <= scroller->width() + 1;
+                };
+                const auto textFits = [&](QQuickItem* item) {
+                    return fitsWidth(item) && item->property("paintedWidth").toReal() <= item->width() + 1 &&
+                           item->property("paintedHeight").toReal() <= item->height() + 1;
+                };
+                for (const qreal width : {320.0, 640.0}) {
+                    QVERIFY(page->setProperty("availableWidth", width));
+                    QVERIFY(page->setProperty("availableHeight", 420.0));
+                    QTRY_COMPARE_WITH_TIMEOUT(scroller->width(), width, TestTimeout::shortMs());
+                    QVERIFY(scroller->setProperty("contentY", 0.0));
+                    const bool logViewer = prefix == QStringLiteral("logViewer_");
+                    const QStringList controls =
+                        logViewer ? QStringList{QStringLiteral("openULog"),   QStringLiteral("openTLog"),
+                                                QStringLiteral("clear"),      QStringLiteral("tabChart"),
+                                                QStringLiteral("tabMap"),     QStringLiteral("tabParameters"),
+                                                QStringLiteral("tabMessages")}
+                                  : QStringList{QStringLiteral("timeOffset"), QStringLiteral("preview"),
+                                                QStringLiteral("start")};
+                    for (const auto& controlName : controls) {
+                        auto* control = findItem(page, prefix + controlName);
+                        QVERIFY2(control, qPrintable(prefix + controlName));
+                        QTRY_VERIFY2_WITH_TIMEOUT(fitsWidth(control), qPrintable(prefix + controlName),
+                                                  TestTimeout::shortMs());
+                    }
+                    if (logViewer) {
+                        auto* binButton = findItem(page, QStringLiteral("logViewer_openBin"));
+                        if (binButton && binButton->isVisible()) {
+                            QTRY_VERIFY_WITH_TIMEOUT(fitsWidth(binButton), TestTimeout::shortMs());
+                        }
+                        auto* tabs = findItem(page, QStringLiteral("logViewer_tabs"));
+                        QVERIFY(tabs);
+                        for (const auto& tab : {qMakePair("tabMap", 1), qMakePair("tabParameters", 2),
+                                                qMakePair("tabMessages", 3), qMakePair("tabChart", 0)}) {
+                            QVERIFY(clickButtonScrolled(prefix + QLatin1String(tab.first),
+                                                        QStringLiteral("logViewer_scroller")));
+                            QTRY_COMPARE_WITH_TIMEOUT(tabs->property("currentIndex").toInt(), tab.second,
+                                                      TestTimeout::shortMs());
+                        }
+                    } else {
+                        for (const auto& name : {QStringLiteral("offsetHelp"), QStringLiteral("previewHelp")}) {
+                            auto* label = findItem(page, prefix + name);
+                            QVERIFY(label);
+                            QTRY_VERIFY2_WITH_TIMEOUT(textFits(label), qPrintable(prefix + name),
+                                                      TestTimeout::shortMs());
+                        }
+                        auto* preview = findItem(page, QStringLiteral("geoTag_preview"));
+                        QVERIFY(preview);
+                        auto* previewText = preview->property("contentItem").value<QQuickItem*>();
+                        QVERIFY(previewText);
+                        QTRY_VERIFY_WITH_TIMEOUT(textFits(previewText), TestTimeout::shortMs());
+                    }
+                    auto* bottom =
+                        findItem(page, prefix + (logViewer ? QStringLiteral("endContent") : QStringLiteral("start")));
+                    QVERIFY(bottom);
+                    QTRY_VERIFY_WITH_TIMEOUT(logViewer
+                                                 ? scroller->property("contentHeight").toReal() >= scroller->height()
+                                                 : scroller->property("contentHeight").toReal() > scroller->height(),
+                                             TestTimeout::shortMs());
+                    const qreal maximumY =
+                        std::max(0.0, scroller->property("contentHeight").toReal() - scroller->height());
+                    QVERIFY(scroller->setProperty("contentY", maximumY));
+                    QTRY_VERIFY_WITH_TIMEOUT(
+                        [&] {
+                            const auto bounds = bottom->mapRectToItem(scroller, bottom->boundingRect());
+                            return bounds.bottom() <= scroller->height() + 1 && bounds.bottom() > 0;
+                        }(),
+                        TestTimeout::shortMs());
+                    QCOMPARE(scroller->property("contentX").toReal(), 0.0);
+                }
+                QVERIFY(clickButton(QStringLiteral("analyze_backToMenu")));
+                QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("analyze_panel"), 0));
+            }
         }
         QQmlExpression returnToPlan(qmlContext(plan), plan, QStringLiteral("mainWindow.showPlanView()"));
         returnToPlan.evaluate();
@@ -867,9 +954,19 @@ void CaacPlanningInteractionUITest::_preferencesUI()
     QTRY_COMPARE_WITH_TIMEOUT(theme->rawValue().toInt(), 0, TestTimeout::mediumMs());
     QVERIFY(clickButton(QStringLiteral("caacPreferenceThemeDark")));
     QTRY_COMPARE_WITH_TIMEOUT(theme->rawValue().toInt(), 1, TestTimeout::mediumMs());
-    QVERIFY(clickButton(QStringLiteral("caacPreferencesFlightTab")));
-    auto* flightPage = findVisibleItem(_rootItem, QStringLiteral("caacPreferenceFlightParameters"));
-    QVERIFY(flightPage);
+    QVERIFY(!findItem(_rootItem, QStringLiteral("caacPreferencesFlightTab")));
+    QVERIFY(!findItem(_rootItem, QStringLiteral("caacPreferenceFlightParameters")));
+    QVERIFY(clickButton(QStringLiteral("caacPreferencesPlanningTab")));
+    auto* drawing = findVisibleItem(_rootItem, QStringLiteral("caacDrawingSettingsFrame"));
+    QVERIFY(drawing);
+    horizontal = findVisibleItemScrolled(QStringLiteral("caacPreference_horizontalSnap"),
+                                         QStringLiteral("caacPreferencesScroller"));
+    QVERIFY(horizontal);
+    QCOMPARE(horizontal->property("checked").toBool(), !before);
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacPreferenceThemeDark"), 0));
+    QVERIFY(clickButton(QStringLiteral("caacPreferencesUITab")));
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacPreferenceThemeDark")));
+    QVERIFY(!drawing->isVisible());
 }
 
 void CaacPlanningInteractionUITest::_calculatorUI()
@@ -1183,6 +1280,8 @@ void CaacPlanningInteractionUITest::_dragSnappingAndRelations()
     auto* master = plan->property("_planMasterController").value<PlanMasterController*>();
     auto* editor = panel->property("routeController").value<CaacRouteEditorController*>();
     QVERIFY(master && editor);
+    QVERIFY(map->setProperty("allowVehicleLocationCenter", false));
+    QVERIFY(map->setProperty("allowGCSLocationCenter", false));
     QVERIFY(panel->property("panelsCollapsed").toBool());
     QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacPanelTitle"), 0));
     const auto collapsedHeight = panel->height();
@@ -1273,9 +1372,12 @@ void CaacPlanningInteractionUITest::_dragSnappingAndRelations()
                                                {"midpointSnap", false},
                                                {"intersectionSnap", true}}));
     const auto intersection = QGCGeo::geodesicDestination(origin, 0, 50);
-    map->setProperty("center", QVariant::fromValue(QGCGeo::geodesicDestination(intersection, 90, 0.5)));
-    map->setProperty("zoomLevel", 18.0);
+    moving = mission->visualItems()->value<SimpleMissionItem*>(2);
+    QVERIFY(moving);
+    QVERIFY(map->setProperty("center", QVariant::fromValue(moving->coordinate())));
+    QVERIFY(map->setProperty("zoomLevel", 17.0));
     map->setProperty("bearing", 180.0);
+    QTRY_VERIFY_WITH_TIMEOUT(map->property("mapReady").toBool(), TestTimeout::mediumMs());
     ready.clear();
     _window->update();
     QVERIFY(ready.wait(TestTimeout::mediumMs()));
@@ -1284,7 +1386,28 @@ void CaacPlanningInteractionUITest::_dragSnappingAndRelations()
     indicator = dragger->property("itemIndicator").value<QQuickItem*>();
     moving = mission->visualItems()->value<SimpleMissionItem*>(2);
     QVERIFY(indicator && moving);
-    const auto intersectionStart = dragger->mapToScene(indicator->property("anchorPoint").toPointF()).toPoint();
+    const auto dragAnchor = [&] {
+        return dragger->mapToScene(indicator->property("anchorPoint").toPointF() +
+                                   QPointF(dragger->property("_touchMarginHorizontal").toReal(),
+                                           dragger->property("_touchMarginVertical").toReal()));
+    };
+    QTRY_VERIFY_WITH_TIMEOUT(
+        QLineF(dragAnchor(), map->mapToScene(QPointF(map->width() / 2, map->height() / 2))).length() < 1,
+        TestTimeout::mediumMs());
+    QPointF intersectionPoint;
+    QVERIFY(QMetaObject::invokeMethod(map, "fromCoordinate", Q_RETURN_ARG(QPointF, intersectionPoint),
+                                      Q_ARG(QGeoCoordinate, QGCGeo::geodesicDestination(intersection, 90, 0.5)),
+                                      Q_ARG(bool, false)));
+    const auto intersectionStart = dragAnchor().toPoint();
+    const auto intersectionTarget = map->mapToScene(intersectionPoint).toPoint();
+    for (const auto& point : {intersectionStart, intersectionTarget}) {
+        QVERIFY(map->mapRectToScene(map->boundingRect()).contains(point));
+        for (const auto& name : {QStringLiteral("caacMainToolsScroller"), QStringLiteral("caacMapEditTools"),
+                                 QStringLiteral("caacMissionDetailsButton"), QStringLiteral("caacRouteEditor")}) {
+            auto* overlay = findVisibleItem(_rootItem, name, 0);
+            QVERIFY2(!overlay || !overlay->mapRectToScene(overlay->boundingRect()).contains(point), qPrintable(name));
+        }
+    }
     QTest::mousePress(_window, Qt::LeftButton, Qt::NoModifier, intersectionStart);
     grabber = _window->mouseGrabberItem();
     QVERIFY(grabber);
@@ -1296,7 +1419,7 @@ void CaacPlanningInteractionUITest::_dragSnappingAndRelations()
                             .arg(grabber->parentItem()->objectName())
                             .arg(panel->property("activePanel").toInt())));
     QTest::mouseMove(_window, intersectionStart + QPoint(15, 15));
-    QTest::mouseMove(_window, target);
+    QTest::mouseMove(_window, intersectionTarget);
     QCOMPARE(panel->property("_draggedWaypoint").value<QObject*>(), moving);
     QTRY_VERIFY_WITH_TIMEOUT(panel->property("_dragGuides").toList().size() > 0, TestTimeout::mediumMs());
     QCOMPARE(panel->property("_dragGuides").toList().first().toMap().value("kind").toInt(), 4);
@@ -1311,7 +1434,7 @@ void CaacPlanningInteractionUITest::_dragSnappingAndRelations()
     if (const auto screenshot = qgetenv("CAAC_INTERSECTION_UI_SCREENSHOT"); !screenshot.isEmpty()) {
         QVERIFY(_window->grabWindow().save(QString::fromUtf8(screenshot)));
     }
-    QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, target);
+    QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, intersectionTarget);
     QTRY_VERIFY_WITH_TIMEOUT(!findVisibleItem(_rootItem, QStringLiteral("caacWaypointSnapGuides"), 0),
                              TestTimeout::mediumMs());
     QVERIFY(clickButton(QStringLiteral("caacUndo")));
