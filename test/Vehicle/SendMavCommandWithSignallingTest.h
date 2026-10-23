@@ -16,6 +16,7 @@ public:
 
 private slots:
     void _performTestCases();
+    void _retryHasFullAckWindow();
     void _duplicateCommand();
     void _commandedFlightSpeedConfirmation();
     void _commandedFlightSpeedFilter_data();

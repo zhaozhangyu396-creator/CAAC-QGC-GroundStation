@@ -461,6 +461,7 @@ void MavCommandQueue::_sendFromList(int index)
                                              &cmd);
     }
 
+    _list[index].elapsedTimer.restart();
     _vehicle->sendMessageOnLinkThreadSafe(sharedLink.get(), msg);
 }
 

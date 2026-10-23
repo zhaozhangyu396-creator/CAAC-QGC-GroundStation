@@ -5,6 +5,7 @@
 
 #include <QtCore/QElapsedTimer>
 #include <QtCore/QRegularExpression>
+#include <QtCore/QTimer>
 #include <QtTest/QSignalSpy>
 
 #include "Fixtures/RAIIFixtures.h"
@@ -98,6 +99,36 @@ void SendMavCommandWithSignallingTest::_performTestCases()
         qCDebug(UnitTestLog) << "Testing case" << index++;
         _testCaseWorker(testCase);
     }
+}
+
+void SendMavCommandWithSignallingTest::_retryHasFullAckWindow()
+{
+    TestFixtures::MavCommandAckTimeoutFixture shortAckTimeout;
+    QSignalSpy results(_vehicle, &Vehicle::mavCommandResult);
+    QVERIFY(results.isValid());
+    _mockLink->clearReceivedMavCommandCounts();
+    _vehicle->sendMavCommand(_vehicle->defaultComponentId(), MockLink::MAV_CMD_MOCKLINK_NO_RESPONSE, false);
+    QTRY_COMPARE_WITH_TIMEOUT(_mockLink->receivedMavCommandCount(MockLink::MAV_CMD_MOCKLINK_NO_RESPONSE), 2,
+                              TestTimeout::mediumMs());
+
+    // ACK after multiple polling intervals, within the second attempt's unchanged timeout.
+    QTimer delayedAck;
+    delayedAck.setSingleShot(true);
+    connect(&delayedAck, &QTimer::timeout, this, [this]() {
+        mavlink_message_t message{};
+        message.compid = _vehicle->defaultComponentId();
+        mavlink_command_ack_t ack{};
+        ack.command = MockLink::MAV_CMD_MOCKLINK_NO_RESPONSE;
+        ack.result = MAV_RESULT_ACCEPTED;
+        _vehicle->_mavCmdQueue->handleCommandAck(message, ack);
+    });
+    delayedAck.start(TestFixtures::MavCommandAckTimeoutFixture::kDefaultTimeoutMs / 2);
+    QList<QVariant> arguments;
+    QVERIFY(_waitForExpectedCommandResult(results, MockLink::MAV_CMD_MOCKLINK_NO_RESPONSE, arguments));
+    QCOMPARE(arguments.at(3).toInt(), int(MAV_RESULT_ACCEPTED));
+    QCOMPARE(arguments.at(4).toInt(), int(Vehicle::MavCmdResultCommandResultOnly));
+    QCOMPARE(_mockLink->receivedMavCommandCount(MockLink::MAV_CMD_MOCKLINK_NO_RESPONSE), 2);
+    QVERIFY(!_vehicle->isMavCommandPending(_vehicle->defaultComponentId(), MockLink::MAV_CMD_MOCKLINK_NO_RESPONSE));
 }
 
 void SendMavCommandWithSignallingTest::_duplicateCommand()
