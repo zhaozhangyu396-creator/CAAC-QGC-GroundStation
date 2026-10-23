@@ -1978,16 +1978,29 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     QVERIFY(QMetaObject::invokeMethod(_window, "showPlanView"));
     auto* planMap = findVisibleItem(_rootItem, QStringLiteral("planView_map"));
     QVERIFY(planMap);
-    auto* localWaypoint = mission->visualItems()->value<SimpleMissionItem*>(1);
+    SimpleMissionItem* localWaypoint = nullptr;
+    for (int i = 1; i < mission->visualItems()->count(); ++i) {
+        auto* item = mission->visualItems()->value<SimpleMissionItem*>(i);
+        if (item && item->command() == MAV_CMD_NAV_WAYPOINT) {
+            localWaypoint = item;
+            break;
+        }
+    }
     QVERIFY(localWaypoint);
+    QCOMPARE(localWaypoint->waypointNumber(), 1);
     const auto gotoPoint = QGCGeo::geodesicDestination(vehicle->coordinate(), 90, 10);
     localWaypoint->setCoordinate(gotoPoint);
     planMap->setProperty("zoomLevel", 18);
     planMap->setProperty("center", QVariant::fromValue(gotoPoint));
-    auto* dragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_1"), TestTimeout::mediumMs());
+    const auto draggerName = QStringLiteral("missionItemDrag_%1").arg(localWaypoint->sequenceNumber());
+    auto* dragger = findVisibleItem(planMap, draggerName, TestTimeout::mediumMs());
     QVERIFY(dragger);
     auto* indicator = dragger->property("itemIndicator").value<QQuickItem*>();
     QVERIFY(indicator);
+    QCOMPARE(indicator->property("missionItem").value<QObject*>(), static_cast<QObject*>(localWaypoint));
+    QTRY_VERIFY_WITH_TIMEOUT(QGCGeo::geodesicDistance(dragger->property("itemCoordinate").value<QGeoCoordinate>(),
+                                                      localWaypoint->coordinate()) < 0.02,
+                             TestTimeout::mediumMs());
     const auto markerPosition = [&]() {
         return dragger->mapToScene(indicator->property("anchorPoint").toPointF() +
                                    QPointF(dragger->property("_touchMarginHorizontal").toDouble(),
@@ -1995,6 +2008,10 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     };
     const auto middle = planMap->mapToScene(QPointF(planMap->width() / 2, planMap->height() / 2));
     QTRY_VERIFY_WITH_TIMEOUT(QLineF(markerPosition(), middle).length() < 1, TestTimeout::mediumMs());
+    const auto labelName = QStringLiteral("missionItemMapLabel_%1").arg(localWaypoint->sequenceNumber());
+    auto* markerLabel = findVisibleItem(planMap, labelName, TestTimeout::mediumMs());
+    QVERIFY(markerLabel);
+    QTRY_COMPARE_WITH_TIMEOUT(markerLabel->property("index").toInt(), 1, TestTimeout::mediumMs());
     mock->clearReceivedMavCommandCounts();
     QTest::mouseClick(_window, Qt::RightButton, Qt::NoModifier, markerPosition().toPoint());
     auto* gotoButton = findVisibleItem(_rootItem, QStringLiteral("caacContextGoto"));
