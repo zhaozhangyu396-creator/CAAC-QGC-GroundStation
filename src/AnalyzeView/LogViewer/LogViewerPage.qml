@@ -23,8 +23,8 @@ AnalyzePage {
         QGCFlickable {
             id: logViewerScroll
             objectName: "logViewer_scroller"
-            width: availableWidth
-            height: availableHeight
+            width: logViewerPage.availableWidth
+            height: logViewerPage.availableHeight
             contentWidth: width
             contentHeight: logViewerContent.height
             flickableDirection: Flickable.VerticalFlick
@@ -69,9 +69,9 @@ AnalyzePage {
                 function loadBinFile(file) {
                     if (logViewerController.hasLoadedLog) {
                         // Match explicit "Clear" behavior before loading replacement .bin file.
-                        clearLoadedLogState(true)
+                        logViewerContent.clearLoadedLogState(true)
                     }
-                    pendingBinFile = file
+                    logViewerContent.pendingBinFile = file
                     logParser.startParsingAsync(file)
                 }
 
@@ -90,13 +90,13 @@ AnalyzePage {
                     ignoreUnknownSignals: true
 
                     function onParseFileFinished(filePath, ok, errorMessage) {
-                        if (filePath !== pendingBinFile) {
+                        if (filePath !== logViewerContent.pendingBinFile) {
                             return
                         }
 
                         if (!ok) {
                             QGroundControl.showMessageDialog(logViewerPage, qsTr("Log Viewer"), errorMessage)
-                            pendingBinFile = ""
+                            logViewerContent.pendingBinFile = ""
                             return
                         }
 
@@ -113,7 +113,7 @@ AnalyzePage {
                         } else {
                             logViewerController.openBinLog(filePath)
                         }
-                        pendingBinFile = ""
+                        logViewerContent.pendingBinFile = ""
                     }
                 }
 
@@ -173,7 +173,7 @@ AnalyzePage {
                         text: qsTr("Clear")
                         enabled: logViewerController.hasLoadedLog
                         onClicked: {
-                            clearLoadedLogState(true)
+                            logViewerContent.clearLoadedLogState(true)
                         }
                     }
 
@@ -374,7 +374,7 @@ AnalyzePage {
                             Layout.maximumWidth: chartingLayout.columns === 1 ? Infinity : logViewerContent.width * 0.4
                             Layout.preferredHeight: chartingLayout.columns === 1 ? ScreenTools.defaultFontPixelHeight * 14 : -1
                             Layout.minimumHeight: ScreenTools.defaultFontPixelHeight * 10
-                            visible: isFirmwareLog
+                            visible: logViewerContent.isFirmwareLog
                             logParser: logParser
                             logViewerController: logViewerController
                             onClearSelectedRequested: logViewerChart.refreshBinChart()
@@ -398,10 +398,10 @@ AnalyzePage {
                                     id: logViewerChart
                                     Layout.fillWidth: true
                                     Layout.fillHeight: true
-                                    visible: isFirmwareLog
+                                    visible: logViewerContent.isFirmwareLog
                                     logParser: logParser
                                     logViewerController: logViewerController
-                                    xAxisShowLocalTime: _xAxisShowLocalTime
+                                    xAxisShowLocalTime: logViewerContent._xAxisShowLocalTime
 
                                     onCursorMoved: (t) => {
                                         _mapTab._markerVisible = true
@@ -573,7 +573,7 @@ AnalyzePage {
                                 visible: _mapTab._showAltChart && !_mapTab._altChartCollapsed
                                 logParser: logParser
                                 altFieldName: _mapTab._altFieldName
-                                xAxisShowLocalTime: _xAxisShowLocalTime
+                                xAxisShowLocalTime: logViewerContent._xAxisShowLocalTime
 
                                 onMarkerChanged: (t) => {
                                     _mapTab._markerVisible = true
@@ -635,7 +635,7 @@ AnalyzePage {
                         const fileLower = file.toLowerCase()
                         if (fileLower.endsWith(".tlog")) {
                             if (logViewerController.hasLoadedLog) {
-                                clearLoadedLogState(true)
+                                logViewerContent.clearLoadedLogState(true)
                             }
                             const replayLink = QGroundControl.linkManager.startLogReplay(file)
                             if (!replayLink) {
@@ -650,7 +650,7 @@ AnalyzePage {
                             replayController.link = replayLink
                             logViewerController.openTLog(file)
                         } else {
-                            loadBinFile(file)
+                            logViewerContent.loadBinFile(file)
                         }
                         close()
                     }

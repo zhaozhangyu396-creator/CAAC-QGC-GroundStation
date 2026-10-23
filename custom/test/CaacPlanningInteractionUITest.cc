@@ -6,6 +6,7 @@
 #include <QtCore/QDir>
 #include <QtCore/QJsonArray>
 #include <QtCore/QLineF>
+#include <QtCore/QPointer>
 #include <QtCore/QRectF>
 #include <QtCore/QRegularExpression>
 #include <QtCore/QScopeGuard>
@@ -812,15 +813,64 @@ void CaacPlanningInteractionUITest::_newSettingsPages()
             QVERIFY(capture(QStringLiteral("caacAnalyzeInline")));
             QVERIFY(clickButton(QStringLiteral("analyze_backToMenu")));
             QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("analyze_panel"), 0));
+            const QSize savedWindowSize = _window->size();
+            const auto restoreWindow = qScopeGuard([this, savedWindowSize] { _window->resize(savedWindowSize); });
+            QVERIFY(_window->screen());
+            const auto available = _window->screen()->availableGeometry().size();
+            const auto frameMargins = _window->frameMargins();
+            const QSize testWindowSize(std::min(1100, available.width() - frameMargins.left() - frameMargins.right()),
+                                       std::min(900, available.height() - frameMargins.top() - frameMargins.bottom()));
+            _window->resize(testWindowSize);
+            QTRY_COMPARE_WITH_TIMEOUT(_window->size(), testWindowSize, TestTimeout::shortMs());
+            const QPointer<QQuickItem> host = findVisibleItem(_rootItem, QStringLiteral("caacSettingsMenu"));
+            QVERIFY(host);
+            const QSizeF savedHostSize(host->width(), host->height());
+            const auto restoreHost = qScopeGuard([host, savedHostSize] {
+                if (host) {
+                    host->setWidth(savedHostSize.width());
+                    host->setHeight(savedHostSize.height());
+                }
+            });
+            const auto insideClippedAncestors = [this](QQuickItem* item, bool wholeItem) {
+                if (!item || !item->isVisible() || !item->window()) {
+                    return false;
+                }
+                for (auto* ancestor = item; ancestor; ancestor = ancestor->parentItem()) {
+                    ancestor->ensurePolished();
+                }
+                const QRectF sceneBounds = item->mapRectToScene(item->boundingRect());
+                const QRectF windowBounds(QPointF(), QSizeF(_window->size()));
+                if (!(wholeItem ? windowBounds.contains(sceneBounds) : windowBounds.contains(sceneBounds.center()))) {
+                    return false;
+                }
+                for (auto* ancestor = item->parentItem(); ancestor; ancestor = ancestor->parentItem()) {
+                    if (!ancestor->isVisible()) {
+                        return false;
+                    }
+                    if (ancestor->clip()) {
+                        const auto clipBounds = ancestor->boundingRect().adjusted(-1, -1, 1, 1);
+                        const bool contained =
+                            wholeItem ? clipBounds.contains(item->mapRectToItem(ancestor, item->boundingRect()))
+                                      : clipBounds.contains(ancestor->mapFromScene(sceneBounds.center()));
+                        if (!contained) {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            };
             for (const auto& tool : {qMakePair("Log Viewer", "logViewer_"), qMakePair("GeoTag Images", "geoTag_")}) {
                 const QString prefix = QLatin1String(tool.second);
                 const auto buttonName =
                     QStringLiteral("analyzeButton_") + QCoreApplication::translate("QGCCorePlugin", tool.first);
                 QVERIFY(clickButtonScrolled(buttonName, QStringLiteral("analyze_buttonList")));
-                auto* page = findVisibleItem(_rootItem, prefix + QStringLiteral("page"));
-                auto* scroller = findItem(page, prefix + QStringLiteral("scroller"));
+                const QPointer<QQuickItem> page = findVisibleItem(_rootItem, prefix + QStringLiteral("page"));
+                const QPointer<QQuickItem> scroller = findItem(page, prefix + QStringLiteral("scroller"));
                 QVERIFY(page && scroller);
                 const auto fitsWidth = [&](QQuickItem* item) {
+                    if (!item || !scroller) {
+                        return false;
+                    }
                     for (auto* ancestor = item; ancestor; ancestor = ancestor->parentItem()) {
                         ancestor->ensurePolished();
                     }
@@ -829,13 +879,18 @@ void CaacPlanningInteractionUITest::_newSettingsPages()
                            bounds.right() <= scroller->width() + 1;
                 };
                 const auto textFits = [&](QQuickItem* item) {
-                    return fitsWidth(item) && item->property("paintedWidth").toReal() <= item->width() + 1 &&
+                    return item && fitsWidth(item) && item->property("paintedWidth").toReal() <= item->width() + 1 &&
                            item->property("paintedHeight").toReal() <= item->height() + 1;
                 };
                 for (const qreal width : {320.0, 640.0}) {
-                    QVERIFY(page->setProperty("availableWidth", width));
-                    QVERIFY(page->setProperty("availableHeight", 420.0));
-                    QTRY_COMPARE_WITH_TIMEOUT(scroller->width(), width, TestTimeout::shortMs());
+                    QVERIFY(host && page && scroller);
+                    host->setWidth(host->width() + width - scroller->width());
+                    QTRY_VERIFY_WITH_TIMEOUT(scroller && std::abs(scroller->width() - width) < 1,
+                                             TestTimeout::shortMs());
+                    host->setHeight(host->height() + 420.0 - scroller->height());
+                    QTRY_VERIFY_WITH_TIMEOUT(scroller && std::abs(scroller->height() - 420.0) < 1,
+                                             TestTimeout::shortMs());
+                    QTRY_VERIFY_WITH_TIMEOUT(insideClippedAncestors(scroller, true), TestTimeout::shortMs());
                     QVERIFY(scroller->setProperty("contentY", 0.0));
                     const bool logViewer = prefix == QStringLiteral("logViewer_");
                     const QStringList controls =
@@ -846,39 +901,46 @@ void CaacPlanningInteractionUITest::_newSettingsPages()
                                   : QStringList{QStringLiteral("timeOffset"), QStringLiteral("preview"),
                                                 QStringLiteral("start")};
                     for (const auto& controlName : controls) {
-                        auto* control = findItem(page, prefix + controlName);
+                        const QPointer<QQuickItem> control = findItem(page, prefix + controlName);
                         QVERIFY2(control, qPrintable(prefix + controlName));
                         QTRY_VERIFY2_WITH_TIMEOUT(fitsWidth(control), qPrintable(prefix + controlName),
                                                   TestTimeout::shortMs());
                     }
                     if (logViewer) {
-                        auto* binButton = findItem(page, QStringLiteral("logViewer_openBin"));
+                        const QPointer<QQuickItem> binButton = findItem(page, QStringLiteral("logViewer_openBin"));
                         if (binButton && binButton->isVisible()) {
                             QTRY_VERIFY_WITH_TIMEOUT(fitsWidth(binButton), TestTimeout::shortMs());
                         }
-                        auto* tabs = findItem(page, QStringLiteral("logViewer_tabs"));
+                        QPointer<QQuickItem> tabs = findItem(page, QStringLiteral("logViewer_tabs"));
                         QVERIFY(tabs);
                         for (const auto& tab : {qMakePair("tabMap", 1), qMakePair("tabParameters", 2),
                                                 qMakePair("tabMessages", 3), qMakePair("tabChart", 0)}) {
-                            QVERIFY(clickButtonScrolled(prefix + QLatin1String(tab.first),
-                                                        QStringLiteral("logViewer_scroller")));
-                            QTRY_COMPARE_WITH_TIMEOUT(tabs->property("currentIndex").toInt(), tab.second,
-                                                      TestTimeout::shortMs());
+                            const auto tabName = prefix + QLatin1String(tab.first);
+                            const QPointer<QQuickItem> button =
+                                findVisibleItemScrolled(tabName, QStringLiteral("logViewer_scroller"));
+                            QVERIFY(button);
+                            QTRY_VERIFY_WITH_TIMEOUT(insideClippedAncestors(button, false), TestTimeout::shortMs());
+                            QVERIFY(clickButton(tabName));
+                            QVERIFY2(page && scroller, "Analyze page was destroyed while switching a log tab");
+                            tabs = findItem(page, QStringLiteral("logViewer_tabs"));
+                            QVERIFY(tabs);
+                            QTRY_VERIFY_WITH_TIMEOUT(tabs && tabs->property("currentIndex").toInt() == tab.second,
+                                                     TestTimeout::shortMs());
                         }
                     } else {
                         for (const auto& name : {QStringLiteral("offsetHelp"), QStringLiteral("previewHelp")}) {
-                            auto* label = findItem(page, prefix + name);
+                            const QPointer<QQuickItem> label = findItem(page, prefix + name);
                             QVERIFY(label);
                             QTRY_VERIFY2_WITH_TIMEOUT(textFits(label), qPrintable(prefix + name),
                                                       TestTimeout::shortMs());
                         }
-                        auto* preview = findItem(page, QStringLiteral("geoTag_preview"));
+                        const QPointer<QQuickItem> preview = findItem(page, QStringLiteral("geoTag_preview"));
                         QVERIFY(preview);
-                        auto* previewText = preview->property("contentItem").value<QQuickItem*>();
+                        const QPointer<QQuickItem> previewText = preview->property("contentItem").value<QQuickItem*>();
                         QVERIFY(previewText);
                         QTRY_VERIFY_WITH_TIMEOUT(textFits(previewText), TestTimeout::shortMs());
                     }
-                    auto* bottom =
+                    const QPointer<QQuickItem> bottom =
                         findItem(page, prefix + (logViewer ? QStringLiteral("endContent") : QStringLiteral("start")));
                     QVERIFY(bottom);
                     QTRY_VERIFY_WITH_TIMEOUT(logViewer
@@ -890,6 +952,9 @@ void CaacPlanningInteractionUITest::_newSettingsPages()
                     QVERIFY(scroller->setProperty("contentY", maximumY));
                     QTRY_VERIFY_WITH_TIMEOUT(
                         [&] {
+                            if (!bottom || !scroller) {
+                                return false;
+                            }
                             const auto bounds = bottom->mapRectToItem(scroller, bottom->boundingRect());
                             return bounds.bottom() <= scroller->height() + 1 && bounds.bottom() > 0;
                         }(),
