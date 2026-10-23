@@ -1,5 +1,7 @@
 #include "Vehicle.h"
 
+#include <cmath>
+
 #include "ADSBVehicleManager.h"
 #include "APM.h"
 #include "Actuators.h"
@@ -260,6 +262,21 @@ void Vehicle::_commonInit(LinkInterface* link)
     connect(_missionManager, &MissionManager::sendComplete,             this, &Vehicle::_clearCameraTriggerPoints);
     connect(_missionManager, &MissionManager::currentIndexChanged,      this, &Vehicle::_updateHeadingToNextWP);
     connect(_missionManager, &MissionManager::currentIndexChanged,      this, &Vehicle::_updateMissionItemIndex);
+    connect(_missionManager, &MissionManager::currentIndexChanged, this,
+            &Vehicle::_updateCommandedFlightSpeedForMission);
+    const auto clearSpeedAfterMissionChange = [this](bool error) {
+        if (!error) {
+            _clearCommandedFlightSpeed();
+        }
+    };
+    connect(_missionManager, &MissionManager::sendComplete, this, clearSpeedAfterMissionChange);
+    connect(_missionManager, &MissionManager::removeAllComplete, this, clearSpeedAfterMissionChange);
+    connect(_missionManager, &MissionManager::newMissionItemsAvailable, this, &Vehicle::_clearCommandedFlightSpeed);
+    connect(this, &Vehicle::armedChanged, this, [this](bool armed) {
+        if (!armed) {
+            _clearCommandedFlightSpeed();
+        }
+    });
 
     connect(_missionManager, &MissionManager::sendComplete,             _trajectoryPoints, &TrajectoryPoints::clear);
     connect(_missionManager, &MissionManager::newMissionItemsAvailable, _trajectoryPoints, &TrajectoryPoints::clear);
@@ -274,6 +291,19 @@ void Vehicle::_commonInit(LinkInterface* link)
     // (e.g. VehicleLinkManager::_addLink() → _updatePrimaryLink → sendMavCommand).
     _mavCmdQueue = new MavCommandQueue(this);
     connect(_mavCmdQueue, &MavCommandQueue::commandResult, this, &Vehicle::mavCommandResult);
+    connect(_mavCmdQueue, &MavCommandQueue::flightSpeedChangeAccepted, this, [this](int speedType, double speed) {
+        _commandedFlightSpeedMissionIndex = _missionManager->currentIndex();
+        if (_commandedFlightSpeed != speed || _commandedFlightSpeedType != speedType) {
+            _commandedFlightSpeed = speed;
+            _commandedFlightSpeedType = speedType;
+            emit commandedFlightSpeedChanged();
+        }
+    });
+    connect(_mavCmdQueue, &MavCommandQueue::flightSpeedTargetInvalidated, this, [this](int speedType) {
+        if (_commandedFlightSpeedType == speedType) {
+            _clearCommandedFlightSpeed();
+        }
+    });
     _reqMsgCoord = new RequestMessageCoordinator(this, _mavCmdQueue);
     _messageIntervalManager = new MessageIntervalManager(this, _mavCmdQueue, _reqMsgCoord);
     connect(_messageIntervalManager, &MessageIntervalManager::mavlinkMsgIntervalsChanged,
@@ -1968,6 +1998,38 @@ Vehicle::guidedModeChangeGroundSpeedMetersSecond(double groundspeed)
         return;
     }
     _firmwarePlugin->guidedModeChangeGroundSpeedMetersSecond(this, groundspeed);
+}
+
+void Vehicle::_clearCommandedFlightSpeed()
+{
+    _commandedFlightSpeedMissionIndex = -1;
+    if (!qIsNaN(_commandedFlightSpeed) || _commandedFlightSpeedType != -1) {
+        _commandedFlightSpeed = qQNaN();
+        _commandedFlightSpeedType = -1;
+        emit commandedFlightSpeedChanged();
+    }
+}
+
+void Vehicle::_updateCommandedFlightSpeedForMission(int index)
+{
+    if (qIsNaN(_commandedFlightSpeed)) {
+        return;
+    }
+    const int previousIndex = _commandedFlightSpeedMissionIndex;
+    if (index < 0 || previousIndex < 0 || index < previousIndex) {
+        _clearCommandedFlightSpeed();
+        return;
+    }
+    // MissionManager indices and item sequences are both wire indices, without the editor's home offset.
+    for (const auto* item : _missionManager->missionItems()) {
+        if (item && item->sequenceNumber() > previousIndex && item->sequenceNumber() <= index &&
+            item->command() == MAV_CMD_DO_CHANGE_SPEED && item->param1() == _commandedFlightSpeedType &&
+            std::isfinite(item->param2()) && item->param2() != -1) {
+            _clearCommandedFlightSpeed();
+            return;
+        }
+    }
+    _commandedFlightSpeedMissionIndex = index;
 }
 
 void

@@ -17,6 +17,10 @@ public:
 private slots:
     void _performTestCases();
     void _duplicateCommand();
+    void _commandedFlightSpeedConfirmation();
+    void _commandedFlightSpeedFilter_data();
+    void _commandedFlightSpeedFilter();
+    void _commandedFlightSpeedMissionLifecycle();
 
 private:
     struct TestCase_t
@@ -29,6 +33,7 @@ private:
     };
 
     void _testCaseWorker(TestCase_t& testCase);
+    void _acknowledgeSpeedCommand(int targetComponent, MAV_RESULT result);
 
     static TestCase_t _rgTestCases[];
 };

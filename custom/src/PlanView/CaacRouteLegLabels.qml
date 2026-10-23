@@ -10,9 +10,51 @@ Item {
     required property var mapControl
     property var segments: null
     property var previewSegments: []
+    property var runtimeMissionController: null
+    property var runtimeVehicle: null
     property var blockedAreas: []
     property real warningTopInset: 0
     property int _projectionRevision: 0
+    readonly property var _runtimeSegment: {
+        if (!runtimeVehicle || !runtimeVehicle.armed || !runtimeVehicle.airborne || !runtimeMissionController) {
+            return null
+        }
+        const sequence = runtimeMissionController.currentMissionIndex
+        const items = runtimeMissionController.visualItems
+        let previous = items.count > 0 ? items.get(0) : null
+        for (let i = 1; i < items.count; ++i) {
+            const item = items.get(i)
+            if (item.sequenceNumber <= sequence && sequence <= item.lastSequenceNumber) {
+                if (!previous || !item.isSimpleItem || sequence !== item.sequenceNumber
+                    || (item.command !== 20 && (!item.specifiesCoordinate || item.isStandaloneCoordinate))) {
+                    return null
+                }
+                return { coordinate1: previous.isSimpleItem ? previous.entryCoordinate : previous.exitCoordinate,
+                    coordinate2: item.command === 20 ? items.get(0).entryCoordinate : item.entryCoordinate }
+            }
+            if (item.specifiesCoordinate && !item.isStandaloneCoordinate) { previous = item }
+        }
+        return null
+    }
+    readonly property real _runtimeSpeed: {
+        if (!_runtimeSegment) { return NaN }
+        const simulation = QGroundControl.corePlugin.simulation
+        if (simulation.active && simulation.vehicle === runtimeVehicle) {
+            const details = simulation.currentMissionDetails
+            return details.sequence === runtimeMissionController.currentMissionIndex ? details.speed : NaN
+        }
+        return runtimeVehicle.commandedFlightSpeedType === (runtimeVehicle.inFwdFlight ? 0 : 1)
+            ? runtimeVehicle.commandedFlightSpeed : NaN
+    }
+
+    function isRuntimeSegment(segment) {
+        if (!_runtimeSegment) { return false }
+        if (segment === _runtimeSegment) { return true }
+        // The planning preview and the uploaded mission own separate segment objects.
+        return segment.coordinate1.distanceTo(_runtimeSegment.coordinate1) < 0.1
+            && segment.coordinate2.distanceTo(_runtimeSegment.coordinate2) < 0.1
+    }
+
     readonly property bool terrainCollision: {
         if (segments) {
             for (let i = 0; i < segments.count; ++i) {
@@ -96,10 +138,12 @@ Item {
             return metrics.midpoint !== undefined ? root.screenPoint(metrics.midpoint) : Qt.point(-1, -1)
         }
         readonly property real _angle: Math.atan2(_to.y - _from.y, _to.x - _from.x) * 180 / Math.PI
+        readonly property real displayedFlightSpeed: isFinite(root._runtimeSpeed) && root._runtimeSpeed > 0
+            && root.isRuntimeSegment(object) ? root._runtimeSpeed : object.flightSpeed
         readonly property string legText: metrics.distance !== undefined
             ? qsTr("%1 m  %2°  %3 m/s").arg(metrics.distance.toFixed(1))
                 .arg((Math.round(metrics.bearing) % 360).toFixed(0))
-                .arg(isFinite(object.flightSpeed) && object.flightSpeed > 0 ? object.flightSpeed.toFixed(1) : "—") : ""
+                .arg(isFinite(displayedFlightSpeed) && displayedFlightSpeed > 0 ? displayedFlightSpeed.toFixed(1) : "—") : ""
         x: _midpoint.x
         y: _midpoint.y
         visible: metrics.distance !== undefined && isFinite(_midpoint.x) && isFinite(_midpoint.y)

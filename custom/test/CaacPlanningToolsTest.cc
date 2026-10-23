@@ -19,6 +19,7 @@
 #include "QGCGeo.h"
 #include "SimpleMissionItem.h"
 #include "SpeedSection.h"
+#include "Vehicle.h"
 
 class CaacPlanningToolsTest : public OfflineMissionTest
 {
@@ -1238,7 +1239,18 @@ void CaacPlanningToolsTest::_legFlightSpeeds()
     auto* first = mission->visualItems()->value<SimpleMissionItem*>(1);
     auto* second = mission->visualItems()->value<SimpleMissionItem*>(2);
     QVERIFY(first && second);
+    auto* homeItem = mission->visualItems()->value<MissionSettingsItem*>(0);
+    auto* vehicle = planController()->controllerVehicle();
+    QVERIFY(homeItem && vehicle);
+    QVERIFY(vehicle->multiRotor());
+    QVERIFY(editor.setMissionFlightSpeed(false, 0));
+    QTRY_VERIFY_WITH_TIMEOUT(homeItem->simpleFlightPathSegment(), TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(homeItem->simpleFlightPathSegment()->flightSpeed(), vehicle->defaultHoverSpeed(),
+                              TestTimeout::mediumMs());
+    QVERIFY(std::isfinite(homeItem->simpleFlightPathSegment()->flightSpeed()));
+    QVERIFY(homeItem->simpleFlightPathSegment()->flightSpeed() > 0);
     QVERIFY(editor.setMissionFlightSpeed(true, 6));
+    QTRY_COMPARE_WITH_TIMEOUT(homeItem->simpleFlightPathSegment()->flightSpeed(), 6.0, TestTimeout::mediumMs());
     first->speedSection()->flightSpeed()->setRawValue(8.5);
     first->speedSection()->setSpecifyFlightSpeed(true);
     QTRY_VERIFY_WITH_TIMEOUT(first->simpleFlightPathSegment(), TestTimeout::mediumMs());
@@ -1249,6 +1261,7 @@ void CaacPlanningToolsTest::_legFlightSpeeds()
     second->speedSection()->setSpecifyFlightSpeed(true);
     QTRY_COMPARE_WITH_TIMEOUT(second->simpleFlightPathSegment()->flightSpeed(), 11.0, TestTimeout::mediumMs());
     QCOMPARE(first->simpleFlightPathSegment()->flightSpeed(), 8.5);
+    QCOMPARE(homeItem->simpleFlightPathSegment()->flightSpeed(), 6.0);
 
     auto settings = CaacSimulationController::defaults();
     settings["closed"] = true;
@@ -1267,6 +1280,7 @@ void CaacPlanningToolsTest::_legFlightSpeeds()
     first->speedSection()->setSpecifyFlightSpeed(false);
     QTRY_COMPARE_WITH_TIMEOUT(first->simpleFlightPathSegment()->flightSpeed(), 6.0, TestTimeout::mediumMs());
     QVERIFY(editor.setMissionFlightSpeed(true, 7));
+    QTRY_COMPARE_WITH_TIMEOUT(homeItem->simpleFlightPathSegment()->flightSpeed(), 7.0, TestTimeout::mediumMs());
     QTRY_COMPARE_WITH_TIMEOUT(first->simpleFlightPathSegment()->flightSpeed(), 7.0, TestTimeout::mediumMs());
     QCOMPARE(second->simpleFlightPathSegment()->flightSpeed(), 11.0);
     auto* speedCommand = qobject_cast<SimpleMissionItem*>(mission->insertSimpleMissionItem(QGeoCoordinate(), 2, false));
@@ -1276,10 +1290,35 @@ void CaacPlanningToolsTest::_legFlightSpeeds()
     speedCommand->missionItem().setParam2(9.5);
     QTRY_COMPARE_WITH_TIMEOUT(first->simpleFlightPathSegment()->flightSpeed(), 9.5, TestTimeout::mediumMs());
     QCOMPARE(second->simpleFlightPathSegment()->flightSpeed(), 11.0);
+    QCOMPARE(homeItem->simpleFlightPathSegment()->flightSpeed(), 7.0);
     const auto changedPreview = editor.simulationPreviewSegments(settings);
     const auto firstLeg = changedPreview.at(1).toMap();
     QCOMPARE(firstLeg.value("coordinate1").value<QGeoCoordinate>(), first->coordinate());
     QCOMPARE(firstLeg.value("flightSpeed").toDouble(), 9.5);
+
+    auto* initialSpeedCommand =
+        qobject_cast<SimpleMissionItem*>(mission->insertSimpleMissionItem(QGeoCoordinate(), 1, false));
+    QVERIFY(initialSpeedCommand);
+    initialSpeedCommand->setCommand(MAV_CMD_DO_CHANGE_SPEED);
+    initialSpeedCommand->missionItem().setParam1(1);
+    initialSpeedCommand->missionItem().setParam2(4.5);
+    QTRY_VERIFY_WITH_TIMEOUT(homeItem->simpleFlightPathSegment(), TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(homeItem->simpleFlightPathSegment()->flightSpeed(), 4.5, TestTimeout::mediumMs());
+    QCOMPARE(first->simpleFlightPathSegment()->flightSpeed(), 9.5);
+    QCOMPARE(second->simpleFlightPathSegment()->flightSpeed(), 11.0);
+    initialSpeedCommand->missionItem().setParam2(5.5);
+    QTRY_COMPARE_WITH_TIMEOUT(homeItem->simpleFlightPathSegment()->flightSpeed(), 5.5, TestTimeout::mediumMs());
+    const auto initialPreview = editor.simulationPreviewSegments(settings);
+    QVERIFY(!initialPreview.isEmpty());
+    const auto initialLeg = initialPreview.first().toMap();
+    QCOMPARE(initialLeg.value("coordinate1").value<QGeoCoordinate>(), home);
+    QCOMPARE(initialLeg.value("coordinate2").value<QGeoCoordinate>(), first->coordinate());
+    QCOMPARE(initialLeg.value("flightSpeed").toDouble(), 5.5);
+    mission->removeVisualItem(1);
+    QTRY_VERIFY_WITH_TIMEOUT(homeItem->simpleFlightPathSegment(), TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(homeItem->simpleFlightPathSegment()->flightSpeed(), 7.0, TestTimeout::mediumMs());
+    QCOMPARE(first->simpleFlightPathSegment()->flightSpeed(), 9.5);
+    QCOMPARE(second->simpleFlightPathSegment()->flightSpeed(), 11.0);
 }
 
 UT_REGISTER_TEST(CaacPlanningToolsTest, TestLabel::Unit, TestLabel::MissionManager)

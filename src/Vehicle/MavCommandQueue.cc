@@ -1,12 +1,14 @@
 #include "MavCommandQueue.h"
 
+#include <cmath>
+
 #include <QtCore/QTimer>
 
+#include "AppMessages.h"
 #include "FirmwarePlugin.h"
 #include "MAVLinkLib.h"
 #include "MAVLinkProtocol.h"
 #include "MissionCommandTree.h"
-#include "AppMessages.h"
 #include "QGCLoggingCategory.h"
 #include "Vehicle.h"
 #include "VehicleLinkManager.h"
@@ -542,6 +544,18 @@ void MavCommandQueue::handleCommandAck(const mavlink_message_t& message, const m
     }
 
     MavCommandListEntry_t commandEntry = _list.takeAt(entryIndex);
+    if (ack.result == MAV_RESULT_ACCEPTED && _vehicle && commandEntry.targetCompId == _vehicle->defaultComponentId() &&
+        commandEntry.command == MAV_CMD_DO_CHANGE_SPEED &&
+        (commandEntry.rgParam1 == 0.0f || commandEntry.rgParam1 == 1.0f) && std::isfinite(commandEntry.rgParam2)) {
+        const int speedType = static_cast<int>(commandEntry.rgParam1);
+        if (commandEntry.rgParam4 == 0.0f && commandEntry.rgParam2 > 0.0f) {
+            emit flightSpeedChangeAccepted(speedType, commandEntry.rgParam2);
+        } else if ((commandEntry.rgParam4 == 0.0f && commandEntry.rgParam2 == -2.0f) ||
+                   (commandEntry.rgParam4 == 1.0f && commandEntry.rgParam2 != -1.0f && commandEntry.rgParam2 != 0.0f)) {
+            // Default restoration and relative changes do not provide a known absolute target.
+            emit flightSpeedTargetInvalidated(speedType);
+        }
+    }
     if (commandEntry.ackHandlerInfo.resultHandler) {
         (*commandEntry.ackHandlerInfo.resultHandler)(commandEntry.ackHandlerInfo.resultHandlerData, message.compid, ack, MavCmdResultCommandResultOnly);
     } else {

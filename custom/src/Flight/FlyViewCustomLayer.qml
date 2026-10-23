@@ -203,6 +203,8 @@ Item {
         blockedAreas: root.occluders ? root.occluders.all.concat(root.customOccluders) : root.customOccluders
         warningTopInset: root.occluders ? root.occluders.toolStrip.y + root.occluders.toolStrip.height + root._margin : 0
         segments: root._missionController ? root._missionController.simpleFlightPathSegments : null
+        runtimeMissionController: root._missionController
+        runtimeVehicle: root._vehicle
     }
 
     ColumnLayout {

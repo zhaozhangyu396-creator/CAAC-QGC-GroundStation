@@ -274,6 +274,9 @@ Column {
         mapControl: root.editorMap
         segments: root.planMasterController ? root.planMasterController.missionController.simpleFlightPathSegments : null
         previewSegments: root.simulationPreviewActive ? root.simulationPreviewSegments : []
+        runtimeMissionController: globals.planMasterControllerFlyView.missionController
+        runtimeVehicle: root.planMasterController && root.planMasterController.missionController.uploadConfirmed
+            ? QGroundControl.multiVehicleManager.activeVehicle : null
     }
 
     CaacWaypointGuides {

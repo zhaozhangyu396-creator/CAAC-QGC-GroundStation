@@ -229,6 +229,8 @@ public:
     Q_PROPERTY(QString  gotoFlightMode          READ gotoFlightMode                                 CONSTANT)                   ///< Flight mode vehicle is in while performing goto
     Q_PROPERTY(bool     haveMRSpeedLimits       READ haveMRSpeedLimits                              NOTIFY haveMRSpeedLimChanged)
     Q_PROPERTY(bool     haveFWSpeedLimits       READ haveFWSpeedLimits                              NOTIFY haveFWSpeedLimChanged)
+    Q_PROPERTY(double commandedFlightSpeed READ commandedFlightSpeed NOTIFY commandedFlightSpeedChanged)
+    Q_PROPERTY(int commandedFlightSpeedType READ commandedFlightSpeedType NOTIFY commandedFlightSpeedChanged)
 
     Q_PROPERTY(ParameterManager*        parameterManager    READ parameterManager   CONSTANT)
     Q_PROPERTY(VehicleLinkManager*      vehicleLinkManager  READ vehicleLinkManager CONSTANT)
@@ -421,6 +423,10 @@ public:
     bool    hasGripper              () const;
     bool haveMRSpeedLimits() const { return _multirotor_speed_limits_available; }
     bool haveFWSpeedLimits() const { return _fixed_wing_airspeed_limits_available; }
+
+    double commandedFlightSpeed() const { return _commandedFlightSpeed; }
+
+    int commandedFlightSpeedType() const { return _commandedFlightSpeedType; }
 
     // Property accessors
 
@@ -811,6 +817,7 @@ signals:
     void newStableFirmwareVersionChanged();
     void haveMRSpeedLimChanged          ();
     void haveFWSpeedLimChanged          ();
+    void commandedFlightSpeedChanged();
     void hasGripperChanged              ();
 
     void firmwareVersionChanged         ();
@@ -873,6 +880,7 @@ private slots:
     void _clearCameraTriggerPoints          ();
     void _updateDistanceHeadingHome         ();
     void _updateMissionItemIndex            ();
+    void _updateCommandedFlightSpeedForMission(int index);
     void _updateHeadingToNextWP             ();
     void _updateDistanceHeadingGCS          ();
     void _updateHomepoint                   ();
@@ -885,6 +893,7 @@ private slots:
     void _gotProgressUpdate                 (float progressValue);
 
 private:
+    void _clearCommandedFlightSpeed();
     void _activeVehicleChanged          (Vehicle* newActiveVehicle);
     void _handlePing                    (LinkInterface* link, mavlink_message_t& message);
     void _handleHomePosition            (mavlink_message_t& message);
@@ -978,6 +987,9 @@ private:
     bool            _cameraImageCapturedMessageAvailable    = false;
     double          _defaultCruiseSpeed = qQNaN();
     double          _defaultHoverSpeed = qQNaN();
+    double _commandedFlightSpeed = qQNaN();
+    int _commandedFlightSpeedType = -1;
+    int _commandedFlightSpeedMissionIndex = -1;
     bool            _capabilityBitsKnown                    = false;
     uint64_t        _capabilityBits                         = 0;
     CheckList       _checkListState                         = CheckListNotSetup;

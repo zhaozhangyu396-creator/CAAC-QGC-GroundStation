@@ -6,6 +6,8 @@ target_sources(
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacStartupUITest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacMissionUpdateControllerTest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacRouteEditorUITest.cc
+            ${CMAKE_CURRENT_SOURCE_DIR}/CaacWaypointSnapUITest.cc
+            ${CMAKE_CURRENT_SOURCE_DIR}/CaacLegSpeedUITest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacFlightDistanceTest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacFlightDataUITest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacPlanningToolsTest.cc
@@ -97,6 +99,26 @@ if(WIN32)
 endif()
 add_qgc_test(
     CaacRouteEditorUITest
+    LABELS
+    Integration
+    MissionManager
+    NoSanitizer
+    TIMEOUT
+    120
+    ${_caac_ui_env}
+)
+add_qgc_test(
+    CaacWaypointSnapUITest
+    LABELS
+    Integration
+    MissionManager
+    NoSanitizer
+    TIMEOUT
+    120
+    ${_caac_ui_env}
+)
+add_qgc_test(
+    CaacLegSpeedUITest
     LABELS
     Integration
     MissionManager

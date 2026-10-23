@@ -181,10 +181,10 @@ void MissionFlightStatusCalculator::recalc(QmlObjectListModel* visualItems,
                         simpleItem->setMissionVehicleYaw(_status.vehicleYaw);
                     }
 
+                    if (auto* segment = lastFlyThroughVI->simpleFlightPathSegment()) {
+                        segment->setFlightSpeed(_status.vehicleSpeed);
+                    }
                     if (lastFlyThroughVI != settingsItem || linkStartToHome) {
-                        if (auto* segment = lastFlyThroughVI->simpleFlightPathSegment()) {
-                            segment->setFlightSpeed(_status.vehicleSpeed);
-                        }
                         // This is a subsequent waypoint or we are forcing the first waypoint back to home
                         double azimuth, distance, altDifference;
 

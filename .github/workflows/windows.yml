@@ -291,7 +291,7 @@ jobs:
         with:
           build-dir: ${{ runner.temp }}/build
           build-type: ${{ matrix.build_type }}
-          tests-regex: "^(FactGroupTest|Caac.*Test|CompassRotationTest|VehiclePeripheralSetupUITest|\
+          tests-regex: "^(FactGroupTest|Caac.*Test|CompassRotationTest|SendMavCommandWithSignallingTest|VehiclePeripheralSetupUITest|\
             FirmwareUpgradeUITest|FirmwareUpgradeControllerTest|QGCSerialPortInfoTest|VideoManagerInitTest|\
             VehicleMessageTranslatorTest|OnlineMessageTranslatorTest|\
             AirframeComponentAirframesTest|APMAirframeComponentControllerTest|\

@@ -72,6 +72,8 @@ public:
 signals:
     /// Emitted for every terminal ack that has no user-provided resultHandler.
     void commandResult(int vehicleId, int targetComponent, int command, int ackResult, int failureCode);
+    void flightSpeedChangeAccepted(int speedType, double speed);
+    void flightSpeedTargetInvalidated(int speedType);
 
 private slots:
     void _responseTimeoutCheck();
