@@ -25,8 +25,10 @@ public:
     RequestMessageCoordinator(Vehicle* vehicle, MavCommandQueue* commandQueue);
     ~RequestMessageCoordinator();
 
-    /// Requests the vehicle to send the specified message. Will retry a number of times.
-    ///     @param resultHandler Callback for result
+    /// Requests the vehicle to send the specified message. Will retry a number
+    /// of times.
+    ///     @param resultHandler Callback for result, or nullptr when no result
+    ///     notification is needed
     ///     @param resultHandlerData Opaque data passed back to resultHandler
     void requestMessage(RequestMessageResultHandler resultHandler, void* resultHandlerData,
                         int compId, int messageId,

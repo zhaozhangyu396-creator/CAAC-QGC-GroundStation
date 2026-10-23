@@ -23,6 +23,8 @@ private slots:
     void _duplicateCommand();
     void _duplicateWhileQueued();
     void _staleAvailableModesIgnored();
+    void _callbackFreeRequest_data();
+    void _callbackFreeRequest();
 
 private:
     struct TestCase_t

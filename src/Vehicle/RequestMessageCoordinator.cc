@@ -321,6 +321,12 @@ void RequestMessageCoordinator::_cmdResultHandler(void* resultHandlerData_, [[ma
 
 void RequestMessageCoordinator::requestMessage(RequestMessageResultHandler resultHandler, void* resultHandlerData, int compId, int messageId, float param1, float param2, float param3, float param4, float param5)
 {
+    // Keep completion and timeout cleanup identical when the caller needs no
+    // result.
+    if (!resultHandler) {
+        resultHandler = &_noOpResultHandler;
+    }
+
     const mavlink_message_info_t* msgInfo = mavlink_get_message_info_by_id(messageId);
     const QString msgName = msgInfo ? QString(msgInfo->name) : QString::number(messageId);
     const int activeCount = _infoMap.contains(compId) ? _infoMap[compId].count() : 0;

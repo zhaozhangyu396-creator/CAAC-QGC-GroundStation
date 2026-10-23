@@ -13,7 +13,7 @@
 #include "Vehicle.h"
 #include "VehicleLinkManager.h"
 
-#ifdef QT_DEBUG
+#if defined(QT_DEBUG) || defined(QGC_UNITTEST_BUILD)
 #include "MockLink.h"
 #endif
 
@@ -232,31 +232,31 @@ std::optional<int> MavCommandQueue::testAckTimeoutOverride()
 bool MavCommandQueue::_shouldRetry(MAV_CMD command)
 {
     switch (command) {
-#ifdef QT_DEBUG
-    // These MockLink commands should be retried so we can create unit tests to test retry code
-    case MockLink::MAV_CMD_MOCKLINK_ALWAYS_RESULT_ACCEPTED:
-    case MockLink::MAV_CMD_MOCKLINK_ALWAYS_RESULT_FAILED:
-    case MockLink::MAV_CMD_MOCKLINK_SECOND_ATTEMPT_RESULT_ACCEPTED:
-    case MockLink::MAV_CMD_MOCKLINK_SECOND_ATTEMPT_RESULT_FAILED:
-    case MockLink::MAV_CMD_MOCKLINK_NO_RESPONSE:
-        return true;
+#if defined(QT_DEBUG) || defined(QGC_UNITTEST_BUILD)
+        // These MockLink commands should be retried so we can create unit tests to test retry code
+        case MockLink::MAV_CMD_MOCKLINK_ALWAYS_RESULT_ACCEPTED:
+        case MockLink::MAV_CMD_MOCKLINK_ALWAYS_RESULT_FAILED:
+        case MockLink::MAV_CMD_MOCKLINK_SECOND_ATTEMPT_RESULT_ACCEPTED:
+        case MockLink::MAV_CMD_MOCKLINK_SECOND_ATTEMPT_RESULT_FAILED:
+        case MockLink::MAV_CMD_MOCKLINK_NO_RESPONSE:
+            return true;
 #endif
 
-        // In general we should not retry any commands. This is for safety reasons. For example you don't want an ARM command
-        // to timeout with no response over a noisy link twice and then suddenly have the third try work 6 seconds later. At that
-        // point the user could have walked up to the vehicle to see what is going wrong.
-        //
-        // We do retry commands which are part of the initial vehicle connect sequence. This makes this process work better over noisy
-        // links where commands could be lost. Also these commands tend to just be requesting status so if they end up being delayed
-        // there are no safety concerns that could occur.
-    case MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES:
-    case MAV_CMD_REQUEST_MESSAGE:
-    case MAV_CMD_PREFLIGHT_STORAGE:
-    case MAV_CMD_RUN_PREARM_CHECKS:
-        return true;
+            // In general we should not retry any commands. This is for safety reasons. For example you don't want an
+            // ARM command to timeout with no response over a noisy link twice and then suddenly have the third try work
+            // 6 seconds later. At that point the user could have walked up to the vehicle to see what is going wrong.
+            //
+            // We do retry commands which are part of the initial vehicle connect sequence. This makes this process work
+            // better over noisy links where commands could be lost. Also these commands tend to just be requesting
+            // status so if they end up being delayed there are no safety concerns that could occur.
+        case MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES:
+        case MAV_CMD_REQUEST_MESSAGE:
+        case MAV_CMD_PREFLIGHT_STORAGE:
+        case MAV_CMD_RUN_PREARM_CHECKS:
+            return true;
 
-    default:
-        return false;
+        default:
+            return false;
     }
 }
 
