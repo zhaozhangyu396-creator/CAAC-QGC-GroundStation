@@ -320,7 +320,7 @@ void PlanMasterController::_sendRallyPointsComplete(void)
 
 void PlanMasterController::sendToVehicle(void)
 {
-    if (property("caacMissionUpdateActive").toBool()) {
+    if (_managerVehicle && _managerVehicle->flightPlanUpdateInProgress()) {
         QGC::showAppMessage(
             QCoreApplication::translate("CaacMissionUpdateController", "A waypoint update is already in progress."));
         return;

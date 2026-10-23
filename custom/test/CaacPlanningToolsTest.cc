@@ -289,7 +289,10 @@ void CaacPlanningToolsTest::_synchronizeWaypointDefaults()
     QCOMPARE(mission->plannedHomePosition(), home);
     QVERIFY(editor.undo());
     QCOMPARE(master.saveToJson(), original);
-    QVERIFY(editor.syncWaypointDefaults({{"specifySpeed", true}, {"speed", 8.0}}));
+    QVERIFY(editor.syncWaypointDefaults({{"specifySpeed", true}, {"speed", 8.0}, {"includeMissionSpeed", true}}));
+    auto* missionSpeed = mission->visualItems()->value<MissionSettingsItem*>(0)->speedSection();
+    QVERIFY(missionSpeed && missionSpeed->specifyFlightSpeed());
+    QCOMPARE(missionSpeed->flightSpeed()->rawValue().toDouble(), 8.0);
     for (int i = 2; i <= 3; ++i) {
         auto* item = mission->visualItems()->value<SimpleMissionItem*>(i);
         auto* speed = qobject_cast<SpeedSection*>(item->speedSection());
@@ -298,6 +301,9 @@ void CaacPlanningToolsTest::_synchronizeWaypointDefaults()
     }
     const auto synced = master.saveToJson();
     QVERIFY(!editor.syncWaypointDefaults({{"altitude", 400.0}, {"specifySpeed", true}, {"speed", 0.0}}));
+    QCOMPARE(master.saveToJson(), synced);
+    QVERIFY(!editor.syncWaypointDefaults({{"specifySpeed", true}, {"speed", 0.0}, {"includeMissionSpeed", true}}));
+    QVERIFY(!editor.syncWaypointDefaults({{"includeMissionSpeed", true}}));
     QCOMPARE(master.saveToJson(), synced);
     QVERIFY(editor.undo());
     QCOMPARE(master.saveToJson(), original);

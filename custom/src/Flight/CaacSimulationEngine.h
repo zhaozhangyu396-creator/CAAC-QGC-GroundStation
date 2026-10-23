@@ -50,7 +50,7 @@ public:
               const Options& options, QString& error, const QMap<int, WaypointOptions>& waypointOptions = {});
     bool updateMission(const QMap<uint16_t, mavlink_mission_item_int_t>& mission, const QGeoCoordinate& home,
                        const Options& options, QString& error, const QMap<int, WaypointOptions>& waypointOptions,
-                       bool speedChanges = false, double currentFlightSpeed = qQNaN());
+                       bool speedChanges = false, double currentFlightSpeed = qQNaN(), bool allowDeletions = false);
     bool jump(int sequence);
     bool restartMission();
     void advance(double seconds);

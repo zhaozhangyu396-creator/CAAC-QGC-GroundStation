@@ -211,6 +211,9 @@ void FlightPathGeometryTest::_highlightFlags()
     geometry.setPath(makePath({kStart, QGeoCoordinate(), second, third}), QVariantList{false, true, true, false});
     QCOMPARE(highlightsOf(), QList<float>({0.0f, 1.0f, 0.0f}));
 
+    geometry.setPath(makePath({kStart, second, third}), QVariantList{0, 1, 2});
+    QCOMPARE(highlightsOf(), QList<float>({0.0f, 1.0f, 2.0f}));
+
     // Missing trailing flags and appended points are unhighlighted
     geometry.setPath(makePath({kStart, second}), QVariantList{true});
     geometry.appendPoint(third);

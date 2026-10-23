@@ -1760,6 +1760,12 @@ void CaacSimulationUITest::_uploadAndFlightControls()
         return last;
     };
     step("live altitude change");
+    vehicle->setFlightMode(vehicle->missionFlightMode());
+    QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->missionFlightMode(), TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(vehicle->groundSpeed()->rawValue().toDouble() > 1, TestTimeout::mediumMs());
+    QVERIFY(!plugin->changeCurrentFlightAltitude(nullptr, 4).isEmpty());
+    const auto missionBeforeLiveHeight = master->saveToJson();
+    QSignalSpy currentHeightUploads(manager, &MissionManager::sendComplete);
     // Exercise scrolling at the compact desktop size used by Windows runners.
     const QSize previousWindowSize = _window->size();
     const QSize previousMinimumSize = _window->minimumSize();
@@ -1774,19 +1780,52 @@ void CaacSimulationUITest::_uploadAndFlightControls()
             const double targetMeters = unit == UnitsSettings::VerticalDistanceUnitsMeters ? 4.0 : 4.572;
             QVERIFY(doubleClickAction(QStringLiteral("caacModifyWaypointAltitude")));
             step("height dialog opened");
+            auto* currentHeightAction = findVisibleItemScrolled(QStringLiteral("caacChangeFlightAltitude"),
+                                                                QStringLiteral("popupDialog_contentFlickable"));
+            QVERIFY(currentHeightAction && currentHeightAction->isEnabled());
+            if (unit == UnitsSettings::VerticalDistanceUnitsMeters) {
+                QCOMPARE(vehicle->flightMode(), vehicle->missionFlightMode());
+                QQmlExpression legacyHeightAllowed(qmlContext(currentHeightAction), currentHeightAction,
+                                                   QStringLiteral("globals.guidedControllerFlyView.showChangeAlt"));
+                QVERIFY(!legacyHeightAllowed.evaluate().toBool());
+                QVERIFY(!legacyHeightAllowed.hasError());
+            }
             QVERIFY(clickButtonScrolled(QStringLiteral("caacChangeFlightAltitude"),
                                         QStringLiteral("popupDialog_contentFlickable")));
             auto* liveAltitude = findVisibleItem(_rootItem, QStringLiteral("caacFlightWaypointAltitude"));
             QVERIFY(liveAltitude);
             QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacFlightWaypointChoice"), 0));
-            QVERIFY(liveAltitude->setProperty("text", QString::number(targetMeters)));
             mock->clearReceivedMavCommandCounts();
+            QVERIFY(liveAltitude->setProperty("text", QStringLiteral("0")));
+            QVERIFY(acceptDialog());
+            QVERIFY(dialogVisible(QCoreApplication::translate("CaacMissionActionDialog", "Change altitude")));
+            QCOMPARE(mock->receivedMavCommandCount(MAV_CMD_DO_REPOSITION), 0);
+            QVERIFY(liveAltitude->setProperty("text", QString::number(targetMeters)));
+            const int targetBeforeHeight = manager->currentIndex();
+            const int loopsBeforeHeight = simulation->remainingLoops();
+            QSignalSpy altitudeAcknowledged(vehicle, &Vehicle::mavCommandResult);
             QVERIFY(acceptDialog());
             QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("guidedActionConfirmButton"), 0));
             step("live height command sent");
             QTRY_VERIFY_WITH_TIMEOUT(mock->receivedMavCommandCount(MAV_CMD_DO_REPOSITION) > 0, TestTimeout::mediumMs());
+            const auto acceptedHeight = [&altitudeAcknowledged]() {
+                for (const auto& result : altitudeAcknowledged) {
+                    if (result[2].toInt() == MAV_CMD_DO_REPOSITION && result[3].toInt() == MAV_RESULT_ACCEPTED) {
+                        return true;
+                    }
+                }
+                return false;
+            };
+            QTRY_VERIFY_WITH_TIMEOUT(acceptedHeight(), TestTimeout::mediumMs());
             QTRY_VERIFY_WITH_TIMEOUT(std::abs(vehicle->altitudeRelative()->rawValue().toDouble() - targetMeters) < 0.1,
                                      TestTimeout::longMs());
+            QTRY_VERIFY_WITH_TIMEOUT(!findVisibleItem(_rootItem, QStringLiteral("caacFlightWaypointAltitude"), 0),
+                                     TestTimeout::mediumMs());
+            QCOMPARE(vehicle->flightMode(), vehicle->pauseFlightMode());
+            QCOMPARE(manager->currentIndex(), targetBeforeHeight);
+            QCOMPARE(simulation->remainingLoops(), loopsBeforeHeight);
+            QCOMPARE(currentHeightUploads.count(), 0);
+            QCOMPARE(master->saveToJson(), missionBeforeLiveHeight);
         }
     }
     _window->setMinimumSize(previousMinimumSize);

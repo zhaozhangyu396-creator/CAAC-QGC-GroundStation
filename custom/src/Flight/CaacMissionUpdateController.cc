@@ -31,8 +31,8 @@ CaacMissionUpdateController::~CaacMissionUpdateController()
         disconnect(connection);
     }
     qDeleteAll(_pendingItems);
-    if (_plan) {
-        _plan->setProperty("caacMissionUpdateActive", false);
+    if (_vehicle) {
+        _vehicle->setFlightPlanUpdateInProgress(false);
     }
 }
 
@@ -57,9 +57,68 @@ bool CaacMissionUpdateController::updateSpeeds(PlanMasterController* plan, CaacS
     return _update(plan, simulation, true, currentFlightSpeed, expectedCurrentSequence);
 }
 
+bool CaacMissionUpdateController::updateDeletedWaypoints(PlanMasterController* plan,
+                                                         CaacSimulationController* simulation)
+{
+    return _update(plan, simulation, false, qQNaN(), -1, true);
+}
+
+bool CaacMissionUpdateController::returnToLandingPoint(PlanMasterController* plan, CaacSimulationController* simulation)
+{
+    if (busy()) {
+        return false;
+    }
+    auto* vehicle = plan ? plan->managerVehicle() : nullptr;
+    if (!vehicle || vehicle != MultiVehicleManager::instance()->activeVehicle() || plan->offline() ||
+        !vehicle->isInitialConnectComplete() || !vehicle->armed() || !vehicle->underway() ||
+        vehicle->vehicleLinkManager()->communicationLost() || !vehicle->supports()->pauseVehicle() ||
+        vehicle->firmwarePlugin()->pauseFlightMode().isEmpty() || plan->syncInProgress() ||
+        vehicle->flightPlanUpdateInProgress() ||
+        !vehicle->firmwarePlugin()->flightModes(vehicle).contains(vehicle->flightMode())) {
+        emit finished(false, tr("The aircraft is not ready to return to the uploaded landing point."));
+        return false;
+    }
+    _target = -1;
+    const auto& items = vehicle->missionManager()->missionItems();
+    for (int i = 0; i < items.size(); ++i) {
+        const auto* item = items[i];
+        if (item && (item->command() == MAV_CMD_NAV_LAND || item->command() == MAV_CMD_NAV_VTOL_LAND) &&
+            item->coordinate().isValid() && std::isfinite(item->param7())) {
+            _target = i;
+        }
+    }
+    if (_target < 0) {
+        emit finished(false, tr("The uploaded mission has no landing point."));
+        return false;
+    }
+    if (simulation && simulation->ownsVehicle(vehicle)) {
+        vehicle->guidedModeRTL(false);
+        emit finished(true, tr("Returning to the uploaded landing point."));
+        return true;
+    }
+    _vehicle = vehicle;
+    _plan = plan;
+    _simulation.clear();
+    _returningToLanding = true;
+    _returnInitialMode = vehicle->flightMode();
+    _landingTarget = items[_target];
+    QJsonObject landing;
+    _landingTarget->save(landing);
+    _snapshot = QJsonDocument(landing);
+    _allowSpeedChanges = false;
+    _allowDeletions = false;
+    _restoreFlightSpeed = false;
+    _resumeAfterUpdate = true;
+    vehicle->setFlightPlanUpdateInProgress(true);
+    _setStage(Stage::Pausing);
+    _timer.start();
+    vehicle->pauseVehicle();
+    return true;
+}
+
 bool CaacMissionUpdateController::_update(PlanMasterController* plan, CaacSimulationController* simulation,
                                           bool allowSpeedChanges, double currentFlightSpeed,
-                                          int expectedCurrentSequence)
+                                          int expectedCurrentSequence, bool allowDeletions)
 {
     if (busy()) {
         return false;
@@ -76,7 +135,7 @@ bool CaacMissionUpdateController::_update(PlanMasterController* plan, CaacSimula
         (vehicle->flightMode() != vehicle->missionFlightMode() &&
          vehicle->flightMode() != vehicle->firmwarePlugin()->pauseFlightMode()) ||
         !vehicle->supports()->pauseVehicle() || vehicle->firmwarePlugin()->pauseFlightMode().isEmpty() ||
-        plan->syncInProgress() || plan->property("caacMissionUpdateActive").toBool() ||
+        plan->syncInProgress() || vehicle->flightPlanUpdateInProgress() ||
         plan->property("caacRotationPreviewActive").toBool() ||
         plan->missionController()->readyForSaveState() != VisualMissionItem::ReadyForSave) {
         emit finished(false, tr("The mission or connection changed. No waypoint update was sent."));
@@ -86,6 +145,12 @@ bool CaacMissionUpdateController::_update(PlanMasterController* plan, CaacSimula
     _plan = plan;
     _simulation = simulation && simulation->ownsVehicle(vehicle) ? simulation : nullptr;
     _allowSpeedChanges = allowSpeedChanges;
+    _allowDeletions = allowDeletions;
+    _returningToLanding = false;
+    _landingTarget.clear();
+    _resumeAfterUpdate =
+        (!allowDeletions && !allowSpeedChanges) || vehicle->flightMode() == vehicle->missionFlightMode();
+    _restoreFlightSpeed = allowSpeedChanges;
     _forcedFlightSpeed = currentFlightSpeed;
     _expectedCurrentSequence = expectedCurrentSequence;
     _flightSpeedType = vehicle->inFwdFlight() ? 0 : 1;
@@ -94,7 +159,7 @@ bool CaacMissionUpdateController::_update(PlanMasterController* plan, CaacSimula
     _desiredFlightSpeed = qQNaN();
     _snapshot = plan->saveToJson();
     _lastTransferError.clear();
-    plan->setProperty("caacMissionUpdateActive", true);
+    vehicle->setFlightPlanUpdateInProgress(true);
     _setStage(Stage::Pausing);
     _timer.start();
     vehicle->pauseVehicle();
@@ -110,7 +175,16 @@ bool CaacMissionUpdateController::_prepareNative()
     _pendingItems = MissionController::createMissionItems(_plan->missionController()->visualItems(), this);
     const int offset = _vehicle->firmwarePlugin()->sendHomePositionToVehicle() ? 0 : 1;
     const auto& previous = manager->missionItems();
-    if (_allowSpeedChanges) {
+    if (_allowDeletions) {
+        const auto* visualItems = _plan->missionController()->visualItems();
+        for (int i = 1; i < visualItems->count(); ++i) {
+            const auto* item = visualItems->value<VisualMissionItem*>(i);
+            if (!item || !item->isSimpleItem()) {
+                return false;
+            }
+        }
+    }
+    if (_allowSpeedChanges || _allowDeletions) {
         return _prepareNativeSpeeds();
     }
     if (_pendingItems.size() != previous.size() + offset) {
@@ -194,7 +268,11 @@ bool CaacMissionUpdateController::_prepareNativeSpeeds()
     };
     auto oldWire = wireMission(previous, 0);
     const auto newWire = wireMission(_pendingItems, offset);
-    auto mapping = CaacMissionUpdateUtils::speedUpdateMapping(oldWire, newWire);
+    const auto mapUpdate = [this](const auto& oldMission, const auto& newMission) {
+        return _allowDeletions ? CaacMissionUpdateUtils::waypointDeletionMapping(oldMission, newMission)
+                               : CaacMissionUpdateUtils::speedUpdateMapping(oldMission, newMission);
+    };
+    auto mapping = mapUpdate(oldWire, newWire);
     if (offset > 0) {
         auto downloadedWire = oldWire;
         for (auto it = downloadedWire.begin(); it != downloadedWire.end(); ++it) {
@@ -203,7 +281,7 @@ bool CaacMissionUpdateController::_prepareNativeSpeeds()
                 it->param1 -= offset;
             }
         }
-        const auto downloadedMapping = CaacMissionUpdateUtils::speedUpdateMapping(downloadedWire, newWire);
+        const auto downloadedMapping = mapUpdate(downloadedWire, newWire);
         if (mapping.valid && downloadedMapping.valid) {
             for (auto it = oldWire.cbegin(); it != oldWire.cend(); ++it) {
                 if (it->command == MAV_CMD_DO_JUMP &&
@@ -230,6 +308,9 @@ bool CaacMissionUpdateController::_prepareNativeSpeeds()
             continue;
         }
         const int newIndex = mapping.oldToNew.value(i, -1);
+        if (_allowDeletions && mapping.newToOld.value(newIndex, -1) != i) {
+            continue;
+        }
         if (newIndex < 0 || newIndex + offset >= _pendingItems.size()) {
             return false;
         }
@@ -265,6 +346,8 @@ bool CaacMissionUpdateController::_prepareNativeSpeeds()
     const double oldSpeed = prefixSpeed(oldWire, _target);
     _target = mapping.oldToNew.value(_target);
     const double newSpeed = prefixSpeed(newWire, _target);
+    _restoreFlightSpeed = _allowSpeedChanges || !equal(oldSpeed, newSpeed) ||
+                          (std::isfinite(_runtimeFlightSpeed) && _runtimeFlightSpeed > 0);
     _desiredFlightSpeed = std::isfinite(_forcedFlightSpeed) ? _forcedFlightSpeed
                           : equal(oldSpeed, newSpeed) && std::isfinite(_runtimeFlightSpeed) && _runtimeFlightSpeed > 0
                               ? _runtimeFlightSpeed
@@ -295,8 +378,7 @@ void CaacMissionUpdateController::_applySpeed()
                 return;
             }
             if (result == MAV_RESULT_ACCEPTED && failure == Vehicle::MavCmdResultCommandResultOnly) {
-                _setStage(Stage::Resuming);
-                _vehicle->setFlightMode(_vehicle->missionFlightMode());
+                _restored();
             } else {
                 _finish(false, tr("The aircraft did not accept the flight speed. The mission remains paused."));
             }
@@ -308,6 +390,16 @@ void CaacMissionUpdateController::_applySpeed()
     }
 }
 
+void CaacMissionUpdateController::_restored()
+{
+    if (!_resumeAfterUpdate) {
+        _finish(true, tr("Waypoints updated. The mission remains paused."));
+        return;
+    }
+    _setStage(Stage::Resuming);
+    _vehicle->setFlightMode(_vehicle->missionFlightMode());
+}
+
 void CaacMissionUpdateController::_tick()
 {
     if (!_vehicle || !_plan || _vehicle != MultiVehicleManager::instance()->activeVehicle() ||
@@ -315,6 +407,18 @@ void CaacMissionUpdateController::_tick()
         _vehicle->vehicleLinkManager()->communicationLost()) {
         _finish(false, tr("Connection or aircraft state changed. Automatic resume was cancelled."));
         return;
+    }
+    if (_returningToLanding) {
+        const auto& items = _vehicle->missionManager()->missionItems();
+        QJsonObject landing;
+        if (_landingTarget) {
+            _landingTarget->save(landing);
+        }
+        if (!_vehicle->underway() || !_landingTarget || _target < 0 || _target >= items.size() ||
+            items[_target] != _landingTarget || QJsonDocument(landing) != _snapshot) {
+            _finish(false, tr("The uploaded landing point changed. The return was cancelled."));
+            return;
+        }
     }
     const auto mode = _vehicle->flightMode();
     const auto pauseMode = _vehicle->firmwarePlugin()->pauseFlightMode();
@@ -325,12 +429,24 @@ void CaacMissionUpdateController::_tick()
     }
     if (_stage == Stage::Pausing) {
         if (mode != pauseMode) {
-            if (mode != _vehicle->missionFlightMode()) {
+            if (mode != (_returningToLanding ? _returnInitialMode : _vehicle->missionFlightMode())) {
                 _finish(false, tr("Flight mode changed. The waypoint update was cancelled."));
             }
             return;
         }
         if (_plan->syncInProgress()) {
+            return;
+        }
+        if (_returningToLanding) {
+            const auto& items = _vehicle->missionManager()->missionItems();
+            if (!_landingTarget || _target < 0 || _target >= items.size() || items[_target] != _landingTarget ||
+                !_vehicle->underway()) {
+                _finish(false, tr("The uploaded landing point changed. The return was cancelled."));
+                return;
+            }
+            _setStage(Stage::Restoring);
+            const int offset = _vehicle->firmwarePlugin()->sendHomePositionToVehicle() ? 0 : 1;
+            _vehicle->setCurrentMissionSequence(_target + offset);
             return;
         }
         if (_plan->saveToJson() != _snapshot) {
@@ -344,7 +460,9 @@ void CaacMissionUpdateController::_tick()
         }
         if (_target < 0 || (!_simulation && !_prepareNative())) {
             _finish(false,
-                    _allowSpeedChanges
+                    _allowDeletions
+                        ? tr("The waypoint deletion cannot preserve a safe mission target. The mission remains paused.")
+                    : _allowSpeedChanges
                         ? tr("The mission structure changed. The speed update was cancelled.")
                         : tr("Only waypoint positions can be updated during flight. Pause and upload other mission "
                              "changes manually."));
@@ -372,7 +490,7 @@ void CaacMissionUpdateController::_tick()
                                         &CaacMissionUpdateController::_uploaded));
             _connections.append(connect(_simulation, &CaacSimulationController::missionUploadFailed, this,
                                         [this]() { _uploadFailed(_simulation ? _simulation->status() : QString()); }));
-            if (!_simulation->upload(_plan, true, _allowSpeedChanges, _forcedFlightSpeed)) {
+            if (!_simulation->upload(_plan, true, _allowSpeedChanges, _forcedFlightSpeed, _allowDeletions)) {
                 _uploadFailed(_simulation ? _simulation->status() : QString());
             }
         } else {
@@ -389,16 +507,16 @@ void CaacMissionUpdateController::_tick()
             _vehicle->pauseVehicle();
             _finish(false, tr("Flight mode changed during upload. Automatic resume was cancelled."));
         } else if (_stage == Stage::Restoring && _vehicle->missionManager()->currentIndex() == _target) {
-            if (_allowSpeedChanges && !_simulation) {
+            if (_restoreFlightSpeed && !_simulation) {
                 _applySpeed();
             } else {
-                _setStage(Stage::Resuming);
-                _vehicle->setFlightMode(_vehicle->missionFlightMode());
+                _restored();
             }
         }
     } else if (_stage == Stage::Resuming) {
         if (mode == _vehicle->missionFlightMode()) {
-            _finish(true, tr("Waypoints updated. Continuing from the previous target waypoint."));
+            _finish(true, _returningToLanding ? tr("Returning to the uploaded landing point.")
+                                              : tr("Waypoints updated. Continuing from the previous target waypoint."));
         } else if (mode != pauseMode) {
             _finish(false, tr("Flight mode changed. Automatic resume was cancelled."));
         }
@@ -407,7 +525,13 @@ void CaacMissionUpdateController::_tick()
 
 void CaacMissionUpdateController::_uploaded()
 {
-    if (_stage != Stage::Uploading || !_vehicle) {
+    if (_stage != Stage::Uploading) {
+        return;
+    }
+    if (!_vehicle || !_plan || _vehicle != MultiVehicleManager::instance()->activeVehicle() ||
+        _plan->managerVehicle() != _vehicle || !_vehicle->armed() ||
+        _vehicle->vehicleLinkManager()->communicationLost()) {
+        _finish(false, tr("Connection or aircraft state changed. Automatic resume was cancelled."));
         return;
     }
     if (_vehicle->flightMode() != _vehicle->firmwarePlugin()->pauseFlightMode()) {
@@ -417,7 +541,7 @@ void CaacMissionUpdateController::_uploaded()
     }
     _setStage(Stage::Restoring);
     const int offset = _vehicle->firmwarePlugin()->sendHomePositionToVehicle() ? 0 : 1;
-    if (_simulation && _allowSpeedChanges) {
+    if (_simulation && (_allowSpeedChanges || _allowDeletions)) {
         _target = _simulation->currentMissionDetails().value(QStringLiteral("sequence"), -1).toInt() - offset;
         if (_target < 0) {
             _finish(false, tr("The mission structure changed. The speed update was cancelled."));
@@ -448,12 +572,14 @@ void CaacMissionUpdateController::_finish(bool success, const QString& message)
     _connections.clear();
     qDeleteAll(_pendingItems);
     _pendingItems.clear();
-    if (_plan) {
-        _plan->setProperty("caacMissionUpdateActive", false);
+    if (_vehicle) {
+        _vehicle->setFlightPlanUpdateInProgress(false);
     }
     _setStage(Stage::Idle);
     _vehicle.clear();
     _plan.clear();
     _simulation.clear();
+    _landingTarget.clear();
+    _returningToLanding = false;
     emit finished(success, message);
 }

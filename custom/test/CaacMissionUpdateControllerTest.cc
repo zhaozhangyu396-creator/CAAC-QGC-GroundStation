@@ -1,5 +1,6 @@
 #include <cmath>
 
+#include <QtCore/QCoreApplication>
 #include <QtCore/QJsonArray>
 #include <QtCore/QMetaMethod>
 #include <QtCore/QRegularExpression>
@@ -34,6 +35,11 @@ private slots:
     void _speedMapping();
     void _speedUpdate_data();
     void _speedUpdate();
+    void _deletionMapping();
+    void _deletionUpdate_data();
+    void _deletionUpdate();
+    void _returnToLanding_data();
+    void _returnToLanding();
 };
 
 void CaacMissionUpdateControllerTest::_connectedHomeAltitude()
@@ -346,13 +352,15 @@ void CaacMissionUpdateControllerTest::_speedUpdate_data()
     QTest::addColumn<bool>("forceCurrent");
     QTest::addColumn<bool>("downloadLoop");
     QTest::addColumn<int>("expectationMode");
-    QTest::newRow("insert-speeds-preserves-later-target") << false << false << false << false << 0;
-    QTest::newRow("future-speed-keeps-current-override") << false << true << false << false << 0;
-    QTest::newRow("explicit-current-speed-replaces-override") << false << false << true << false << 1;
-    QTest::newRow("selected-target-advances-while-pausing") << false << false << true << false << 2;
-    QTest::newRow("all-waypoints-force-survives-target-advance") << false << false << true << false << 3;
-    QTest::newRow("downloaded-px4-loop-preserves-target-and-progress") << false << false << false << true << 0;
-    QTest::newRow("unrelated-structure-change-stays-paused") << true << false << false << false << 0;
+    QTest::addColumn<bool>("initiallyPaused");
+    QTest::newRow("insert-speeds-preserves-later-target") << false << false << false << false << 0 << false;
+    QTest::newRow("future-speed-keeps-current-override") << false << true << false << false << 0 << false;
+    QTest::newRow("explicit-current-speed-replaces-override") << false << false << true << false << 1 << false;
+    QTest::newRow("selected-target-advances-while-pausing") << false << false << true << false << 2 << false;
+    QTest::newRow("all-waypoints-force-survives-target-advance") << false << false << true << false << 3 << false;
+    QTest::newRow("downloaded-px4-loop-preserves-target-and-progress") << false << false << false << true << 0 << false;
+    QTest::newRow("unrelated-structure-change-stays-paused") << true << false << false << false << 0 << false;
+    QTest::newRow("paused-speed-update-keeps-hold-and-target") << false << false << true << false << 1 << true;
 }
 
 void CaacMissionUpdateControllerTest::_speedUpdate()
@@ -362,6 +370,7 @@ void CaacMissionUpdateControllerTest::_speedUpdate()
     QFETCH(bool, forceCurrent);
     QFETCH(bool, downloadLoop);
     QFETCH(int, expectationMode);
+    QFETCH(bool, initiallyPaused);
     QVERIFY(vehicle());
     QVERIFY(waitForInitialConnect());
     QTRY_VERIFY_WITH_TIMEOUT(vehicle()->homePosition().isValid(), TestTimeout::mediumMs());
@@ -415,8 +424,10 @@ void CaacMissionUpdateControllerTest::_speedUpdate()
     QVERIFY(third->speedSection() && third->speedSection()->available());
     vehicle()->setArmed(true, true);
     QTRY_VERIFY_WITH_TIMEOUT(vehicle()->armed(), TestTimeout::mediumMs());
-    vehicle()->setFlightMode(vehicle()->missionFlightMode());
-    QTRY_COMPARE_WITH_TIMEOUT(vehicle()->flightMode(), vehicle()->missionFlightMode(), TestTimeout::mediumMs());
+    const auto initialMode =
+        initiallyPaused ? vehicle()->firmwarePlugin()->pauseFlightMode() : vehicle()->missionFlightMode();
+    vehicle()->setFlightMode(initialMode);
+    QTRY_COMPARE_WITH_TIMEOUT(vehicle()->flightMode(), initialMode, TestTimeout::mediumMs());
     const bool advanceWhilePausing = expectationMode == 2 || expectationMode == 3;
     auto* initialTarget = advanceWhilePausing ? mission->visualItems()->value<SimpleMissionItem*>(2) : third;
     QVERIFY(initialTarget);
@@ -560,12 +571,19 @@ void CaacMissionUpdateControllerTest::_speedUpdate()
     } else {
         QVERIFY(pausedBeforeTransfer);
         QCOMPARE(sent.count(), 2);
-        QCOMPARE(vehicle()->flightMode(), vehicle()->missionFlightMode());
+        QCOMPARE(vehicle()->flightMode(), initialMode);
         QCOMPARE(speedCommands.count(), 1);
         const double expectedSpeed = expectationMode == 2 || futureOnly ? 8.0 : forceCurrent ? 5.0 : 7.0;
         QCOMPARE(speedCommands.last().param2, static_cast<float>(expectedSpeed));
         QCOMPARE(vehicle()->commandedFlightSpeed(), expectedSpeed);
-        QVERIFY(speedAcceptedBeforeResume);
+        if (initiallyPaused) {
+            QVERIFY(!speedAcceptedBeforeResume);
+            QVERIFY(!speedResults.isEmpty());
+            QCOMPARE(speedResults.last()[2].toInt(), static_cast<int>(MAV_CMD_DO_CHANGE_SPEED));
+            QCOMPARE(speedResults.last()[3].toInt(), static_cast<int>(MAV_RESULT_ACCEPTED));
+        } else {
+            QVERIFY(speedAcceptedBeforeResume);
+        }
         QCOMPARE(manager->currentIndex(), expectedTarget);
         QVERIFY(manager->missionItems()[expectedTarget]->coordinate().distanceTo(expectedTargetCoordinate) < 0.02);
         if (downloadLoop) {
@@ -575,6 +593,284 @@ void CaacMissionUpdateControllerTest::_speedUpdate()
             QCOMPARE(manager->missionItems().last()->param2(), 1.0);
         }
     }
+}
+
+void CaacMissionUpdateControllerTest::_deletionMapping()
+{
+    using namespace CaacMissionUpdateUtils;
+    const auto nav = [](int sequence, int latitude) {
+        mavlink_mission_item_int_t item{};
+        item.seq = sequence;
+        item.command = MAV_CMD_NAV_WAYPOINT;
+        item.frame = MAV_FRAME_GLOBAL_RELATIVE_ALT;
+        item.autocontinue = true;
+        item.x = latitude;
+        item.y = 1200000000;
+        item.z = 30;
+        return item;
+    };
+    auto speed = nav(1, 0);
+    speed.command = MAV_CMD_DO_CHANGE_SPEED;
+    speed.frame = MAV_FRAME_MISSION;
+    speed.param1 = 1;
+    speed.param2 = 7;
+    speed.param3 = -1;
+    speed.y = 0;
+    speed.z = 0;
+    auto jump = nav(4, 0);
+    jump.command = MAV_CMD_DO_JUMP;
+    jump.frame = MAV_FRAME_MISSION;
+    jump.param1 = 2;
+    jump.param2 = 3;
+    jump.y = 0;
+    jump.z = 0;
+    const Mission previous{
+        {0, nav(0, 300000000)}, {1, speed}, {2, nav(2, 300010000)}, {3, nav(3, 300020000)}, {4, jump}};
+    jump.seq = 2;
+    jump.param1 = 0;
+    const Mission removed{{0, nav(0, 300010000)}, {1, nav(1, 300020000)}, {2, jump}};
+    const auto mapping = waypointDeletionMapping(previous, removed);
+    QVERIFY(mapping.valid);
+    QCOMPARE(mapping.oldToNew.value(0), 0);
+    QCOMPARE(mapping.oldToNew.value(1), 0);
+    QCOMPARE(mapping.oldToNew.value(2), 0);
+    QCOMPARE(mapping.newToOld.value(0), 2);
+    QCOMPARE(mapping.jumpTargetToNew.value(2), 0);
+    auto invalid = removed;
+    invalid[0].z += 1;
+    QVERIFY(!waypointDeletionMapping(previous, invalid).valid);
+    invalid = removed;
+    invalid[0].x += 1;
+    QVERIFY(!waypointDeletionMapping(previous, invalid).valid);
+    invalid = removed;
+    invalid[2].param2 -= 1;
+    QVERIFY(!waypointDeletionMapping(previous, invalid).valid);
+    invalid = removed;
+    invalid[2].param1 = 1;
+    QVERIFY(!waypointDeletionMapping(previous, invalid).valid);
+    QVERIFY(waypointDeletionMapping(previous, invalid, false).valid);
+    auto withLanding = previous;
+    withLanding[0].command = MAV_CMD_NAV_LAND;
+    QVERIFY(!waypointDeletionMapping(withLanding, removed).valid);
+    const Mission repeated{{0, nav(0, 300000000)}, {1, nav(1, 300000000)}};
+    QVERIFY(!waypointDeletionMapping(repeated, {{0, nav(0, 300000000)}}).valid);
+    const Mission tail{{0, nav(0, 300000000)}, {1, nav(1, 300010000)}};
+    const auto removedTail = waypointDeletionMapping(tail, {{0, tail.value(0)}});
+    QVERIFY(removedTail.valid);
+    QVERIFY(!removedTail.oldToNew.contains(1));
+    auto landing = nav(2, 300020000);
+    landing.command = MAV_CMD_NAV_LAND;
+    const Mission endingWithLanding{{0, tail.value(0)}, {1, tail.value(1)}, {2, landing}};
+    landing.seq = 1;
+    const auto beforeLanding = waypointDeletionMapping(endingWithLanding, {{0, tail.value(0)}, {1, landing}});
+    QVERIFY(beforeLanding.valid);
+    QVERIFY(!beforeLanding.oldToNew.contains(1));
+}
+
+void CaacMissionUpdateControllerTest::_deletionUpdate_data()
+{
+    QTest::addColumn<int>("deletedIndex");
+    QTest::addColumn<int>("currentIndex");
+    QTest::addColumn<bool>("initiallyPaused");
+    QTest::addColumn<bool>("withLoop");
+    QTest::newRow("earlier-waypoint-preserves-current-target") << 1 << 3 << false << false;
+    QTest::newRow("deleted-current-target-uses-next-waypoint") << 2 << 2 << false << false;
+    QTest::newRow("paused-mission-stays-paused") << 1 << 3 << true << false;
+    QTest::newRow("deleted-final-target-has-no-safe-successor") << 3 << 3 << false << false;
+    QTest::newRow("deleted-loop-entry-keeps-remaining-laps") << 1 << 3 << false << true;
+}
+
+void CaacMissionUpdateControllerTest::_deletionUpdate()
+{
+    QFETCH(int, deletedIndex);
+    QFETCH(int, currentIndex);
+    QFETCH(bool, initiallyPaused);
+    QFETCH(bool, withLoop);
+    QVERIFY(vehicle());
+    QVERIFY(waitForInitialConnect());
+    QTRY_VERIFY_WITH_TIMEOUT(vehicle()->homePosition().isValid(), TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(!planController()->syncInProgress(), TestTimeout::mediumMs());
+    clearMission();
+    auto* mission = missionController();
+    mission->setHomePosition(QGeoCoordinate(30, 120, 20));
+    for (int i = 1; i <= 3; ++i) {
+        QVERIFY(mission->insertSimpleMissionItem(QGeoCoordinate(30 + i * 0.001, 120), i, false));
+    }
+    if (withLoop) {
+        auto* jump = qobject_cast<SimpleMissionItem*>(mission->insertSimpleMissionItem(QGeoCoordinate(), 4, false));
+        QVERIFY(jump);
+        jump->setCommand(MAV_CMD_DO_JUMP);
+        jump->missionItem().setParam1(1);
+        jump->missionItem().setParam2(2);
+    }
+    auto* manager = vehicle()->missionManager();
+    QSignalSpy sent(manager, &MissionManager::sendComplete);
+    mission->sendToVehicle();
+    QTRY_COMPARE_WITH_TIMEOUT(sent.count(), 1, TestTimeout::longMs());
+    QVERIFY(!sent.last()[0].toBool());
+    if (withLoop) {
+        QSignalSpy downloaded(mission, &MissionController::newItemsFromVehicle);
+        mission->loadFromVehicle();
+        QTRY_COMPARE_WITH_TIMEOUT(downloaded.count(), 1, TestTimeout::longMs());
+        QTRY_VERIFY_WITH_TIMEOUT(!planController()->syncInProgress(), TestTimeout::mediumMs());
+    }
+    vehicle()->setArmed(true, true);
+    QTRY_VERIFY_WITH_TIMEOUT(vehicle()->armed(), TestTimeout::mediumMs());
+    const auto pauseMode = vehicle()->firmwarePlugin()->pauseFlightMode();
+    vehicle()->setFlightMode(initiallyPaused ? pauseMode : vehicle()->missionFlightMode());
+    QTRY_COMPARE_WITH_TIMEOUT(vehicle()->flightMode(), initiallyPaused ? pauseMode : vehicle()->missionFlightMode(),
+                              TestTimeout::mediumMs());
+    const int offset = vehicle()->firmwarePlugin()->sendHomePositionToVehicle() ? 0 : 1;
+    const auto reportTarget = [&](int sequence) {
+        mavlink_message_t report{};
+        mavlink_msg_mission_current_pack(vehicle()->id(), vehicle()->defaultComponentId(), &report, sequence,
+                                         manager->missionItems().size(), MISSION_STATE_ACTIVE, 1, 0, 0, 0);
+        return QMetaObject::invokeMethod(manager, "_mavlinkMessageReceived", Qt::DirectConnection,
+                                         Q_ARG(mavlink_message_t, report));
+    };
+    if (withLoop) {
+        QVERIFY(reportTarget(manager->missionItems().last()->sequenceNumber()));
+        QVERIFY(reportTarget(0));
+        QCOMPARE(manager->remainingLoops(), 2);
+    }
+    QVERIFY(reportTarget(currentIndex - offset));
+    const auto preservedCoordinate = mission->visualItems()->value<SimpleMissionItem*>(3)->coordinate();
+    mission->removeVisualItem(deletedIndex);
+    if (withLoop) {
+        auto* jump = mission->visualItems()->value<SimpleMissionItem*>(3);
+        QVERIFY(jump && jump->command() == MAV_CMD_DO_JUMP);
+        jump->missionItem().setParam1(1);
+    }
+    const bool safeTarget = deletedIndex != 3;
+    const int expectedTarget = 2 - offset;
+    CaacMissionUpdateController update;
+    QSignalSpy finished(&update, &CaacMissionUpdateController::finished);
+    bool pausedBeforeTransfer = false;
+    connect(manager, &MissionManager::inProgressChanged, &update, [&](bool inProgress) {
+        if (inProgress) {
+            pausedBeforeTransfer = vehicle()->flightMode() == pauseMode;
+        }
+    });
+    QVERIFY(update.updateDeletedWaypoints(planController(), nullptr));
+    if (safeTarget) {
+        mavlink_message_t command{};
+        QTRY_VERIFY_WITH_TIMEOUT(
+            mockLink()->lastReceivedMavlinkMessage(MAVLINK_MSG_ID_MISSION_SET_CURRENT, command) || !finished.isEmpty(),
+            TestTimeout::mediumMs());
+        QVERIFY2(finished.isEmpty(), finished.isEmpty() ? "" : qPrintable(finished.last()[1].toString()));
+        mavlink_mission_set_current_t target{};
+        mavlink_msg_mission_set_current_decode(&command, &target);
+        QCOMPARE(target.seq, expectedTarget);
+        QCOMPARE(vehicle()->flightMode(), pauseMode);
+        QVERIFY(reportTarget(target.seq));
+    }
+    QTRY_VERIFY_WITH_TIMEOUT(!finished.isEmpty(), TestTimeout::longMs());
+    QCOMPARE(finished.last()[0].toBool(), safeTarget);
+    QVERIFY(!update.busy());
+    QCOMPARE(sent.count(), safeTarget ? 2 : 1);
+    QCOMPARE(vehicle()->flightMode(), !safeTarget || initiallyPaused ? pauseMode : vehicle()->missionFlightMode());
+    if (safeTarget) {
+        QVERIFY(pausedBeforeTransfer);
+        QCOMPARE(manager->currentIndex(), expectedTarget);
+        QVERIFY(manager->missionItems()[expectedTarget]->coordinate().distanceTo(preservedCoordinate) < 0.02);
+        if (withLoop) {
+            QCOMPARE(manager->remainingLoops(), 2);
+            QCOMPARE(manager->missionItems().last()->command(), MAV_CMD_DO_JUMP);
+            QCOMPARE(manager->missionItems().last()->param1(), 0.0);
+            QCOMPARE(manager->missionItems().last()->param2(), 1.0);
+        }
+    }
+}
+
+void CaacMissionUpdateControllerTest::_returnToLanding_data()
+{
+    QTest::addColumn<bool>("replaceUploadedMission");
+    QTest::addColumn<bool>("startInPositionMode");
+    QTest::newRow("uploaded-land-target-ignores-unsent-draft") << false << false;
+    QTest::newRow("uploaded-target-replaced-while-pausing") << true << false;
+    QTest::newRow("position-mode-pauses-and-returns-to-uploaded-land") << false << true;
+}
+
+void CaacMissionUpdateControllerTest::_returnToLanding()
+{
+    QFETCH(bool, replaceUploadedMission);
+    QFETCH(bool, startInPositionMode);
+    QVERIFY(vehicle());
+    QVERIFY(waitForInitialConnect());
+    QTRY_VERIFY_WITH_TIMEOUT(vehicle()->homePosition().isValid(), TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(!planController()->syncInProgress(), TestTimeout::mediumMs());
+    clearMission();
+    auto* mission = missionController();
+    mission->setHomePosition(QGeoCoordinate(30, 120, 20));
+    for (int i = 1; i <= 3; ++i) {
+        auto* item = qobject_cast<SimpleMissionItem*>(
+            mission->insertSimpleMissionItem(QGeoCoordinate(30 + i * 0.001, 120), i, false));
+        QVERIFY(item);
+        if (i == 3) {
+            item->setCommand(MAV_CMD_NAV_LAND);
+        }
+    }
+    auto* manager = vehicle()->missionManager();
+    QSignalSpy sent(manager, &MissionManager::sendComplete);
+    mission->sendToVehicle();
+    QTRY_COMPARE_WITH_TIMEOUT(sent.count(), 1, TestTimeout::longMs());
+    QVERIFY(!sent.last()[0].toBool());
+    const auto uploadedLanding = manager->missionItems().last()->coordinate();
+    const auto originalHome = vehicle()->homePosition();
+    mission->visualItems()->value<SimpleMissionItem*>(3)->setCoordinate(QGeoCoordinate(31, 121));
+    vehicle()->setArmed(true, true);
+    QTRY_VERIFY_WITH_TIMEOUT(vehicle()->armed(), TestTimeout::mediumMs());
+    vehicle()->setFlightMode(vehicle()->missionFlightMode());
+    QTRY_COMPARE_WITH_TIMEOUT(vehicle()->flightMode(), vehicle()->missionFlightMode(), TestTimeout::mediumMs());
+    CaacMissionUpdateController update;
+    QSignalSpy finished(&update, &CaacMissionUpdateController::finished);
+    QVERIFY(!update.returnToLandingPoint(planController(), nullptr));
+    QCOMPARE(finished.count(), 1);
+    QVERIFY(!finished.last()[0].toBool());
+    finished.clear();
+    ignoreLogMessage("Utilities.QGCSensors", QtWarningMsg,
+                     QRegularExpression(QStringLiteral("Failed to connect to pressure backend")));
+    ignoreLogMessage("Utilities.QGCSensors", QtWarningMsg,
+                     QRegularExpression(QStringLiteral("Error Initializing Pressure Sensor")));
+    vehicle()->sendMavCommand(vehicle()->defaultComponentId(), MAV_CMD_NAV_TAKEOFF, false, 0, 0, 0, 0, 0, 0, 10);
+    QTRY_VERIFY_WITH_TIMEOUT(vehicle()->underway(), TestTimeout::mediumMs());
+    if (startInPositionMode) {
+        const auto positionMode = QCoreApplication::translate("PX4FirmwarePlugin", "Position");
+        QVERIFY(vehicle()->firmwarePlugin()->flightModes(vehicle()).contains(positionMode));
+        vehicle()->setFlightMode(positionMode);
+        QTRY_COMPARE_WITH_TIMEOUT(vehicle()->flightMode(), positionMode, TestTimeout::mediumMs());
+    }
+    QVERIFY(update.returnToLandingPoint(planController(), nullptr));
+    if (replaceUploadedMission) {
+        manager->missionItems().last()->setParam5(32);
+        manager->missionItems().last()->setParam6(122);
+        QTRY_VERIFY_WITH_TIMEOUT(!finished.isEmpty(), TestTimeout::mediumMs());
+        QVERIFY(!finished.last()[0].toBool());
+    } else {
+        mavlink_message_t command{};
+        QTRY_VERIFY_WITH_TIMEOUT(
+            mockLink()->lastReceivedMavlinkMessage(MAVLINK_MSG_ID_MISSION_SET_CURRENT, command) || !finished.isEmpty(),
+            TestTimeout::mediumMs());
+        QVERIFY2(finished.isEmpty(), finished.isEmpty() ? "" : qPrintable(finished.last()[1].toString()));
+        mavlink_mission_set_current_t target{};
+        mavlink_msg_mission_set_current_decode(&command, &target);
+        QCOMPARE(target.seq, 2);
+        QCOMPARE(vehicle()->flightMode(), vehicle()->firmwarePlugin()->pauseFlightMode());
+        QCOMPARE(sent.count(), 1);
+        QCOMPARE(manager->missionItems().last()->coordinate(), uploadedLanding);
+        mavlink_message_t report{};
+        mavlink_msg_mission_current_pack(vehicle()->id(), vehicle()->defaultComponentId(), &report, target.seq,
+                                         manager->missionItems().size(), MISSION_STATE_ACTIVE, 1, 0, 0, 0);
+        QVERIFY(QMetaObject::invokeMethod(manager, "_mavlinkMessageReceived", Qt::DirectConnection,
+                                          Q_ARG(mavlink_message_t, report)));
+        QTRY_VERIFY_WITH_TIMEOUT(!finished.isEmpty(), TestTimeout::mediumMs());
+        QVERIFY2(finished.last()[0].toBool(), qPrintable(finished.last()[1].toString()));
+        QCOMPARE(vehicle()->flightMode(), vehicle()->missionFlightMode());
+        QCOMPARE(manager->currentIndex(), 2);
+    }
+    QVERIFY(!update.busy());
+    QCOMPARE(sent.count(), 1);
+    QCOMPARE(vehicle()->homePosition(), originalHome);
 }
 
 UT_REGISTER_TEST(CaacMissionUpdateControllerTest, TestLabel::Unit, TestLabel::MissionManager)

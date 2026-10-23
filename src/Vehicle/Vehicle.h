@@ -147,6 +147,8 @@ public:
     Q_PROPERTY(QGeoCoordinate       homePosition                READ homePosition                                                   NOTIFY homePositionChanged)
     Q_PROPERTY(QGeoCoordinate       armedPosition               READ armedPosition                                                  NOTIFY armedPositionChanged)
     Q_PROPERTY(bool                 armed                       READ armed                      WRITE setArmedShowError             NOTIFY armedChanged)
+    Q_PROPERTY(bool flightPlanUpdateInProgress READ flightPlanUpdateInProgress WRITE setFlightPlanUpdateInProgress
+                   NOTIFY flightPlanUpdateInProgressChanged)
     Q_PROPERTY(bool                 autoDisarm                  READ autoDisarm                                                     NOTIFY autoDisarmChanged)
     Q_PROPERTY(bool                 flightModeSetAvailable      READ flightModeSetAvailable                                         CONSTANT)
     Q_PROPERTY(QStringList          flightModes                 READ flightModes                                                    NOTIFY flightModesChanged)
@@ -474,6 +476,10 @@ public:
     void setArmed           (bool armed, bool showError);
     void setArmedShowError  (bool armed) { setArmed(armed, true); }
 
+    bool flightPlanUpdateInProgress() const { return _flightPlanUpdateInProgress; }
+
+    void setFlightPlanUpdateInProgress(bool inProgress);
+
     bool flightModeSetAvailable             ();
     QStringList flightModes                 ();
     QString flightMode                      () const;
@@ -781,6 +787,7 @@ signals:
     void homePositionChanged            (const QGeoCoordinate& homePosition);
     void armedPositionChanged();
     void armedChanged                   (bool armed);
+    void flightPlanUpdateInProgressChanged(bool inProgress);
     void flightModeChanged              (const QString& flightMode);
     void underwayChanged(bool underway);
     void airborneChanged(bool airborne);
@@ -1020,6 +1027,7 @@ private:
     VehicleSupports*                _vehicleSupports                = nullptr;
 
     bool    _armed = false;         ///< true: vehicle is armed
+    bool _flightPlanUpdateInProgress = false;
     uint8_t _base_mode = 0;     ///< base_mode from HEARTBEAT
     uint32_t _custom_mode = 0;  ///< custom_mode from HEARTBEAT
     uint32_t _custom_mode_user_intention = 0;  ///< custom_mode_user_intention from CURRENT_MODE

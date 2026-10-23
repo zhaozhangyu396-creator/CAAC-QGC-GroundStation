@@ -484,7 +484,26 @@ void CaacFlightDataUITest::_safetyAndUomTelemetry()
     QVERIFY(uom);
     QCOMPARE(uom->property("vehicle").value<Vehicle*>(), vehicle);
     QCOMPARE(uom->property("serial").toString(), vehicle->remoteIDManager()->aircraftSerial());
+    QTRY_VERIFY_WITH_TIMEOUT(vehicle->remoteIDManager()->available(), TestTimeout::mediumMs());
+    const auto refreshIdentity = [&](const QString& button) {
+        const int versionRequests = mock->receivedRequestMessageCount(MAVLINK_MSG_ID_AUTOPILOT_VERSION);
+        const int basicIdRequests = mock->receivedRequestMessageCount(MAVLINK_MSG_ID_OPEN_DRONE_ID_BASIC_ID);
+        return clickButtonScrolled(button, QStringLiteral("caacUOMScroller")) &&
+               waitForCondition(
+                   [&]() {
+                       return mock->receivedRequestMessageCount(MAVLINK_MSG_ID_AUTOPILOT_VERSION) ==
+                                  versionRequests + 1 &&
+                              mock->receivedRequestMessageCount(MAVLINK_MSG_ID_OPEN_DRONE_ID_BASIC_ID) ==
+                                  basicIdRequests + 1 &&
+                              !vehicle->isMavCommandPending(vehicle->compId(), MAV_CMD_REQUEST_MESSAGE);
+                   },
+                   TestTimeout::mediumMs(),
+                   QStringLiteral("UOM refresh completes without blocking the "
+                                  "next request"));
+    };
+    QVERIFY(refreshIdentity(QStringLiteral("caacUOMRefreshStatus")));
     QVERIFY(clickButton(QStringLiteral("caacUOMSerialTab")));
+    QVERIFY(refreshIdentity(QStringLiteral("caacUOMReadAll")));
     QVERIFY(clickButtonScrolled(QStringLiteral("caacUOMCopyAll"), QStringLiteral("caacUOMScroller")));
     QVERIFY(QGuiApplication::clipboard()->text().contains(QStringLiteral("CAAC-TEST-SERIAL")));
     QVERIFY(clickButton(QStringLiteral("caacUOMTelemetryTab")));
@@ -666,9 +685,9 @@ void CaacFlightDataUITest::_liveFlightData()
     QVERIFY(verifyText(QStringLiteral("caacNorthDistanceValue"), unavailable, QStringLiteral("no telemetry")));
 
     ignoreLogMessage("Utilities.QGCSensors", QtWarningMsg,
-                     QRegularExpression(QStringLiteral("Failed to connect to pressure backend")));
+                     QRegularExpression(QStringLiteral("Failed to connect to pressure backend$")));
     ignoreLogMessage("Utilities.QGCSensors", QtWarningMsg,
-                     QRegularExpression(QStringLiteral("Error Initializing Pressure Sensor")));
+                     QRegularExpression(QStringLiteral("Error Initializing Pressure Sensor$")));
     Vehicle* vehicle = nullptr;
     auto mock = connectMockLinkAndWaitReady([]() { return MockLink::startPX4MockLink(); }, vehicle);
     if (!mock || !vehicle) {

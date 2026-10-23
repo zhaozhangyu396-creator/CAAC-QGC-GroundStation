@@ -1,7 +1,12 @@
 #include "MissionController.h"
 
+#include <algorithm>
+#include <cmath>
+#include <limits>
+
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonDocument>
+#include <QtCore/QSet>
 #include <QtMath>
 
 #include "AppMessages.h"
@@ -14,6 +19,7 @@
 #include "JsonParsing.h"
 #include "KMLPlanDomDocument.h"
 #include "MissionCommandTree.h"
+#include "MissionCommandUIInfo.h"
 #include "MissionManager.h"
 #include "MissionSettingsItem.h"
 #include "PlanMasterController.h"
@@ -36,6 +42,396 @@
 #define UPDATE_TIMEOUT 5000 ///< How often we check for bounding box changes
 
 QGC_LOGGING_CATEGORY(MissionControllerLog, "PlanManager.MissionController")
+
+namespace {
+bool sameRouteNumber(double left, double right)
+{
+    return (std::isnan(left) && std::isnan(right)) ||
+           (std::isfinite(left) && std::isfinite(right) &&
+            std::abs(left - right) <=
+                std::max({1.0, std::abs(left), std::abs(right)}) * std::numeric_limits<float>::epsilon());
+}
+
+bool sameRouteLocation(const QGeoCoordinate& left, const QGeoCoordinate& right)
+{
+    return left.isValid() && right.isValid() && left.distanceTo(right) < 0.02;
+}
+}  // namespace
+
+MissionController::RouteCoordinateKey MissionController::_routeCoordinateKey(const QGeoCoordinate& coordinate)
+{
+    return {qRound64(coordinate.latitude() * 1e7), qRound64(coordinate.longitude() * 1e7)};
+}
+
+QList<MissionController::RoutePoint> MissionController::_routePointsAt(const RoutePointIndex& points,
+                                                                       const QGeoCoordinate& coordinate)
+{
+    QList<RoutePoint> matches;
+    if (!coordinate.isValid()) {
+        return matches;
+    }
+    const auto key = _routeCoordinateKey(coordinate);
+    for (int latitude = -1; latitude <= 1; ++latitude) {
+        for (int longitude = -1; longitude <= 1; ++longitude) {
+            const auto entries = points.constFind({key.first + latitude, key.second + longitude});
+            if (entries == points.cend()) {
+                continue;
+            }
+            for (const auto& point : entries.value()) {
+                if (sameRouteLocation(point.coordinate, coordinate)) {
+                    matches.append(point);
+                }
+            }
+        }
+    }
+    return matches;
+}
+
+bool MissionController::_sameRoutePoint(const RoutePoint& left, const RoutePoint& right)
+{
+    return left.home == right.home && left.command == right.command && left.frame == right.frame &&
+           sameRouteLocation(left.coordinate, right.coordinate) && sameRouteNumber(left.altitude, right.altitude);
+}
+
+bool MissionController::_routePointsUnchanged(const QList<RoutePoint>& current, const QList<RoutePoint>& uploaded)
+{
+    if (current.isEmpty() || uploaded.isEmpty()) {
+        return false;
+    }
+    for (const auto& point : current) {
+        bool found = false;
+        for (const auto& candidate : uploaded) {
+            if (_sameRoutePoint(point, candidate)) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            return false;
+        }
+    }
+    return true;
+}
+
+MissionController::RoutePointIndex MissionController::_captureRoutePoints() const
+{
+    RoutePointIndex points;
+    if (!_visualItems || !_settingsItem) {
+        return points;
+    }
+    const auto append = [&points](const RoutePoint& point) {
+        if (point.coordinate.isValid()) {
+            points[_routeCoordinateKey(point.coordinate)].append(point);
+        }
+    };
+    append({_settingsItem->coordinate(), 0, MAV_FRAME_GLOBAL,
+            _settingsItem->plannedHomePositionAltitude()->rawValue().toDouble(), true});
+    for (int i = 1; i < _visualItems->count(); ++i) {
+        auto* item = _visualItems->value<VisualMissionItem*>(i);
+        if (!item || !item->specifiesCoordinate() || item->isStandaloneCoordinate()) {
+            continue;
+        }
+        if (auto* simple = qobject_cast<SimpleMissionItem*>(item)) {
+            append({simple->coordinate(), simple->command(), simple->missionItem().frame(),
+                    simple->missionItem().param7(), false});
+        } else {
+            append({item->entryCoordinate(), -1, -1, item->amslEntryAlt(), false});
+            if (!item->exitCoordinateSameAsEntry()) {
+                append({item->exitCoordinate(), -1, -1, item->amslExitAlt(), false});
+            }
+        }
+    }
+    return points;
+}
+
+MissionController::RoutePoint MissionController::_routePointForItem(VisualMissionItem* item, bool exit) const
+{
+    if (!item) {
+        return {};
+    }
+    if (item == _settingsItem) {
+        return {_settingsItem->coordinate(), 0, MAV_FRAME_GLOBAL,
+                _settingsItem->plannedHomePositionAltitude()->rawValue().toDouble(), true};
+    }
+    if (auto* simple = qobject_cast<SimpleMissionItem*>(item)) {
+        return {simple->coordinate(), simple->command(), simple->missionItem().frame(), simple->missionItem().param7(),
+                false};
+    }
+    return {exit ? item->exitCoordinate() : item->entryCoordinate(), -1, -1,
+            exit ? item->amslExitAlt() : item->amslEntryAlt(), false};
+}
+
+QVariantMap MissionController::_routeHomeSettings() const
+{
+    const auto settings = _masterController->property("caacSimulationSettings").toMap();
+    return {{QStringLiteral("takeoffHeight"), settings.value(QStringLiteral("takeoffHeight"))},
+            {QStringLiteral("endBehavior"), settings.value(QStringLiteral("endBehavior"))}};
+}
+
+FlightPathSegment* MissionController::routeSegmentForItems(VisualMissionItem* from, VisualMissionItem* to) const
+{
+    return _flightPathSegmentHashTable.value({from, to}, nullptr);
+}
+
+bool MissionController::isRouteSegmentUploaded(const QGeoCoordinate& from, const QGeoCoordinate& to,
+                                               double flightSpeed) const
+{
+    return _isRouteSegmentUploaded(from, to, flightSpeed, _routePointsAt(_currentRoutePoints, from),
+                                   _routePointsAt(_currentRoutePoints, to));
+}
+
+bool MissionController::_isRouteSegmentUploaded(const QGeoCoordinate& from, const QGeoCoordinate& to,
+                                                double flightSpeed, const QList<RoutePoint>& origins,
+                                                const QList<RoutePoint>& destinations) const
+{
+    if (!from.isValid() || !to.isValid() || !std::isfinite(flightSpeed) || flightSpeed <= 0) {
+        return false;
+    }
+    const auto fromKey = _routeCoordinateKey(from);
+    const auto toKey = _routeCoordinateKey(to);
+    for (int fromLat = -1; fromLat <= 1; ++fromLat) {
+        for (int fromLon = -1; fromLon <= 1; ++fromLon) {
+            for (int toLat = -1; toLat <= 1; ++toLat) {
+                for (int toLon = -1; toLon <= 1; ++toLon) {
+                    const auto entry = _uploadedRoutes.constFind({{fromKey.first + fromLat, fromKey.second + fromLon},
+                                                                  {toKey.first + toLat, toKey.second + toLon}});
+                    if (entry == _uploadedRoutes.cend()) {
+                        continue;
+                    }
+                    for (const auto& segment : entry.value()) {
+                        if (sameRouteLocation(from, segment.from) && sameRouteLocation(to, segment.to) &&
+                            sameRouteNumber(flightSpeed, segment.speed) &&
+                            (!std::isfinite(segment.takeoffHeight) ||
+                             !_routeHomeSettings().value(QStringLiteral("takeoffHeight")).isValid() ||
+                             sameRouteNumber(_routeHomeSettings().value(QStringLiteral("takeoffHeight")).toDouble(),
+                                             segment.takeoffHeight)) &&
+                            (segment.returnBehavior < 0 ||
+                             !_routeHomeSettings().value(QStringLiteral("endBehavior")).isValid() ||
+                             _routeHomeSettings().value(QStringLiteral("endBehavior")).toInt() ==
+                                 segment.returnBehavior) &&
+                            _routePointsUnchanged(origins, segment.origins) &&
+                            _routePointsUnchanged(destinations, segment.destinations)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
+
+void MissionController::_refreshRouteUploadState()
+{
+    _currentRoutePoints = _captureRoutePoints();
+    for (auto entry = _flightPathSegmentHashTable.cbegin(); entry != _flightPathSegmentHashTable.cend(); ++entry) {
+        auto* segment = entry.value();
+        segment->setUploaded(_isRouteSegmentUploaded(
+            segment->coordinate1(), segment->coordinate2(), segment->flightSpeed(),
+            {_routePointForItem(entry.key().first, true)}, {_routePointForItem(entry.key().second, false)}));
+    }
+    ++_uploadedRouteRevision;
+    emit uploadedRouteRevisionChanged();
+}
+
+void MissionController::_clearUploadedRoute()
+{
+    _uploadedRoutes.clear();
+    _pendingRoutePoints.clear();
+    _uploadedRouteAliases.clear();
+    _refreshRouteUploadState();
+}
+
+void MissionController::_recordUploadedRoute(const RoutePointIndex& sourcePoints, const QGeoCoordinate& plannedHome,
+                                             double defaultSpeed)
+{
+    if (!_missionManager || !_managerVehicle || !_controllerVehicle) {
+        return;
+    }
+    UploadedRouteIndex uploaded;
+    const auto& items = _missionManager->missionItems();
+    const bool includesHome = _managerVehicle->firmwarePlugin()->sendHomePositionToVehicle();
+    auto home = plannedHome;
+    if (includesHome && !items.isEmpty() && items.first()->coordinate().isValid()) {
+        home = items.first()->coordinate();
+    } else if (sourcePoints.isEmpty()) {
+        home = _managerVehicle->homePosition();
+        if (_missionManager->missionItemsAreDownloaded()) {
+            for (const auto& entries : _uploadedRouteAliases) {
+                for (const auto& alias : entries) {
+                    if (alias.wire.home && alias.wire.coordinate.isValid()) {
+                        home = alias.wire.coordinate;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    const auto pointAt = [&items, &home](int index) {
+        if (index < 0) {
+            return RoutePoint{home, 0, MAV_FRAME_GLOBAL, home.altitude(), true};
+        }
+        const auto* item = items.at(index);
+        return RoutePoint{item->coordinate(), item->command(), item->frame(), item->param7(), false};
+    };
+    RouteAliasIndex aliases;
+    const bool downloaded = _missionManager->missionItemsAreDownloaded();
+    const auto sourceMatches = [this, &sourcePoints, &home, &aliases, downloaded](const RoutePoint& wire) {
+        const auto key = _routeCoordinateKey(wire.coordinate);
+        for (const auto& alias : aliases.value(key)) {
+            if (_sameRoutePoint(alias.wire, wire)) {
+                return alias.sources;
+            }
+        }
+        QList<RoutePoint> matches{wire};
+        if (downloaded) {
+            for (int latitude = -1; latitude <= 1; ++latitude) {
+                for (int longitude = -1; longitude <= 1; ++longitude) {
+                    for (const auto& alias :
+                         _uploadedRouteAliases.value({key.first + latitude, key.second + longitude})) {
+                        if (_sameRoutePoint(alias.wire, wire)) {
+                            matches.append(alias.sources);
+                        }
+                    }
+                }
+            }
+        }
+        for (const auto& source : _routePointsAt(sourcePoints, wire.coordinate)) {
+            const double amsl = wire.altitude + ((wire.frame == MAV_FRAME_GLOBAL_RELATIVE_ALT ||
+                                                  wire.frame == MAV_FRAME_GLOBAL_RELATIVE_ALT_INT)
+                                                     ? home.altitude()
+                                                     : 0);
+            if (source.home ||
+                (source.frame < 0 && std::isfinite(source.altitude) &&
+                 (wire.frame == MAV_FRAME_GLOBAL || wire.frame == MAV_FRAME_GLOBAL_INT ||
+                  wire.frame == MAV_FRAME_GLOBAL_RELATIVE_ALT || wire.frame == MAV_FRAME_GLOBAL_RELATIVE_ALT_INT) &&
+                 sameRouteNumber(source.altitude, amsl)) ||
+                ((source.command == wire.command ||
+                  (source.command == MAV_CMD_NAV_WAYPOINT && wire.command == MAV_CMD_NAV_LOITER_UNLIM)) &&
+                 source.frame == wire.frame && sameRouteNumber(source.altitude, wire.altitude))) {
+                matches.append(source);
+            }
+        }
+        aliases[key].append({wire, matches});
+        return matches;
+    };
+    const auto append = [&uploaded, &sourceMatches, &home](const RoutePoint& from, const RoutePoint& to, double speed,
+                                                           int returnBehavior = -1) {
+        if (!from.coordinate.isValid() || !to.coordinate.isValid() ||
+            (from.coordinate.distanceTo(to.coordinate) < 0.01 && from.frame == to.frame &&
+             sameRouteNumber(from.altitude, to.altitude))) {
+            return;
+        }
+        UploadedRouteSegment segment{from.coordinate, to.coordinate, speed, sourceMatches(from), sourceMatches(to)};
+        if ((from.command == MAV_CMD_NAV_TAKEOFF || from.command == MAV_CMD_NAV_VTOL_TAKEOFF) &&
+            sameRouteLocation(from.coordinate, home)) {
+            segment.takeoffHeight = from.altitude - (from.frame == MAV_FRAME_GLOBAL ? home.altitude() : 0);
+        }
+        segment.returnBehavior = returnBehavior;
+        if (to.command == MAV_CMD_NAV_LOITER_UNLIM && sameRouteLocation(to.coordinate, home)) {
+            segment.returnBehavior = 2;
+        }
+        uploaded[{_routeCoordinateKey(from.coordinate), _routeCoordinateKey(to.coordinate)}].append(segment);
+    };
+
+    struct State
+    {
+        int index;
+        int previous;
+        double speed;
+        bool hoverMode;
+    };
+
+    bool startsInHover = _controllerVehicle->multiRotor();
+    if (_controllerVehicle->vtol()) {
+        for (const auto* item : items) {
+            const auto* info = MissionCommandTree::instance()->getUIInfo(
+                _controllerVehicle, QGCMAVLink::VehicleClassGeneric, item->command());
+            if (info && info->specifiesCoordinate() && !info->isStandaloneCoordinate()) {
+                startsInHover = item->command() == MAV_CMD_NAV_VTOL_TAKEOFF ||
+                                TakeoffMissionItem::isVTOLMulticopterTakeoff(_controllerVehicle,
+                                                                             static_cast<MAV_CMD>(item->command()));
+                break;
+            }
+        }
+    }
+    QList<State> pending{{includesHome ? 1 : 0, -1, defaultSpeed, startsInHover}};
+    QSet<QString> visited;
+    // Walk both finite-loop exits without expanding their repeat count.
+    while (!pending.isEmpty() && visited.size() < 100000) {
+        auto state = pending.takeLast();
+        if (state.index < 0 || state.index >= items.size()) {
+            continue;
+        }
+        const auto key = QStringLiteral("%1:%2:%3:%4")
+                             .arg(state.index)
+                             .arg(state.previous)
+                             .arg(state.speed, 0, 'g', 17)
+                             .arg(state.hoverMode);
+        if (visited.contains(key)) {
+            continue;
+        }
+        visited.insert(key);
+        const auto* item = items.at(state.index);
+        const bool hoverSpeed = _controllerVehicle->multiRotor() || (_controllerVehicle->vtol() && state.hoverMode);
+        if (item->command() == MAV_CMD_DO_CHANGE_SPEED && item->param1() == (hoverSpeed ? 1 : 0) &&
+            std::isfinite(item->param2()) && item->param2() > 0) {
+            state.speed = item->param2();
+        } else if (item->command() == MAV_CMD_DO_JUMP) {
+            const double target = item->param1() - (downloaded && !includesHome ? 1 : 0);
+            if (std::isfinite(target) && target == std::floor(target) && target >= 0 && target < items.size() &&
+                item->param2() != 0) {
+                pending.append({static_cast<int>(target), state.previous, state.speed, state.hoverMode});
+            }
+            if (item->param2() < 0) {
+                continue;
+            }
+        } else if (item->command() == MAV_CMD_NAV_RETURN_TO_LAUNCH) {
+            if (state.previous >= 0) {
+                append(pointAt(state.previous), pointAt(-1), state.speed, 1);
+            }
+            continue;
+        } else {
+            const auto* info = MissionCommandTree::instance()->getUIInfo(
+                _controllerVehicle, QGCMAVLink::VehicleClassGeneric, item->command());
+            if (info && info->specifiesCoordinate() && !info->isStandaloneCoordinate()) {
+                append(pointAt(state.previous), pointAt(state.index), state.speed);
+                state.previous = state.index;
+                if (info->isLandCommand() || item->command() == MAV_CMD_NAV_LOITER_UNLIM) {
+                    continue;
+                }
+            }
+        }
+        if (_controllerVehicle->vtol()) {
+            switch (item->command()) {
+                case MAV_CMD_NAV_TAKEOFF:
+                    state.hoverMode =
+                        TakeoffMissionItem::isVTOLMulticopterTakeoff(_controllerVehicle, MAV_CMD_NAV_TAKEOFF);
+                    break;
+                case MAV_CMD_NAV_VTOL_TAKEOFF:
+                case MAV_CMD_NAV_LAND:
+                    state.hoverMode = false;
+                    break;
+                case MAV_CMD_NAV_VTOL_LAND:
+                    state.hoverMode = true;
+                    break;
+                case MAV_CMD_DO_VTOL_TRANSITION:
+                    if (item->param1() == static_cast<double>(MAV_VTOL_STATE_MC)) {
+                        state.hoverMode = true;
+                    } else if (item->param1() == static_cast<double>(MAV_VTOL_STATE_FW)) {
+                        state.hoverMode = false;
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+        pending.append({state.index + 1, state.previous, state.speed, state.hoverMode});
+    }
+    _uploadedRoutes = std::move(uploaded);
+    _uploadedRouteAliases = std::move(aliases);
+    _refreshRouteUploadState();
+}
 
 MissionController::MissionController(PlanMasterController* masterController, QObject *parent)
     : PlanElementController (masterController, parent)
@@ -169,6 +565,12 @@ void MissionController::_newMissionItemsAvailableFromVehicle(bool removeAllReque
         emit containsItemsChanged();
     }
     _itemsRequested = false;
+    if (!_missionManager->missionItems().isEmpty() || _missionManager->missionItemsAreDownloaded()) {
+        _recordUploadedRoute({}, plannedHomePosition(),
+                             _controllerVehicle->multiRotor() || _controllerVehicle->vtol()
+                                 ? _controllerVehicle->defaultHoverSpeed()
+                                 : _controllerVehicle->defaultCruiseSpeed());
+    }
 }
 
 void MissionController::loadFromVehicle(void)
@@ -185,7 +587,7 @@ void MissionController::loadFromVehicle(void)
 
 void MissionController::sendToVehicle(void)
 {
-    if (_masterController->property("caacMissionUpdateActive").toBool()) {
+    if (_managerVehicle && _managerVehicle->flightPlanUpdateInProgress()) {
         QGC::showAppMessage(
             QCoreApplication::translate("CaacMissionUpdateController", "A waypoint update is already in progress."));
         return;
@@ -647,6 +1049,7 @@ void MissionController::_setupNewVisualItems(QmlObjectListModel* newItems)
 
 void MissionController::removeAll(void)
 {
+    _clearUploadedRoute();
     _setupNewVisualItems();
     _initAllVisualItems();
     setDirty(true);
@@ -1258,6 +1661,7 @@ void MissionController::_recalcMissionFlightStatus()
     _missionFlightStatus = _flightStatusCalc.status();
     _minAMSLAltitude = _flightStatusCalc.minAMSLAltitude();
     _maxAMSLAltitude = _flightStatusCalc.maxAMSLAltitude();
+    _refreshRouteUploadState();
 
     emit missionMaxTelemetryChanged     (_missionFlightStatus.maxTelemetryDistance);
     emit missionTotalDistanceChanged    (_missionFlightStatus.totalDistance);
@@ -1662,6 +2066,8 @@ void MissionController::_initVisualItem(VisualMissionItem* visualItem)
         SimpleMissionItem* simpleItem = qobject_cast<SimpleMissionItem*>(visualItem);
         if (simpleItem) {
             connect(&simpleItem->missionItem()._commandFact, &Fact::valueChanged, this, &MissionController::_itemCommandChanged);
+            connect(&simpleItem->missionItem()._param1Fact, &Fact::valueChanged, this,
+                    &MissionController::_recalcMissionFlightStatusSignal, Qt::QueuedConnection);
             // The altitude frame drives segmentTypeForPair, and segment type is immutable once created
             connect(simpleItem, &SimpleMissionItem::altitudeFrameChanged, this,
                     &MissionController::_recalcFlightPathSegmentsSignal, Qt::QueuedConnection);
@@ -1698,6 +2104,7 @@ void MissionController::_itemCommandChanged(void)
 
 void MissionController::_managerVehicleChanged(Vehicle* managerVehicle)
 {
+    _clearUploadedRoute();
     _setUploadConfirmed(false);
     _uploadPending = false;
     if (_managerVehicle) {
@@ -2009,6 +2416,7 @@ bool MissionController::showPlanFromManagerVehicle (void)
 
 void MissionController::_managerSendComplete(bool error)
 {
+    const bool tracked = _uploadPending;
     if (_uploadPending) {
         _uploadPending = false;
         _setUploadConfirmed(!error && _uploadUnchanged && containsItems());
@@ -2017,6 +2425,14 @@ void MissionController::_managerSendComplete(bool error)
     if (!error && _flyView) {
         showPlanFromManagerVehicle();
         _setUploadConfirmed(containsItems());
+    }
+    if (!error) {
+        _recordUploadedRoute(tracked ? _pendingRoutePoints : RoutePointIndex{},
+                             tracked ? _pendingRouteHome : plannedHomePosition(),
+                             tracked ? _pendingRouteDefaultSpeed
+                                     : (_controllerVehicle->multiRotor() || _controllerVehicle->vtol()
+                                            ? _controllerVehicle->defaultHoverSpeed()
+                                            : _controllerVehicle->defaultCruiseSpeed()));
     }
 }
 
@@ -2030,6 +2446,11 @@ void MissionController::_setUploadConfirmed(bool confirmed)
 
 void MissionController::trackMissionUpload()
 {
+    _pendingRoutePoints = _captureRoutePoints();
+    _pendingRouteHome = plannedHomePosition();
+    _pendingRouteDefaultSpeed = _controllerVehicle->multiRotor() || _controllerVehicle->vtol()
+                                    ? _controllerVehicle->defaultHoverSpeed()
+                                    : _controllerVehicle->defaultCruiseSpeed();
     _setUploadConfirmed(false);
     setDirty(false);
     _uploadPending = true;
@@ -2039,6 +2460,7 @@ void MissionController::trackMissionUpload()
 void MissionController::_managerRemoveAllComplete(bool error)
 {
     if (!error) {
+        _clearUploadedRoute();
         // Remove all from vehicle so we always update
         showPlanFromManagerVehicle();
     }

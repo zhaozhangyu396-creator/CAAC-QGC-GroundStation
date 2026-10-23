@@ -20,10 +20,12 @@
 #include "CaacExamAudio.h"
 #include "CaacFigureEightController.h"
 #include "CaacFlightDistance.h"
+#include "CaacMissionUpdateController.h"
 #include "CaacMissionUpdateUtils.h"
 #include "CaacSimulationController.h"
 #include "FactMetaData.h"
 #include "FlightPathSegment.h"
+#include "FlyViewSettings.h"
 #include "LinkConfiguration.h"
 #include "LinkInterface.h"
 #include "MissionController.h"
@@ -37,11 +39,13 @@
 #include "QmlObjectListModel.h"
 #include "RemoteIDManager.h"
 #include "RemoteIDSettings.h"
+#include "SettingsManager.h"
 #include "SimpleMissionItem.h"
 #include "SpeedSection.h"
 #include "UnitsSettings.h"
 #include "Vehicle.h"
 #include "VehicleLinkManager.h"
+#include "VehicleSupports.h"
 
 Q_APPLICATION_STATIC(CaacCorePlugin, caacCorePluginInstance);
 
@@ -314,7 +318,7 @@ QString CaacCorePlugin::refreshFlightMission(PlanMasterController* controller)
         return tr("Wait for the aircraft and mission transfer to be ready.");
     }
     if (!controller || controller->managerVehicle() != vehicle || controller->offline() ||
-        controller->syncInProgress() || !vehicle->isInitialConnectComplete()) {
+        controller->syncInProgress() || vehicle->flightPlanUpdateInProgress() || !vehicle->isInitialConnectComplete()) {
         return tr("Wait for the aircraft and mission transfer to be ready.");
     }
     const auto link = vehicle->vehicleLinkManager()->primaryLink().lock();
@@ -328,6 +332,77 @@ QString CaacCorePlugin::refreshFlightMission(PlanMasterController* controller)
     return {};
 }
 
+QString CaacCorePlugin::changeCurrentFlightAltitude(Vehicle* expectedVehicle, double altitude) const
+{
+    auto* vehicle = MultiVehicleManager::instance()->activeVehicle();
+    if (!vehicle) {
+        return tr("Wait for the aircraft and mission transfer to be ready.");
+    }
+    if (vehicle != expectedVehicle || !vehicle->isInitialConnectComplete() || !vehicle->armed() ||
+        !vehicle->airborne() || !vehicle->supports()->guidedMode() || vehicle->missionManager()->inProgress() ||
+        vehicle->vehicleLinkManager()->communicationLost() || vehicle->flightPlanUpdateInProgress() ||
+        _flightAltitudeUpdateTimer || (_flightReturnController && _flightReturnController->busy()) ||
+        !vehicle->homePosition().isValid() || !std::isfinite(vehicle->homePosition().altitude())) {
+        return tr("Wait for the aircraft and mission transfer to be ready.");
+    }
+    const double current = vehicle->altitudeRelative()->rawValue().toDouble();
+    auto* settings = SettingsManager::instance()->flyViewSettings();
+    const double minimum = settings->guidedMinimumAltitude()->rawValue().toDouble();
+    const double maximum = settings->guidedMaximumAltitude()->rawValue().toDouble();
+    if (!std::isfinite(current) || !std::isfinite(altitude) || !std::isfinite(minimum) || !std::isfinite(maximum) ||
+        altitude < minimum || altitude > maximum || std::abs(altitude - current) > std::numeric_limits<float>::max()) {
+        return QCoreApplication::translate("CaacMissionActionDialog", "Altitude must be between %1 and %2 metres.")
+            .arg(minimum)
+            .arg(maximum);
+    }
+    vehicle->guidedModeChangeAltitude(altitude - current, false);
+    return {};
+}
+
+void CaacCorePlugin::returnToDesignatedLanding(PlanMasterController* controller, CaacSimulationController* simulation)
+{
+    auto* vehicle = MultiVehicleManager::instance()->activeVehicle();
+    if (!vehicle) {
+        QGC::showAppMessage(tr("Wait for the aircraft and mission transfer to be ready."));
+        return;
+    }
+    if (!controller || controller->managerVehicle() != vehicle || controller->offline() ||
+        !vehicle->isInitialConnectComplete() || !vehicle->armed() || !vehicle->airborne() ||
+        !vehicle->supports()->guidedMode() || vehicle->vehicleLinkManager()->communicationLost() ||
+        controller->syncInProgress() || vehicle->flightPlanUpdateInProgress() ||
+        controller->property("caacRotationPreviewActive").toBool() || _flightAltitudeUpdateTimer ||
+        (_flightReturnController && _flightReturnController->busy())) {
+        QGC::showAppMessage(tr("Wait for the aircraft and mission transfer to be ready."));
+        return;
+    }
+    bool hasLandingPoint = false;
+    for (const auto* item : vehicle->missionManager()->missionItems()) {
+        if (item && (item->command() == MAV_CMD_NAV_LAND || item->command() == MAV_CMD_NAV_VTOL_LAND)) {
+            hasLandingPoint = true;
+        }
+    }
+    if (!hasLandingPoint) {
+        vehicle->guidedModeRTL(false);
+        return;
+    }
+    auto* transaction = new CaacMissionUpdateController(this);
+    _flightReturnController = transaction;
+    connect(transaction, &CaacMissionUpdateController::finished, this,
+            [this, transaction](bool success, const QString& message) {
+                if (_flightReturnController == transaction) {
+                    _flightReturnController.clear();
+                }
+                if (!success && !message.isEmpty()) {
+                    QGC::showAppMessage(message);
+                }
+                transaction->deleteLater();
+            });
+    if (!transaction->returnToLandingPoint(controller, simulation) && _flightReturnController == transaction) {
+        _flightReturnController.clear();
+        transaction->deleteLater();
+    }
+}
+
 QString CaacCorePlugin::updateFlightWaypointAltitude(PlanMasterController* controller, QObject* waypoint,
                                                      double altitude)
 {
@@ -337,7 +412,7 @@ QString CaacCorePlugin::updateFlightWaypointAltitude(PlanMasterController* contr
 QString CaacCorePlugin::updateFlightWaypointAltitudes(PlanMasterController* controller, const QVariantList& waypoints,
                                                       double altitude)
 {
-    if (_flightAltitudeUpdateTimer) {
+    if (_flightAltitudeUpdateTimer || (_flightReturnController && _flightReturnController->busy())) {
         return tr("Wait for the aircraft and mission transfer to be ready.");
     }
     auto* vehicle = MultiVehicleManager::instance()->activeVehicle();
@@ -346,7 +421,7 @@ QString CaacCorePlugin::updateFlightWaypointAltitudes(PlanMasterController* cont
     }
     auto* mission = controller ? controller->missionController() : nullptr;
     if (!controller || !mission || controller->managerVehicle() != vehicle || controller->offline() ||
-        controller->syncInProgress() || !vehicle->isInitialConnectComplete()) {
+        controller->syncInProgress() || vehicle->flightPlanUpdateInProgress() || !vehicle->isInitialConnectComplete()) {
         return tr("Wait for the aircraft and mission transfer to be ready.");
     }
     if (waypoints.isEmpty()) {
@@ -464,8 +539,10 @@ QString CaacCorePlugin::setFlightWaypointSpeeds(PlanMasterController* controller
     auto* model = mission ? mission->visualItems() : nullptr;
     auto* settings = model && model->count() ? model->value<MissionSettingsItem*>(0) : nullptr;
     auto* planningVehicle = controller ? controller->controllerVehicle() : nullptr;
+    auto* managerVehicle = controller ? controller->managerVehicle() : nullptr;
     if (!controller || !mission || !settings || !planningVehicle || _flightAltitudeUpdateTimer ||
-        controller->syncInProgress() || controller->property("caacMissionUpdateActive").toBool()) {
+        (_flightReturnController && _flightReturnController->busy()) || controller->syncInProgress() ||
+        (managerVehicle && managerVehicle->flightPlanUpdateInProgress())) {
         return tr("Wait for the aircraft and mission transfer to be ready.");
     }
     if (controller->property("caacRotationPreviewActive").toBool()) {

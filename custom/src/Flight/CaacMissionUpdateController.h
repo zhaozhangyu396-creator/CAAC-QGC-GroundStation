@@ -31,6 +31,8 @@ public:
     Q_INVOKABLE bool update(PlanMasterController* plan, CaacSimulationController* simulation);
     Q_INVOKABLE bool updateSpeeds(PlanMasterController* plan, CaacSimulationController* simulation,
                                   double currentFlightSpeed = qQNaN(), int expectedCurrentSequence = -1);
+    Q_INVOKABLE bool updateDeletedWaypoints(PlanMasterController* plan, CaacSimulationController* simulation);
+    Q_INVOKABLE bool returnToLandingPoint(PlanMasterController* plan, CaacSimulationController* simulation);
 
 signals:
     void busyChanged();
@@ -47,7 +49,7 @@ private:
         Resuming
     };
     bool _update(PlanMasterController* plan, CaacSimulationController* simulation, bool allowSpeedChanges,
-                 double currentFlightSpeed, int expectedCurrentSequence);
+                 double currentFlightSpeed, int expectedCurrentSequence, bool allowDeletions = false);
     void _tick();
     void _uploaded();
     void _finish(bool success, const QString& message);
@@ -55,6 +57,7 @@ private:
     bool _prepareNative();
     bool _prepareNativeSpeeds();
     void _applySpeed();
+    void _restored();
     void _setStage(Stage stage);
 
     Stage _stage = Stage::Idle;
@@ -68,6 +71,12 @@ private:
     QElapsedTimer _elapsed;
     int _target = -1;
     bool _allowSpeedChanges = false;
+    bool _allowDeletions = false;
+    bool _resumeAfterUpdate = true;
+    bool _restoreFlightSpeed = false;
+    bool _returningToLanding = false;
+    QString _returnInitialMode;
+    QPointer<MissionItem> _landingTarget;
     int _flightSpeedType = -1;
     double _runtimeFlightSpeed = qQNaN();
     double _forcedFlightSpeed = qQNaN();

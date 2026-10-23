@@ -21,6 +21,8 @@ public:
     bool inProgress(void) const;
     const QList<MissionItem*>& missionItems(void) { return _missionItems; }
 
+    bool missionItemsAreDownloaded() const { return _missionItemsAreDownloaded; }
+
     /// Current mission item as reported by MISSION_CURRENT
     int currentIndex(void) const { return _currentMissionIndex; }
 
@@ -136,6 +138,7 @@ protected:
     int                 _lastMissionRequest;    ///< Index of item last requested by MISSION_REQUEST
     int                 _missionItemCountToRead;///< Count of all mission items to read
 
+    bool _missionItemsAreDownloaded = false;
     QList<MissionItem*> _missionItems;          ///< Set of mission items on vehicle
     QList<MissionItem*> _writeMissionItems;     ///< Set of mission items currently being written to vehicle
     int                 _currentMissionIndex;

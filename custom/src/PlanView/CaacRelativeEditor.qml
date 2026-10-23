@@ -17,6 +17,14 @@ Item {
     property var _insertAfterItem: null
     property var _overwriteItem: null
 
+    component FieldLabel: QGCLabel {
+        Layout.fillWidth: root._compact
+        Layout.minimumWidth: 0
+        Layout.preferredWidth: root._compact ? -1 : root.width * 0.35
+        Layout.maximumWidth: root._compact ? Number.POSITIVE_INFINITY : root.width * 0.35
+        wrapMode: Text.WordWrap
+    }
+
     function selectedIndex(combo) {
         return combo.currentIndex >= 0 && combo.currentIndex < _points.length ? _points[combo.currentIndex].index : -1
     }
@@ -92,7 +100,7 @@ Item {
                 rowSpacing: ScreenTools.defaultFontPixelHeight
                 columnSpacing: ScreenTools.defaultFontPixelWidth
 
-                QGCLabel { text: qsTr("Target point") }
+                FieldLabel { text: qsTr("Target point") }
                 QGCComboBox {
                     id: target
                     objectName: "caacRelativeTarget"
@@ -100,7 +108,7 @@ Item {
                     Layout.minimumWidth: 0
                     model: [qsTr("Waypoint"), qsTr("Takeoff point"), qsTr("Landing point")]
                 }
-                QGCLabel { text: qsTr("Reference point") }
+                FieldLabel { text: qsTr("Reference point") }
                 QGCComboBox {
                     id: reference
                     objectName: "caacRelativeReference"
@@ -111,7 +119,7 @@ Item {
                     onModelChanged: Qt.callLater(root.restoreSelections)
                     onActivated: root._referenceItem = root.itemAt(root.selectedIndex(reference))
                 }
-                QGCLabel { text: qsTr("Angle type") }
+                FieldLabel { text: qsTr("Angle type") }
                 QGCComboBox {
                     id: angleType
                     objectName: "caacRelativeAngleType"
@@ -119,7 +127,7 @@ Item {
                     Layout.minimumWidth: 0
                     model: [qsTr("Bearing"), qsTr("Interior angle")]
                 }
-                QGCLabel { text: qsTr("Angle (°)") }
+                FieldLabel { text: qsTr("Angle (°)") }
                 QGCTextField {
                     id: angle
                     objectName: "caacRelativeAngle"
@@ -137,7 +145,7 @@ Item {
                     }
                     validator: DoubleValidator { locale: "C" }
                 }
-                QGCLabel { text: qsTr("Distance (m)") }
+                FieldLabel { text: qsTr("Distance (m)") }
                 QGCTextField {
                     id: distance
                     objectName: "caacRelativeDistance"
@@ -166,7 +174,7 @@ Item {
                 columns: root._compact ? 1 : 2
                 rowSpacing: ScreenTools.defaultFontPixelHeight
                 columnSpacing: ScreenTools.defaultFontPixelWidth
-                QGCLabel { text: qsTr("Generation method") }
+                FieldLabel { text: qsTr("Generation method") }
                 QGCComboBox {
                     id: generationMethod
                     objectName: "caacRelativeGenerationMethod"
@@ -176,7 +184,7 @@ Item {
                     model: [qsTr("Insert"), qsTr("Overwrite")]
                 }
                 QGCLabel { text: qsTr("Set position"); visible: target.currentIndex > 0; Layout.fillWidth: true }
-                QGCLabel { text: qsTr("Insert after"); visible: insertAfter.visible }
+                FieldLabel { text: qsTr("Insert after"); visible: insertAfter.visible }
                 QGCComboBox {
                     id: insertAfter
                     objectName: "caacRelativeInsertAfter"
@@ -188,7 +196,7 @@ Item {
                     onModelChanged: Qt.callLater(root.restoreSelections)
                     onActivated: root._insertAfterItem = root.itemAt(root.selectedIndex(insertAfter))
                 }
-                QGCLabel { text: qsTr("Overwrite waypoint"); visible: overwritePoint.visible }
+                FieldLabel { text: qsTr("Overwrite waypoint"); visible: overwritePoint.visible }
                 QGCComboBox {
                     id: overwritePoint
                     objectName: "caacRelativeOverwritePoint"

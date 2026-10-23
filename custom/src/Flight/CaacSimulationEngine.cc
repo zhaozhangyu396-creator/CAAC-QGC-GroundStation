@@ -12,7 +12,7 @@ namespace {
 bool coordinateCommand(int command)
 {
     return command == MAV_CMD_NAV_WAYPOINT || command == MAV_CMD_NAV_TAKEOFF || command == MAV_CMD_NAV_LAND ||
-           command == MAV_CMD_NAV_LOITER_UNLIM;
+           command == MAV_CMD_NAV_VTOL_LAND || command == MAV_CMD_NAV_LOITER_UNLIM;
 }
 
 double normalized(double value)
@@ -150,21 +150,26 @@ bool CaacSimulationEngine::load(const QMap<uint16_t, mavlink_mission_item_int_t>
 bool CaacSimulationEngine::updateMission(const QMap<uint16_t, mavlink_mission_item_int_t>& mission,
                                          const QGeoCoordinate& home, const Options& options, QString& error,
                                          const QMap<int, WaypointOptions>& waypointOptions, bool speedChanges,
-                                         double currentFlightSpeed)
+                                         double currentFlightSpeed, bool allowDeletions)
 {
-    if (!std::isnan(currentFlightSpeed) &&
-        (!speedChanges || !std::isfinite(currentFlightSpeed) || currentFlightSpeed <= 0 || currentFlightSpeed > 100)) {
+    if ((speedChanges && allowDeletions) ||
+        (!std::isnan(currentFlightSpeed) && (!speedChanges || !std::isfinite(currentFlightSpeed) ||
+                                             currentFlightSpeed <= 0 || currentFlightSpeed > 100))) {
         error = QCoreApplication::translate("CaacSimulationEngine", "Invalid speed command.");
         return false;
     }
     const auto equal = [](float left, float right) { return left == right || (std::isnan(left) && std::isnan(right)); };
     bool same = home == _home && options == _missionOptions;
     QMap<int, int> oldToNew;
+    QMap<int, int> newToOld;
     int currentSequence = _state.sequence;
-    if (speedChanges && same) {
-        const auto mapping = CaacMissionUpdateUtils::speedUpdateMapping(_items, mission);
+    const bool sequenceChanges = speedChanges || allowDeletions;
+    if (sequenceChanges && same) {
+        const auto mapping = allowDeletions ? CaacMissionUpdateUtils::waypointDeletionMapping(_items, mission)
+                                            : CaacMissionUpdateUtils::speedUpdateMapping(_items, mission);
         same = mapping.valid;
         oldToNew = mapping.oldToNew;
+        newToOld = mapping.newToOld;
         currentSequence = oldToNew.value(_state.sequence, -1);
         if (_state.finished && !_items.isEmpty() && _state.sequence > _items.lastKey() && !mission.isEmpty()) {
             currentSequence = mission.lastKey() + 1;
@@ -176,6 +181,9 @@ bool CaacSimulationEngine::updateMission(const QMap<uint16_t, mavlink_mission_it
         const WaypointOptions defaults{options.verticalSpeed, options.turnMode, options.climbMode};
         for (auto it = _items.cbegin(); same && it != _items.cend(); ++it) {
             if (it->command == MAV_CMD_NAV_WAYPOINT) {
+                if (allowDeletions && newToOld.value(oldToNew.value(it.key(), -1), -1) != it.key()) {
+                    continue;
+                }
                 same = oldToNew.contains(it.key()) && _waypointOptions.value(it.key(), defaults) ==
                                                           waypointOptions.value(oldToNew.value(it.key()), defaults);
             }
@@ -191,7 +199,11 @@ bool CaacSimulationEngine::updateMission(const QMap<uint16_t, mavlink_mission_it
         }
     }
     if (!same) {
-        if (speedChanges) {
+        if (allowDeletions) {
+            error = QCoreApplication::translate("CaacSimulationEngine",
+                                                "Only waypoint deletion can be uploaded with this operation. The "
+                                                "current target must have a safe remaining waypoint.");
+        } else if (speedChanges) {
             error = QCoreApplication::translate(
                 "CaacSimulationEngine",
                 "Only waypoint positions and flight speeds can be updated during flight. Pause and upload other "
@@ -210,7 +222,7 @@ bool CaacSimulationEngine::updateMission(const QMap<uint16_t, mavlink_mission_it
     updated._options = _options;
     updated._state = _state;
     updated._jumpCounts = _jumpCounts;
-    if (speedChanges) {
+    if (sequenceChanges) {
         updated._state.sequence = currentSequence;
         updated._jumpCounts.clear();
         for (auto it = _jumpCounts.cbegin(); it != _jumpCounts.cend(); ++it) {
@@ -236,7 +248,12 @@ bool CaacSimulationEngine::updateMission(const QMap<uint16_t, mavlink_mission_it
     updated._wait = _wait;
     updated._returnLanding = _returnLanding;
     updated._takeoffAtCurrentPosition = _takeoffAtCurrentPosition;
-    if (!speedChanges) {
+    if (allowDeletions && newToOld.value(currentSequence, -1) != _state.sequence) {
+        // A removed target's arrival wait cannot carry over to its successor.
+        updated._wait = -1;
+        updated._returnLanding = false;
+    }
+    if (!sequenceChanges) {
         updated.pause();
     }
     *this = updated;
@@ -408,11 +425,21 @@ bool CaacSimulationEngine::advanceReturn(double seconds)
         return false;
     }
     auto target = _home;
-    const bool landing = QGCGeo::geodesicDistance(_state.position, _home) < 0.05;
+    for (auto it = _items.cend(); it != _items.cbegin();) {
+        --it;
+        if (it->command == MAV_CMD_NAV_LAND || it->command == MAV_CMD_NAV_VTOL_LAND) {
+            target = _target(it.value());
+            break;
+        }
+    }
+    const bool landing = QGCGeo::geodesicDistance(_state.position, target) < 0.05;
     if (!landing) {
-        target.setAltitude(std::max(_state.position.altitude(), _home.altitude() + 10));
+        target.setAltitude(std::max(_state.position.altitude(), target.altitude() + 10));
     }
     const bool arrived = _move(target, seconds, landing);
+    if (landing && arrived) {
+        _state.airborne = false;
+    }
     return landing && arrived;
 }
 
@@ -580,11 +607,12 @@ void CaacSimulationEngine::advance(double seconds)
                         target.setLatitude(_state.position.latitude());
                         target.setLongitude(_state.position.longitude());
                     }
-                    if (item.command == MAV_CMD_NAV_LAND) {
-                        target.setAltitude(_home.altitude());
-                    }
-                    if (_wait < 0 && !_move(target, seconds, item.command == MAV_CMD_NAV_LAND)) {
+                    const bool landing = item.command == MAV_CMD_NAV_LAND || item.command == MAV_CMD_NAV_VTOL_LAND;
+                    if (_wait < 0 && !_move(target, seconds, landing)) {
                         return;
+                    }
+                    if (landing) {
+                        _state.airborne = false;
                     }
                     if (std::isfinite(item.param4)) {
                         pause();

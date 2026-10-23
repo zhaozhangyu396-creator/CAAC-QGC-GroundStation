@@ -39,9 +39,8 @@ GeoMapItem {
     // instead of being re-sampled here independently
     property real homeTerrainBias: 0
     property real lineWidth: ScreenTools.defaultFontPixelHeight / 5
-    // Matches MissionLineView.qml's existing flight-path line color
-    property color lineColor: missionController && missionController.uploadConfirmed
-        ? QGroundControl.globalPalette.colorGreen : QGroundControl.globalPalette.mapMissionTrajectory
+    property color lineColor: QGroundControl.globalPalette.mapMissionTrajectory
+    property color uploadedColor: QGroundControl.globalPalette.colorGreen
     property color collisionColor: "red"
 
     altitudeMode: GeoMapItem.Absolute
@@ -65,7 +64,9 @@ GeoMapItem {
     // each vertex's own camera distance
     readonly property real _screenFactor: _camera ? _camera.unitsPerPixelAtUnitDistance : 0
 
-    // Ordered route points ({coordinate, leg}) of every item the vehicle
+    readonly property int _uploadedRouteRevision: missionController ? missionController.uploadedRouteRevision : 0
+
+    // Ordered route points ({coordinate, leg, item, flightSegment}) of every item the vehicle
     // actually routes through, mirroring MissionController::_recalcFlightPathSegments:
     // items must specifiesCoordinate && !isStandaloneCoordinate to get a
     // segment (excludes RTL, which has no mission-encoded coordinate, and
@@ -79,9 +80,8 @@ GeoMapItem {
     // drawn by the landing pattern visual from the slope start, not straight
     // from the loiter center, and _recalcFlightPathSegments draws no segment
     // after a landing item either. The walk starts at item 1 (item 0 is the
-    // MissionSettingsItem, i.e. home); home is prepended only when the mission
-    // starts from the ground — rover, or a takeoff command before the first
-    // coordinate item — mirroring linkStartToHome. leg is the type of the leg
+    // MissionSettingsItem, i.e. home); its valid coordinate is prepended,
+    // mirroring MissionController's linkStartToHome. leg is the type of the leg
     // ARRIVING at a point, mirroring segmentTypeForPair: Takeoff / Land
     // destinations first, then Terrain for a terrain-frame destination
     // (MAV_FRAME_GLOBAL_TERRAIN_ALT), else Generic; Interior is a complex
@@ -91,21 +91,21 @@ GeoMapItem {
     readonly property var _routePoints: {
         const points = []
         if (root.missionController) {
+            // Speed changes can preserve the route geometry and the segment count.
+            void root.missionController.missionTime
+            void root._uploadedRouteRevision
             const items = root.missionController.visualItems
-            let linkStartToHome = root.vehicle ? root.vehicle.rover : false
             for (let i = 1; i < items.count; ++i) {
                 const visualItem = items.get(i)
                 if (visualItem.isSimpleItem && visualItem.command === MAVLinkEnums.MAV_CMD_NAV_RETURN_TO_LAUNCH) {
                     if (points.length > 0 && root.vehicle && root.vehicle.homePosition.isValid) {
-                        points.push({ coordinate: root.vehicle.homePosition, leg: GeoMapMissionPath.Generic })
+                        points.push({ coordinate: root.vehicle.homePosition, leg: GeoMapMissionPath.Generic, item: items.get(0) })
                     }
                     break
                 }
-                if (points.length === 0 && visualItem.isTakeoffItem) {
-                    linkStartToHome = true
-                }
                 if (visualItem.specifiesCoordinate && !visualItem.isStandaloneCoordinate) {
                     points.push({
+                        item: visualItem,
                         coordinate: QtPositioning.coordinate(visualItem.entryCoordinate.latitude,
                                                              visualItem.entryCoordinate.longitude,
                                                              visualItem.amslEntryAlt),
@@ -119,6 +119,7 @@ GeoMapItem {
                     }
                     if (!visualItem.exitCoordinateSameAsEntry) {
                         points.push({
+                            item: visualItem,
                             coordinate: QtPositioning.coordinate(visualItem.exitCoordinate.latitude,
                                                                  visualItem.exitCoordinate.longitude,
                                                                  visualItem.amslExitAlt),
@@ -127,10 +128,11 @@ GeoMapItem {
                     }
                 }
             }
-            if (linkStartToHome && points.length > 0 && items.count > 0) {
+            if (points.length > 0 && items.count > 0) {
                 const home = items.get(0)
                 if (home.coordinate.isValid) {
                     points.unshift({
+                        item: home,
                         coordinate: QtPositioning.coordinate(home.coordinate.latitude,
                                                              home.coordinate.longitude,
                                                              home.amslEntryAlt),
@@ -138,8 +140,20 @@ GeoMapItem {
                     })
                 }
             }
+            for (let i = 1; i < points.length; ++i) {
+                points[i].flightSegment = root.missionController.routeSegmentForItems(points[i - 1].item, points[i].item)
+            }
         }
         return points
+    }
+
+    function _legColorState(index) {
+        if (root._legCollisions[index]) {
+            return 1
+        }
+        const points = root._routePoints
+        const segment = index > 0 ? points[index].flightSegment : null
+        return segment && segment.uploaded ? 2 : 0
     }
 
     // Straight legs longer than this are subdivided along the great circle
@@ -157,22 +171,21 @@ GeoMapItem {
     // Terrain sampling can't live in the _routePoints binding: terrainHeightAt
     // is not NOTIFY-reactive, so draping is re-run explicitly here on route
     // changes and on terrainHeightsChanged as DEM patches stream in.
-    // Returns the ribbon points and a highlight flag per point.
+    // Returns the ribbon points and a color state per point: base, collision, or uploaded.
     function _expandedPath() {
         const points = root._routePoints
-        const collisions = root._legCollisions
         const coordinates = []
         const highlights = []
         for (let i = 0; i < points.length; ++i) {
             const coord = points[i].coordinate
             if (i > 0) {
                 const prev = points[i - 1].coordinate
-                const collision = collisions[i]
+                const colorState = root._legColorState(i)
                 // Restart a recolored leg at a copy of its start point so the color
                 // changes at the waypoint instead of blending along the leg
-                if (collision !== highlights[highlights.length - 1]) {
+                if (colorState !== highlights[highlights.length - 1]) {
                     coordinates.push(prev)
-                    highlights.push(collision)
+                    highlights.push(colorState)
                 }
                 if (points[i].leg === GeoMapMissionPath.Terrain && root.surfaceModel) {
                     root._appendTerrainLeg(coordinates, prev, coord)
@@ -181,11 +194,11 @@ GeoMapItem {
                 }
                 coordinates.push(coord)
                 while (highlights.length < coordinates.length) {
-                    highlights.push(collision)
+                    highlights.push(colorState)
                 }
             } else {
                 coordinates.push(coord)
-                highlights.push(points.length > 1 && collisions[1])
+                highlights.push(points.length > 1 ? root._legColorState(1) : 0)
             }
         }
         return { coordinates: coordinates, highlights: highlights }
@@ -319,6 +332,7 @@ GeoMapItem {
     }
 
     on_RoutePointsChanged: _scheduleReloadPath()
+    on_UploadedRouteRevisionChanged: Qt.callLater(root._redrapePath)
     onHomeTerrainBiasChanged: _scheduleCollisionRefresh()
 
     readonly property bool _hasTerrainLeg: _routePoints.some(p => p.leg === GeoMapMissionPath.Terrain)
@@ -362,6 +376,7 @@ GeoMapItem {
                     property real screenFactor: root._screenFactor
                     property color pathColor: root.lineColor
                     property color highlightColor: root.collisionColor
+                    property color uploadedColor: root.uploadedColor
                     // Ramps in as the terrain flattens, effectively disabling
                     // depth testing in 2D mode (see flightpath.vert)
                     property real depthPull: root.scene ? 0.5 * (1.0 - root.scene.terrainScale) : 0.0

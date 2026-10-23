@@ -38,6 +38,7 @@ public:
     Q_PROPERTY(bool             terrainCollision        MEMBER _terrainCollision                                NOTIFY terrainCollisionChanged)
     Q_PROPERTY(SegmentType      segmentType             MEMBER _segmentType                                     CONSTANT)
     Q_PROPERTY(double flightSpeed READ flightSpeed NOTIFY flightSpeedChanged)
+    Q_PROPERTY(bool uploaded READ uploaded NOTIFY uploadedChanged)
 
     QGeoCoordinate      coordinate1         (void) const { return _coord1; }
     QGeoCoordinate      coordinate2         (void) const { return _coord2; }
@@ -57,6 +58,10 @@ public:
 
     void setFlightSpeed(double speed);
 
+    bool uploaded() const { return _uploaded; }
+
+    void setUploaded(bool uploaded);
+
 public slots:
     void setCoordinate1     (const QGeoCoordinate& coordinate);
     void setCoordinate2     (const QGeoCoordinate& coordinate);
@@ -75,6 +80,7 @@ signals:
     void totalDistanceChanged       (double totalDistance);
     void terrainCollisionChanged    (bool terrainCollision);
     void flightSpeedChanged();
+    void uploadedChanged();
 
 private slots:
     void _sendTerrainPathQuery      (void);
@@ -101,4 +107,5 @@ private:
     static constexpr double _collisionIgnoreMeters =    10; // Distance to ignore for takeoff/land segments
 
     double _flightSpeed = qQNaN();
+    bool _uploaded = false;
 };

@@ -9,6 +9,8 @@ target_sources(
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacWaypointSnapUITest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacLegSpeedUITest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacFlightSpeedScopeUITest.cc
+            ${CMAKE_CURRENT_SOURCE_DIR}/CaacRouteUploadStateTest.cc
+            ${CMAKE_CURRENT_SOURCE_DIR}/CaacRouteUploadUITest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacFlightDistanceTest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacFlightDataUITest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacPlanningToolsTest.cc
@@ -75,6 +77,7 @@ if(WIN32)
 endif()
 add_qgc_test(CaacFlightDistanceTest LABELS Unit Vehicle)
 add_qgc_test(CaacRouteEditorTest LABELS Unit MissionManager)
+add_qgc_test(CaacRouteUploadStateTest LABELS Unit MissionManager)
 add_qgc_test(CaacPlanningToolsTest LABELS Unit MissionManager)
 add_qgc_test(CaacRouteTemplateGeometryTest LABELS Unit MissionManager)
 add_qgc_test(
@@ -139,13 +142,23 @@ add_qgc_test(
     ${_caac_ui_env}
 )
 add_qgc_test(
+    CaacRouteUploadUITest
+    LABELS
+    Integration
+    MissionManager
+    NoSanitizer
+    TIMEOUT
+    120
+    ${_caac_ui_env}
+)
+add_qgc_test(
     CaacFlightDataUITest
     LABELS
     Integration
     Vehicle
     NoSanitizer
     TIMEOUT
-    180
+    300
     ENV_MODIFICATION
     "QGC_TEST_LOCALE=set:zh_CN"
 )

@@ -10,6 +10,7 @@
 
 #include "CaacRouteEditorController.h"
 #include "CaacRouteGeometry.h"
+#include "CaacSimulationController.h"
 #include "FlightPathSegment.h"
 #include "MissionController.h"
 #include "MissionItem.h"
@@ -50,29 +51,66 @@ void CaacRouteEditorTest::_testWaypointLanding()
 {
     CaacRouteEditorController editor;
     editor.setPlanMasterController(planController());
-    missionController()->setHomePosition(QGeoCoordinate(30, 120, 20));
+    const QGeoCoordinate home(30, 120, 2062);
+    missionController()->setHomePosition(home);
     QVERIFY(editor.addWaypoint(QGeoCoordinate(30.001, 120)));
     auto* first = editor.currentItem();
     QVERIFY(editor.addWaypoint(QGeoCoordinate(30.002, 120)));
     auto* second = editor.currentItem();
+    QVERIFY(editor.addWaypoint(QGeoCoordinate(30.003, 120)));
+    auto* third = editor.currentItem();
+    QVERIFY(first && second && third);
+    first->setAltitudeFrame(QGroundControlQmlGlobal::AltitudeFrameAbsolute);
+    first->altitude()->setRawValue(2100);
+    first->speedSection()->flightSpeed()->setRawValue(7);
+    first->speedSection()->setSpecifyFlightSpeed(true);
+    auto settings = CaacSimulationController::defaults();
+    settings["closed"] = true;
+    settings["loopMode"] = 1;
+    settings["loopCount"] = 3;
+    settings["startSequence"] = third->sequenceNumber();
+    settings["returnSequence"] = second->sequenceNumber();
+    QVERIFY(editor.setSimulationSettings(settings));
+    auto* rtl = qobject_cast<SimpleMissionItem*>(missionController()->insertSimpleMissionItem({}, 4, false));
+    QVERIFY(rtl);
+    rtl->setCommand(MAV_CMD_NAV_RETURN_TO_LAUNCH);
+    const auto firstCoordinate = first->coordinate();
+    const auto secondCoordinate = second->coordinate();
+    const auto thirdCoordinate = third->coordinate();
     const auto original = planController()->saveToJson();
     QVERIFY(editor.useWaypointAsLanding(first));
     auto* model = missionController()->visualItems();
     QCOMPARE(model->count(), 4);
     auto* landing = model->value<SimpleMissionItem*>(3);
-    QVERIFY(landing && landing->isLandCommand());
-    QVERIFY(landing->coordinate().distanceTo(first->coordinate()) < 0.01);
+    QCOMPARE(landing, first);
+    QVERIFY(landing->isLandCommand());
+    QCOMPARE(landing->coordinate(), firstCoordinate);
+    QCOMPARE(model->get(1), second);
+    QCOMPARE(model->get(2), third);
+    QCOMPARE(editor.currentItem(), landing);
+    QCOMPARE(landing->altitudeFrame(), QGroundControlQmlGlobal::AltitudeFrameRelative);
     QCOMPARE(landing->altitude()->rawValue().toDouble(), 0.0);
+    QCOMPARE(landing->missionItem().frame(), MAV_FRAME_GLOBAL_RELATIVE_ALT);
+    QCOMPARE(missionController()->plannedHomePosition(), home);
+    QCOMPARE(editor.simulationSettings().value("startSequence").toInt(), third->sequenceNumber());
+    QCOMPARE(editor.simulationSettings().value("returnSequence").toInt(), second->sequenceNumber());
+    QCOMPARE(editor.simulationSettings().value("closed").toBool(), true);
+    QCOMPARE(editor.simulationSettings().value("loopCount").toInt(), 3);
     const auto firstLanding = planController()->saveToJson();
     QVERIFY(editor.useWaypointAsLanding(second));
-    QCOMPARE(model->count(), 4);
-    landing = model->value<SimpleMissionItem*>(3);
-    QVERIFY(landing && landing->isLandCommand());
-    QVERIFY(landing->coordinate().distanceTo(second->coordinate()) < 0.01);
+    QCOMPARE(model->count(), 3);
+    landing = model->value<SimpleMissionItem*>(2);
+    QCOMPARE(landing, second);
+    QVERIFY(landing->isLandCommand());
+    QCOMPARE(landing->coordinate(), secondCoordinate);
+    QCOMPARE(model->get(1), third);
+    QCOMPARE(third->coordinate(), thirdCoordinate);
+    QCOMPARE(editor.currentItem(), landing);
+    QCOMPARE(missionController()->plannedHomePosition(), home);
     const auto secondLanding = planController()->saveToJson();
     QVERIFY(editor.selectWaypoint(landing));
     QVERIFY(editor.removeCurrentWaypoint());
-    QCOMPARE(model->count(), 3);
+    QCOMPARE(model->count(), 2);
     QVERIFY(!missionController()->property("hasLandItem").toBool());
     QVERIFY(editor.undo());
     QCOMPARE(planController()->saveToJson(), secondLanding);
@@ -80,6 +118,30 @@ void CaacRouteEditorTest::_testWaypointLanding()
     QCOMPARE(planController()->saveToJson(), firstLanding);
     QVERIFY(editor.undo());
     QCOMPARE(planController()->saveToJson(), original);
+
+    QVERIFY(editor.redo());
+    QCOMPARE(planController()->saveToJson(), firstLanding);
+    QTemporaryDir directory;
+    QVERIFY(directory.isValid());
+    const auto path = directory.filePath(QStringLiteral("landing.plan"));
+    QVERIFY(planController()->saveToFile(path));
+    planController()->removeAll();
+    planController()->loadFromFile(path);
+    QCOMPARE(planController()->saveToJson(), firstLanding);
+    model = missionController()->visualItems();
+    QCOMPARE(model->count(), 4);
+    landing = model->value<SimpleMissionItem*>(3);
+    QVERIFY(landing && landing->isLandCommand());
+    QCOMPARE(landing->coordinate(), firstCoordinate);
+    QCOMPARE(missionController()->plannedHomePosition(), home);
+
+    auto* special =
+        qobject_cast<SimpleMissionItem*>(missionController()->insertSimpleMissionItem({}, model->count(), false));
+    QVERIFY(special);
+    special->setCommand(MAV_CMD_DO_CHANGE_SPEED);
+    const auto withSpecial = planController()->saveToJson();
+    QVERIFY(!editor.useWaypointAsLanding(model->get(1)));
+    QCOMPARE(planController()->saveToJson(), withSpecial);
 }
 
 void CaacRouteEditorTest::_testWaypointLabelsFollowSpeedCommands()
@@ -479,6 +541,7 @@ void CaacRouteEditorTest::_testOrderConstraints()
     QVERIFY(!editor.addWaypoint(QGeoCoordinate(30.1, 120)));
     QVERIFY(!editor.removeCurrentWaypoint());
     QVERIFY(!editor.updateWaypoint(waypoint, 31, 121, 100, true, 9));
+    QVERIFY(!editor.useWaypointAsLanding(waypoint));
     QCOMPARE(planController()->saveToJson(), withJump);
 }
 

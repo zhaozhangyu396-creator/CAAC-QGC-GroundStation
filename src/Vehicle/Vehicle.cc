@@ -1493,6 +1493,14 @@ QGeoCoordinate Vehicle::homePosition()
     return _homePosition;
 }
 
+void Vehicle::setFlightPlanUpdateInProgress(bool inProgress)
+{
+    if (_flightPlanUpdateInProgress != inProgress) {
+        _flightPlanUpdateInProgress = inProgress;
+        emit flightPlanUpdateInProgressChanged(inProgress);
+    }
+}
+
 void Vehicle::setArmed(bool armed, bool showError)
 {
     // We specifically use COMMAND_LONG:MAV_CMD_COMPONENT_ARM_DISARM since it is supported by more flight stacks.

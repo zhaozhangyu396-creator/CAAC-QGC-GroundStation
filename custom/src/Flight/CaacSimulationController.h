@@ -79,7 +79,7 @@ public:
     Q_INVOKABLE int waypointNumber(int sequence, const QGeoCoordinate& coordinate) const;
     Q_INVOKABLE bool start(PlanMasterController* plan);
     Q_INVOKABLE bool upload(PlanMasterController* plan, bool preserveProgress = false, bool speedChanges = false,
-                            double currentFlightSpeed = qQNaN());
+                            double currentFlightSpeed = qQNaN(), bool allowDeletions = false);
     Q_INVOKABLE bool restart();
     Q_INVOKABLE bool beginManualControl();
     Q_INVOKABLE void endManualControl();
@@ -100,7 +100,7 @@ signals:
     void modeSwitchConfigurationChanged();
 
 private:
-    bool _prepareFlightPlan(bool speedChanges = false);
+    bool _prepareFlightPlan(bool sequenceChanges = false);
     void _tick();
     void _publish();
     void _setStatus(const QString& status);
@@ -143,6 +143,7 @@ private:
     bool _preserveUploadProgress = false;
     bool _preserveUploadSpeedChanges = false;
     double _preserveUploadFlightSpeed = qQNaN();
+    bool _preserveUploadDeletions = false;
     bool _missionReady = false;
     bool _settingsExplicit = false;
 

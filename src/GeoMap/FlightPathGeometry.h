@@ -25,11 +25,10 @@ Q_MOC_INCLUDE("GeoScene.h")
 /// the vehicle's trajectory, depth-tested against terrain (hills hide it).
 /// Each trail point yields two centerline vertices carrying the path's unit
 /// 3D tangent (normal slot), a side flag (texcoord0.x, -1 left / +1 right)
-/// and a highlight flag (texcoord0.y, 0 or 1, for the fragment shader's
-/// highlight color); the ribbon has zero width until a vertex shader expands each
-/// vertex perpendicular to both the tangent and the view direction
-/// (billboarding), keeping the width constant in screen pixels for any
-/// segment orientation — including straight vertical climbs.
+/// and a color state (texcoord0.y: 0 base, 1 highlighted, 2 uploaded). The
+/// ribbon has zero width until a vertex shader expands each vertex perpendicular to both the tangent and the view
+/// direction (billboarding), keeping the width constant in screen pixels for any segment orientation — including
+/// straight vertical climbs.
 ///
 /// Positions are scene-unit offsets relative to anchorCoordinate (the first
 /// path point), so the buffer is immune to scene-origin re-anchors and to any
@@ -64,8 +63,9 @@ public:
     int pointCount() const { return static_cast<int>(_points.size()); }
 
     /// Replace the whole path (QGeoCoordinate variants, TrajectoryPoints::list() format).
-    /// highlights[i] (bool) highlights point i; missing entries are false. A
-    /// segment between differently highlighted points blends along its length.
+    /// highlights[i] selects the color: 0 base, 1 highlighted, 2 uploaded.
+    /// Boolean false/true remain compatible with 0/1; missing entries are 0.
+    /// A segment between different states blends along its length.
     Q_INVOKABLE void setPath(const QVariantList& coordinates, const QVariantList& highlights = QVariantList());
 
     Q_INVOKABLE void appendPoint(const QGeoCoordinate& coordinate);
@@ -90,7 +90,7 @@ private:
 
     GeoScene* _scene = nullptr;
     QList<QGeoCoordinate> _points;
-    QList<bool> _highlights;
+    QList<float> _highlights;
 
     // Incremental mirrors of the GPU buffer so mutations avoid full rebuilds
     QList<QVector3D> _positions;

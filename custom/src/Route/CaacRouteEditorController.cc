@@ -69,14 +69,23 @@ bool CaacRouteEditorController::syncWaypointDefaults(const QVariantMap& properti
     }
     const bool syncAltitude = properties.contains(QStringLiteral("altitude"));
     const bool syncSpeed = properties.contains(QStringLiteral("specifySpeed"));
+    const bool syncMissionSpeed = properties.value(QStringLiteral("includeMissionSpeed")).toBool();
     bool altitudeValid = false;
     bool speedValid = false;
     const double altitude = properties.value(QStringLiteral("altitude")).toDouble(&altitudeValid);
     const double speed = properties.value(QStringLiteral("speed")).toDouble(&speedValid);
     const bool specifySpeed = properties.value(QStringLiteral("specifySpeed")).toBool();
     QList<SimpleMissionItem*> waypoints;
-    bool orderChanges = false;
     auto* model = _missionController()->visualItems();
+    auto* missionSettings = model->value<MissionSettingsItem*>(0);
+    auto* missionSpeed = missionSettings ? missionSettings->speedSection() : nullptr;
+    if (syncMissionSpeed && (!syncSpeed || !missionSpeed || !missionSpeed->available() ||
+                             (specifySpeed && (!speedValid || !std::isfinite(speed) || speed <= 0 ||
+                                               speed < missionSpeed->flightSpeed()->rawMin().toDouble() ||
+                                               speed > missionSpeed->flightSpeed()->rawMax().toDouble())))) {
+        return _fail(tr("Check mission flight speed."));
+    }
+    bool orderChanges = syncMissionSpeed && missionSpeed->specifyFlightSpeed() != specifySpeed;
     for (int i = 1; i < model->count(); ++i) {
         auto* item = model->value<SimpleMissionItem*>(i);
         if (!item || item->command() != MAV_CMD_NAV_WAYPOINT) {
@@ -95,7 +104,7 @@ bool CaacRouteEditorController::syncWaypointDefaults(const QVariantMap& properti
         orderChanges = orderChanges || (syncSpeed && section->specifyFlightSpeed() != specifySpeed);
         waypoints.append(item);
     }
-    if (waypoints.isEmpty() || (!syncAltitude && !syncSpeed)) {
+    if ((waypoints.isEmpty() && !syncMissionSpeed) || (!syncAltitude && !syncSpeed)) {
         return _fail(tr("No ordinary waypoints to synchronize."));
     }
     if (orderChanges && !_canChangeOrder()) {
@@ -103,6 +112,12 @@ bool CaacRouteEditorController::syncWaypointDefaults(const QVariantMap& properti
     }
     beginEdit();
     const auto finish = qScopeGuard([this]() { endEdit(); });
+    if (syncMissionSpeed) {
+        if (specifySpeed) {
+            missionSpeed->flightSpeed()->setRawValue(speed);
+        }
+        missionSpeed->setSpecifyFlightSpeed(specifySpeed);
+    }
     for (auto* item : waypoints) {
         if (syncAltitude) {
             item->altitude()->setRawValue(altitude);
@@ -473,7 +488,8 @@ bool CaacRouteEditorController::_canEdit(bool allowRotationPreview)
         _missionController()->visualItems()->count() < 1) {
         return _fail(tr("No plan is available."));
     }
-    if (_masterController->syncInProgress() || _masterController->property("caacMissionUpdateActive").toBool()) {
+    auto* vehicle = _masterController->managerVehicle();
+    if (_masterController->syncInProgress() || (vehicle && vehicle->flightPlanUpdateInProgress())) {
         return _fail(tr("Wait for the vehicle transfer to finish before editing."));
     }
     if (_rotationPreviewActive && !allowRotationPreview) {
@@ -1290,15 +1306,23 @@ bool CaacRouteEditorController::useWaypointAsLanding(QObject* object)
     auto* point = qobject_cast<SimpleMissionItem*>(object);
     auto* mission = _missionController();
     auto* model = mission->visualItems();
-    if (!point || mission->visualItemIndexForObject(point) < 1 || point->command() != MAV_CMD_NAV_WAYPOINT) {
+    const int selectedIndex = mission->visualItemIndexForObject(point);
+    if (!point || selectedIndex < 1 || point->command() != MAV_CMD_NAV_WAYPOINT || !point->coordinate().isValid()) {
         return _fail(tr("Select an ordinary waypoint as the landing point."));
     }
+    if (_masterController->property("flyView").toBool()) {
+        return _fail(tr("Set the landing point in the planning view."));
+    }
     for (int i = 1; i < model->count(); ++i) {
-        if (!model->value<SimpleMissionItem*>(i)) {
+        const auto* item = model->value<SimpleMissionItem*>(i);
+        if (!item) {
             return _fail(tr("Set the landing point in the original editor for complex missions."));
         }
+        if (i > selectedIndex && item->command() != MAV_CMD_NAV_WAYPOINT && !item->isLandCommand() &&
+            item->command() != MAV_CMD_NAV_RETURN_TO_LAUNCH) {
+            return _fail(tr("Move the landing point past special commands in the original mission editor."));
+        }
     }
-    const auto coordinate = point->coordinate();
     beginEdit();
     const auto finish = qScopeGuard([this]() { endEdit(); });
     for (int i = model->count() - 1; i > 0; --i) {
@@ -1307,14 +1331,16 @@ bool CaacRouteEditorController::useWaypointAsLanding(QObject* object)
             mission->removeVisualItem(i);
         }
     }
-    auto* landing =
-        qobject_cast<SimpleMissionItem*>(mission->insertSimpleMissionItem(coordinate, model->count(), true));
-    if (!landing) {
-        return _fail(tr("Unable to create the landing point."));
+    const int fromIndex = mission->visualItemIndexForObject(point);
+    const int lastIndex = model->count() - 1;
+    // moveVisualItem accepts ordinary waypoints only, so change the command after moving the selected object.
+    if (fromIndex != lastIndex && !mission->moveVisualItem(fromIndex, lastIndex)) {
+        return _fail(tr("Unable to move the selected waypoint to the landing position."));
     }
-    landing->setCommand(MAV_CMD_NAV_LAND);
-    landing->setAltitudeFrame(QGroundControlQmlGlobal::AltitudeFrameRelative);
-    landing->altitude()->setRawValue(0);
+    point->setCommand(MAV_CMD_NAV_LAND);
+    point->setAltitudeFrame(QGroundControlQmlGlobal::AltitudeFrameRelative);
+    point->altitude()->setRawValue(0);
+    mission->setCurrentPlanViewSeqNum(point->sequenceNumber(), true);
     return true;
 }
 

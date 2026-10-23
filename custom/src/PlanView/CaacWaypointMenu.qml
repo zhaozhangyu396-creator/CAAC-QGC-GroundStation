@@ -103,10 +103,8 @@ Menu {
         objectName: "caacContextDeleteWaypoint"
         visible: root.waypoint && !root.waypoint.homePosition
         text: root.waypoint ? qsTr("Delete waypoint %1").arg(root.waypoint.waypointNumber) : qsTr("Delete")
-        enabled: root.waypoint && (root.waypoint.command === 16 || root.waypoint.isLandCommand)
-        onTriggered: {
-            if (root.controller.selectWaypoint(root.waypoint)) { root.controller.removeCurrentWaypoint() }
-        }
+        enabled: root.waypoint && (root.waypoint.command === 16 || root.waypoint.isLandCommand) && root.editor.canDeleteWaypoints
+        onTriggered: root.editor.removeWaypoint(root.waypoint)
     }
     MenuItem {
         objectName: "caacContextClearWaypoints"

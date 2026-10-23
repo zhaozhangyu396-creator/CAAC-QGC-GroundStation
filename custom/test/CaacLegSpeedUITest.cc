@@ -1,6 +1,7 @@
 #include <QtCore/QPointer>
 #include <QtCore/QRegularExpression>
 #include <QtCore/QScopeGuard>
+#include <QtCore/QtMath>
 #include <QtQuick/QQuickItem>
 #include <QtQuick/QQuickWindow>
 #include <QtTest/QSignalSpy>
@@ -47,7 +48,19 @@ void CaacLegSpeedUITest::_homeLegSpeed()
     mission->setHomePosition(home);
     QVERIFY(editor->addWaypoint(QGCGeo::geodesicDestination(home, 90, 100)));
     QVERIFY(editor->addWaypoint(QGCGeo::geodesicDestination(home, 90, 200)));
-    QVERIFY(editor->setMissionFlightSpeed(true, 6));
+    auto* settings = mission->visualItems()->value<MissionSettingsItem*>(0);
+    QVERIFY(settings && settings->speedSection());
+    QVERIFY(editor->setMissionFlightSpeed(false, 0));
+    QVERIFY(!settings->speedSection()->specifyFlightSpeed());
+    QVERIFY(clickButton(QStringLiteral("caacGlobalSettingsButton")));
+    QVERIFY(!findItem(_rootItem, QStringLiteral("caacSpecifyMissionSpeed")));
+    auto* speedField =
+        findVisibleItemScrolled(QStringLiteral("caacMissionSpeed"), QStringLiteral("caacGlobalSettingsScroller"));
+    QVERIFY(speedField && speedField->isEnabled());
+    QVERIFY(speedField->setProperty("text", QStringLiteral("6")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacApplyMissionSpeed"), QStringLiteral("caacGlobalSettingsScroller")));
+    QVERIFY(settings->speedSection()->specifyFlightSpeed());
+    QCOMPARE(settings->specifiedFlightSpeed(), 6.0);
     panel->setProperty("activePanel", -1);
     map->setProperty("center", QVariant::fromValue(QGCGeo::geodesicDestination(home, 90, 100)));
     map->setProperty("zoomLevel", 17.0);
@@ -70,6 +83,28 @@ void CaacLegSpeedUITest::_homeLegSpeed()
                              TestTimeout::mediumMs());
     QTRY_VERIFY_WITH_TIMEOUT((homeLabel = findVisibleItem(map, QStringLiteral("caacRouteLegLabel_0"), 0)) &&
                                  homeLabel->property("legText").toString().endsWith(QStringLiteral("7.0 m/s")),
+                             TestTimeout::mediumMs());
+    QVERIFY(editor->setMissionFlightSpeed(false, 0));
+    QVERIFY(!settings->speedSection()->specifyFlightSpeed());
+    QVariant prepared;
+    QVERIFY(QMetaObject::invokeMethod(panel, "prepareUpload", Q_RETURN_ARG(QVariant, prepared)));
+    QVERIFY(prepared.toBool());
+    QVERIFY(settings->speedSection()->specifyFlightSpeed());
+    QCOMPARE(settings->specifiedFlightSpeed(), 7.0);
+    QVERIFY(clickButton(QStringLiteral("caacRelativeEditorButton")));
+    auto* generation = findVisibleItem(_rootItem, QStringLiteral("caacRelativeGenerationMethod"));
+    auto* insertAfter = findVisibleItem(_rootItem, QStringLiteral("caacRelativeInsertAfter"));
+    QVERIFY(generation && insertAfter);
+    QTRY_VERIFY_WITH_TIMEOUT(generation->width() > 0 && insertAfter->width() > 0, TestTimeout::mediumMs());
+    const double generationWidth = generation->width();
+    const double waypointWidth = insertAfter->width();
+    const double waypointX = insertAfter->mapToScene(QPointF()).x();
+    QVERIFY(generation->setProperty("currentIndex", 1));
+    auto* overwrite = findVisibleItem(_rootItem, QStringLiteral("caacRelativeOverwritePoint"));
+    QVERIFY(overwrite);
+    QTRY_VERIFY_WITH_TIMEOUT(qAbs(generation->width() - generationWidth) < 1 &&
+                                 qAbs(overwrite->width() - waypointWidth) < 1 &&
+                                 qAbs(overwrite->mapToScene(QPointF()).x() - waypointX) < 1,
                              TestTimeout::mediumMs());
 }
 

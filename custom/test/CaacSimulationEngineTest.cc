@@ -54,6 +54,9 @@ private slots:
     void _positionUpdatePreservesProgress();
     void _speedUpdatePreservesProgress();
     void _speedUpdatePreservesFlightPhases();
+    void _waypointDeletionPreservesProgress_data();
+    void _waypointDeletionPreservesProgress();
+    void _returnUsesUploadedLanding();
     void _homeUpdatePreservesProgress();
     void _windComponents();
     void _rejectInvalidMissionAtomically();
@@ -464,6 +467,13 @@ void CaacSimulationEngineTest::_speedUpdatePreservesProgress()
         engine.advance(0.1);
     }
     QVERIFY(holding());
+    for (int pause = 0; pause < 2; ++pause) {
+        const auto held = engine.state();
+        engine.pause();
+        QCOMPARE(engine.state().position, held.position);
+        QCOMPARE(engine.state().sequence, held.sequence);
+        QCOMPARE(engine.remainingLoops(), 2);
+    }
     QVERIFY(engine.setHorizontalSpeed(8));
     auto reference = engine;
     const auto before = engine.state();
@@ -531,6 +541,7 @@ void CaacSimulationEngineTest::_speedUpdatePreservesProgress()
     QCOMPARE(engine.state().sequence, 1);
     QCOMPARE(engine.horizontalSpeed(), 8.0);
     QCOMPARE(engine.remainingLoops(), 2);
+    engine.pause();
 
     // Waiting at the current point must finish at the same tick as an untouched engine.
     for (int tick = 0; tick < 20 && reference.state().sequence == 1; ++tick) {
@@ -598,6 +609,153 @@ void CaacSimulationEngineTest::_speedUpdatePreservesFlightPhases()
     QVERIFY(engine.state().finished);
     QVERIFY(!engine.state().airborne);
     QCOMPARE(engine.state().position, home);
+}
+
+void CaacSimulationEngineTest::_waypointDeletionPreservesProgress_data()
+{
+    QTest::addColumn<int>("removedSequence");
+    QTest::newRow("previous-target") << 1;
+    QTest::newRow("current-target") << 3;
+    QTest::newRow("future-target") << 5;
+}
+
+void CaacSimulationEngineTest::_waypointDeletionPreservesProgress()
+{
+    QFETCH(int, removedSequence);
+    const QGeoCoordinate home(30, 120, 20);
+    auto first = waypoint(1, home, 2);
+    first.param1 = 1;
+    auto second = waypoint(3, QGCGeo::geodesicDestination(home, 0, 5), 2);
+    second.param1 = 2;
+    auto third = waypoint(5, QGCGeo::geodesicDestination(home, 90, 5), 2);
+    auto jump = waypoint(6, home, 0);
+    jump.command = MAV_CMD_DO_JUMP;
+    jump.param1 = 0;
+    jump.param2 = 2;
+    auto land = waypoint(7, home, 0);
+    land.command = MAV_CMD_NAV_LAND;
+    const QMap<uint16_t, mavlink_mission_item_int_t> mission{{0, horizontalSpeed(0, 5)},
+                                                             {1, first},
+                                                             {2, horizontalSpeed(2, 6)},
+                                                             {3, second},
+                                                             {4, horizontalSpeed(4, 7)},
+                                                             {5, third},
+                                                             {6, jump},
+                                                             {7, land}};
+    const CaacSimulationEngine::Options options{.horizontalSpeed = 5, .verticalSpeed = 10, .turnMode = 3};
+    const QMap<int, CaacSimulationEngine::WaypointOptions> waypointOptions{
+        {1, {3, 3, 0}}, {3, {4, 3, 1}}, {5, {5, 3, 0}}};
+    CaacSimulationEngine engine;
+    QString error;
+    QVERIFY2(engine.load(mission, home, options, error, waypointOptions), qPrintable(error));
+    const auto holding = [&]() {
+        return engine.remainingLoops() == 2 && engine.state().sequence == 3 &&
+               QGCGeo::geodesicDistance(engine.state().position, QGeoCoordinate(second.x / 1e7, second.y / 1e7)) <
+                   0.01 &&
+               std::hypot(engine.state().northSpeed, engine.state().eastSpeed) < 0.01;
+    };
+    for (int tick = 0; tick < 300 && !holding(); ++tick) {
+        engine.advance(0.1);
+    }
+    QVERIFY(holding());
+    engine.pause();
+    QVERIFY(engine.setHorizontalSpeed(8));
+    auto reference = engine;
+    const auto before = engine.state();
+
+    QMap<uint16_t, mavlink_mission_item_int_t> updated;
+    QMap<int, CaacSimulationEngine::WaypointOptions> updatedOptions;
+    QMap<int, int> sequenceMap;
+    for (auto it = mission.cbegin(); it != mission.cend(); ++it) {
+        if (it.key() == removedSequence ||
+            (it.key() == removedSequence + 1 && it->command == MAV_CMD_DO_CHANGE_SPEED)) {
+            continue;
+        }
+        auto item = it.value();
+        item.seq = static_cast<uint16_t>(updated.size());
+        sequenceMap.insert(it.key(), item.seq);
+        updated.insert(item.seq, item);
+        if (waypointOptions.contains(it.key())) {
+            updatedOptions.insert(item.seq, waypointOptions.value(it.key()));
+        }
+    }
+    QVERIFY(!engine.updateMission(updated, home, options, error, updatedOptions));
+    auto invalid = updated;
+    invalid[sequenceMap.value(6)].param2 = 10;
+    QVERIFY(!engine.updateMission(invalid, home, options, error, updatedOptions, false, qQNaN(), true));
+    QCOMPARE(engine.state().position, before.position);
+    QCOMPARE(engine.state().sequence, 3);
+    QCOMPARE(engine.remainingLoops(), 2);
+    if (removedSequence == 5) {
+        auto unsafe = engine;
+        QVERIFY(unsafe.jump(5));
+        QVERIFY(!unsafe.updateMission(updated, home, options, error, updatedOptions, false, qQNaN(), true));
+        QCOMPARE(unsafe.state().sequence, 5);
+    }
+    QVERIFY2(engine.updateMission(updated, home, options, error, updatedOptions, false, qQNaN(), true),
+             qPrintable(error));
+    const int current = sequenceMap.value(removedSequence == 3 ? 5 : 3);
+    QCOMPARE(engine.state().sequence, current);
+    QCOMPARE(engine.state().position, before.position);
+    QCOMPARE(engine.state().heading, before.heading);
+    QCOMPARE(engine.remainingLoops(), 2);
+    QCOMPARE(engine.horizontalSpeed(), removedSequence == 1 ? 5.0 : 8.0);
+    engine.pause();
+    engine.advance(0.1);
+    if (removedSequence == 3) {
+        QVERIFY(QGCGeo::geodesicDistance(engine.state().position, before.position) > 0.1);
+    } else {
+        reference.advance(0.1);
+        QCOMPARE(engine.state().position, reference.state().position);
+        for (int tick = 0; tick < 30 && reference.state().sequence == 3; ++tick) {
+            QCOMPARE(engine.state().sequence, current);
+            engine.advance(0.1);
+            reference.advance(0.1);
+        }
+        QCOMPARE(reference.state().sequence, 4);
+        QCOMPARE(engine.state().sequence, current + 1);
+    }
+    for (int tick = 0; tick < 500 && !engine.state().finished; ++tick) {
+        engine.advance(0.1);
+    }
+    QVERIFY(engine.state().finished);
+    QVERIFY(!engine.state().airborne);
+    QCOMPARE(engine.remainingLoops(), 0);
+}
+
+void CaacSimulationEngineTest::_returnUsesUploadedLanding()
+{
+    const QGeoCoordinate home(30, 120, 20);
+    const auto destination = QGCGeo::geodesicDestination(home, 90, 15);
+    const CaacSimulationEngine::Options options{.horizontalSpeed = 10, .verticalSpeed = 10, .turnMode = 3};
+    for (int command : {MAV_CMD_NAV_LAND, MAV_CMD_NAV_VTOL_LAND}) {
+        auto firstLanding = waypoint(1, QGCGeo::geodesicDestination(home, 270, 15), 0);
+        firstLanding.command = MAV_CMD_NAV_LAND;
+        auto lastLanding = waypoint(2, destination, 23);
+        lastLanding.command = command;
+        lastLanding.frame = MAV_FRAME_GLOBAL;
+        CaacSimulationEngine engine;
+        QString error;
+        QVERIFY2(
+            engine.load(
+                {{0, waypoint(0, QGCGeo::geodesicDestination(home, 0, 100), 10)}, {1, firstLanding}, {2, lastLanding}},
+                home, options, error),
+            qPrintable(error));
+        engine.setAltitude(30);
+        bool landed = false;
+        for (int tick = 0; tick < 100 && !landed; ++tick) {
+            landed = engine.advanceReturn(0.1);
+            if (tick == 5) {
+                engine.pause();
+            }
+        }
+        QVERIFY(landed);
+        QVERIFY(!engine.state().airborne);
+        QVERIFY(QGCGeo::geodesicDistance(engine.state().position, destination) < 0.03);
+        QCOMPARE(engine.state().position.altitude(), 23.0);
+        QCOMPARE(engine.home(), home);
+        QCOMPARE(engine.state().sequence, 0);
+    }
 }
 
 void CaacSimulationEngineTest::_loopsAndReturn()

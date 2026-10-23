@@ -279,7 +279,7 @@ Popup {
                 text: qsTr("Delete")
                 onClicked: {
                     root.fineTuning = false
-                    if (root.controller.selectWaypoint(root.waypoint) && root.controller.removeCurrentWaypoint()) { root.close() }
+                    if (root.editor.removeWaypoint(root.waypoint)) { root.close() }
                 }
             }
             QGCLabel {

@@ -194,7 +194,7 @@ Item {
                         showBorder: true
                         onClicked: Qt.openUrlExternally("https://uom.caac.gov.cn/")
                     }
-                    QGCButton { text: qsTr("Refresh status"); enabled: !!root.vehicle; onClicked: root.refresh() }
+                    QGCButton { objectName: "caacUOMRefreshStatus"; text: qsTr("Refresh status"); enabled: !!root.vehicle; onClicked: root.refresh() }
                 }
                 ColumnLayout {
                     Layout.fillWidth: true
@@ -218,7 +218,7 @@ Item {
                                 qsTr("Flight controller SN") + ": " + root.flightControllerSN
                             ].join("\n"))
                         }
-                        QGCButton { text: qsTr("Read all"); Layout.fillWidth: true; backgroundColor: palette.window; showBorder: true; enabled: !!root.vehicle; onClicked: root.refresh() }
+                        QGCButton { objectName: "caacUOMReadAll"; text: qsTr("Read all"); Layout.fillWidth: true; backgroundColor: palette.window; showBorder: true; enabled: !!root.vehicle; onClicked: root.refresh() }
                     }
                 }
                 ColumnLayout {

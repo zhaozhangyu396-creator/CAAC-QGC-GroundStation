@@ -827,6 +827,7 @@ void PlanManager::_finishTransaction(bool success, bool apmGuidedItemWrite)
 
     switch (currentTransactionType) {
     case TransactionRead:
+        _missionItemsAreDownloaded = success;
         if (!success) {
             // Read from vehicle failed, clear partial list
             _clearAndDeleteMissionItems();
@@ -837,6 +838,7 @@ void PlanManager::_finishTransaction(bool success, bool apmGuidedItemWrite)
         // No need to do anything for ArduPilot guided go to waypoint write
         if (!apmGuidedItemWrite) {
             if (success) {
+                _missionItemsAreDownloaded = false;
                 // Write succeeded, update internal list to be current
                 if (_planType == MAV_MISSION_TYPE_MISSION) {
                     _currentMissionIndex = -1;
@@ -927,6 +929,7 @@ void PlanManager::removeAll(void)
 
 void PlanManager::_clearAndDeleteMissionItems(void)
 {
+    _missionItemsAreDownloaded = false;
     for (int i=0; i<_missionItems.count(); i++) {
         // Using deleteLater here causes too much transient memory to stack up
         delete _missionItems[i];

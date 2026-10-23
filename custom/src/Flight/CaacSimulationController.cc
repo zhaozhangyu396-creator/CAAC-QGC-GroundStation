@@ -449,12 +449,14 @@ bool CaacSimulationController::start(PlanMasterController* plan)
             const bool preserve = _preserveUploadProgress;
             const bool speedChanges = _preserveUploadSpeedChanges;
             const double currentFlightSpeed = _preserveUploadFlightSpeed;
+            const bool allowDeletions = _preserveUploadDeletions;
             _preserveUploadProgress = false;
             _preserveUploadSpeedChanges = false;
             _preserveUploadFlightSpeed = qQNaN();
+            _preserveUploadDeletions = false;
             const auto mission = _link->_missionItemHandler->uploadedMission();
             const bool loaded = preserve ? _engine.updateMission(mission, _home, _options, error, _waypointOptions,
-                                                                 speedChanges, currentFlightSpeed)
+                                                                 speedChanges, currentFlightSpeed, allowDeletions)
                                          : _engine.load(mission, _home, _options, error, _waypointOptions);
             if (!loaded) {
                 _uploadSent = false;
@@ -486,10 +488,11 @@ bool CaacSimulationController::start(PlanMasterController* plan)
 }
 
 bool CaacSimulationController::upload(PlanMasterController* plan, bool preserveProgress, bool speedChanges,
-                                      double currentFlightSpeed)
+                                      double currentFlightSpeed, bool allowDeletions)
 {
-    if (!std::isnan(currentFlightSpeed) && (!preserveProgress || !speedChanges || !std::isfinite(currentFlightSpeed) ||
-                                            currentFlightSpeed <= 0 || currentFlightSpeed > 100)) {
+    if ((allowDeletions && (!preserveProgress || speedChanges)) ||
+        (!std::isnan(currentFlightSpeed) && (!preserveProgress || !speedChanges || !std::isfinite(currentFlightSpeed) ||
+                                             currentFlightSpeed <= 0 || currentFlightSpeed > 100))) {
         _setStatus(QCoreApplication::translate("CaacSimulationEngine", "Invalid speed command."));
         return false;
     }
@@ -545,7 +548,7 @@ bool CaacSimulationController::upload(PlanMasterController* plan, bool preserveP
         _uploadPlan.clear();
     }
     const auto previousWaypointOptions = _waypointOptions;
-    if (!_prepareFlightPlan(speedChanges)) {
+    if (!_prepareFlightPlan(speedChanges || allowDeletions)) {
         return false;
     }
     if (preserveProgress) {
@@ -569,12 +572,15 @@ bool CaacSimulationController::upload(PlanMasterController* plan, bool preserveP
             wireMission.insert(wire.seq, wire);
         }
         qDeleteAll(items);
-        if (speedChanges) {
-            const auto mapping = CaacMissionUpdateUtils::speedUpdateMapping(_engine.mission(), wireMission);
+        if (speedChanges || allowDeletions) {
+            const auto mapping = allowDeletions
+                                     ? CaacMissionUpdateUtils::waypointDeletionMapping(_engine.mission(), wireMission)
+                                     : CaacMissionUpdateUtils::speedUpdateMapping(_engine.mission(), wireMission);
             if (mapping.valid) {
                 for (auto it = previousWaypointOptions.cbegin(); it != previousWaypointOptions.cend(); ++it) {
                     const int sequence = mapping.oldToNew.value(it.key(), -1);
-                    if (sequence >= 0 && !_waypointOptions.contains(sequence)) {
+                    if (sequence >= 0 && (!allowDeletions || mapping.newToOld.value(sequence, -1) == it.key()) &&
+                        !_waypointOptions.contains(sequence)) {
                         _waypointOptions.insert(sequence, it.value());
                     }
                 }
@@ -589,7 +595,7 @@ bool CaacSimulationController::upload(PlanMasterController* plan, bool preserveP
         auto probe = _engine;
         QString error;
         if (!probe.updateMission(wireMission, _home, _options, error, _waypointOptions, speedChanges,
-                                 currentFlightSpeed)) {
+                                 currentFlightSpeed, allowDeletions)) {
             _setStatus(error);
             return false;
         }
@@ -597,6 +603,7 @@ bool CaacSimulationController::upload(PlanMasterController* plan, bool preserveP
     _preserveUploadProgress = preserveProgress;
     _preserveUploadSpeedChanges = speedChanges;
     _preserveUploadFlightSpeed = currentFlightSpeed;
+    _preserveUploadDeletions = allowDeletions;
     _uploadSent = true;
     _missionReady = false;
     _elapsed.restart();
@@ -669,6 +676,7 @@ void CaacSimulationController::stop()
     _preserveUploadProgress = false;
     _preserveUploadSpeedChanges = false;
     _preserveUploadFlightSpeed = qQNaN();
+    _preserveUploadDeletions = false;
     _missionReady = false;
     _link.clear();
     _vehicle.clear();
@@ -908,7 +916,7 @@ void CaacSimulationController::_publish()
     }
 }
 
-bool CaacSimulationController::_prepareFlightPlan(bool speedChanges)
+bool CaacSimulationController::_prepareFlightPlan(bool sequenceChanges)
 {
     _uploadPlan = new PlanMasterController(this);
     _uploadPlan->setProperty("caacSimulationPlanning", true);
@@ -921,6 +929,8 @@ bool CaacSimulationController::_prepareFlightPlan(bool speedChanges)
         return false;
     }
     auto* items = mission->visualItems();
+    auto* last = items->value<SimpleMissionItem*>(items->count() - 1);
+    const bool plannedLanding = last && last->command() == MAV_CMD_NAV_LAND;
     QList<SimpleMissionItem*> waypoints;
     QHash<const SimpleMissionItem*, int> waypointOrigins;
     bool takeoff = false;
@@ -948,7 +958,7 @@ bool CaacSimulationController::_prepareFlightPlan(bool speedChanges)
     }
     if (waypoints.isEmpty() ||
         (!existingFlow && ((_settings.value("startSequence").toInt() > 0 && !selectedStart) ||
-                           (_settings.value("endBehavior").toInt() == 1 &&
+                           (!plannedLanding && _settings.value("endBehavior").toInt() == 1 &&
                             _settings.value("returnSequence").toInt() > 0 && !selectedReturn)))) {
         _fail(tr("Select existing waypoints for the start and return points."));
         return false;
@@ -967,7 +977,7 @@ bool CaacSimulationController::_prepareFlightPlan(bool speedChanges)
             }
         }
     }
-    const auto captureNumbers = [this, &waypointOrigins, existingFlow, speedChanges]() {
+    const auto captureNumbers = [this, &waypointOrigins, existingFlow, sequenceChanges]() {
         _pendingWaypointNumbers.clear();
         const auto previousOptions = _waypointOptions;
         const int offset = _vehicle && !_vehicle->firmwarePlugin()->sendHomePositionToVehicle() ? 1 : 0;
@@ -979,7 +989,7 @@ bool CaacSimulationController::_prepareFlightPlan(bool speedChanges)
                 _waypointOptions.insert(it.key()->sequenceNumber() - offset,
                                         {settings.value("verticalSpeed").toDouble(), settings.value("turnMode").toInt(),
                                          settings.value("climbMode").toInt()});
-            } else if (existingFlow && !speedChanges && it.key()->command() == MAV_CMD_NAV_WAYPOINT &&
+            } else if (existingFlow && !sequenceChanges && it.key()->command() == MAV_CMD_NAV_WAYPOINT &&
                        previousOptions.contains(it.key()->sequenceNumber() - offset)) {
                 _waypointOptions.insert(it.key()->sequenceNumber() - offset,
                                         previousOptions.value(it.key()->sequenceNumber() - offset));
@@ -994,9 +1004,7 @@ bool CaacSimulationController::_prepareFlightPlan(bool speedChanges)
         selectedStart = waypoints.first();
     }
     bool nativeEnd = false;
-    auto* last = items->value<SimpleMissionItem*>(items->count() - 1);
     const bool returnHomeHover = _settings.value("endBehavior").toInt() == 2;
-    const bool plannedLanding = last && last->command() == MAV_CMD_NAV_LAND && !returnHomeHover;
     const auto landingCoordinate = plannedLanding ? last->coordinate() : QGeoCoordinate();
     const auto landingFrame = plannedLanding ? last->altitudeFrame() : QGroundControlQmlGlobal::AltitudeFrameRelative;
     const double landingAltitude = plannedLanding ? last->editableAlt() : 0;

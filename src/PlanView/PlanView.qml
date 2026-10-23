@@ -138,7 +138,6 @@ Item {
         }
 
         function upload() {
-            if (!rightPanel.prepareUpload()) { return }
             if (!checkReadyForSaveUpload(false /* save */)) {
                 return
             }
@@ -147,6 +146,7 @@ Item {
                 rightPanel.requestWaypointUpload()
                 return
             }
+            if (!rightPanel.prepareUpload()) { return }
             const simulation = QGroundControl.corePlugin.simulation
             if (simulation && simulation.active && simulation.vehicle === _planMasterController.managerVehicle) {
                 simulation.upload(_planMasterController)
@@ -430,7 +430,6 @@ Item {
             }
             MissionLineView {
                 objectName: "caacPlanMissionLines"
-                uploadConfirmed: _missionController.uploadConfirmed
                 showSpecialVisual: _missionController.isROIBeginCurrentItem
                 model: _root._figureEightView || rightPanel.simulationPreviewActive
                     ? null : _missionController.simpleFlightPathSegments

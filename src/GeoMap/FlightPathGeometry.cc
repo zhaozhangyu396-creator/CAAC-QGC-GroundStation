@@ -57,7 +57,9 @@ void FlightPathGeometry::setPath(const QVariantList& coordinates, const QVariant
         const QGeoCoordinate coordinate = coordinates[i].value<QGeoCoordinate>();
         if (coordinate.isValid()) {
             _points.append(coordinate);
-            _highlights.append((i < highlights.size()) && highlights[i].toBool());
+            bool converted = false;
+            const float highlight = (i < highlights.size()) ? highlights[i].toFloat(&converted) : 0.0f;
+            _highlights.append(converted && std::isfinite(highlight) ? qBound(0.0f, highlight, 2.0f) : 0.0f);
         }
     }
     emit anchorCoordinateChanged();
@@ -71,7 +73,7 @@ void FlightPathGeometry::appendPoint(const QGeoCoordinate& coordinate)
         return;
     }
     _points.append(coordinate);
-    _highlights.append(false);
+    _highlights.append(0.0f);
     if (_points.size() == 1) {
         emit anchorCoordinateChanged();
     }
@@ -224,7 +226,7 @@ QVector3D FlightPathGeometry::_tangentAt(qsizetype index) const
 void FlightPathGeometry::_writeVertexPair(qsizetype index, const QVector3D& tangent)
 {
     const QVector3D& position = _positions[index];
-    const float highlight = _highlights[index] ? 1.0f : 0.0f;
+    const float highlight = _highlights[index];
     float* vertex = reinterpret_cast<float*>(_vertexData.data()) + (index * 2 * kFloatsPerVertex);
     for (const float side : {-1.0f, 1.0f}) {
         *vertex++ = position.x();

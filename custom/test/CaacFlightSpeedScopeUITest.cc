@@ -12,6 +12,7 @@
 #include "CaacRouteEditorController.h"
 #include "CaacSimulationController.h"
 #include "Fact.h"
+#include "FirmwarePlugin.h"
 #include "MissionController.h"
 #include "MissionItem.h"
 #include "MissionManager.h"
@@ -32,16 +33,21 @@ private slots:
 
 private:
     bool _openSpeedDialog();
+    bool _triggerFlightAction(const QString& name);
 };
 
 bool CaacFlightSpeedScopeUITest::_openSpeedDialog()
+{
+    return _triggerFlightAction(QStringLiteral("caacChangeFlightSpeed"));
+}
+
+bool CaacFlightSpeedScopeUITest::_triggerFlightAction(const QString& name)
 {
     if (!findVisibleItem(_rootItem, QStringLiteral("caacFlightSettingsPanel"), 0) &&
         !clickButton(QStringLiteral("caacFlightSettingsButton"))) {
         return false;
     }
-    auto* button =
-        findVisibleItemScrolled(QStringLiteral("caacChangeFlightSpeed"), QStringLiteral("flyViewToolStrip_flickable"));
+    auto* button = findVisibleItemScrolled(name, QStringLiteral("flyViewToolStrip_flickable"));
     if (!button || !button->isEnabled()) {
         return false;
     }
@@ -69,9 +75,11 @@ void CaacFlightSpeedScopeUITest::_scopedUpdatesPreserveFlightProgress()
     auto* mission = master->missionController();
     const QGeoCoordinate home(30, 120, 20);
     const auto firstCoordinate = QGCGeo::geodesicDestination(home, 90, 600);
+    const auto fifthCoordinate = QGCGeo::geodesicDestination(firstCoordinate, 0, 400);
     mission->setHomePosition(home);
     for (const auto& coordinate : {firstCoordinate, QGCGeo::geodesicDestination(firstCoordinate, 0, 100),
-                                   QGCGeo::geodesicDestination(firstCoordinate, 0, 200)}) {
+                                   QGCGeo::geodesicDestination(firstCoordinate, 0, 200),
+                                   QGCGeo::geodesicDestination(firstCoordinate, 0, 300), fifthCoordinate}) {
         QVERIFY(editor->addWaypoint(coordinate));
         auto* item = editor->currentItem();
         QVERIFY(item && item->speedSection());
@@ -89,6 +97,9 @@ void CaacFlightSpeedScopeUITest::_scopedUpdatesPreserveFlightProgress()
     settings["verticalSpeed"] = 10.0;
     settings["yawRate"] = 360.0;
     settings["endBehavior"] = 2;
+    settings["closed"] = true;
+    settings["loopMode"] = 1;
+    settings["loopCount"] = 2;
     QVERIFY(editor->setSimulationSettings(settings));
     panel->setProperty("activePanel", -1);
     map->setProperty("center", QVariant::fromValue(QGCGeo::geodesicDestination(home, 90, 300)));
@@ -172,7 +183,7 @@ void CaacFlightSpeedScopeUITest::_scopedUpdatesPreserveFlightProgress()
         if (scopeIndex == 1) {
             auto* waypoint = findVisibleItem(_rootItem, QStringLiteral("caacFlightSpeedWaypoint"));
             QVERIFY(waypoint);
-            QCOMPARE(waypoint->property("count").toInt(), 3);
+            QCOMPARE(waypoint->property("count").toInt(), 5);
             QVERIFY(waypoint->setProperty("currentIndex", 1));
         }
         const double requestedSpeed = scopeIndex == 1 ? 8 : 6;
@@ -232,6 +243,90 @@ void CaacFlightSpeedScopeUITest::_scopedUpdatesPreserveFlightProgress()
             QVERIFY(speedCommands >= 3);
         }
     }
+
+    int fifthSequence = -1;
+    for (int index = 0; index < manager->missionItems().size(); ++index) {
+        const auto* item = manager->missionItems().at(index);
+        if (item->command() == MAV_CMD_NAV_WAYPOINT && item->coordinate().distanceTo(fifthCoordinate) < 0.1) {
+            fifthSequence = index;
+            break;
+        }
+    }
+    QVERIFY(fifthSequence >= 0);
+    const int offset = vehicle->firmwarePlugin()->sendHomePositionToVehicle() ? 0 : 1;
+    vehicle->setCurrentMissionSequence(fifthSequence + offset);
+    const auto targetingFifth = [&]() {
+        const auto target = targetCoordinate();
+        return target.isValid() && target.distanceTo(fifthCoordinate) < 0.1;
+    };
+    QTRY_VERIFY_WITH_TIMEOUT(targetingFifth(), TestTimeout::mediumMs());
+    QQmlExpression liveMaster(qmlContext(panel), panel, QStringLiteral("globals.planMasterControllerFlyView"));
+    auto* flyMaster = liveMaster.evaluate().value<PlanMasterController*>();
+    QVERIFY(!liveMaster.hasError() && flyMaster);
+    auto* flyMission = flyMaster->missionController();
+    QTRY_VERIFY_WITH_TIMEOUT(flyMission->currentMissionIndex() >= flyMission->visualItems()->count() - 1,
+                             TestTimeout::mediumMs());
+    const int remainingLoops = simulation->remainingLoops();
+    QVERIFY(remainingLoops >= 1);
+    const auto pauseMode = vehicle->firmwarePlugin()->pauseFlightMode();
+    for (int repetition = 0; repetition < 2; ++repetition) {
+        QVERIFY(_triggerFlightAction(QStringLiteral("caacPauseMission")));
+        QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), pauseMode, TestTimeout::mediumMs());
+        QVERIFY(targetingFifth());
+        QCOMPARE(simulation->remainingLoops(), remainingLoops);
+        auto* start =
+            findVisibleItemScrolled(QStringLiteral("caacStartMission"), QStringLiteral("flyViewToolStrip_flickable"));
+        QVERIFY(start);
+        QTRY_VERIFY_WITH_TIMEOUT(start->isEnabled(), TestTimeout::mediumMs());
+        QVERIFY(_triggerFlightAction(QStringLiteral("caacStartMission")));
+        QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->missionFlightMode(), TestTimeout::mediumMs());
+        QVERIFY(targetingFifth());
+        QCOMPARE(simulation->remainingLoops(), remainingLoops);
+    }
+
+    QVERIFY(_triggerFlightAction(QStringLiteral("caacPauseMission")));
+    QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), pauseMode, TestTimeout::mediumMs());
+    const auto pausedPosition = vehicle->coordinate();
+    const auto pausedJson = master->saveToJson();
+    QVERIFY(_openSpeedDialog());
+    scope = findVisibleItem(_rootItem, QStringLiteral("caacFlightSpeedScope"));
+    speed = findVisibleItem(_rootItem, QStringLiteral("caacFlightSpeedValue"));
+    QVERIFY(scope && speed);
+    QVERIFY(scope->setProperty("currentIndex", 2));
+    QVERIFY(speed->setProperty("text", QStringLiteral("6")));
+    QQmlExpression transaction(qmlContext(speed), speed, QStringLiteral("update"));
+    QPointer<CaacMissionUpdateController> update =
+        qobject_cast<CaacMissionUpdateController*>(transaction.evaluate().value<QObject*>());
+    QVERIFY(!transaction.hasError() && update);
+    QSignalSpy finished(update, &CaacMissionUpdateController::finished);
+    const int uploadsBeforePausedChange = uploads.count();
+    auto* busyStart = findItem(_rootItem, QStringLiteral("caacStartMission"));
+    QVERIFY(busyStart);
+    QVERIFY(acceptDialog());
+    QVERIFY(update && update->busy());
+    QVERIFY(vehicle->flightPlanUpdateInProgress());
+    QTRY_VERIFY_WITH_TIMEOUT(!busyStart->isEnabled(), TestTimeout::shortMs());
+    QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, TestTimeout::longMs());
+    QVERIFY(!vehicle->flightPlanUpdateInProgress());
+    QVERIFY2(finished.first().first().toBool(), qPrintable(finished.first().at(1).toString()));
+    QTRY_VERIFY_WITH_TIMEOUT(!findVisibleItem(_rootItem, QStringLiteral("caacFlightSpeedValue"), 0),
+                             TestTimeout::mediumMs());
+    QCOMPARE(uploads.count(), uploadsBeforePausedChange + 1);
+    QCOMPARE(master->saveToJson(), pausedJson);
+    QCOMPARE(vehicle->flightMode(), pauseMode);
+    QVERIFY(vehicle->coordinate().distanceTo(pausedPosition) < 0.1);
+    QVERIFY(targetingFifth());
+    QCOMPARE(simulation->remainingLoops(), remainingLoops);
+    QTRY_COMPARE_WITH_TIMEOUT(simulation->currentMissionDetails().value("speed").toDouble(), 6.0,
+                              TestTimeout::mediumMs());
+    auto* start =
+        findVisibleItemScrolled(QStringLiteral("caacStartMission"), QStringLiteral("flyViewToolStrip_flickable"));
+    QVERIFY(start);
+    QTRY_VERIFY_WITH_TIMEOUT(start->isEnabled(), TestTimeout::mediumMs());
+    QVERIFY(_triggerFlightAction(QStringLiteral("caacStartMission")));
+    QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->missionFlightMode(), TestTimeout::mediumMs());
+    QVERIFY(targetingFifth());
+    QCOMPARE(simulation->remainingLoops(), remainingLoops);
 }
 
 void CaacFlightSpeedScopeUITest::_selectedDepartureIncludesCurrentLeg()

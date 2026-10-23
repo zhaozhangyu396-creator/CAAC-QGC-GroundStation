@@ -10,6 +10,7 @@
 class CaacFlightDistance;
 class CaacFigureEightController;
 class CaacSimulationController;
+class CaacMissionUpdateController;
 class CaacActivationController;
 class QQmlAbstractUrlInterceptor;
 class QTimer;
@@ -51,6 +52,8 @@ public:
     Q_INVOKABLE static QGeoCoordinate defaultHomePosition();
     Q_INVOKABLE void initializeDefaultPlan(PlanMasterController* controller) const;
     Q_INVOKABLE void resetFlightDistanceForSimulationRestart(Vehicle* vehicle);
+    Q_INVOKABLE QString changeCurrentFlightAltitude(Vehicle* expectedVehicle, double altitude) const;
+    Q_INVOKABLE void returnToDesignatedLanding(PlanMasterController* controller, CaacSimulationController* simulation);
     Q_INVOKABLE QString updateFlightWaypointAltitude(PlanMasterController* controller, QObject* waypoint,
                                                      double altitude);
     Q_INVOKABLE QString updateFlightWaypointAltitudes(PlanMasterController* controller, const QVariantList& waypoints,
@@ -108,4 +111,5 @@ private:
     CaacFigureEightController* _figureEight = nullptr;
     CaacActivationController* _activation = nullptr;
     QPointer<QTimer> _flightAltitudeUpdateTimer;
+    QPointer<CaacMissionUpdateController> _flightReturnController;
 };

@@ -12,10 +12,23 @@ ToolStripActionList {
     readonly property var _guided: globals.guidedControllerFlyView
     readonly property var _vehicle: QGroundControl.multiVehicleManager.activeVehicle
     readonly property var _master: globals.planMasterControllerFlyView
-    readonly property bool _hasMission: _vehicle && _master && !_master.syncInProgress
+    readonly property bool _hasMission: _vehicle && !_vehicle.flightPlanUpdateInProgress
+        && _master && !_master.syncInProgress
         && _master.missionController.visualItems.count > 1
     readonly property var _simulation: QGroundControl.corePlugin.simulation
     readonly property bool _simulatedVehicle: _vehicle && _simulation.active && _simulation.vehicle === _vehicle
+    readonly property bool _hasCurrentMissionItem: {
+        if (!_hasMission) { return false }
+        const mission = _master.missionController
+        const sequence = mission.currentMissionIndex
+        for (let index = 1; index < mission.visualItems.count; ++index) {
+            const item = mission.visualItems.get(index)
+            if (sequence >= item.sequenceNumber && sequence <= item.lastSequenceNumber) { return true }
+        }
+        return false
+    }
+    readonly property bool _canContinueMission: _hasCurrentMissionItem && _vehicle.armed && _vehicle.airborne
+        && _vehicle.flightMode === _vehicle.pauseFlightMode && (!_simulatedVehicle || _simulation.missionReady)
     property Component _missionDialog: Component { CaacMissionActionDialog { } }
     property Component _speedDialog: Component { CaacFlightSpeedDialog { } }
     property var _pendingVehicle: null
@@ -35,7 +48,7 @@ ToolStripActionList {
     }
 
     function openMissionDialog(editAltitude) {
-        if (!_vehicle || !_master || _master.syncInProgress) {
+        if (!_vehicle || _vehicle.flightPlanUpdateInProgress || !_master || _master.syncInProgress) {
             return
         }
         _pendingVehicle = _vehicle
@@ -51,7 +64,8 @@ ToolStripActionList {
         target: root._master ? root._master.missionController : null
         function onNewItemsFromVehicle() {
             Qt.callLater(() => {
-                if (root._pendingVehicle && root._pendingVehicle === root._vehicle && !root._master.syncInProgress) {
+                if (root._pendingVehicle && root._pendingVehicle === root._vehicle
+                        && !root._vehicle.flightPlanUpdateInProgress && !root._master.syncInProgress) {
                     root._pendingVehicle = null
                     if (root._master.missionController.visualItems.count > 1) {
                         const dialog = root._missionDialog.createObject(mainWindow, {editAltitude: root._pendingAltitude})
@@ -82,11 +96,11 @@ ToolStripActionList {
             objectName: "caacReturnHome"
             text: qsTr("One-click return")
             iconSource: "/res/rtl.svg"
-            enabled: root._vehicle && root._guided.showRTL
+            enabled: root._vehicle && !root._vehicle.flightPlanUpdateInProgress && root._guided.showRTL
             onTriggered: {
                 if (enabled) {
                     root._guided.closeAll()
-                    root._vehicle.guidedModeRTL(false)
+                    QGroundControl.corePlugin.returnToDesignatedLanding(root._master, root._simulation)
                 }
             }
         },
@@ -94,7 +108,7 @@ ToolStripActionList {
             objectName: "caacStartMission"
             text: qsTr("Start route")
             iconSource: "/InstrumentValueIcons/play.svg"
-            enabled: root._hasMission && (root._guided.showStartMission || root._guided.showContinueMission
+            enabled: root._hasMission && root._guided && (root._guided.showStartMission || root._canContinueMission
                 || (root._simulatedVehicle && root._simulation.missionFinished && root._vehicle.armed
                     && root._vehicle.airborne && root._vehicle.flightMode !== root._vehicle.missionFlightMode))
             onTriggered: {
@@ -136,6 +150,7 @@ ToolStripActionList {
             iconSource: "/InstrumentValueIcons/arrow-thick-right.svg"
             enabled: root._vehicle && root._vehicle.initialConnectComplete && root._vehicle.armed
                 && root._vehicle.airborne && root._vehicle.supports.guidedMode
+                && !root._vehicle.flightPlanUpdateInProgress
             onTriggered: {
                 if (enabled) { root._guided.closeAll(); _speedDialog.createObject(mainWindow).open() }
             }

@@ -69,7 +69,6 @@ Item {
 
         MapItemGroup {
             MissionLineView {
-                uploadConfirmed: _missionController.uploadConfirmed
                 model: _missionController.simpleFlightPathSegments
             }
 

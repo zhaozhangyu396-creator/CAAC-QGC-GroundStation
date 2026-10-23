@@ -24,7 +24,8 @@ QGCPopupDialog {
     readonly property real maximumSpeed: !vehicle ? 0 : forwardFlight
         ? vehicle.maximumEquivalentAirspeed() : vehicle.maximumHorizontalSpeedMultirotorMetersSecond()
     readonly property bool canChange: vehicle && vehicle === openedVehicle && vehicle.initialConnectComplete
-        && vehicle.armed && vehicle.airborne && vehicle.supports.guidedMode && !update.busy
+        && vehicle.armed && vehicle.airborne && vehicle.supports.guidedMode
+        && !vehicle.flightPlanUpdateInProgress && !update.busy
     Component.onCompleted: {
         openedVehicle = vehicle
         const simulation = QGroundControl.corePlugin.simulation
@@ -57,7 +58,8 @@ QGCPopupDialog {
                 ? [waypointChoices[waypoint.currentIndex]] : []
         const selected = []
         const items = openedMaster ? openedMaster.missionController.visualItems : null
-        if (!items || openedMaster.managerVehicle !== vehicle || openedMaster.syncInProgress) { return [] }
+        if (!vehicle || vehicle.flightPlanUpdateInProgress || !items
+                || openedMaster.managerVehicle !== vehicle || openedMaster.syncInProgress) { return [] }
         for (const group of groups) {
             for (const member of group.members) {
                 let current = false

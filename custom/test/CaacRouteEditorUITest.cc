@@ -11,6 +11,7 @@
 #include <QtCore/QLineF>
 #include <QtCore/QPointer>
 #include <QtCore/QProcess>
+#include <QtCore/QRegularExpression>
 #include <QtCore/QScopeGuard>
 #include <QtCore/QTemporaryDir>
 #include <QtCore/QUuid>
@@ -24,13 +25,17 @@
 #include <QtQml/QQmlExpression>
 #include <QtQuick/QQuickItem>
 #include <QtQuick/QQuickWindow>
+#include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
 #include "AppSettings.h"
 #include "CaacCorePlugin.h"
+#include "CaacMissionUpdateController.h"
 #include "CaacRouteEditorController.h"
+#include "CaacSimulationController.h"
 #include "Fact.h"
 #include "MissionController.h"
+#include "MissionSettingsItem.h"
 #include "PlanMasterController.h"
 #include "QGCApplication.h"
 #include "QGCFileDialogController.h"
@@ -40,6 +45,7 @@
 #include "SettingsManager.h"
 #include "SimpleMissionItem.h"
 #include "SpeedSection.h"
+#include "Vehicle.h"
 
 namespace {
 void reportInvalidGeometry(QQuickItem* item, int& remaining)
@@ -138,6 +144,7 @@ private slots:
     void _homeCenterWindowFocus();
     void _planningUtilities();
     void _deleteLandingFromContextMenu();
+    void _deleteWaypointsDuringFlight();
 };
 
 void CaacRouteEditorUITest::_deleteLandingFromContextMenu()
@@ -180,10 +187,127 @@ void CaacRouteEditorUITest::_deleteLandingFromContextMenu()
     QVERIFY(remove && remove->isEnabled());
     QVERIFY(clickButton(QStringLiteral("caacContextDeleteWaypoint")));
     QCOMPARE(mission->visualItems()->count(), 2);
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacUploadDeletedWaypointsDialog"), 0));
     QCOMPARE(mission->visualItems()->value<SimpleMissionItem*>(1)->command(), int(MAV_CMD_NAV_WAYPOINT));
     QVERIFY(editor->undo());
     QCOMPARE(mission->visualItems()->count(), 3);
     QVERIFY(mission->visualItems()->value<SimpleMissionItem*>(2)->isLandCommand());
+}
+
+void CaacRouteEditorUITest::_deleteWaypointsDuringFlight()
+{
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    QVERIFY(QMetaObject::invokeMethod(_window, "showPlanView"));
+    auto* panel = findVisibleItem(_rootItem, QStringLiteral("caacRouteEditor"));
+    auto* map = findVisibleItem(_rootItem, QStringLiteral("planView_map"));
+    QVERIFY(panel && map);
+    auto* master = panel->property("planMasterController").value<PlanMasterController*>();
+    auto* editor = panel->property("routeController").value<CaacRouteEditorController*>();
+    auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
+    QVERIFY(master && editor && plugin);
+    master->removeAll();
+    auto* mission = master->missionController();
+    const QGeoCoordinate home(30, 120, 20);
+    mission->setHomePosition(home);
+    for (int i = 0; i < 6; ++i) {
+        QVERIFY(editor->addWaypoint(home.atDistanceAndAzimuth(1000 + i * 100, 90)));
+        mission->visualItems()->value<SimpleMissionItem*>(i + 1)->altitude()->setRawValue(2);
+    }
+    auto settings = CaacSimulationController::defaults();
+    settings["takeoffHeight"] = 2.0;
+    settings["verticalSpeed"] = 10.0;
+    settings["yawRate"] = 360.0;
+    QVERIFY(editor->setSimulationSettings(settings));
+    auto* simulation = plugin->simulation();
+    QVERIFY(simulation);
+    const auto stop = qScopeGuard([simulation]() { simulation->stop(); });
+    ignoreLogMessage("Utilities.QGCSensors", QtWarningMsg,
+                     QRegularExpression(QStringLiteral("Failed to connect to pressure backend")));
+    ignoreLogMessage("Utilities.QGCSensors", QtWarningMsg,
+                     QRegularExpression(QStringLiteral("Error Initializing Pressure Sensor")));
+    QVERIFY(simulation->start(master));
+    QTRY_VERIFY_WITH_TIMEOUT(simulation->vehicle() && simulation->vehicle()->isInitialConnectComplete(),
+                             TestTimeout::longMs());
+    QSignalSpy uploaded(simulation, &CaacSimulationController::missionUploaded);
+    QVERIFY(uploaded.isValid());
+    QVERIFY(simulation->upload(master));
+    QTRY_COMPARE_WITH_TIMEOUT(uploaded.count(), 1, TestTimeout::longMs());
+    auto* vehicle = simulation->vehicle();
+    vehicle->startMission();
+    QTRY_VERIFY_WITH_TIMEOUT(
+        vehicle->armed() && vehicle->airborne() && vehicle->groundSpeed()->rawValue().toDouble() > 1,
+        TestTimeout::longMs());
+    QVERIFY(QMetaObject::invokeMethod(_window, "showPlanView"));
+    panel->setProperty("activePanel", -1);
+    map->setProperty("zoomLevel", 18.0);
+    const auto beforeDeletion = master->saveToJson();
+    auto* fifth = mission->visualItems()->value<SimpleMissionItem*>(5);
+    QVERIFY(fifth);
+    map->setProperty("center", QVariant::fromValue(fifth->coordinate()));
+    auto* dragger = findVisibleItem(_rootItem, QStringLiteral("missionItemDrag_%1").arg(fifth->sequenceNumber()),
+                                    TestTimeout::mediumMs());
+    QVERIFY(dragger);
+    auto* indicator = dragger->property("itemIndicator").value<QQuickItem*>();
+    QVERIFY(indicator);
+    const auto anchor = [&]() {
+        return dragger->mapToScene(indicator->property("anchorPoint").toPointF() +
+                                   QPointF(dragger->property("_touchMarginHorizontal").toDouble(),
+                                           dragger->property("_touchMarginVertical").toDouble()));
+    };
+    const QPointF center = map->mapToScene(QPointF(map->width() / 2, map->height() / 2));
+    QTRY_VERIFY_WITH_TIMEOUT(QLineF(anchor(), center).length() < 1, TestTimeout::mediumMs());
+    QTest::mouseClick(_window, Qt::RightButton, Qt::NoModifier, anchor().toPoint());
+    QVERIFY(clickButton(QStringLiteral("caacContextDeleteWaypoint")));
+    QCOMPARE(mission->visualItems()->count(), 6);
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacUploadDeletedWaypointsDialog")));
+    QVERIFY(master->saveToJson() != beforeDeletion);
+    const auto pending = master->saveToJson();
+    const QVariant second = QVariant::fromValue(static_cast<QObject*>(mission->visualItems()->get(2)));
+    QVariant removed;
+    QVERIFY(
+        QMetaObject::invokeMethod(panel, "removeWaypoint", Q_RETURN_ARG(QVariant, removed), Q_ARG(QVariant, second)));
+    QVERIFY(!removed.toBool());
+    QCOMPARE(master->saveToJson(), pending);
+    QCOMPARE(uploaded.count(), 1);
+    QVERIFY(rejectDialog());
+    QTRY_VERIFY_WITH_TIMEOUT(!findVisibleItem(_rootItem, QStringLiteral("caacUploadDeletedWaypointsDialog"), 0),
+                             TestTimeout::mediumMs());
+    QCOMPARE(master->saveToJson(), pending);
+    QCOMPARE(uploaded.count(), 1);
+
+    QVERIFY(clickButton(QStringLiteral("caacWaypointListButton")));
+    auto* fourth = mission->visualItems()->value<SimpleMissionItem*>(4);
+    QVERIFY(fourth);
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacRemoveWaypoint_%1").arg(fourth->sequenceNumber()),
+                                QStringLiteral("caacWaypointList")));
+    QCOMPARE(mission->visualItems()->count(), 5);
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacUploadDeletedWaypointsDialog")));
+    QVERIFY(editor->undo());
+    QTRY_VERIFY_WITH_TIMEOUT(!findVisibleItem(_rootItem, QStringLiteral("caacUploadDeletedWaypointsDialog"), 0),
+                             TestTimeout::mediumMs());
+    QCOMPARE(master->saveToJson(), pending);
+    QCOMPARE(uploaded.count(), 1);
+
+    QVERIFY(
+        panel->setProperty("selectedWaypointItems", QVariantList{QVariant::fromValue(mission->visualItems()->get(2)),
+                                                                 QVariant::fromValue(mission->visualItems()->get(3))}));
+    QVERIFY(clickButton(QStringLiteral("caacDeleteSelectedWaypoints")));
+    QCOMPARE(mission->visualItems()->count(), 4);
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacUploadDeletedWaypointsDialog")));
+    auto* update = panel->findChild<CaacMissionUpdateController*>(QStringLiteral("caacMissionUpdateController"));
+    QVERIFY(update);
+    QSignalSpy finished(update, &CaacMissionUpdateController::finished);
+    QVERIFY(finished.isValid());
+    QVERIFY(acceptDialog());
+    QTRY_VERIFY_WITH_TIMEOUT(!finished.isEmpty(), TestTimeout::longMs());
+    QVERIFY2(finished.last().at(0).toBool(), qPrintable(finished.last().at(1).toString()));
+    QVERIFY(!update->busy());
+    QVERIFY(mission->uploadConfirmed());
+    QCOMPARE(mission->visualItems()->count(), 4);
+    QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->missionFlightMode(), TestTimeout::mediumMs());
 }
 
 void CaacRouteEditorUITest::_testMouseEditing_data()
@@ -1164,17 +1288,20 @@ void CaacRouteEditorUITest::_planningUtilities()
     QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacMeasureMapValues"), 0));
     QCOMPARE(master->saveToJson(), before);
     QVERIFY(clickButton(QStringLiteral("caacGlobalSettingsButton")));
-    auto* specify = findVisibleItem(_rootItem, QStringLiteral("caacSpecifyMissionSpeed"));
-    QVERIFY(specify);
-    QVERIFY(scrollIntoView(specify, QStringLiteral("caacGlobalSettingsScroller")));
-    QVERIFY(clickButton(QStringLiteral("caacSpecifyMissionSpeed")));
-    auto* speed = findVisibleItem(_rootItem, QStringLiteral("caacMissionSpeed"));
-    QVERIFY(speed);
+    QVERIFY(!findItem(_rootItem, QStringLiteral("caacSpecifyMissionSpeed")));
+    auto* speed =
+        findVisibleItemScrolled(QStringLiteral("caacMissionSpeed"), QStringLiteral("caacGlobalSettingsScroller"));
+    QVERIFY(speed && speed->isEnabled());
     speed->setProperty("text", QStringLiteral("8.5"));
     apply = findVisibleItem(_rootItem, QStringLiteral("caacApplyMissionSpeed"));
     QVERIFY(apply);
     QVERIFY(scrollIntoView(apply, QStringLiteral("caacGlobalSettingsScroller")));
     QVERIFY(clickButton(QStringLiteral("caacApplyMissionSpeed")));
+    auto* homeSettings = master->missionController()->visualItems()->value<MissionSettingsItem*>(0);
+    QVERIFY(homeSettings);
+    auto* missionSpeed = qobject_cast<SpeedSection*>(homeSettings->speedSection());
+    QVERIFY(missionSpeed && missionSpeed->specifyFlightSpeed());
+    QCOMPARE(missionSpeed->flightSpeed()->rawValue().toDouble(), 8.5);
     QVERIFY(master->saveToJson() != before);
     QVERIFY(clickButton(QStringLiteral("caacUndo")));
     QCOMPARE(master->saveToJson(), before);

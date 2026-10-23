@@ -88,7 +88,12 @@ Item {
                 value.text = displayText()
             }
         }
-        QGCLabel { text: row.definition.label; Layout.preferredWidth: root.width * 0.46; wrapMode: Text.WordWrap }
+        QGCLabel {
+            text: row.definition.label
+            Layout.preferredWidth: row.definition.names[0] === "RTL_TYPE"
+                ? Math.min(implicitWidth, root.width * 0.46) : root.width * 0.46
+            wrapMode: Text.WordWrap
+        }
         QGCTextField {
             id: value
             objectName: row.objectName + "_value"
@@ -196,7 +201,6 @@ Item {
             objectName: "caacSafetyConfirm_" + (section.definitions.length ? section.definitions[0].names[0] : section.title)
             Layout.fillWidth: true
             text: qsTr("Confirm")
-            backgroundColor: palette.window
             showBorder: true
             enabled: root.vehicle && root.ready
             onClicked: {
@@ -295,6 +299,7 @@ Item {
                 fact: QGroundControl.settingsManager.flyViewSettings.showObstacleDistanceOverlay
             }
             CaacBatteryProtection {
+                id: batteryProtection
                 visible: !!root.parameter(["BAT_LOW_THR"])
                 lowThreshold: root.parameter(["BAT_LOW_THR"])
                 criticalThreshold: root.parameter(["BAT_CRIT_THR"])
@@ -303,6 +308,15 @@ Item {
                 emptyVoltageFact: root.parameter(["BAT1_V_EMPTY", "BAT_V_EMPTY"])
                 chargedVoltageFact: root.parameter(["BAT1_V_CHARGED", "BAT_V_CHARGED"])
                 ready: root.ready && !!root.vehicle && !root.vehicle.armed
+            }
+            Rectangle {
+                objectName: "caacBatteryFenceDivider"
+                visible: batteryProtection.visible
+                Layout.fillWidth: true
+                Layout.preferredHeight: 1
+                Layout.topMargin: ScreenTools.defaultFontPixelHeight * 0.5
+                Layout.bottomMargin: ScreenTools.defaultFontPixelHeight * 0.5
+                color: palette.groupBorder
             }
             CaacGeoFenceSettings {
                 actionFact: root.parameter(["GF_ACTION", "FENCE_ACTION"])

@@ -50,11 +50,19 @@ public:
 
     void trackMissionUpload();
 
+    int uploadedRouteRevision() const { return _uploadedRouteRevision; }
+
+    Q_INVOKABLE FlightPathSegment* routeSegmentForItems(VisualMissionItem* from, VisualMissionItem* to) const;
+
+    Q_INVOKABLE bool isRouteSegmentUploaded(const QGeoCoordinate& from, const QGeoCoordinate& to,
+                                            double flightSpeed) const;
+
     // Legacy alias kept for source compatibility with external code
     using MissionFlightStatus_t = ::MissionFlightStatus_t;
 
     Q_PROPERTY(QmlObjectListModel*  visualItems                     READ visualItems                    NOTIFY visualItemsReset)
     Q_PROPERTY(bool uploadConfirmed READ uploadConfirmed NOTIFY uploadConfirmedChanged)
+    Q_PROPERTY(int uploadedRouteRevision READ uploadedRouteRevision NOTIFY uploadedRouteRevisionChanged)
     Q_PROPERTY(QmlObjectTreeModel*  visualItemsTree                 READ visualItemsTree                CONSTANT)                               ///< Tree-structured view of visualItems for TreeView
     Q_PROPERTY(QPersistentModelIndex planFileGroupIndex              READ planFileGroupIndex              CONSTANT)
     Q_PROPERTY(QPersistentModelIndex defaultsGroupIndex              READ defaultsGroupIndex              CONSTANT)
@@ -325,6 +333,7 @@ public:
 
 signals:
     void uploadConfirmedChanged();
+    void uploadedRouteRevisionChanged();
     void visualItemsReset                   (void);
     void splitSegmentChanged                (void);
     void newItemsFromVehicle                (void);
@@ -384,7 +393,51 @@ private slots:
     void _syncTreeRallyPointsRemoved                   (const QModelIndex& parent, int first, int last);
 
     void _syncTreeRallyPointsReset                    (void);
+    void _refreshRouteUploadState();
+
 private:
+    struct RoutePoint
+    {
+        QGeoCoordinate coordinate;
+        int command = -1;
+        int frame = -1;
+        double altitude = qQNaN();
+        bool home = false;
+    };
+
+    using RouteCoordinateKey = QPair<qint64, qint64>;
+    using RoutePointIndex = QHash<RouteCoordinateKey, QList<RoutePoint>>;
+
+    struct UploadedRouteSegment
+    {
+        QGeoCoordinate from;
+        QGeoCoordinate to;
+        double speed = qQNaN();
+        QList<RoutePoint> origins;
+        QList<RoutePoint> destinations;
+        double takeoffHeight = qQNaN();
+        int returnBehavior = -1;
+    };
+
+    struct RouteAlias
+    {
+        RoutePoint wire;
+        QList<RoutePoint> sources;
+    };
+
+    using RouteAliasIndex = QHash<RouteCoordinateKey, QList<RouteAlias>>;
+    using UploadedRouteIndex = QHash<QPair<RouteCoordinateKey, RouteCoordinateKey>, QList<UploadedRouteSegment>>;
+    RoutePointIndex _captureRoutePoints() const;
+    QVariantMap _routeHomeSettings() const;
+    static RouteCoordinateKey _routeCoordinateKey(const QGeoCoordinate& coordinate);
+    static QList<RoutePoint> _routePointsAt(const RoutePointIndex& points, const QGeoCoordinate& coordinate);
+    static bool _sameRoutePoint(const RoutePoint& left, const RoutePoint& right);
+    static bool _routePointsUnchanged(const QList<RoutePoint>& current, const QList<RoutePoint>& uploaded);
+    RoutePoint _routePointForItem(VisualMissionItem* item, bool exit) const;
+    bool _isRouteSegmentUploaded(const QGeoCoordinate& from, const QGeoCoordinate& to, double speed,
+                                 const QList<RoutePoint>& origins, const QList<RoutePoint>& destinations) const;
+    void _recordUploadedRoute(const RoutePointIndex& sourcePoints, const QGeoCoordinate& home, double defaultSpeed);
+    void _clearUploadedRoute();
     void _setUploadConfirmed(bool confirmed);
     void                    _init                               (void);
     void                    _setupTreeModel                     (void);
@@ -453,6 +506,13 @@ private:
     bool _uploadConfirmed = false;
     bool _uploadPending = false;
     bool _uploadUnchanged = false;
+    int _uploadedRouteRevision = 0;
+    UploadedRouteIndex _uploadedRoutes;
+    RoutePointIndex _currentRoutePoints;
+    RoutePointIndex _pendingRoutePoints;
+    QGeoCoordinate _pendingRouteHome;
+    double _pendingRouteDefaultSpeed = qQNaN();
+    RouteAliasIndex _uploadedRouteAliases;
     bool                        _inRecalcSequence =             false;
     MissionFlightStatusCalculator _flightStatusCalc;
     MissionFlightStatus_t       _missionFlightStatus;

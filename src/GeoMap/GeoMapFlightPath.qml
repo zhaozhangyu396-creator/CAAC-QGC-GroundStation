@@ -97,8 +97,9 @@ GeoMapItem {
                     property real lineWidth: root.lineWidth
                     property real screenFactor: root._screenFactor
                     property color pathColor: root.lineColor
-                    // Required by flightpath.frag; the trail never highlights
+                    // Required by flightpath.frag; the trail always uses its base color
                     property color highlightColor: root.lineColor
+                    property color uploadedColor: root.lineColor
                     // Ramps in as the terrain flattens, effectively disabling
                     // depth testing in 2D mode (see flightpath.vert)
                     property real depthPull: root.scene ? 0.5 * (1.0 - root.scene.terrainScale) : 0.0

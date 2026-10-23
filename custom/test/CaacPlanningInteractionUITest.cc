@@ -1125,17 +1125,13 @@ void CaacPlanningInteractionUITest::_synchronizeBasicsUI()
     mission->setHomePosition(home);
     QTRY_COMPARE_WITH_TIMEOUT(homeAltitude->property("text").toString().toDouble(), 20.0, TestTimeout::mediumMs());
     editor->clearHistory();
-    auto* specify = findVisibleItemScrolled(QStringLiteral("caacSpecifyMissionSpeed"),
-                                            QStringLiteral("caacGlobalSettingsScroller"));
-    QVERIFY(specify);
-    if (!specify->property("checked").toBool()) {
-        QVERIFY(clickButtonScrolled(QStringLiteral("caacSpecifyMissionSpeed"),
-                                    QStringLiteral("caacGlobalSettingsScroller")));
-    }
+    QVERIFY(!findItem(_rootItem, QStringLiteral("caacSpecifyMissionSpeed")));
     auto* speedField =
         findVisibleItemScrolled(QStringLiteral("caacMissionSpeed"), QStringLiteral("caacGlobalSettingsScroller"));
     QVERIFY(speedField && speedField->setProperty("text", QStringLiteral("8")));
     QVERIFY(clickButtonScrolled(QStringLiteral("caacSyncWaypointSpeed"), QStringLiteral("caacGlobalSettingsScroller")));
+    QVERIFY(homeItem->speedSection()->specifyFlightSpeed());
+    QCOMPARE(homeItem->specifiedFlightSpeed(), 8.0);
     for (int i = 1; i <= 2; ++i) {
         auto* speed = qobject_cast<SpeedSection*>(mission->visualItems()->value<SimpleMissionItem*>(i)->speedSection());
         QVERIFY(speed && speed->specifyFlightSpeed());

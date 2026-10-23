@@ -36,7 +36,7 @@ Column {
     property int _flightSpeedRevision: 0
     function prepareUpload() { return globalSettings.prepareUpload() }
     function requestWaypointUpload() {
-        if (root._canTransfer) { updateWaypointsFactory.open() }
+        if (root._canTransfer && !root._deletedWaypointsPrompt) { updateWaypointsFactory.open() }
     }
     readonly property var simulationPreviewSegments: {
         void editorController.coordinateItems
@@ -79,8 +79,16 @@ Column {
                 property var attachedMap: null
                 path: [preview.modelData.coordinate1, preview.modelData.coordinate2]
                 visible: root.visible && root.enabled
-                line.color: root.planMasterController && root.planMasterController.missionController.uploadConfirmed
-                    ? QGroundControl.globalPalette.colorGreen : QGroundControl.globalPalette.mapMissionTrajectory
+                line.color: {
+                    if (Boolean(preview.modelData.terrainCollision)) {
+                        return QGroundControl.globalPalette.colorRed
+                    }
+                    const mission = root.planMasterController ? root.planMasterController.missionController : null
+                    if (!mission) { return QGroundControl.globalPalette.mapMissionTrajectory }
+                    void mission.uploadedRouteRevision
+                    return mission.isRouteSegmentUploaded(preview.modelData.coordinate1, preview.modelData.coordinate2, preview.modelData.flightSpeed)
+                        ? QGroundControl.globalPalette.colorGreen : QGroundControl.globalPalette.mapMissionTrajectory
+                }
                 line.width: ScreenTools.defaultFontPixelWidth * 0.3
                 z: QGroundControl.zOrderWaypointLines
                 Component.onDestruction: { if (attachedMap) { attachedMap.removeMapItem(line) } }
@@ -111,6 +119,44 @@ Column {
         const items = selectedWaypointItems.filter(point => point !== item)
         if (selected && _selectableWaypoints.indexOf(item) >= 0) { items.push(item) }
         selectedWaypointItems = items
+    }
+    property var _deletedWaypointsPrompt: null
+    property int _deletionSourceRevision: 0
+    readonly property bool canDeleteWaypoints: !missionUpdate.busy && !_deletedWaypointsPrompt
+        && root.planMasterController && !root.planMasterController.syncInProgress
+
+    function removeWaypoint(item) {
+        if (!canDeleteWaypoints) { return false }
+        waypointPopup.close()
+        editorController.cancelRouteOrientation()
+        if (!editorController.selectWaypoint(item) || !editorController.removeCurrentWaypoint()) { return false }
+        offerDeletedWaypointUpload()
+        return true
+    }
+
+    function removeSelectedWaypoints() {
+        if (!canDeleteWaypoints) { return false }
+        waypointPopup.close()
+        editorController.cancelRouteOrientation()
+        if (!editorController.removeWaypoints(selectedWaypointItems)) { return false }
+        selectedWaypointItems = []
+        offerDeletedWaypointUpload()
+        return true
+    }
+
+    function offerDeletedWaypointUpload() {
+        const vehicle = root._managerVehicle
+        if (!root._canTransfer || !vehicle || !vehicle.armed || !vehicle.airborne || root._deletedWaypointsPrompt) { return }
+        root._deletedWaypointsPrompt = deletedWaypointsFactory.open({
+            vehicleAtOpen: vehicle,
+            masterAtOpen: root.planMasterController,
+            revisionAtOpen: root._deletionSourceRevision
+        })
+    }
+
+    Connections {
+        target: editorController
+        function onHistoryChanged() { ++root._deletionSourceRevision }
     }
     readonly property var _managerVehicle: planMasterController ? planMasterController.managerVehicle : null
     readonly property bool _canTransfer: !missionUpdate.busy && planMasterController && !planMasterController.offline
@@ -239,7 +285,7 @@ Column {
         _pickingHome = true
     }
     function centerPlannedHome() { editorController.centerHomeOnRoute() }
-    function confirmClearWaypoints() { clearWaypointsFactory.open() }
+    function confirmClearWaypoints() { if (root.canDeleteWaypoints) { clearWaypointsFactory.open() } }
     function confirmGoto(coordinate) {
         const vehicle = QGroundControl.multiVehicleManager.activeVehicle
         if (!vehicle || !vehicle.armed || !vehicle.airborne || !vehicle.supports.guidedMode) { return }
@@ -796,12 +842,8 @@ Column {
             Layout.minimumWidth: 0
             pointSize: ScreenTools.smallFontPointSize
             text: qsTr("Delete selected (%1)").arg(root.selectedWaypointCount)
-            enabled: root.selectedWaypointCount > 0 && root.planMasterController && !root.planMasterController.syncInProgress
-            onClicked: {
-                waypointPopup.close()
-                editorController.cancelRouteOrientation()
-                if (editorController.removeWaypoints(root.selectedWaypointItems)) { root.selectedWaypointItems = [] }
-            }
+            enabled: root.selectedWaypointCount > 0 && root.canDeleteWaypoints
+            onClicked: root.removeSelectedWaypoints()
         }
     }
 
@@ -909,13 +951,9 @@ Column {
                     QGCButton {
                         objectName: "caacRemoveWaypoint_" + card.object.sequenceNumber
                         text: qsTr("Delete")
-                        enabled: card.object.command === 16 || card.object.isLandCommand
+                        enabled: (card.object.command === 16 || card.object.isLandCommand) && root.canDeleteWaypoints
                         heightFactor: 0.2
-                        onClicked: {
-                            waypointPopup.close()
-                            editorController.cancelRouteOrientation()
-                            if (editorController.selectWaypoint(card.object)) { editorController.removeCurrentWaypoint() }
-                        }
+                        onClicked: root.removeWaypoint(card.object)
                     }
                 }
             }
@@ -993,6 +1031,39 @@ Column {
         objectName: "caacMissionUpdateController"
         onFinished: (success, message) => {
             if (!success) { QGroundControl.showMessageDialog(mainWindow, qsTr("Update waypoints"), message) }
+        }
+    }
+    QGCPopupDialogFactory {
+        id: deletedWaypointsFactory
+        dialogComponent: Component {
+            QGCPopupDialog {
+                id: deletionDialog
+                objectName: "caacUploadDeletedWaypointsDialog"
+                title: qsTr("Upload waypoint deletion")
+                buttons: Dialog.Yes | Dialog.No
+                property var vehicleAtOpen: null
+                property var masterAtOpen: null
+                property int revisionAtOpen: -1
+                readonly property bool sourceCurrent: root._canTransfer
+                    && vehicleAtOpen && vehicleAtOpen.armed && vehicleAtOpen.airborne
+                    && vehicleAtOpen === QGroundControl.multiVehicleManager.activeVehicle
+                    && root._managerVehicle === vehicleAtOpen && root.planMasterController === masterAtOpen
+                    && root._deletionSourceRevision === revisionAtOpen
+                acceptButtonEnabled: sourceCurrent
+                onSourceCurrentChanged: if (visible && !sourceCurrent) { close() }
+                onOpened: if (!sourceCurrent) { close() }
+                onClosed: if (root._deletedWaypointsPrompt === deletionDialog) { root._deletedWaypointsPrompt = null }
+                QGCLabel {
+                    width: Math.min(deletionDialog.maxContentAvailableWidth, ScreenTools.defaultFontPixelWidth * 42)
+                    wrapMode: Text.WordWrap
+                    text: qsTr("Upload the updated route and waypoint information? The aircraft will pause for the update. It will resume only if the mission was running. Choosing No keeps the edits locally.")
+                }
+                onAccepted: {
+                    if (sourceCurrent) {
+                        missionUpdate.updateDeletedWaypoints(masterAtOpen, QGroundControl.corePlugin.simulation)
+                    }
+                }
+            }
         }
     }
     QGCPopupDialogFactory {
@@ -1226,7 +1297,7 @@ Column {
             if (item && (item.command === 16 || item.command === 21) && root._dragStartCoordinate.isValid
                 && root._dragStartCoordinate.distanceTo(item.coordinate) > 0.01 && vehicle && vehicle.armed
                 && (vehicle.flightMode === vehicle.missionFlightMode || vehicle.flightMode === vehicle.pauseFlightMode)
-                && !missionUpdate.busy) {
+                && !missionUpdate.busy && !root._deletedWaypointsPrompt) {
                 updateWaypointsFactory.open()
             }
         }

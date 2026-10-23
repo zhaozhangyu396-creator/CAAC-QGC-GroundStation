@@ -5,6 +5,14 @@
 
 QGC_LOGGING_CATEGORY(FlightPathSegmentLog, "Plan.FlightPathSegment")
 
+void FlightPathSegment::setUploaded(bool uploaded)
+{
+    if (_uploaded != uploaded) {
+        _uploaded = uploaded;
+        emit uploadedChanged();
+    }
+}
+
 FlightPathSegment::FlightPathSegment(SegmentType segmentType, const QGeoCoordinate& coord1, double amslCoord1Alt, const QGeoCoordinate& coord2, double amslCoord2Alt, bool queryTerrainData, QObject* parent)
     : QObject           (parent)
     , _coord1           (coord1)
