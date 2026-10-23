@@ -3719,7 +3719,7 @@ A lower value leads to smoother vehicle motions but also limited agility.</sourc
     </message>
     <message>
       <source>Maximum power altitude, relative to the home location</source>
-      <translation>最大功率高度，相对于家乡位置</translation>
+      <translation>最大功率高度，相对于起飞点位置</translation>
     </message>
     <message>
       <source>Maximum rate when releasing line</source>
@@ -5212,7 +5212,7 @@ Only active (if enabled) in height-rate controlled modes.</source>
     </message>
     <message>
       <source>Return to closest safe point (home or rally point) via direct path.</source>
-      <translation>通过直接路径返回最近的安全点（家乡或集结点）。</translation>
+      <translation>通过直接路径返回最近的安全点（起飞点或集结点）。</translation>
     </message>
     <message>
       <source>Return-to-Launch speed default.  If zero use WP_SPEED or CRUISE_SPEED.</source>
@@ -8235,7 +8235,7 @@ This parameter has no effect if blending is active.</source>
     </message>
     <message>
       <source>away from home</source>
-      <translation>远离家乡</translation>
+      <translation>远离起飞点</translation>
     </message>
     <message>
       <source>battery current in the drag reference test</source>

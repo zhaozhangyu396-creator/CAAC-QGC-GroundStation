@@ -3712,7 +3712,7 @@ Setting this parameter to 0 disables the check</source>
     </message>
     <message>
       <source>Maximum soaring altitude, relative to the home location</source>
-      <translation>相对于家乡位置的最大翱翔高度</translation>
+      <translation>相对于起飞点位置的最大翱翔高度</translation>
     </message>
     <message>
       <source>Maximum tangential velocity setting for generating the follow orbit trajectory</source>

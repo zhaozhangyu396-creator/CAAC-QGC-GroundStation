@@ -3858,7 +3858,7 @@ this time before considering gripper actuation successful and publish a
     </message>
     <message>
       <source>Minimum soaring altitude, relative to the home location</source>
-      <translation>相对于家乡位置的最低翱翔高度</translation>
+      <translation>相对于起飞点位置的最低翱翔高度</translation>
     </message>
     <message>
       <source>Minimum throttle percentage used in all modes except manual, provided THR_PASS_STAB is not set. Negative values allow reverse thrust if hardware supports it.</source>

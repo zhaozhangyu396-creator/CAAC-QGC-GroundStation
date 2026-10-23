@@ -6872,7 +6872,7 @@ before takeoff using gyro data.</source>
     </message>
     <message>
       <source>This is the distance from Home that the final approach waypoint is set. The waypoint point will be in the opposite direction of takeoff (the direction the plane is facing when the plane sets its takeoff heading)</source>
-      <translation>这是设置的最终进近航路点距家乡的距离。航路点将位于起飞的相反方向（飞机设定起飞航向时飞机所面对的方向）</translation>
+      <translation>这是设置的最终进近航路点距起飞点的距离。航路点将位于起飞的相反方向（飞机设定起飞航向时飞机所面对的方向）</translation>
     </message>
     <message>
       <source>This is the extra throttle added in schedule elements marked as needing a throttle boost</source>

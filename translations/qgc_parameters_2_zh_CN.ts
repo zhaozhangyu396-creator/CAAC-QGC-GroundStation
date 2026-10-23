@@ -5216,7 +5216,7 @@ is expected to change quickly over time.</source>
     </message>
     <message>
       <source>Return to closest safe point other than home (mission landing pattern or rally point), via direct path. If no mission landing or rally points are defined return home via direct path. Always chose closest safe landing point if vehicle is a VTOL in hover mode.</source>
-      <translation>通过直接路径返回除家外最近的安全点（任务着陆点或集结点）。如果没有定义任务着陆点或集结点，则通过直接路径返回家园。如果车辆是处于悬停模式的 VTOL，请始终选择最近的安全着陆点。</translation>
+      <translation>通过直接路径返回除起飞点外最近的安全点（任务着陆点或集结点）。如果没有定义任务着陆点或集结点，则通过直接路径返回起飞点。如果车辆是处于悬停模式的 VTOL，请始终选择最近的安全着陆点。</translation>
     </message>
     <message>
       <source>Reverse</source>

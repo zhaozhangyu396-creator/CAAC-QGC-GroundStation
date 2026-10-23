@@ -1422,7 +1422,7 @@ Note: certain drivers such as the GPS can determine the Baudrate automatically.<
     </message>
     <message>
       <source>Controls if Home is included as a Rally point (i.e. as a safe landing place) for RTL</source>
-      <translation>控制是否将家乡作为 RTL 的集结点（即作为安全着陆点）</translation>
+      <translation>控制是否将起飞点作为 RTL 的集结点（即作为安全着陆点）</translation>
     </message>
     <message>
       <source>Controls motor mixing for multicopters.  Not used for Tri or Traditional Helicopters.</source>
@@ -5214,7 +5214,7 @@ throttle and attitude or rate piloting.</source>
     </message>
     <message>
       <source>Return to closest safe point other than home (mission landing pattern or rally point), via direct path. If no mission landing or rally points are defined return home via direct path. Always choose closest safe landing point if vehicle is a VTOL in hover mode.</source>
-      <translation>通过直接路径返回除家外最近的安全点（任务着陆点或集结点）。如果没有定义任务着陆点或集结点，则通过直接路径返回家园。如果车辆是处于悬停模式的 VTOL，请始终选择最近的安全着陆点。</translation>
+      <translation>通过直接路径返回除起飞点外最近的安全点（任务着陆点或集结点）。如果没有定义任务着陆点或集结点，则通过直接路径返回起飞点。如果车辆是处于悬停模式的 VTOL，请始终选择最近的安全着陆点。</translation>
     </message>
     <message>
       <source>ReturnToLaunch</source>
@@ -7545,7 +7545,7 @@ to represent a physical ground location on Earth.</source>
     </message>
     <message>
       <source>Time (in milliseconds) to loiter above home before beginning final descent</source>
-      <translation>开始最终下降之前在家乡上空盘旋的时间（以毫秒为单位）</translation>
+      <translation>开始最终下降之前在起飞点上空盘旋的时间（以毫秒为单位）</translation>
     </message>
     <message>
       <source>Time based, on command</source>

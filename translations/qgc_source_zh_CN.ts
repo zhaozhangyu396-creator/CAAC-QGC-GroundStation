@@ -6005,6 +6005,14 @@ Click Ok to start the auto-tuning process.
       <source>Upload the new waypoint positions? The aircraft will pause, upload, and continue from its previous target waypoint. Cancelling keeps the edits locally.</source>
       <translation>是否上传新的航点位置？确认后将自动暂停、上传，并从原目标航点继续飞行。取消后仅保留本地编辑。</translation>
     </message>
+    <message>
+      <source>Upload waypoint deletion</source>
+      <translation>上传航点删除结果</translation>
+    </message>
+    <message>
+      <source>Upload the updated route and waypoint information? The aircraft will pause for the update. It will resume only if the mission was running. Choosing No keeps the edits locally.</source>
+      <translation>是否上传更新后的航线和航点信息？飞行器将暂停以完成更新，仅在更新前任务正在执行时恢复飞行。选择“否”将仅在本地保留修改。</translation>
+    </message>
 </context>
   <context>
     <name>CaacRouteEditorController</name>
@@ -6226,6 +6234,22 @@ Click Ok to start the auto-tuning process.
     <message>
         <source>Select an ordinary waypoint to overwrite.</source>
         <translation>请选择要覆盖的普通航点。</translation>
+    </message>
+    <message>
+      <source>Check mission flight speed.</source>
+      <translation>请检查任务航速。</translation>
+    </message>
+    <message>
+      <source>Set the landing point in the planning view.</source>
+      <translation>请在规划界面设置降落点。</translation>
+    </message>
+    <message>
+      <source>Move the landing point past special commands in the original mission editor.</source>
+      <translation>请在原始任务编辑器中将降落点移至特殊命令之后。</translation>
+    </message>
+    <message>
+      <source>Unable to move the selected waypoint to the landing position.</source>
+      <translation>无法将所选航点移至降落位置。</translation>
     </message>
 </context>
   <context>
@@ -14678,6 +14702,10 @@ VTOL</source>
       <location filename="../src/QmlControls/MapNames.qml" line="22"/>
       <source>Terrarium elevation</source>
       <translation>Terrarium 高程数据</translation>
+    </message>
+    <message>
+      <source>Gaode</source>
+      <translation>高德地图</translation>
     </message>
   </context>
   <context>
@@ -26681,6 +26709,10 @@ If a vehicle still has this key configured, you will no longer be able to commun
         <source>Synchronize existing waypoint altitudes</source>
         <translation>同步已设航点高度</translation>
     </message>
+    <message>
+      <source>Initial mission speed</source>
+      <translation>任务初始速度</translation>
+    </message>
 </context>
 <context>
     <name>CaacCoordinateField</name>
@@ -26944,6 +26976,22 @@ altitude</source>
     <message>
       <source>All waypoints</source>
       <translation>全部航点</translation>
+    </message>
+    <message>
+      <source>The aircraft did not reach the requested altitude. Check the flight data and try again.</source>
+      <translation>飞行器未达到指定高度，请检查飞行数据后重试。</translation>
+    </message>
+    <message>
+      <source>The aircraft did not accept the altitude change.</source>
+      <translation>飞行器未接受高度更改指令。</translation>
+    </message>
+    <message>
+      <source>Changing current flight altitude…</source>
+      <translation>正在更改当前飞行高度…</translation>
+    </message>
+    <message>
+      <source>The aircraft will pause the mission and change its current altitude. Waypoint altitudes are unchanged.</source>
+      <translation>飞行器将暂停任务并更改当前高度，航点高度保持不变。</translation>
     </message>
 </context>
   <context>
@@ -27270,6 +27318,10 @@ altitude</source>
     <message>
         <source>Only waypoint positions and flight speeds can be updated during flight. Pause and upload other mission changes manually.</source>
         <translation>飞行中仅支持更新航点位置和飞行速度，其他任务变更请暂停后手动上传。</translation>
+    </message>
+    <message>
+      <source>Only waypoint deletion can be uploaded with this operation. The current target must have a safe remaining waypoint.</source>
+      <translation>此操作仅支持上传航点删除结果，当前目标必须能安全地转移至剩余航点。</translation>
     </message>
 </context>
 <context>
@@ -29529,6 +29581,30 @@ altitude</source>
     <message>
         <source>The mission structure changed. The speed update was cancelled.</source>
         <translation>任务结构已变化，已取消航速更新。</translation>
+    </message>
+    <message>
+      <source>The aircraft is not ready to return to the uploaded landing point.</source>
+      <translation>飞行器尚未准备好飞往已上传的降落点。</translation>
+    </message>
+    <message>
+      <source>The uploaded mission has no landing point.</source>
+      <translation>已上传的任务中没有降落点。</translation>
+    </message>
+    <message>
+      <source>Returning to the uploaded landing point.</source>
+      <translation>正在飞往已上传的降落点。</translation>
+    </message>
+    <message>
+      <source>Waypoints updated. The mission remains paused.</source>
+      <translation>航点已更新，任务保持暂停。</translation>
+    </message>
+    <message>
+      <source>The uploaded landing point changed. The return was cancelled.</source>
+      <translation>已上传的降落点发生变化，已取消返回。</translation>
+    </message>
+    <message>
+      <source>The waypoint deletion cannot preserve a safe mission target. The mission remains paused.</source>
+      <translation>删除这些航点后无法保留安全的任务目标，任务保持暂停。</translation>
     </message>
 </context>
   <context>
@@ -33806,6 +33882,25 @@ Source: %6 (session %7); destination: %8 (session %9)</source>
     <message>
       <source>俯仰零点</source>
       <translation>俯仰零点</translation>
+    </message>
+  </context>
+  <context>
+    <name>Gcj02TileReply</name>
+    <message>
+      <source>Invalid map tile coordinates.</source>
+      <translation>地图瓦片坐标无效。</translation>
+    </message>
+    <message>
+      <source>Map tile request cancelled.</source>
+      <translation>已取消地图瓦片请求。</translation>
+    </message>
+    <message>
+      <source>Map tile image could not be decoded.</source>
+      <translation>无法解码地图瓦片图像。</translation>
+    </message>
+    <message>
+      <source>Map tile reprojection failed.</source>
+      <translation>地图瓦片坐标纠偏失败。</translation>
     </message>
   </context>
 </TS>

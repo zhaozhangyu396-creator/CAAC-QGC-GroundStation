@@ -548,7 +548,7 @@ flag is set back to false</source>
     </message>
     <message>
       <source>Altitude at which to use the ground steering controller on the rudder. If non-zero then the STEER2SRV controller will be used to control the rudder for altitudes within this limit of the home altitude.</source>
-      <translation>使用方向舵上的地面转向控制器的高度。如果非零，则 STEER2SRV 控制器将用于控制舵的高度在家乡高度限制内。</translation>
+      <translation>使用方向舵上的地面转向控制器的高度。如果非零，则 STEER2SRV 控制器将用于控制舵的高度在起飞点高度限制内。</translation>
     </message>
     <message>
       <source>Altitude error threshold for quad-chute triggering during fixed-wing flight.
