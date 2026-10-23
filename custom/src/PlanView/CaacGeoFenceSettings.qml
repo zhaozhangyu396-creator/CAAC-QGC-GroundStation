@@ -25,6 +25,14 @@ ColumnLayout {
     spacing: ScreenTools.defaultFontPixelHeight * 0.5
     QGCPalette { id: palette }
 
+    function scheduleFitPreview() { fitPreviewTimer.restart() }
+    Timer {
+        id: fitPreviewTimer
+        objectName: "caacFenceFitPreviewTimer"
+        interval: 0
+        repeat: false
+        onTriggered: root.fitPreview()
+    }
     function fitPreview() {
         const map = root.previewMap
         if (!controller || !map || !map.mapReady) { return }
@@ -53,8 +61,10 @@ ColumnLayout {
     }
     Connections {
         target: root.controller
-        function onContainsItemsChanged() { Qt.callLater(root.fitPreview) }
-        function onSyncInProgressChanged() { if (!root.controller.syncInProgress) { Qt.callLater(root.fitPreview) } }
+        function onContainsItemsChanged() { root.scheduleFitPreview() }
+        function onSyncInProgressChanged() {
+            if (root.controller && !root.controller.syncInProgress) { root.scheduleFitPreview() }
+        }
     }
     RowLayout {
         Layout.fillWidth: true
@@ -181,7 +191,7 @@ ColumnLayout {
             const home = root.master.missionController.plannedHomePosition
             if (home.isValid) { center = home }
         }
-        onMapReadyChanged: if (mapReady) { Qt.callLater(root.fitPreview) }
+        onMapReadyChanged: if (mapReady) { root.scheduleFitPreview() }
         function fitCoordinates(coordinates) { fit.fitMapViewportToAllCoordinates(coordinates) }
         MapFitFunctions {
             id: fit

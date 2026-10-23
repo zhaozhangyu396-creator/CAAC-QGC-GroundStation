@@ -332,6 +332,33 @@ void CaacPlanningInteractionUITest::_batteryAndFenceSettings()
                         for (int i = 0; i < savedFence.size(); ++i) {
                             QVERIFY(QGCGeo::geodesicDistance(restoredFence[i], savedFence[i]) < 0.02);
                         }
+                        const QPointer<QQuickItem> fencePage = fenceWidget;
+                        const QPointer<QQuickItem> preview =
+                            findVisibleItemScrolled(QStringLiteral("caacFencePreviewMap"), scroller);
+                        const QPointer<QObject> fitTimer =
+                            fenceWidget->findChild<QObject*>(QStringLiteral("caacFenceFitPreviewTimer"));
+                        const QPointer<QQuickItem> settingsMenu =
+                            findVisibleItem(_rootItem, QStringLiteral("caacSettingsMenu"));
+                        QVERIFY(preview && fitTimer && settingsMenu);
+                        QTRY_VERIFY_WITH_TIMEOUT(preview->property("mapReady").toBool(), TestTimeout::mediumMs());
+                        QTRY_VERIFY_WITH_TIMEOUT(!fitTimer->property("running").toBool(), TestTimeout::mediumMs());
+                        QSignalSpy pendingFit(fitTimer.data(), SIGNAL(triggered()));
+                        QVERIFY(pendingFit.isValid());
+                        fence->removeAll();
+                        QCOMPARE(fence->polygons()->count(), 0);
+                        QVERIFY(fitTimer->property("running").toBool());
+                        QVERIFY(QMetaObject::invokeMethod(settingsMenu.data(), "togglePage", Qt::DirectConnection,
+                                                          Q_ARG(QVariant, QVariant(QStringLiteral("Preferences")))));
+                        QCOMPARE(settingsMenu->property("selectedPage").toString(), QStringLiteral("Preferences"));
+                        // Destroy the Loader's old page before dispatching its pending preview refresh.
+                        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+                        QVERIFY(fencePage.isNull() && preview.isNull() && fitTimer.isNull());
+                        QVERIFY(pendingFit.isEmpty());
+                        QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacPreferences")));
+                        QSignalSpy nextFrame(_window, &QQuickWindow::frameSwapped);
+                        _window->update();
+                        QTRY_VERIFY_WITH_TIMEOUT(!nextFrame.isEmpty(), TestTimeout::mediumMs());
+                        QVERIFY(pendingFit.isEmpty());
                     });
 }
 
