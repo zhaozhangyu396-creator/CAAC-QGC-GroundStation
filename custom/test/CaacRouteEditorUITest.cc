@@ -217,6 +217,16 @@ void CaacRouteEditorUITest::_deleteWaypointsDuringFlight()
         QVERIFY(editor->addWaypoint(home.atDistanceAndAzimuth(1000 + i * 100, 90)));
         mission->visualItems()->value<SimpleMissionItem*>(i + 1)->altitude()->setRawValue(2);
     }
+    bool exercisesWireTruncation = false;
+    for (int i = 1; i < mission->visualItems()->count(); ++i) {
+        const auto coordinate = mission->visualItems()->value<SimpleMissionItem*>(i)->coordinate();
+        for (const double value : {coordinate.latitude(), coordinate.longitude()}) {
+            const double scaled = value * 1e7;
+            exercisesWireTruncation = exercisesWireTruncation || static_cast<int32_t>(scaled) != qRound64(scaled);
+        }
+    }
+    QVERIFY2(exercisesWireTruncation,
+             "Deletion upload must cover fractional coordinates that distinguish wire truncation from rounding");
     auto settings = CaacSimulationController::defaults();
     settings["takeoffHeight"] = 2.0;
     settings["verticalSpeed"] = 10.0;

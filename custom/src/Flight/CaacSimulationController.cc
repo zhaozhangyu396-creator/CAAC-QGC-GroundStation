@@ -566,8 +566,10 @@ bool CaacSimulationController::upload(PlanMasterController* plan, bool preserveP
             wire.param2 = item->param2();
             wire.param3 = item->param3();
             wire.param4 = item->param4();
-            wire.x = static_cast<int32_t>(qRound64(item->param5() * 1e7));
-            wire.y = static_cast<int32_t>(qRound64(item->param6() * 1e7));
+            // Match the actual PlanManager upload so strict deletion matching sees identical wire coordinates.
+            const double coordinateScale = item->frame() == MAV_FRAME_MISSION ? 1.0 : 1e7;
+            wire.x = static_cast<int32_t>(item->param5() * coordinateScale);
+            wire.y = static_cast<int32_t>(item->param6() * coordinateScale);
             wire.z = item->param7();
             wireMission.insert(wire.seq, wire);
         }

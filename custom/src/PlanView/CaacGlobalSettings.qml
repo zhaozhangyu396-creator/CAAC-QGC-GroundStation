@@ -23,8 +23,9 @@ Item {
         if (editor.planMasterController) {
             QGroundControl.corePlugin.initializeDefaultPlan(editor.planMasterController)
         }
+        // Store the selected points before a new mission-speed command renumbers their sequences.
+        if ((simulationInputsEdited || simulationSettings.draftDirty) && !saveSimulationSettings()) { return false }
         return saveMissionSpeed()
-            && ((!simulationInputsEdited && !simulationSettings.draftDirty) || saveSimulationSettings())
     }
     readonly property var _points: routeController.coordinateItems
     readonly property var _home: _points.length ? _points[0].coordinate : QtPositioning.coordinate()
