@@ -2,12 +2,16 @@
 
 #include <algorithm>
 
+#include <QtCore/QFile>
 #include <QtCore/QScopeGuard>
+#include <QtCore/QTemporaryDir>
 #include <QtQml/QQmlProperty>
 #include <QtQuick/QQuickItem>
 #include <QtTest/QTest>
 
 #include "Fact.h"
+#include "FirmwareUpgradeController.h"
+#include "QGCFileDownload.h"
 #include "ScreenToolsController.h"
 #include "SettingsManager.h"
 #include "VideoSettings.h"
@@ -25,6 +29,27 @@ void FirmwareUpgradeUITest::_longPortNameFits_data()
 void FirmwareUpgradeUITest::_longPortNameFits()
 {
     QFETCH(int, pageWidth);
+    QTemporaryDir metadata;
+    QVERIFY(metadata.isValid());
+    const auto writeMetadata = [&](const QString& name, const QByteArray& body) {
+        QFile file(metadata.filePath(name));
+        return file.open(QIODevice::WriteOnly) && file.write(body) == body.size();
+    };
+    QVERIFY(writeMetadata(QStringLiteral("firmware-layout-releases.json"),
+                          QByteArrayLiteral("[{\"name\":\"v1.15.2-layout\",\"prerelease\":false},"
+                                            "{\"name\":\"v1.16.0-layout-beta\",\"prerelease\":true}]")));
+    QVERIFY(writeMetadata(QStringLiteral("firmware-layout-manifest.json"), QByteArrayLiteral("{\"firmware\":[]}")));
+    const QString previousReleases = FirmwareUpgradeController::_px4ReleasesUrlForTesting;
+    const QString previousManifest = FirmwareUpgradeController::_apmManifestUrlForTesting;
+    FirmwareUpgradeController::_px4ReleasesUrlForTesting =
+        QUrl::fromLocalFile(metadata.filePath(QStringLiteral("firmware-layout-releases.json"))).toString();
+    FirmwareUpgradeController::_apmManifestUrlForTesting =
+        QUrl::fromLocalFile(metadata.filePath(QStringLiteral("firmware-layout-manifest.json"))).toString();
+    const auto restoreMetadata = qScopeGuard([this, previousReleases, previousManifest]() {
+        stopUI();
+        FirmwareUpgradeController::_px4ReleasesUrlForTesting = previousReleases;
+        FirmwareUpgradeController::_apmManifestUrlForTesting = previousManifest;
+    });
     startUI();
     if (QTest::currentTestFailed()) {
         return;
@@ -34,6 +59,14 @@ void FirmwareUpgradeUITest::_longPortNameFits()
                                 QStringLiteral("vehicleConfig_sidebarFlickable")));
     auto* page = findVisibleItem(_rootItem, QStringLiteral("firmwareUpgrade_page"));
     QVERIFY(page);
+    auto* controller = page->findChild<FirmwareUpgradeController*>();
+    QVERIFY(controller);
+    QTRY_COMPARE_WITH_TIMEOUT(controller->px4StableVersion(), QStringLiteral("v1.15.2-layout"), TestTimeout::shortMs());
+    QTRY_COMPARE_WITH_TIMEOUT(controller->px4BetaVersion(), QStringLiteral("v1.16.0-layout-beta"),
+                              TestTimeout::shortMs());
+    QTRY_VERIFY_WITH_TIMEOUT(!controller->property("downloadingFirmwareList").toBool() &&
+                                 controller->findChildren<QGCFileDownload*>().isEmpty(),
+                             TestTimeout::shortMs());
     QVERIFY(page->setProperty("availableWidth", pageWidth));
     auto* loader = findItem(page, QStringLiteral("setupPage_contentLoader"));
     QVERIFY(loader);

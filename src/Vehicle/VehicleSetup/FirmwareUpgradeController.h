@@ -25,6 +25,7 @@ class FirmwareUpgradeController : public QObject
     QML_ELEMENT
 #ifdef QGC_UNITTEST_BUILD
     friend class FirmwareUpgradeControllerTest; // Unit test
+    friend class FirmwareUpgradeUITest;
 #endif
 public:
         typedef enum {
@@ -185,6 +186,10 @@ private slots:
     void _portsAvailable                    (const QVariantList& ports);
 
 private:
+#ifdef QGC_UNITTEST_BUILD
+    static QString _px4ReleasesUrlForTesting;
+    static QString _apmManifestUrlForTesting;
+#endif
     QHash<FirmwareIdentifier, QString>* _firmwareHashForBoardId(int boardId);
     void _getFirmwareFile           (FirmwareIdentifier firmwareId);
     void _downloadFirmware          (void);
