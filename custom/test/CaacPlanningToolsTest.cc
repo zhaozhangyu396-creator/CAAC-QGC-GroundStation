@@ -35,6 +35,9 @@ private slots:
     void _advancedWaypointProperties();
     void _missionSpeedTransaction();
     void _legFlightSpeeds();
+    void _scopedFlightSpeeds();
+    void _scopedFlightSpeedCommandTypes_data();
+    void _scopedFlightSpeedCommandTypes();
     void _orientationPreview();
     void _quickWaypointOperations();
     void _relativeEndpointEditing();
@@ -1224,6 +1227,157 @@ void CaacPlanningToolsTest::_missionSpeedTransaction()
     planController()->removeAll();
     planController()->loadFromFile(file);
     QCOMPARE(planController()->saveToJson(), edited);
+}
+
+void CaacPlanningToolsTest::_scopedFlightSpeeds()
+{
+    auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
+    QVERIFY(plugin);
+    CaacRouteEditorController editor;
+    editor.setPlanMasterController(planController());
+    auto* mission = missionController();
+    const QGeoCoordinate home(30, 120, 100);
+    mission->setHomePosition(home);
+    for (int i = 1; i <= 4; ++i) {
+        QVERIFY(editor.addWaypoint(home.atDistanceAndAzimuth(i * 100, 90)));
+    }
+    QVERIFY(editor.setMissionFlightSpeed(true, 5));
+    auto* first = mission->visualItems()->value<SimpleMissionItem*>(1);
+    auto* second = mission->visualItems()->value<SimpleMissionItem*>(2);
+    auto* third = mission->visualItems()->value<SimpleMissionItem*>(3);
+    QVERIFY(first && second && third);
+    first->speedSection()->flightSpeed()->setRawValue(7);
+    first->speedSection()->setSpecifyFlightSpeed(true);
+    second->speedSection()->flightSpeed()->setRawValue(5);
+    second->speedSection()->setSpecifyFlightSpeed(true);
+    auto* explicitSpeed = qobject_cast<SimpleMissionItem*>(mission->insertSimpleMissionItem({}, 2, false));
+    QVERIFY(explicitSpeed);
+    explicitSpeed->setCommand(MAV_CMD_DO_CHANGE_SPEED);
+    explicitSpeed->missionItem().setParam1(1);
+    explicitSpeed->missionItem().setParam2(4.5);
+    explicitSpeed->missionItem().setParam3(-1);
+    explicitSpeed->missionItem().setFrame(MAV_FRAME_MISSION);
+    explicitSpeed->missionItem().setParam4(0);
+    explicitSpeed->missionItem().setParam5(0);
+    explicitSpeed->missionItem().setParam6(0);
+    explicitSpeed->missionItem().setParam7(0);
+    auto* jump =
+        qobject_cast<SimpleMissionItem*>(mission->insertSimpleMissionItem({}, mission->visualItems()->count(), false));
+    QVERIFY(jump);
+    jump->setCommand(MAV_CMD_DO_JUMP);
+    jump->missionItem().setParam1(first->sequenceNumber());
+    jump->missionItem().setParam2(2);
+    auto settings = CaacSimulationController::defaults();
+    settings["startSequence"] = second->sequenceNumber();
+    settings["returnSequence"] = third->sequenceNumber();
+    QVERIFY(editor.setSimulationSettings(settings));
+    QTRY_VERIFY_WITH_TIMEOUT(third->simpleFlightPathSegment(), TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(first->simpleFlightPathSegment()->flightSpeed(), 4.5, TestTimeout::mediumMs());
+    const QVariantList selected{QVariant::fromValue(static_cast<QObject*>(first))};
+    const auto before = planController()->saveToJson();
+    for (double invalid : {0.0, qQNaN(), 1e100}) {
+        QVERIFY(!plugin->setFlightWaypointSpeeds(planController(), selected, invalid, false).isEmpty());
+        QCOMPARE(planController()->saveToJson(), before);
+    }
+    QObject foreign;
+    QVERIFY(!plugin->setFlightWaypointSpeeds(planController(), {QVariant::fromValue(&foreign)}, 8, false).isEmpty());
+    QCOMPARE(planController()->saveToJson(), before);
+    QVERIFY(plugin->setFlightWaypointSpeeds(planController(), selected, 8, false).isEmpty());
+    auto* homeItem = mission->visualItems()->value<MissionSettingsItem*>(0);
+    QTRY_COMPARE_WITH_TIMEOUT(homeItem->simpleFlightPathSegment()->flightSpeed(), 5.0, TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(first->simpleFlightPathSegment()->flightSpeed(), 8.0, TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(second->simpleFlightPathSegment()->flightSpeed(), 5.0, TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(third->simpleFlightPathSegment()->flightSpeed(), 5.0, TestTimeout::mediumMs());
+    QCOMPARE(explicitSpeed->missionItem().param2(), 8.0);
+    QCOMPARE(jump->missionItem().param1(), double(first->sequenceNumber()));
+    QCOMPARE(jump->missionItem().param2(), 2.0);
+    QCOMPARE(editor.simulationSettings().value("startSequence").toInt(), second->sequenceNumber());
+    QCOMPARE(editor.simulationSettings().value("returnSequence").toInt(), third->sequenceNumber());
+
+    jump->missionItem().setParam1(first->sequenceNumber() + 1);
+    QVERIFY(plugin->setFlightWaypointSpeeds(planController(), selected, 9, true).isEmpty());
+    QTRY_COMPARE_WITH_TIMEOUT(homeItem->simpleFlightPathSegment()->flightSpeed(), 9.0, TestTimeout::mediumMs());
+    for (auto* item : {first, second, third}) {
+        QTRY_COMPARE_WITH_TIMEOUT(item->simpleFlightPathSegment()->flightSpeed(), 9.0, TestTimeout::mediumMs());
+    }
+    QCOMPARE(explicitSpeed->missionItem().param2(), 9.0);
+    QCOMPARE(jump->missionItem().param1(), double(first->sequenceNumber() + 1));
+    QCOMPARE(jump->missionItem().param2(), 2.0);
+}
+
+void CaacPlanningToolsTest::_scopedFlightSpeedCommandTypes_data()
+{
+    QTest::addColumn<bool>("fixedWing");
+    QTest::newRow("multirotor-groundspeed") << false;
+    QTest::newRow("fixedwing-airspeed") << true;
+}
+
+void CaacPlanningToolsTest::_scopedFlightSpeedCommandTypes()
+{
+    QFETCH(bool, fixedWing);
+    auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
+    QVERIFY(plugin);
+    PlanMasterController plan(MAV_AUTOPILOT_PX4, fixedWing ? MAV_TYPE_FIXED_WING : MAV_TYPE_QUADROTOR);
+    plan.setFlyView(false);
+    plan.start();
+    QCOMPARE(plan.controllerVehicle()->fixedWing(), fixedWing);
+    auto* mission = plan.missionController();
+    CaacRouteEditorController editor;
+    editor.setPlanMasterController(&plan);
+    const QGeoCoordinate home(30, 120, 100);
+    mission->setHomePosition(home);
+    for (int i = 1; i <= 3; ++i) {
+        QVERIFY(editor.addWaypoint(home.atDistanceAndAzimuth(i * 100, 90)));
+    }
+    QVERIFY(editor.setMissionFlightSpeed(true, 5));
+    auto* first = mission->visualItems()->value<SimpleMissionItem*>(1);
+    auto* second = mission->visualItems()->value<SimpleMissionItem*>(2);
+    QVERIFY(first && second);
+    const int horizontalType = fixedWing ? 0 : 1;
+    QList<SimpleMissionItem*> otherSpeeds;
+    const auto insertSpeed = [&](int type, double value, double relative) {
+        auto* item = qobject_cast<SimpleMissionItem*>(
+            mission->insertSimpleMissionItem({}, mission->visualItems()->indexOf(second), false));
+        if (!item) {
+            return item;
+        }
+        item->setCommand(MAV_CMD_DO_CHANGE_SPEED);
+        auto& command = item->missionItem();
+        command.setFrame(MAV_FRAME_MISSION);
+        command.setParam1(type);
+        command.setParam2(value);
+        command.setParam3(-1);
+        command.setParam4(relative);
+        command.setParam5(0);
+        command.setParam6(0);
+        command.setParam7(0);
+        return item;
+    };
+    for (int type : {1 - horizontalType, 2, 3}) {
+        auto* item = insertSpeed(type, type + 3, 0);
+        QVERIFY(item);
+        otherSpeeds.append(item);
+    }
+    QTRY_VERIFY_WITH_TIMEOUT(first->simpleFlightPathSegment(), TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(first->simpleFlightPathSegment()->flightSpeed(), 5.0, TestTimeout::mediumMs());
+    const QVariantList selected{QVariant::fromValue(static_cast<QObject*>(second))};
+    QVERIFY(plugin->setFlightWaypointSpeeds(&plan, selected, 8, false).isEmpty());
+    QTRY_COMPARE_WITH_TIMEOUT(first->simpleFlightPathSegment()->flightSpeed(), 5.0, TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(second->simpleFlightPathSegment(), TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(second->simpleFlightPathSegment()->flightSpeed(), 8.0, TestTimeout::mediumMs());
+    for (const auto* item : otherSpeeds) {
+        const auto& command = item->missionItem();
+        QCOMPARE(command.param2(), command.param1() + 3);
+        QCOMPARE(command.param3(), -1.0);
+        QCOMPARE(command.param4(), 0.0);
+    }
+    auto* relative = insertSpeed(horizontalType, 3, 1);
+    QVERIFY(relative);
+    const auto before = plan.saveToJson();
+    QVERIFY(!plugin->setFlightWaypointSpeeds(&plan, selected, 9, false).isEmpty());
+    QCOMPARE(plan.saveToJson(), before);
+    QVERIFY(!plugin->setFlightWaypointSpeeds(&plan, selected, 9, true).isEmpty());
+    QCOMPARE(plan.saveToJson(), before);
 }
 
 void CaacPlanningToolsTest::_legFlightSpeeds()

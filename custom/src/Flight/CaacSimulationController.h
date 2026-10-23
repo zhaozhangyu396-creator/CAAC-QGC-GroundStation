@@ -22,6 +22,7 @@ class CaacSimulationController : public QObject
     QML_ELEMENT
     QML_UNCREATABLE("Owned by the application plugin")
     Q_MOC_INCLUDE("Vehicle.h")
+    Q_MOC_INCLUDE("PlanMasterController.h")
     Q_PROPERTY(bool active READ active NOTIFY statusChanged)
     Q_PROPERTY(bool emergencyMode READ emergencyMode WRITE setEmergencyMode NOTIFY emergencyModeChanged)
     Q_PROPERTY(bool missionReady READ missionReady NOTIFY statusChanged)
@@ -30,6 +31,7 @@ class CaacSimulationController : public QObject
     Q_PROPERTY(double takeoffHeight READ takeoffHeight NOTIFY statusChanged)
     Q_PROPERTY(QString status READ status NOTIFY statusChanged)
     Q_PROPERTY(Vehicle* vehicle READ vehicle NOTIFY statusChanged)
+    Q_PROPERTY(PlanMasterController* planningPlan READ planningPlan NOTIFY statusChanged)
     Q_PROPERTY(int waypointNumberRevision READ waypointNumberRevision NOTIFY waypointNumbersChanged)
     Q_PROPERTY(int remainingLoops READ remainingLoops NOTIFY statusChanged)
     Q_PROPERTY(QVariantMap currentMissionDetails READ currentMissionDetails NOTIFY missionDetailsChanged)
@@ -60,6 +62,7 @@ public:
     QString status() const { return _status; }
 
     Vehicle* vehicle() const;
+    PlanMasterController* planningPlan() const;
     bool ownsVehicle(const Vehicle* vehicle) const;
 
     int waypointNumberRevision() const { return _waypointNumberRevision; }
@@ -75,7 +78,8 @@ public:
 
     Q_INVOKABLE int waypointNumber(int sequence, const QGeoCoordinate& coordinate) const;
     Q_INVOKABLE bool start(PlanMasterController* plan);
-    Q_INVOKABLE bool upload(PlanMasterController* plan, bool preserveProgress = false);
+    Q_INVOKABLE bool upload(PlanMasterController* plan, bool preserveProgress = false, bool speedChanges = false,
+                            double currentFlightSpeed = qQNaN());
     Q_INVOKABLE bool restart();
     Q_INVOKABLE bool beginManualControl();
     Q_INVOKABLE void endManualControl();
@@ -96,7 +100,7 @@ signals:
     void modeSwitchConfigurationChanged();
 
 private:
-    bool _prepareFlightPlan();
+    bool _prepareFlightPlan(bool speedChanges = false);
     void _tick();
     void _publish();
     void _setStatus(const QString& status);
@@ -137,6 +141,8 @@ private:
     bool _emergencyMode = false;
     bool _uploadSent = false;
     bool _preserveUploadProgress = false;
+    bool _preserveUploadSpeedChanges = false;
+    double _preserveUploadFlightSpeed = qQNaN();
     bool _missionReady = false;
     bool _settingsExplicit = false;
 

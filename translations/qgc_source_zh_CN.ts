@@ -26964,7 +26964,23 @@ altitude</source>
       <source>Enter a valid waypoint altitude.</source>
       <translation>请输入有效的航点高度。</translation>
     </message>
-  </context>
+      <message>
+        <source>Enter a valid waypoint flight speed.</source>
+        <translation>请输入有效的航点飞行速度。</translation>
+    </message>
+    <message>
+        <source>Select at least one ordinary waypoint.</source>
+        <translation>请至少选择一个普通航点。</translation>
+    </message>
+    <message>
+        <source>Unable to preserve the flight speeds of the other waypoints.</source>
+        <translation>无法保留其他航点的飞行速度，请检查航线速度设置。</translation>
+    </message>
+    <message>
+        <source>This mission contains speed or jump commands that cannot be safely updated.</source>
+        <translation>此任务包含无法保留进度更新的速度或跳转指令，请暂停后手动上传。</translation>
+    </message>
+</context>
   <context>
     <name>InstrumentValueLabel</name>
     <message>
@@ -27250,6 +27266,10 @@ altitude</source>
     <message>
         <source>Invalid heading command.</source>
         <translation>航向命令无效。</translation>
+    </message>
+    <message>
+        <source>Only waypoint positions and flight speeds can be updated during flight. Pause and upload other mission changes manually.</source>
+        <translation>飞行中仅支持更新航点位置和飞行速度，其他任务变更请暂停后手动上传。</translation>
     </message>
 </context>
 <context>
@@ -27814,6 +27834,54 @@ altitude</source>
     <message>
         <source>Later waypoint speed commands may override this speed.</source>
         <translation>后续航点的速度命令可能覆盖此航速。</translation>
+    </message>
+    <message>
+        <source>Apply to</source>
+        <translation>作用范围</translation>
+    </message>
+    <message>
+        <source>Current leg</source>
+        <translation>当前航段</translation>
+    </message>
+    <message>
+        <source>Selected waypoint</source>
+        <translation>指定航点</translation>
+    </message>
+    <message>
+        <source>All waypoints</source>
+        <translation>所有航点</translation>
+    </message>
+    <message>
+        <source>Target waypoint</source>
+        <translation>目标航点</translation>
+    </message>
+    <message>
+        <source>Waypoint %1</source>
+        <translation>航点 %1</translation>
+    </message>
+    <message>
+        <source>Aircraft or mission changed. Close this window and select again.</source>
+        <translation>飞行器或任务已变化，请关闭此窗口后重新选择。</translation>
+    </message>
+    <message>
+        <source>Changes the leg leaving the selected waypoint. Other waypoint speeds are preserved.</source>
+        <translation>修改所选航点飞往下一航点的速度，其他航段的速度保持不变。</translation>
+    </message>
+    <message>
+        <source>Changes all waypoint speeds, including the initial leg from takeoff.</source>
+        <translation>修改所有航点的速度，包括起飞点到首个航点的航段。</translation>
+    </message>
+    <message>
+        <source>The aircraft will pause, update the mission, and continue from its current target waypoint.</source>
+        <translation>飞行器将先暂停并更新任务，再从原目标航点继续飞行。</translation>
+    </message>
+    <message>
+        <source>Updating flight speeds…</source>
+        <translation>正在更新航速…</translation>
+    </message>
+    <message>
+        <source>No downloaded waypoints are available.</source>
+        <translation>没有可用的已下载航点。</translation>
     </message>
 </context>
 <context>
@@ -29453,6 +29521,14 @@ altitude</source>
 %1</source>
       <translation>航点上传失败，任务仍处于暂停状态。
 %1</translation>
+    </message>
+    <message>
+        <source>The aircraft did not accept the flight speed. The mission remains paused.</source>
+        <translation>飞行器未接受航速设置，任务保持暂停。</translation>
+    </message>
+    <message>
+        <source>The mission structure changed. The speed update was cancelled.</source>
+        <translation>任务结构已变化，已取消航速更新。</translation>
     </message>
 </context>
   <context>

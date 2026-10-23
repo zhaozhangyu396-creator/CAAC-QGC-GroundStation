@@ -49,7 +49,8 @@ public:
     bool load(const QMap<uint16_t, mavlink_mission_item_int_t>& mission, const QGeoCoordinate& home,
               const Options& options, QString& error, const QMap<int, WaypointOptions>& waypointOptions = {});
     bool updateMission(const QMap<uint16_t, mavlink_mission_item_int_t>& mission, const QGeoCoordinate& home,
-                       const Options& options, QString& error, const QMap<int, WaypointOptions>& waypointOptions);
+                       const Options& options, QString& error, const QMap<int, WaypointOptions>& waypointOptions,
+                       bool speedChanges = false, double currentFlightSpeed = qQNaN());
     bool jump(int sequence);
     bool restartMission();
     void advance(double seconds);
@@ -69,6 +70,8 @@ public:
     const QGeoCoordinate& home() const { return _home; }
 
     bool loaded() const { return !_items.isEmpty(); }
+
+    const QMap<uint16_t, mavlink_mission_item_int_t>& mission() const { return _items; }
 
     int remainingLoops() const;
 

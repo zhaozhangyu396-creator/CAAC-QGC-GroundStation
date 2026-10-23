@@ -8,6 +8,7 @@ target_sources(
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacRouteEditorUITest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacWaypointSnapUITest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacLegSpeedUITest.cc
+            ${CMAKE_CURRENT_SOURCE_DIR}/CaacFlightSpeedScopeUITest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacFlightDistanceTest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacFlightDataUITest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/CaacPlanningToolsTest.cc
@@ -36,7 +37,7 @@ if(WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
     endif()
     add_dependencies(${CMAKE_PROJECT_NAME} CaacFocusTestWindow)
 endif()
-add_qgc_test(CaacMissionUpdateControllerTest LABELS Unit MissionManager)
+add_qgc_test(CaacMissionUpdateControllerTest LABELS Unit MissionManager TIMEOUT 120)
 add_qgc_test(CaacActivationControllerTest LABELS Unit Utilities)
 add_qgc_test(
     CaacActivationUITest
@@ -119,6 +120,16 @@ add_qgc_test(
 )
 add_qgc_test(
     CaacLegSpeedUITest
+    LABELS
+    Integration
+    MissionManager
+    NoSanitizer
+    TIMEOUT
+    120
+    ${_caac_ui_env}
+)
+add_qgc_test(
+    CaacFlightSpeedScopeUITest
     LABELS
     Integration
     MissionManager

@@ -233,6 +233,14 @@ void MissionFlightStatusCalculator::recalc(QmlObjectListModel* visualItems,
         // Speed, VTOL states changes are processed last since they take affect on the next item
 
         double newSpeed = item->specifiedFlightSpeed();
+        if (simpleItem && simpleItem->command() == MAV_CMD_DO_CHANGE_SPEED) {
+            const bool hoverSpeed =
+                controllerVehicle->multiRotor() ||
+                (controllerVehicle->vtol() && _status.vtolMode == QGCMAVLink::VehicleClassMultiRotor);
+            if (simpleItem->missionItem().param1() != (hoverSpeed ? 1 : 0)) {
+                newSpeed = qQNaN();
+            }
+        }
         if (!qIsNaN(newSpeed)) {
             if (controllerVehicle->multiRotor()) {
                 _status.hoverSpeed = newSpeed;

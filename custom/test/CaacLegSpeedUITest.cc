@@ -1,4 +1,5 @@
 #include <QtCore/QPointer>
+#include <QtCore/QRegularExpression>
 #include <QtCore/QScopeGuard>
 #include <QtQuick/QQuickItem>
 #include <QtQuick/QQuickWindow>
@@ -115,6 +116,11 @@ void CaacLegSpeedUITest::_runtimeSpeedRefresh()
     auto* simulation = plugin->simulation();
     QVERIFY(simulation);
     const auto stop = qScopeGuard([simulation]() { simulation->stop(); });
+    // Optional host pressure backends are unavailable on some desktop runners.
+    ignoreLogMessage("Utilities.QGCSensors", QtWarningMsg,
+                     QRegularExpression(QStringLiteral("Failed to connect to pressure backend$")));
+    ignoreLogMessage("Utilities.QGCSensors", QtWarningMsg,
+                     QRegularExpression(QStringLiteral("Error Initializing Pressure Sensor$")));
     QVERIFY(simulation->start(master));
     QTRY_VERIFY_WITH_TIMEOUT(simulation->vehicle() && simulation->vehicle()->isInitialConnectComplete(),
                              TestTimeout::longMs());

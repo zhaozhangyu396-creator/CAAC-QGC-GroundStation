@@ -5,6 +5,7 @@
 
 #include <QtCore/QCoreApplication>
 
+#include "CaacMissionUpdateUtils.h"
 #include "QGCGeo.h"
 
 namespace {
@@ -148,22 +149,58 @@ bool CaacSimulationEngine::load(const QMap<uint16_t, mavlink_mission_item_int_t>
 
 bool CaacSimulationEngine::updateMission(const QMap<uint16_t, mavlink_mission_item_int_t>& mission,
                                          const QGeoCoordinate& home, const Options& options, QString& error,
-                                         const QMap<int, WaypointOptions>& waypointOptions)
+                                         const QMap<int, WaypointOptions>& waypointOptions, bool speedChanges,
+                                         double currentFlightSpeed)
 {
+    if (!std::isnan(currentFlightSpeed) &&
+        (!speedChanges || !std::isfinite(currentFlightSpeed) || currentFlightSpeed <= 0 || currentFlightSpeed > 100)) {
+        error = QCoreApplication::translate("CaacSimulationEngine", "Invalid speed command.");
+        return false;
+    }
     const auto equal = [](float left, float right) { return left == right || (std::isnan(left) && std::isnan(right)); };
-    bool same = mission.size() == _items.size() && home == _home && options == _missionOptions &&
-                waypointOptions == _waypointOptions;
-    for (auto it = mission.cbegin(); same && it != mission.cend(); ++it) {
-        const auto old = _items.constFind(it.key());
-        same = old != _items.cend() && old->command == it->command && old->frame == it->frame &&
-               old->autocontinue == it->autocontinue && equal(old->param1, it->param1) &&
-               equal(old->param2, it->param2) && equal(old->param3, it->param3) && equal(old->param4, it->param4) &&
-               equal(old->z, it->z);
+    bool same = home == _home && options == _missionOptions;
+    QMap<int, int> oldToNew;
+    int currentSequence = _state.sequence;
+    if (speedChanges && same) {
+        const auto mapping = CaacMissionUpdateUtils::speedUpdateMapping(_items, mission);
+        same = mapping.valid;
+        oldToNew = mapping.oldToNew;
+        currentSequence = oldToNew.value(_state.sequence, -1);
+        if (_state.finished && !_items.isEmpty() && _state.sequence > _items.lastKey() && !mission.isEmpty()) {
+            currentSequence = mission.lastKey() + 1;
+        }
+        same = same && currentSequence >= 0;
+        for (auto it = _jumpCounts.cbegin(); same && it != _jumpCounts.cend(); ++it) {
+            same = oldToNew.contains(it.key());
+        }
+        const WaypointOptions defaults{options.verticalSpeed, options.turnMode, options.climbMode};
+        for (auto it = _items.cbegin(); same && it != _items.cend(); ++it) {
+            if (it->command == MAV_CMD_NAV_WAYPOINT) {
+                same = oldToNew.contains(it.key()) && _waypointOptions.value(it.key(), defaults) ==
+                                                          waypointOptions.value(oldToNew.value(it.key()), defaults);
+            }
+        }
+    } else {
+        same = same && mission.size() == _items.size() && waypointOptions == _waypointOptions;
+        for (auto it = mission.cbegin(); same && it != mission.cend(); ++it) {
+            const auto old = _items.constFind(it.key());
+            same = old != _items.cend() && old->command == it->command && old->frame == it->frame &&
+                   old->autocontinue == it->autocontinue && equal(old->param1, it->param1) &&
+                   equal(old->param2, it->param2) && equal(old->param3, it->param3) && equal(old->param4, it->param4) &&
+                   equal(old->z, it->z);
+        }
     }
     if (!same) {
-        error = QCoreApplication::translate(
-            "CaacSimulationEngine",
-            "Only waypoint positions can be updated during flight. Pause and upload other mission changes manually.");
+        if (speedChanges) {
+            error = QCoreApplication::translate(
+                "CaacSimulationEngine",
+                "Only waypoint positions and flight speeds can be updated during flight. Pause and upload other "
+                "mission changes manually.");
+        } else {
+            error = QCoreApplication::translate("CaacSimulationEngine",
+                                                "Only waypoint positions can be updated during flight. Pause and "
+                                                "upload other mission changes manually.");
+        }
         return false;
     }
     auto updated = *this;
@@ -173,10 +210,35 @@ bool CaacSimulationEngine::updateMission(const QMap<uint16_t, mavlink_mission_it
     updated._options = _options;
     updated._state = _state;
     updated._jumpCounts = _jumpCounts;
+    if (speedChanges) {
+        updated._state.sequence = currentSequence;
+        updated._jumpCounts.clear();
+        for (auto it = _jumpCounts.cbegin(); it != _jumpCounts.cend(); ++it) {
+            updated._jumpCounts.insert(oldToNew.value(it.key()), it.value());
+        }
+        const auto prefixSpeed = [](const auto& items, int sequence, double initialSpeed) {
+            double speed = initialSpeed;
+            for (auto it = items.cbegin(); it != items.cend() && it.key() < sequence; ++it) {
+                if (it->command == MAV_CMD_DO_CHANGE_SPEED && it->param1 < 2) {
+                    speed = it->param2;
+                }
+            }
+            return speed;
+        };
+        const double previousSpeed = prefixSpeed(_items, _state.sequence, _missionOptions.horizontalSpeed);
+        const double newSpeed = prefixSpeed(mission, currentSequence, options.horizontalSpeed);
+        if (!std::isnan(currentFlightSpeed)) {
+            updated._options.horizontalSpeed = currentFlightSpeed;
+        } else if (previousSpeed != newSpeed) {
+            updated._options.horizontalSpeed = newSpeed;
+        }
+    }
     updated._wait = _wait;
     updated._returnLanding = _returnLanding;
     updated._takeoffAtCurrentPosition = _takeoffAtCurrentPosition;
-    updated.pause();
+    if (!speedChanges) {
+        updated.pause();
+    }
     *this = updated;
     return true;
 }

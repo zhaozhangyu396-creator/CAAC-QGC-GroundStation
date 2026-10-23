@@ -6,6 +6,7 @@
 
 #include <QtCore/QApplicationStatic>
 #include <QtCore/QJsonObject>
+#include <QtCore/QScopeGuard>
 #include <QtCore/QSettings>
 #include <QtCore/QTimer>
 #include <QtGui/QGuiApplication>
@@ -19,8 +20,10 @@
 #include "CaacExamAudio.h"
 #include "CaacFigureEightController.h"
 #include "CaacFlightDistance.h"
+#include "CaacMissionUpdateUtils.h"
 #include "CaacSimulationController.h"
 #include "FactMetaData.h"
+#include "FlightPathSegment.h"
 #include "LinkConfiguration.h"
 #include "LinkInterface.h"
 #include "MissionController.h"
@@ -35,6 +38,7 @@
 #include "RemoteIDManager.h"
 #include "RemoteIDSettings.h"
 #include "SimpleMissionItem.h"
+#include "SpeedSection.h"
 #include "UnitsSettings.h"
 #include "Vehicle.h"
 #include "VehicleLinkManager.h"
@@ -450,6 +454,282 @@ QString CaacCorePlugin::updateFlightWaypointAltitudes(PlanMasterController* cont
         item->altitude()->setRawValue(altitude);
     }
     mission->sendToVehicle();
+    return {};
+}
+
+QString CaacCorePlugin::setFlightWaypointSpeeds(PlanMasterController* controller, const QVariantList& selectedWaypoints,
+                                                double speed, bool allWaypoints)
+{
+    auto* mission = controller ? controller->missionController() : nullptr;
+    auto* model = mission ? mission->visualItems() : nullptr;
+    auto* settings = model && model->count() ? model->value<MissionSettingsItem*>(0) : nullptr;
+    auto* planningVehicle = controller ? controller->controllerVehicle() : nullptr;
+    if (!controller || !mission || !settings || !planningVehicle || _flightAltitudeUpdateTimer ||
+        controller->syncInProgress() || controller->property("caacMissionUpdateActive").toBool()) {
+        return tr("Wait for the aircraft and mission transfer to be ready.");
+    }
+    if (controller->property("caacRotationPreviewActive").toBool()) {
+        return QCoreApplication::translate("PlanMasterController",
+                                           "Confirm or cancel the orientation preview before saving or uploading.");
+    }
+    const int speedType = planningVehicle->multiRotor() ? 1 : 0;
+    if (!controller->offline()) {
+        auto* vehicle = MultiVehicleManager::instance()->activeVehicle();
+        if (!vehicle) {
+            return tr("Wait for the aircraft and mission transfer to be ready.");
+        }
+        if (controller->managerVehicle() != vehicle || !vehicle->isInitialConnectComplete()) {
+            return tr("Wait for the aircraft and mission transfer to be ready.");
+        }
+        const double maximum = speedType == 1 ? vehicle->maximumHorizontalSpeedMultirotorMetersSecond()
+                                              : vehicle->maximumEquivalentAirspeed();
+        const double minimum = speedType == 1 ? 0 : vehicle->minimumEquivalentAirspeed();
+        if ((std::isfinite(maximum) && speed > maximum) || (std::isfinite(minimum) && speed < minimum)) {
+            return tr("Enter a valid waypoint flight speed.");
+        }
+    }
+    if (!std::isfinite(speed) || speed <= 0 || speed > std::numeric_limits<float>::max()) {
+        return tr("Enter a valid waypoint flight speed.");
+    }
+
+    QList<SimpleMissionItem*> waypoints;
+    QList<SimpleMissionItem*> selected;
+    QList<SimpleMissionItem*> jumps;
+    for (int i = 1; i < model->count(); ++i) {
+        auto* item = model->value<SimpleMissionItem*>(i);
+        if (item && item->command() == MAV_CMD_DO_CHANGE_SPEED && item->missionItem().param1() == speedType) {
+            const auto& command = item->missionItem();
+            if (command.frame() != MAV_FRAME_MISSION || !command.autoContinue() || !std::isfinite(command.param2()) ||
+                command.param2() <= 0 || command.param3() != -1 || command.param4() != 0 || command.param5() != 0 ||
+                command.param6() != 0 || command.param7() != 0) {
+                return tr("This mission contains speed or jump commands that cannot be safely updated.");
+            }
+        }
+        if (item && item->command() == MAV_CMD_NAV_WAYPOINT) {
+            waypoints.append(item);
+        } else if (item && item->command() == MAV_CMD_DO_JUMP) {
+            jumps.append(item);
+        }
+    }
+    if (allWaypoints) {
+        selected = waypoints;
+    } else {
+        for (const auto& value : selectedWaypoints) {
+            auto* item = qobject_cast<SimpleMissionItem*>(value.value<QObject*>());
+            if (!item || !waypoints.contains(item) || selected.contains(item)) {
+                return tr("Select at least one ordinary waypoint.");
+            }
+            selected.append(item);
+        }
+    }
+    if (selected.isEmpty()) {
+        return tr("Select at least one ordinary waypoint.");
+    }
+
+    const auto absoluteSpeedCommand = [speedType](SimpleMissionItem* item) {
+        return item && item->command() == MAV_CMD_DO_CHANGE_SPEED && item->missionItem().param1() == speedType &&
+               item->missionItem().param4() == 0;
+    };
+    QHash<SimpleMissionItem*, double> outgoingSpeeds;
+    double inheritedSpeed =
+        speedType == 1 ? planningVehicle->defaultHoverSpeed() : planningVehicle->defaultCruiseSpeed();
+    SimpleMissionItem* previousWaypoint = nullptr;
+    for (int i = 0; i < model->count(); ++i) {
+        auto* item = model->value<VisualMissionItem*>(i);
+        auto* simple = qobject_cast<SimpleMissionItem*>(item);
+        const bool speedCommand = simple && simple->command() == MAV_CMD_DO_CHANGE_SPEED;
+        const double specified = !speedCommand || absoluteSpeedCommand(simple) ? item->specifiedFlightSpeed() : qQNaN();
+        if (std::isfinite(specified) && specified > 0) {
+            inheritedSpeed = specified;
+            if (speedCommand && previousWaypoint) {
+                outgoingSpeeds[previousWaypoint] = inheritedSpeed;
+            }
+        }
+        if (item->specifiesCoordinate() && !item->isStandaloneCoordinate()) {
+            previousWaypoint = simple && simple->command() == MAV_CMD_NAV_WAYPOINT ? simple : nullptr;
+            if (previousWaypoint) {
+                outgoingSpeeds.insert(previousWaypoint, inheritedSpeed);
+            }
+        }
+    }
+
+    struct SectionChange
+    {
+        SpeedSection* section;
+        QVariant previousValue;
+        bool previousSpecified;
+        bool previousDirty;
+        double value;
+    };
+
+    struct CommandChange
+    {
+        SimpleMissionItem* item;
+        double previousValue;
+    };
+
+    QList<SectionChange> sections;
+    QList<CommandChange> commands;
+    QList<CommandChange> jumpTargets;
+    const auto appendSection = [&sections](SpeedSection* section, double value) {
+        if (!section || !section->available() || !std::isfinite(value) || value <= 0 ||
+            value > std::numeric_limits<float>::max() || value < section->flightSpeed()->rawMin().toDouble() ||
+            value > section->flightSpeed()->rawMax().toDouble()) {
+            return false;
+        }
+        sections.append(
+            {section, section->flightSpeed()->rawValue(), section->specifyFlightSpeed(), section->dirty(), value});
+        return true;
+    };
+    if (allWaypoints && !appendSection(settings->speedSection(), speed)) {
+        return tr("Enter a valid waypoint flight speed.");
+    }
+    if (allWaypoints) {
+        for (int i = 1; i < model->count(); ++i) {
+            auto* item = model->value<SimpleMissionItem*>(i);
+            auto* section = item ? item->speedSection() : nullptr;
+            if (item && item->command() != MAV_CMD_NAV_WAYPOINT && section && section->available() &&
+                section->specifyFlightSpeed() && !appendSection(section, speed)) {
+                return tr("Enter a valid waypoint flight speed.");
+            }
+        }
+    }
+    for (auto* item : waypoints) {
+        double originalSpeed = outgoingSpeeds.value(item, qQNaN());
+        if (auto* segment = item->simpleFlightPathSegment();
+            segment && std::isfinite(segment->flightSpeed()) && segment->flightSpeed() > 0) {
+            originalSpeed = segment->flightSpeed();
+        }
+        if (!appendSection(item->speedSection(), selected.contains(item) ? speed : originalSpeed)) {
+            return selected.contains(item) ? tr("Enter a valid waypoint flight speed.")
+                                           : tr("Unable to preserve the flight speeds of the other waypoints.");
+        }
+    }
+    bool selectedLeg = false;
+    for (int i = 1; i < model->count(); ++i) {
+        auto* item = model->value<SimpleMissionItem*>(i);
+        if (item && item->command() == MAV_CMD_NAV_WAYPOINT) {
+            selectedLeg = selected.contains(item);
+        } else if ((allWaypoints || selectedLeg) && absoluteSpeedCommand(item)) {
+            const auto& command = item->missionItem();
+            if (command.frame() != MAV_FRAME_MISSION || !command.autoContinue() || !std::isfinite(command.param2()) ||
+                command.param2() <= 0 || command.param3() != -1 || command.param5() != 0 || command.param6() != 0 ||
+                command.param7() != 0) {
+                return tr("This mission contains speed or jump commands that cannot be safely updated.");
+            }
+            commands.append({item, item->missionItem().param2()});
+        }
+    }
+    for (auto* jump : jumps) {
+        jumpTargets.append({jump, jump->missionItem().param1()});
+    }
+
+    const auto simulationSettings = controller->property("caacSimulationSettings").toMap();
+    SimpleMissionItem* startPoint = nullptr;
+    SimpleMissionItem* returnPoint = nullptr;
+    for (auto* item : waypoints) {
+        if (item->sequenceNumber() == simulationSettings.value("startSequence").toInt()) {
+            startPoint = item;
+        }
+        if (item->sequenceNumber() == simulationSettings.value("returnSequence").toInt()) {
+            returnPoint = item;
+        }
+    }
+    if ((!startPoint && simulationSettings.value("startSequence").toInt() > 0) ||
+        (!returnPoint && simulationSettings.value("returnSequence").toInt() > 0)) {
+        return QCoreApplication::translate("CaacSimulationController",
+                                           "Select existing waypoints for the start and return points.");
+    }
+    const auto wireMission = [model]() {
+        QObject owner;
+        const auto items = MissionController::createMissionItems(model, &owner);
+        CaacMissionUpdateUtils::Mission result;
+        if (items.isEmpty() || items.size() > 5000) {
+            return result;
+        }
+        for (int i = 0; i < items.size(); ++i) {
+            const auto* item = items.at(i);
+            mavlink_mission_item_int_t wire{};
+            wire.seq = i;
+            wire.command = item->command();
+            wire.frame = item->frame();
+            wire.autocontinue = item->autoContinue();
+            wire.param1 = item->param1();
+            wire.param2 = item->param2();
+            wire.param3 = item->param3();
+            wire.param4 = item->param4();
+            const double scale = item->frame() == MAV_FRAME_MISSION ? 1 : 1e7;
+            wire.x = std::isfinite(item->param5()) ? static_cast<int32_t>(item->param5() * scale) : 0;
+            wire.y = std::isfinite(item->param6()) ? static_cast<int32_t>(item->param6() * scale) : 0;
+            wire.z = item->param7();
+            result.insert(wire.seq, wire);
+        }
+        return result;
+    };
+    const auto previousMission = wireMission();
+    if (!CaacMissionUpdateUtils::speedUpdateMapping(previousMission, previousMission).valid) {
+        return tr("This mission contains speed or jump commands that cannot be safely updated.");
+    }
+    QList<QPair<VisualMissionItem*, bool>> previousDirty;
+    for (int i = 0; i < model->count(); ++i) {
+        auto* item = model->value<VisualMissionItem*>(i);
+        previousDirty.append({item, item->dirty()});
+    }
+    const bool missionDirty = mission->dirty();
+    bool committed = false;
+    const auto rollback = qScopeGuard([&]() {
+        if (committed) {
+            return;
+        }
+        for (const auto& change : sections) {
+            change.section->flightSpeed()->setRawValue(change.previousValue);
+            change.section->setSpecifyFlightSpeed(change.previousSpecified);
+            change.section->setDirty(change.previousDirty);
+        }
+        for (const auto& change : commands) {
+            change.item->missionItem().setParam2(change.previousValue);
+        }
+        for (const auto& change : jumpTargets) {
+            change.item->missionItem().setParam1(change.previousValue);
+        }
+        controller->setProperty("caacSimulationSettings", simulationSettings);
+        for (const auto& state : previousDirty) {
+            state.first->setDirty(state.second);
+        }
+        mission->setDirty(missionDirty);
+    });
+    for (const auto& change : sections) {
+        change.section->flightSpeed()->setRawValue(change.value);
+        change.section->setSpecifyFlightSpeed(true);
+    }
+    for (const auto& change : commands) {
+        change.item->missionItem().setParam2(speed);
+    }
+    const auto mapping = CaacMissionUpdateUtils::speedUpdateMapping(previousMission, wireMission(), false);
+    if (!mapping.valid) {
+        return tr("This mission contains speed or jump commands that cannot be safely updated.");
+    }
+    for (const auto& change : jumpTargets) {
+        const int target = static_cast<int>(change.previousValue);
+        if (!mapping.jumpTargetToNew.contains(target)) {
+            return tr("This mission contains speed or jump commands that cannot be safely updated.");
+        }
+        change.item->missionItem().setParam1(mapping.jumpTargetToNew.value(target));
+    }
+    if (!CaacMissionUpdateUtils::speedUpdateMapping(previousMission, wireMission()).valid) {
+        return tr("This mission contains speed or jump commands that cannot be safely updated.");
+    }
+    if (!simulationSettings.isEmpty()) {
+        auto remapped = simulationSettings;
+        if (startPoint) {
+            remapped["startSequence"] = startPoint->sequenceNumber();
+        }
+        if (returnPoint) {
+            remapped["returnSequence"] = returnPoint->sequenceNumber();
+        }
+        controller->setProperty("caacSimulationSettings", remapped);
+    }
+    committed = true;
     return {};
 }
 

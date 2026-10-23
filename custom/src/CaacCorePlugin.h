@@ -55,6 +55,8 @@ public:
                                                      double altitude);
     Q_INVOKABLE QString updateFlightWaypointAltitudes(PlanMasterController* controller, const QVariantList& waypoints,
                                                       double altitude);
+    Q_INVOKABLE QString setFlightWaypointSpeeds(PlanMasterController* controller, const QVariantList& selectedWaypoints,
+                                                double speed, bool allWaypoints);
 
     bool doubleClickAddWaypoint() const { return _doubleClickAddWaypoint; }
 
