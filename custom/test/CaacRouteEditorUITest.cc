@@ -5,6 +5,7 @@
 #include <memory>
 
 #include <QtCore/QByteArray>
+#include <QtCore/QCoreApplication>
 #include <QtCore/QElapsedTimer>
 #include <QtCore/QFile>
 #include <QtCore/QFileInfo>
@@ -187,7 +188,7 @@ void CaacRouteEditorUITest::_deleteLandingFromContextMenu()
     QVERIFY(remove && remove->isEnabled());
     QVERIFY(clickButton(QStringLiteral("caacContextDeleteWaypoint")));
     QCOMPARE(mission->visualItems()->count(), 2);
-    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacUploadDeletedWaypointsDialog"), 0));
+    QVERIFY(!dialogVisible(QCoreApplication::translate("CaacRouteEditor", "Upload waypoint deletion")));
     QCOMPARE(mission->visualItems()->value<SimpleMissionItem*>(1)->command(), int(MAV_CMD_NAV_WAYPOINT));
     QVERIFY(editor->undo());
     QCOMPARE(mission->visualItems()->count(), 3);
@@ -236,11 +237,26 @@ void CaacRouteEditorUITest::_deleteWaypointsDuringFlight()
     QVERIFY(simulation->upload(master));
     QTRY_COMPARE_WITH_TIMEOUT(uploaded.count(), 1, TestTimeout::longMs());
     auto* vehicle = simulation->vehicle();
+    QVERIFY(vehicle);
     vehicle->startMission();
     QTRY_VERIFY_WITH_TIMEOUT(
         vehicle->armed() && vehicle->airborne() && vehicle->groundSpeed()->rawValue().toDouble() > 1,
         TestTimeout::longMs());
     QVERIFY(QMetaObject::invokeMethod(_window, "showPlanView"));
+    const auto uploadDialogTitle = QCoreApplication::translate("CaacRouteEditor", "Upload waypoint deletion");
+    const auto promptDiagnostic = [&]() {
+        auto* title = findVisibleItem(_rootItem, QStringLiteral("popupDialog_title"), 0);
+        return QStringLiteral("armed=%1 airborne=%2 mode=%3 canTransfer=%4 canDelete=%5 revision=%6 visibleDialog=%7")
+            .arg(vehicle->armed())
+            .arg(vehicle->airborne())
+            .arg(vehicle->flightMode())
+            .arg(panel->property("_canTransfer").toBool())
+            .arg(panel->property("canDeleteWaypoints").toBool())
+            .arg(panel->property("_deletionSourceRevision").toInt())
+            .arg(title ? title->property("text").toString() : QStringLiteral("none"));
+    };
+    QVERIFY2(panel->property("_canTransfer").toBool(), qPrintable(promptDiagnostic()));
+    QVERIFY2(panel->property("canDeleteWaypoints").toBool(), qPrintable(promptDiagnostic()));
     panel->setProperty("activePanel", -1);
     map->setProperty("zoomLevel", 18.0);
     const auto beforeDeletion = master->saveToJson();
@@ -262,7 +278,9 @@ void CaacRouteEditorUITest::_deleteWaypointsDuringFlight()
     QTest::mouseClick(_window, Qt::RightButton, Qt::NoModifier, anchor().toPoint());
     QVERIFY(clickButton(QStringLiteral("caacContextDeleteWaypoint")));
     QCOMPARE(mission->visualItems()->count(), 6);
-    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacUploadDeletedWaypointsDialog")));
+    QVERIFY2(
+        waitForDialog(uploadDialogTitle),
+        qPrintable(QStringLiteral("Context-menu deletion did not show the upload prompt: %1").arg(promptDiagnostic())));
     QVERIFY(master->saveToJson() != beforeDeletion);
     const auto pending = master->saveToJson();
     const QVariant second = QVariant::fromValue(static_cast<QObject*>(mission->visualItems()->get(2)));
@@ -273,8 +291,10 @@ void CaacRouteEditorUITest::_deleteWaypointsDuringFlight()
     QCOMPARE(master->saveToJson(), pending);
     QCOMPARE(uploaded.count(), 1);
     QVERIFY(rejectDialog());
-    QTRY_VERIFY_WITH_TIMEOUT(!findVisibleItem(_rootItem, QStringLiteral("caacUploadDeletedWaypointsDialog"), 0),
-                             TestTimeout::mediumMs());
+    QTRY_VERIFY2_WITH_TIMEOUT(!dialogVisible(uploadDialogTitle), "Choosing No must close the deletion upload prompt",
+                              TestTimeout::mediumMs());
+    QTRY_VERIFY2_WITH_TIMEOUT(panel->property("canDeleteWaypoints").toBool(),
+                              "Choosing No must release the deletion prompt guard", TestTimeout::mediumMs());
     QCOMPARE(master->saveToJson(), pending);
     QCOMPARE(uploaded.count(), 1);
 
@@ -284,10 +304,14 @@ void CaacRouteEditorUITest::_deleteWaypointsDuringFlight()
     QVERIFY(clickButtonScrolled(QStringLiteral("caacRemoveWaypoint_%1").arg(fourth->sequenceNumber()),
                                 QStringLiteral("caacWaypointList")));
     QCOMPARE(mission->visualItems()->count(), 5);
-    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacUploadDeletedWaypointsDialog")));
+    QVERIFY2(waitForDialog(uploadDialogTitle),
+             qPrintable(
+                 QStringLiteral("Waypoint-list deletion did not show the upload prompt: %1").arg(promptDiagnostic())));
     QVERIFY(editor->undo());
-    QTRY_VERIFY_WITH_TIMEOUT(!findVisibleItem(_rootItem, QStringLiteral("caacUploadDeletedWaypointsDialog"), 0),
-                             TestTimeout::mediumMs());
+    QTRY_VERIFY2_WITH_TIMEOUT(!dialogVisible(uploadDialogTitle), "Undo must invalidate the deletion upload prompt",
+                              TestTimeout::mediumMs());
+    QTRY_VERIFY2_WITH_TIMEOUT(panel->property("canDeleteWaypoints").toBool(),
+                              "Undo must release the stale deletion prompt guard", TestTimeout::mediumMs());
     QCOMPARE(master->saveToJson(), pending);
     QCOMPARE(uploaded.count(), 1);
 
@@ -296,7 +320,8 @@ void CaacRouteEditorUITest::_deleteWaypointsDuringFlight()
                                                                  QVariant::fromValue(mission->visualItems()->get(3))}));
     QVERIFY(clickButton(QStringLiteral("caacDeleteSelectedWaypoints")));
     QCOMPARE(mission->visualItems()->count(), 4);
-    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacUploadDeletedWaypointsDialog")));
+    QVERIFY2(waitForDialog(uploadDialogTitle),
+             qPrintable(QStringLiteral("Batch deletion did not show the upload prompt: %1").arg(promptDiagnostic())));
     auto* update = panel->findChild<CaacMissionUpdateController*>(QStringLiteral("caacMissionUpdateController"));
     QVERIFY(update);
     QSignalSpy finished(update, &CaacMissionUpdateController::finished);
@@ -306,6 +331,7 @@ void CaacRouteEditorUITest::_deleteWaypointsDuringFlight()
     QVERIFY2(finished.last().at(0).toBool(), qPrintable(finished.last().at(1).toString()));
     QVERIFY(!update->busy());
     QVERIFY(mission->uploadConfirmed());
+    QCOMPARE(uploaded.count(), 2);
     QCOMPARE(mission->visualItems()->count(), 4);
     QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->missionFlightMode(), TestTimeout::mediumMs());
 }

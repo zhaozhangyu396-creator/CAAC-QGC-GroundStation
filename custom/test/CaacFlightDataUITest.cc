@@ -53,7 +53,20 @@ private slots:
 
 private:
     void _resizeWindow(QSize size);
+    void _disconnectMockLinkAndDrain(QPointer<MockLink> mock);
 };
+
+void CaacFlightDataUITest::_disconnectMockLinkAndDrain(QPointer<MockLink> mock)
+{
+    if (!mock) {
+        return;
+    }
+    const QPointer<Vehicle> vehicle(MultiVehicleManager::instance()->activeVehicle());
+    disconnectMockLink(mock);
+    QVERIFY(waitForDeleted(vehicle, TestTimeout::mediumDuration(), u"flight-data vehicle"));
+    QVERIFY(waitForDeleted(mock, TestTimeout::mediumDuration(), u"flight-data MockLink"));
+    QVERIFY(!MultiVehicleManager::instance()->activeVehicle());
+}
 
 void CaacFlightDataUITest::_resizeWindow(QSize size)
 {
@@ -237,7 +250,7 @@ void CaacFlightDataUITest::_safetySpeedUnits()
         },
         vehicle);
     QVERIFY(mock && vehicle);
-    const auto disconnect = qScopeGuard([&]() { disconnectMockLink(mock); });
+    const auto disconnect = qScopeGuard([&]() { _disconnectMockLinkAndDrain(mock); });
     QVERIFY(vehicle->parameterManager()->parameterExists(vehicle->defaultComponentId(), parameterName));
     auto* speed = vehicle->parameterManager()->getParameter(vehicle->defaultComponentId(), parameterName);
     QVERIFY(speed);
@@ -333,7 +346,7 @@ void CaacFlightDataUITest::_safetyFailsafeEnums()
         },
         vehicle);
     QVERIFY(mock && vehicle);
-    const auto disconnect = qScopeGuard([&]() { disconnectMockLink(mock); });
+    const auto disconnect = qScopeGuard([&]() { _disconnectMockLinkAndDrain(mock); });
     _resizeWindow(QSize(1000, 800));
     QVERIFY(clickButton(QStringLiteral("toolbar_qgcLogo")));
     QVERIFY(clickButtonScrolled(QStringLiteral("toolbar_safety"), QStringLiteral("caacSettingsNavigationScroller")));
@@ -421,7 +434,7 @@ void CaacFlightDataUITest::_safetyAndUomTelemetry()
         },
         vehicle);
     QVERIFY(mock && vehicle);
-    const auto disconnect = qScopeGuard([&]() { disconnectMockLink(mock); });
+    const auto disconnect = qScopeGuard([&]() { _disconnectMockLinkAndDrain(mock); });
     vehicle->rcRSSI()->setRawValue(0);
     QTRY_VERIFY_WITH_TIMEOUT(
         verifyText(QStringLiteral("caacRCRSSIIndicatorValue"), QStringLiteral("0%"), QStringLiteral("RC signal")),
@@ -521,6 +534,7 @@ void CaacFlightDataUITest::_safetyAndUomTelemetry()
     cruise->setRawValue(original);
     QTRY_VERIFY_WITH_TIMEOUT(restorePending.count() >= 2 && !vehicle->parameterManager()->pendingWrites(),
                              TestTimeout::mediumMs());
+    _disconnectMockLinkAndDrain(mock);
 }
 
 void CaacFlightDataUITest::_dashboardInteractions()
@@ -532,7 +546,7 @@ void CaacFlightDataUITest::_dashboardInteractions()
     Vehicle* vehicle = nullptr;
     auto mock = connectMockLinkAndWaitReady([]() { return MockLink::startPX4MockLink(); }, vehicle);
     QVERIFY(mock && vehicle);
-    const auto disconnect = qScopeGuard([&]() { disconnectMockLink(mock); });
+    const auto disconnect = qScopeGuard([&]() { _disconnectMockLinkAndDrain(mock); });
     auto* dashboard = findVisibleItem(_rootItem, QStringLiteral("caacFlightDashboard"));
     auto* footer = findVisibleItem(_rootItem, QStringLiteral("caacFlightTelemetryBar"));
     auto* arrow = findVisibleItem(_rootItem, QStringLiteral("caacTelemetryHeadingArrow"));
@@ -693,7 +707,7 @@ void CaacFlightDataUITest::_liveFlightData()
     if (!mock || !vehicle) {
         return;
     }
-    const auto disconnect = qScopeGuard([&]() { disconnectMockLink(mock); });
+    const auto disconnect = qScopeGuard([&]() { _disconnectMockLinkAndDrain(mock); });
     QVERIFY(verifyText(QStringLiteral("caacConnectionStatusButton"), QStringLiteral("已连接"),
                        QStringLiteral("aircraft connected")));
     {
@@ -817,7 +831,7 @@ void CaacFlightDataUITest::_liveFlightData()
     QCOMPARE(cleared.count(), 1);
     QVERIFY(trajectory->list().isEmpty());
     QCOMPARE(master->saveToJson(), missionBefore);
-    disconnectMockLink(mock);
+    _disconnectMockLinkAndDrain(mock);
     mock.clear();
     QVERIFY(verifyText(QStringLiteral("caacNorthDistanceValue"), unavailable, QStringLiteral("aircraft disconnected")));
     QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacCenterVehicleButton"), 0));

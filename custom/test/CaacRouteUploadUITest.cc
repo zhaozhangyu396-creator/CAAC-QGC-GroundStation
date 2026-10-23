@@ -9,6 +9,7 @@
 #include <QtQml/QQmlComponent>
 #include <QtQml/QQmlEngine>
 #include <QtQml/QQmlExpression>
+#include <QtQml/QQmlProperty>
 #include <QtQuick/QQuickItem>
 #include <QtQuick/QQuickWindow>
 #include <QtTest/QSignalSpy>
@@ -114,11 +115,13 @@ bool CaacRouteUploadUITest::_normalColorsMatch(QQuickItem* map, const QList<QCol
             diagnostic = name + QStringLiteral(" missing");
             return false;
         }
-        QString error;
-        const auto actual = _evaluateColor(line, QStringLiteral("line.color"), &error);
+        const auto colorValue = QQmlProperty::read(line, QStringLiteral("line.color"));
+        const auto actual = colorValue.value<QColor>();
         if (!actual.isValid() || actual != expected.at(i)) {
-            diagnostic =
-                QStringLiteral("%1 actual %2 expected %3: %4").arg(name, actual.name(), expected.at(i).name(), error);
+            diagnostic = QStringLiteral("%1 actual %2 expected %3 (property valid %4, color valid %5)")
+                             .arg(name, actual.name(), expected.at(i).name())
+                             .arg(colorValue.isValid())
+                             .arg(actual.isValid());
             return false;
         }
     }
@@ -154,11 +157,13 @@ bool CaacRouteUploadUITest::_previewColorsMatch(QQuickItem* map, QQuickItem* pan
             diagnostic = name + QStringLiteral(" missing");
             return false;
         }
-        QString error;
-        const auto actual = _evaluateColor(line, QStringLiteral("line.color"), &error);
+        const auto colorValue = QQmlProperty::read(line, QStringLiteral("line.color"));
+        const auto actual = colorValue.value<QColor>();
         if (!actual.isValid() || actual != leg.color) {
-            diagnostic =
-                QStringLiteral("%1 actual %2 expected %3: %4").arg(name, actual.name(), leg.color.name(), error);
+            diagnostic = QStringLiteral("%1 actual %2 expected %3 (property valid %4, color valid %5)")
+                             .arg(name, actual.name(), leg.color.name())
+                             .arg(colorValue.isValid())
+                             .arg(actual.isValid());
             return false;
         }
     }

@@ -1409,7 +1409,6 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     settings["loopCount"] = 3;
     settings["closed"] = true;
     QVERIFY(editor.setSimulationSettings(settings));
-    const auto original = master->saveToJson();
     step("upload simulation");
     QVERIFY(clickButton(QStringLiteral("caacWaypointListButton")));
     QSignalSpy initialUpload(simulation, &CaacSimulationController::missionUploaded);
@@ -1417,6 +1416,8 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     QVERIFY(clickButton(QStringLiteral("caacUploadWaypoints")));
     QTRY_VERIFY_WITH_TIMEOUT(!initialUpload.isEmpty(), TestTimeout::longMs());
     QVERIFY(simulation->missionReady());
+    // The first upload commits the always-visible initial-speed setting to the plan.
+    const auto original = master->saveToJson();
     QVERIFY(!findItem(_rootItem, QStringLiteral("caacSimulationBanner")));
     QVERIFY(!simulation->vehicle()->armed());
     QVERIFY(!simulation->vehicle()->airborne());
