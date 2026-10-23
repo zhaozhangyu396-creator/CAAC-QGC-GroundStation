@@ -1,17 +1,19 @@
 #include "MissionFlightStatusCalculator.h"
-#include "Vehicle.h"
-#include "FirmwarePlugin.h"
-#include "QmlObjectListModel.h"
-#include "VisualMissionItem.h"
-#include "SimpleMissionItem.h"
-#include "ComplexMissionItem.h"
-#include "MissionSettingsItem.h"
-#include "TakeoffMissionItem.h"
-#include "AppSettings.h"
-#include "PlanViewSettings.h"
-#include "SettingsManager.h"
 
 #include <QtMath>
+
+#include "AppSettings.h"
+#include "ComplexMissionItem.h"
+#include "FirmwarePlugin.h"
+#include "FlightPathSegment.h"
+#include "MissionSettingsItem.h"
+#include "PlanViewSettings.h"
+#include "QmlObjectListModel.h"
+#include "SettingsManager.h"
+#include "SimpleMissionItem.h"
+#include "TakeoffMissionItem.h"
+#include "Vehicle.h"
+#include "VisualMissionItem.h"
 
 void MissionFlightStatusCalculator::reset(
     Vehicle* controllerVehicle, Vehicle* managerVehicle, bool missionStartsInVTOLMulticopterMode)
@@ -180,6 +182,9 @@ void MissionFlightStatusCalculator::recalc(QmlObjectListModel* visualItems,
                     }
 
                     if (lastFlyThroughVI != settingsItem || linkStartToHome) {
+                        if (auto* segment = lastFlyThroughVI->simpleFlightPathSegment()) {
+                            segment->setFlightSpeed(_status.vehicleSpeed);
+                        }
                         // This is a subsequent waypoint or we are forcing the first waypoint back to home
                         double azimuth, distance, altDifference;
 
@@ -282,6 +287,9 @@ void MissionFlightStatusCalculator::recalc(QmlObjectListModel* visualItems,
 
     // Add the information for the final segment back to home
     if (foundRTL && lastFlyThroughVI != settingsItem && homePositionValid) {
+        if (auto* segment = lastFlyThroughVI->simpleFlightPathSegment()) {
+            segment->setFlightSpeed(_status.vehicleSpeed);
+        }
         double azimuth, distance, altDifference;
         calcPrevWaypointValues(lastFlyThroughVI, settingsItem, &azimuth, &distance, &altDifference);
 

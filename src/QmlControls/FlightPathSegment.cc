@@ -70,6 +70,14 @@ void FlightPathSegment::setSpecialVisual(bool specialVisual)
     }
 }
 
+void FlightPathSegment::setFlightSpeed(double speed)
+{
+    if (!QGC::fuzzyCompare(_flightSpeed, speed)) {
+        _flightSpeed = speed;
+        emit flightSpeedChanged();
+    }
+}
+
 void FlightPathSegment::_sendTerrainPathQuery(void)
 {
     if (_queryTerrainData && _coord1.isValid() && _coord2.isValid()) {

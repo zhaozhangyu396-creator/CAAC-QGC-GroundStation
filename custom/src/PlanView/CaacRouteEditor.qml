@@ -33,16 +33,23 @@ Column {
     readonly property var currentItem: editorController.currentItem
     readonly property var routeController: editorController
     property var simulationPreviewSettings: null
+    property int _flightSpeedRevision: 0
     function prepareUpload() { return globalSettings.prepareUpload() }
     function requestWaypointUpload() {
         if (root._canTransfer) { updateWaypointsFactory.open() }
     }
     readonly property var simulationPreviewSegments: {
         void editorController.coordinateItems
+        void root._flightSpeedRevision
         return editorController.simulationPreviewSegments(simulationPreviewSettings || editorController.simulationSettings)
     }
     readonly property bool simulationPreviewActive: simulationPreviewSegments.length > 0
         && (simulationPreviewSettings !== null || editorController.hasSimulationSettings)
+
+    Connections {
+        target: root.planMasterController ? root.planMasterController.missionController : null
+        function onMissionTimeChanged() { ++root._flightSpeedRevision }
+    }
 
     function attachPreviewItem(item) {
         if (editorMap && item.attachedMap !== editorMap) {

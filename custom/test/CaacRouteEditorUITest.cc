@@ -39,6 +39,7 @@
 #include "QmlUITestBase.h"
 #include "SettingsManager.h"
 #include "SimpleMissionItem.h"
+#include "SpeedSection.h"
 
 namespace {
 void reportInvalidGeometry(QQuickItem* item, int& remaining)
@@ -369,6 +370,15 @@ void CaacRouteEditorUITest::_testMouseEditing()
     QVERIFY(legLabel);
     const auto initialLegText = legLabel->property("legText").toString();
     QVERIFY(initialLegText.contains(QStringLiteral(" m")) && initialLegText.contains(QChar(0x00b0)));
+    QVERIFY(initialLegText.indexOf(QStringLiteral("m/s")) > initialLegText.indexOf(QChar(0x00b0)));
+    first->speedSection()->flightSpeed()->setRawValue(8.5);
+    first->speedSection()->setSpecifyFlightSpeed(true);
+    QTRY_VERIFY_WITH_TIMEOUT(legLabel->property("legText").toString().endsWith(QStringLiteral("8.5 m/s")),
+                             TestTimeout::mediumMs());
+    first->speedSection()->flightSpeed()->setRawValue(7.5);
+    QTRY_VERIFY_WITH_TIMEOUT(legLabel->property("legText").toString().endsWith(QStringLiteral("7.5 m/s")),
+                             TestTimeout::mediumMs());
+    first->speedSection()->setSpecifyFlightSpeed(false);
     auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
     QVERIFY(plugin);
     const auto restoreMapPreferences = qScopeGuard([plugin]() {

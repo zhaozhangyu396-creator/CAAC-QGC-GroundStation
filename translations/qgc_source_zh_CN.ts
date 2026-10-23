@@ -26270,8 +26270,8 @@ If a vehicle still has this key configured, you will no longer be able to commun
   <context>
     <name>CaacRouteLegLabels</name>
     <message>
-      <source>%1 m  %2°</source>
-      <translation>%1 m  %2°</translation>
+      <source>%1 m  %2°  %3 m/s</source>
+      <translation>%1 m  %2°  %3 m/s</translation>
     </message>
       <message>
         <source>True height is too low; adjust the waypoint altitude.</source>

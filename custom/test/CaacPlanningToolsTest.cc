@@ -9,6 +9,8 @@
 #include "CaacCorePlugin.h"
 #include "CaacRouteEditorController.h"
 #include "CaacRouteTemplates.h"
+#include "CaacSimulationController.h"
+#include "FlightPathSegment.h"
 #include "MissionController.h"
 #include "MissionItem.h"
 #include "MissionSettingsItem.h"
@@ -31,6 +33,7 @@ private slots:
     void _coordinateFormats();
     void _advancedWaypointProperties();
     void _missionSpeedTransaction();
+    void _legFlightSpeeds();
     void _orientationPreview();
     void _quickWaypointOperations();
     void _relativeEndpointEditing();
@@ -1220,6 +1223,63 @@ void CaacPlanningToolsTest::_missionSpeedTransaction()
     planController()->removeAll();
     planController()->loadFromFile(file);
     QCOMPARE(planController()->saveToJson(), edited);
+}
+
+void CaacPlanningToolsTest::_legFlightSpeeds()
+{
+    CaacRouteEditorController editor;
+    editor.setPlanMasterController(planController());
+    auto* mission = missionController();
+    const QGeoCoordinate home(30, 120, 100);
+    mission->setHomePosition(home);
+    for (int i = 1; i <= 3; ++i) {
+        QVERIFY(editor.addWaypoint(home.atDistanceAndAzimuth(i * 100, 45)));
+    }
+    auto* first = mission->visualItems()->value<SimpleMissionItem*>(1);
+    auto* second = mission->visualItems()->value<SimpleMissionItem*>(2);
+    QVERIFY(first && second);
+    QVERIFY(editor.setMissionFlightSpeed(true, 6));
+    first->speedSection()->flightSpeed()->setRawValue(8.5);
+    first->speedSection()->setSpecifyFlightSpeed(true);
+    QTRY_VERIFY_WITH_TIMEOUT(first->simpleFlightPathSegment(), TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(first->simpleFlightPathSegment()->flightSpeed(), 8.5, TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(second->simpleFlightPathSegment(), TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(second->simpleFlightPathSegment()->flightSpeed(), 8.5, TestTimeout::mediumMs());
+    second->speedSection()->flightSpeed()->setRawValue(11);
+    second->speedSection()->setSpecifyFlightSpeed(true);
+    QTRY_COMPARE_WITH_TIMEOUT(second->simpleFlightPathSegment()->flightSpeed(), 11.0, TestTimeout::mediumMs());
+    QCOMPARE(first->simpleFlightPathSegment()->flightSpeed(), 8.5);
+
+    auto settings = CaacSimulationController::defaults();
+    settings["closed"] = true;
+    settings["endBehavior"] = 2;
+    const auto preview = editor.simulationPreviewSegments(settings);
+    QVERIFY(!preview.isEmpty());
+    for (const auto& value : preview) {
+        const auto segment = value.toMap();
+        const auto from = segment.value("coordinate1").value<QGeoCoordinate>();
+        const auto kind = segment.value("kind").toString();
+        const double expected = kind == "start"                                              ? 6
+                                : kind == "body" && from.distanceTo(first->coordinate()) < 1 ? 8.5
+                                                                                             : 11;
+        QCOMPARE(segment.value("flightSpeed").toDouble(), expected);
+    }
+    first->speedSection()->setSpecifyFlightSpeed(false);
+    QTRY_COMPARE_WITH_TIMEOUT(first->simpleFlightPathSegment()->flightSpeed(), 6.0, TestTimeout::mediumMs());
+    QVERIFY(editor.setMissionFlightSpeed(true, 7));
+    QTRY_COMPARE_WITH_TIMEOUT(first->simpleFlightPathSegment()->flightSpeed(), 7.0, TestTimeout::mediumMs());
+    QCOMPARE(second->simpleFlightPathSegment()->flightSpeed(), 11.0);
+    auto* speedCommand = qobject_cast<SimpleMissionItem*>(mission->insertSimpleMissionItem(QGeoCoordinate(), 2, false));
+    QVERIFY(speedCommand);
+    speedCommand->setCommand(MAV_CMD_DO_CHANGE_SPEED);
+    speedCommand->missionItem().setParam1(1);
+    speedCommand->missionItem().setParam2(9.5);
+    QTRY_COMPARE_WITH_TIMEOUT(first->simpleFlightPathSegment()->flightSpeed(), 9.5, TestTimeout::mediumMs());
+    QCOMPARE(second->simpleFlightPathSegment()->flightSpeed(), 11.0);
+    const auto changedPreview = editor.simulationPreviewSegments(settings);
+    const auto firstLeg = changedPreview.at(1).toMap();
+    QCOMPARE(firstLeg.value("coordinate1").value<QGeoCoordinate>(), first->coordinate());
+    QCOMPARE(firstLeg.value("flightSpeed").toDouble(), 9.5);
 }
 
 UT_REGISTER_TEST(CaacPlanningToolsTest, TestLabel::Unit, TestLabel::MissionManager)

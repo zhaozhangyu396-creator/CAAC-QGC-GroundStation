@@ -159,6 +159,7 @@ QVariantList CaacRouteEditorController::simulationPreviewSegments(const QVariant
     }
     QList<SimpleMissionItem*> waypoints;
     QGeoCoordinate departure = mission->plannedHomePosition();
+    SimpleMissionItem* takeoffItem = nullptr;
     for (int i = 1; i < mission->visualItems()->count(); ++i) {
         auto* item = mission->visualItems()->value<SimpleMissionItem*>(i);
         if (!item || item->command() == MAV_CMD_DO_JUMP) {
@@ -171,6 +172,7 @@ QVariantList CaacRouteEditorController::simulationPreviewSegments(const QVariant
             waypoints.append(item);
         } else if (item->isTakeoffItem() && item->coordinate().isValid()) {
             departure = item->coordinate();
+            takeoffItem = item;
         } else if (item->specifiesCoordinate() && item->command() != MAV_CMD_NAV_LAND &&
                    item->command() != MAV_CMD_NAV_LOITER_UNLIM) {
             return {};
@@ -199,22 +201,48 @@ QVariantList CaacRouteEditorController::simulationPreviewSegments(const QVariant
         return {};
     }
     QVariantList result;
-    const auto append = [&result](const QGeoCoordinate& from, const QGeoCoordinate& to, const QString& kind) {
+    double speed = settings.value("horizontalSpeed").toDouble();
+    const auto applySpeed = [&speed](VisualMissionItem* item) {
+        const double specified = item ? item->specifiedFlightSpeed() : qQNaN();
+        if (std::isfinite(specified) && specified > 0) {
+            speed = specified;
+        }
+    };
+    const auto applyInterveningSpeeds = [mission, &applySpeed](SimpleMissionItem* from, SimpleMissionItem* to) {
+        auto* model = mission->visualItems();
+        const int begin = from ? model->indexOf(from) + 1 : 1;
+        const int end = model->indexOf(to);
+        for (int i = begin; i < end; ++i) {
+            auto* item = model->value<SimpleMissionItem*>(i);
+            if (item && item->command() == MAV_CMD_DO_CHANGE_SPEED) {
+                applySpeed(item);
+            }
+        }
+    };
+    applySpeed(mission->visualItems()->value<VisualMissionItem*>(0));
+    const auto append = [&result, &speed](const QGeoCoordinate& from, const QGeoCoordinate& to, const QString& kind) {
         if (QGCGeo::geodesicDistance(from, to) >= 0.01) {
             result.append(QVariantMap{{QStringLiteral("coordinate1"), QVariant::fromValue(from)},
                                       {QStringLiteral("coordinate2"), QVariant::fromValue(to)},
-                                      {QStringLiteral("kind"), kind}});
+                                      {QStringLiteral("kind"), kind},
+                                      {QStringLiteral("flightSpeed"), speed}});
         }
     };
     append(mission->plannedHomePosition(), departure, QStringLiteral("takeoff"));
+    applySpeed(takeoffItem);
     const auto first = waypoints.at(start)->coordinate();
+    applyInterveningSpeeds(takeoffItem, waypoints.at(start));
     append(departure, first, QStringLiteral("start"));
+    applySpeed(waypoints.at(start));
     auto last = first;
     const bool closed = settings.value("closed").toBool();
     const int count = closed ? waypoints.count() : waypoints.count() - start;
     for (int i = 1; i < count; ++i) {
-        const auto next = waypoints.at((start + i) % waypoints.count())->coordinate();
+        auto* nextItem = waypoints.at((start + i) % waypoints.count());
+        const auto next = nextItem->coordinate();
+        applyInterveningSpeeds(waypoints.at((start + i - 1) % waypoints.count()), nextItem);
         append(last, next, QStringLiteral("body"));
+        applySpeed(nextItem);
         last = next;
     }
     if (closed) {

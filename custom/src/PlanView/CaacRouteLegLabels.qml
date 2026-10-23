@@ -97,7 +97,9 @@ Item {
         }
         readonly property real _angle: Math.atan2(_to.y - _from.y, _to.x - _from.x) * 180 / Math.PI
         readonly property string legText: metrics.distance !== undefined
-            ? qsTr("%1 m  %2°").arg(metrics.distance.toFixed(1)).arg((Math.round(metrics.bearing * 10) / 10 % 360).toFixed(1)) : ""
+            ? qsTr("%1 m  %2°  %3 m/s").arg(metrics.distance.toFixed(1))
+                .arg((Math.round(metrics.bearing) % 360).toFixed(0))
+                .arg(isFinite(object.flightSpeed) && object.flightSpeed > 0 ? object.flightSpeed.toFixed(1) : "—") : ""
         x: _midpoint.x
         y: _midpoint.y
         visible: metrics.distance !== undefined && isFinite(_midpoint.x) && isFinite(_midpoint.y)

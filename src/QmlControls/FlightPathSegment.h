@@ -37,6 +37,7 @@ public:
     Q_PROPERTY(double           totalDistance           MEMBER _totalDistance                                   NOTIFY totalDistanceChanged)
     Q_PROPERTY(bool             terrainCollision        MEMBER _terrainCollision                                NOTIFY terrainCollisionChanged)
     Q_PROPERTY(SegmentType      segmentType             MEMBER _segmentType                                     CONSTANT)
+    Q_PROPERTY(double flightSpeed READ flightSpeed NOTIFY flightSpeedChanged)
 
     QGeoCoordinate      coordinate1         (void) const { return _coord1; }
     QGeoCoordinate      coordinate2         (void) const { return _coord2; }
@@ -51,6 +52,10 @@ public:
     SegmentType         segmentType         (void) const { return _segmentType; }
 
     void setSpecialVisual(bool specialVisual);
+
+    double flightSpeed() const { return _flightSpeed; }
+
+    void setFlightSpeed(double speed);
 
 public slots:
     void setCoordinate1     (const QGeoCoordinate& coordinate);
@@ -69,6 +74,7 @@ signals:
     void finalDistanceBetweenChanged(double finalDistanceBetween);
     void totalDistanceChanged       (double totalDistance);
     void terrainCollisionChanged    (bool terrainCollision);
+    void flightSpeedChanged();
 
 private slots:
     void _sendTerrainPathQuery      (void);
@@ -93,4 +99,6 @@ private:
     SegmentType         _segmentType =                  SegmentTypeGeneric;
 
     static constexpr double _collisionIgnoreMeters =    10; // Distance to ignore for takeoff/land segments
+
+    double _flightSpeed = qQNaN();
 };
