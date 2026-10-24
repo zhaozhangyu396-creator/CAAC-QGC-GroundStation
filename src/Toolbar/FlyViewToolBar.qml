@@ -24,6 +24,9 @@ Item {
         flightActionHost.width / Math.max(1, flightActionLayout.implicitWidth),
         rightPanel.width / Math.max(1, rightIndicators.implicitWidth))
     property alias flightToolStrip: flightActions
+    property real flightActionsLeft: NaN
+    readonly property real _flightPanelLeft: isFinite(flightActionsLeft)
+        ? Math.max(_margins, flightActionsLeft) : flightSettingsButton.mapToItem(control.parent, 0, 0).x
     property bool flightSettingsExpanded: false
     signal displayPreFlightChecklist
 
@@ -401,7 +404,7 @@ Item {
         objectName: "caacFlightSettingsPanel"
         parent: control.parent
         visible: control.visible && control.flightSettingsExpanded && !guidedActionConfirm.visible
-        x: Math.max(control._margins, Math.min(flightSettingsButton.mapToItem(parent, 0, 0).x,
+        x: Math.max(control._margins, Math.min(control._flightPanelLeft,
             parent.width - width - control._margins))
         y: control.mapToItem(parent, 0, control.height).y + control._margins
         width: flightActions.width + control._margins * 2
@@ -417,7 +420,9 @@ Item {
             squareButtons: QGroundControl.corePlugin.directMissionItemEditing
             x: control._margins
             y: control._margins
-            maxWidth: Math.min(control.parent.width - control._margins * 4, ScreenTools.defaultFontPixelHeight * 16)
+            maxWidth: Math.min(Math.max(0, control.parent.width - (isFinite(control.flightActionsLeft)
+                ? control._flightPanelLeft + control._margins * 3 : control._margins * 4)),
+                ScreenTools.defaultFontPixelHeight * 16)
             maxHeight: Math.max(0, control.parent.height - parent.y - control._margins * 3)
             roundButtonHeight: ScreenTools.defaultFontPixelHeight * 3.9
             roundButtonMaximumDiameter: ScreenTools.defaultFontPixelHeight * 2.3

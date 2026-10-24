@@ -13,6 +13,7 @@
 #include "MissionManager.h"
 #include "MultiVehicleManager.h"
 #include "PlanMasterController.h"
+#include "SimpleMissionItem.h"
 #include "Vehicle.h"
 #include "VehicleLinkManager.h"
 #include "VehicleSupports.h"
@@ -109,6 +110,62 @@ bool CaacMissionUpdateController::returnToLandingPoint(PlanMasterController* pla
     _allowDeletions = false;
     _restoreFlightSpeed = false;
     _resumeAfterUpdate = true;
+    vehicle->setFlightPlanUpdateInProgress(true);
+    _setStage(Stage::Pausing);
+    _timer.start();
+    vehicle->pauseVehicle();
+    return true;
+}
+
+bool CaacMissionUpdateController::uploadAndReturnToLandingPoint(PlanMasterController* plan,
+                                                                CaacSimulationController* simulation)
+{
+    if (busy()) {
+        return false;
+    }
+    auto* vehicle = plan ? plan->managerVehicle() : nullptr;
+    auto* mission = plan ? plan->missionController() : nullptr;
+    if (!vehicle || !mission || vehicle != MultiVehicleManager::instance()->activeVehicle() || plan->offline() ||
+        !vehicle->isInitialConnectComplete() || !vehicle->armed() || !vehicle->underway() ||
+        vehicle->vehicleLinkManager()->communicationLost() || !vehicle->supports()->pauseVehicle() ||
+        vehicle->firmwarePlugin()->pauseFlightMode().isEmpty() || plan->syncInProgress() ||
+        vehicle->flightPlanUpdateInProgress() || plan->property("caacRotationPreviewActive").toBool() ||
+        mission->readyForSaveState() != VisualMissionItem::ReadyForSave ||
+        !vehicle->firmwarePlugin()->flightModes(vehicle).contains(vehicle->flightMode())) {
+        emit finished(false, tr("The aircraft is not ready to return to the uploaded landing point."));
+        return false;
+    }
+    const SimpleMissionItem* landing = nullptr;
+    for (int i = 1; i < mission->visualItems()->count(); ++i) {
+        const auto* item = mission->visualItems()->value<SimpleMissionItem*>(i);
+        if (item && (item->command() == MAV_CMD_NAV_LAND || item->command() == MAV_CMD_NAV_VTOL_LAND) &&
+            item->coordinate().isValid() && std::isfinite(item->missionItem().param7())) {
+            landing = item;
+        }
+    }
+    if (!landing) {
+        emit finished(false, tr("The planned mission has no valid landing point."));
+        return false;
+    }
+    _vehicle = vehicle;
+    _plan = plan;
+    _simulation = simulation && simulation->ownsVehicle(vehicle) ? simulation : nullptr;
+    _requestedLandingCoordinate = landing->coordinate();
+    _requestedLandingCommand = landing->command();
+    _requestedLandingFrame = landing->missionItem().frame();
+    _requestedLandingAltitude = landing->missionItem().param7();
+    _uploadForLandingReturn = true;
+    _returningToLanding = false;
+    _returnInitialMode = vehicle->flightMode();
+    _landingTarget.clear();
+    _allowSpeedChanges = false;
+    _allowDeletions = false;
+    _restoreFlightSpeed = false;
+    _resumeAfterUpdate = true;
+    _snapshot = plan->saveToJson();
+    _forcedFlightSpeed = qQNaN();
+    _expectedCurrentSequence = -1;
+    _lastTransferError.clear();
     vehicle->setFlightPlanUpdateInProgress(true);
     _setStage(Stage::Pausing);
     _timer.start();
@@ -429,7 +486,8 @@ void CaacMissionUpdateController::_tick()
     }
     if (_stage == Stage::Pausing) {
         if (mode != pauseMode) {
-            if (mode != (_returningToLanding ? _returnInitialMode : _vehicle->missionFlightMode())) {
+            if (mode != ((_returningToLanding || _uploadForLandingReturn) ? _returnInitialMode
+                                                                          : _vehicle->missionFlightMode())) {
                 _finish(false, tr("Flight mode changed. The waypoint update was cancelled."));
             }
             return;
@@ -458,7 +516,11 @@ void CaacMissionUpdateController::_tick()
         if (_allowSpeedChanges && _expectedCurrentSequence >= 0 && _target + homeOffset != _expectedCurrentSequence) {
             _forcedFlightSpeed = qQNaN();
         }
-        if (_target < 0 || (!_simulation && !_prepareNative())) {
+        if (_uploadForLandingReturn && !_simulation) {
+            _pendingItems = MissionController::createMissionItems(_plan->missionController()->visualItems(), this);
+        }
+        if ((_uploadForLandingReturn && !_simulation && _pendingItems.isEmpty()) ||
+            (!_uploadForLandingReturn && (_target < 0 || (!_simulation && !_prepareNative())))) {
             _finish(false,
                     _allowDeletions
                         ? tr("The waypoint deletion cannot preserve a safe mission target. The mission remains paused.")
@@ -490,7 +552,8 @@ void CaacMissionUpdateController::_tick()
                                         &CaacMissionUpdateController::_uploaded));
             _connections.append(connect(_simulation, &CaacSimulationController::missionUploadFailed, this,
                                         [this]() { _uploadFailed(_simulation ? _simulation->status() : QString()); }));
-            if (!_simulation->upload(_plan, true, _allowSpeedChanges, _forcedFlightSpeed, _allowDeletions)) {
+            if (!_simulation->upload(_plan, !_uploadForLandingReturn, _allowSpeedChanges, _forcedFlightSpeed,
+                                     _allowDeletions)) {
                 _uploadFailed(_simulation ? _simulation->status() : QString());
             }
         } else {
@@ -514,7 +577,9 @@ void CaacMissionUpdateController::_tick()
             }
         }
     } else if (_stage == Stage::Resuming) {
-        if (mode == _vehicle->missionFlightMode()) {
+        const auto resumedMode =
+            _returningToLanding && _simulation ? _vehicle->rtlFlightMode() : _vehicle->missionFlightMode();
+        if (mode == resumedMode) {
             _finish(true, _returningToLanding ? tr("Returning to the uploaded landing point.")
                                               : tr("Waypoints updated. Continuing from the previous target waypoint."));
         } else if (mode != pauseMode) {
@@ -538,6 +603,40 @@ void CaacMissionUpdateController::_uploaded()
         _vehicle->pauseVehicle();
         _finish(false, tr("Flight mode changed during upload. Automatic resume was cancelled."));
         return;
+    }
+    if (_uploadForLandingReturn) {
+        if (_plan->saveToJson() != _snapshot) {
+            _finish(false, tr("The plan changed while pausing. The mission remains paused."));
+            return;
+        }
+        const auto& items = _vehicle->missionManager()->missionItems();
+        _target = -1;
+        for (int i = 0; i < items.size(); ++i) {
+            const auto* item = items[i];
+            if (item && (item->command() == MAV_CMD_NAV_LAND || item->command() == MAV_CMD_NAV_VTOL_LAND)) {
+                _target = i;
+            }
+        }
+        if (_target < 0 || !items[_target]->coordinate().isValid() ||
+            items[_target]->command() != _requestedLandingCommand ||
+            items[_target]->frame() != _requestedLandingFrame ||
+            items[_target]->coordinate().distanceTo(_requestedLandingCoordinate) > 0.02 ||
+            !std::isfinite(items[_target]->param7()) ||
+            std::abs(items[_target]->param7() - _requestedLandingAltitude) > 0.001) {
+            _finish(false, tr("The uploaded landing point changed. The return was cancelled."));
+            return;
+        }
+        _landingTarget = items[_target];
+        QJsonObject landing;
+        _landingTarget->save(landing);
+        _snapshot = QJsonDocument(landing);
+        _uploadForLandingReturn = false;
+        _returningToLanding = true;
+        if (_simulation) {
+            _setStage(Stage::Resuming);
+            _vehicle->guidedModeRTL(false);
+            return;
+        }
     }
     _setStage(Stage::Restoring);
     const int offset = _vehicle->firmwarePlugin()->sendHomePositionToVehicle() ? 0 : 1;
@@ -581,5 +680,6 @@ void CaacMissionUpdateController::_finish(bool success, const QString& message)
     _simulation.clear();
     _landingTarget.clear();
     _returningToLanding = false;
+    _uploadForLandingReturn = false;
     emit finished(success, message);
 }

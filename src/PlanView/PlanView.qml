@@ -281,6 +281,7 @@ Item {
     FlyViewToolBar {
         visible: _root.unifiedFlightPlan
         guidedValueSlider: unifiedValueSlider
+        flightActionsLeft: unifiedFlightLayer.mapToItem(parent, unifiedFlightLayer.flightActionsLeft, 0).x
     }
     GuidedValueSlider {
         id: unifiedValueSlider

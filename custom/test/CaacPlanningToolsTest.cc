@@ -1,6 +1,7 @@
 #include <cmath>
 #include <limits>
 
+#include <QtCore/QLineF>
 #include <QtCore/QScopeGuard>
 #include <QtCore/QTemporaryDir>
 #include <QtCore/QtMath>
@@ -50,6 +51,8 @@ private slots:
     void _edgeMidpoints();
     void _routeIntersections();
     void _guideIntersections();
+    void _drawingAidIntersections_data();
+    void _drawingAidIntersections();
     void _pointRelationsAndVertex();
     void _synchronizeWaypointDefaults();
     void _displayNumbersAndLoopSelection();
@@ -539,6 +542,97 @@ void CaacPlanningToolsTest::_guideIntersections()
         QCOMPARE(disabled.value("guides").toList().size(), 1);
         QVERIFY(!disabled.value("guides").toList().first().toMap().contains("intersection"));
         QVERIFY(plugin->updatePlanningPreferences({{"intersectionSnap", true}}));
+    }
+}
+
+void CaacPlanningToolsTest::_drawingAidIntersections_data()
+{
+    QTest::addColumn<QVariantList>("segments");
+    QTest::addColumn<QPointF>("position");
+    QTest::addColumn<double>("tolerance");
+    QTest::addColumn<bool>("enabled");
+    QTest::addColumn<QPointF>("expectedPoint");
+    QTest::addColumn<QList<int>>("expectedSegments");
+    const auto segment = [](int lineId, const QPointF& start, const QPointF& end) {
+        const auto coordinate = [](const QPointF& point) {
+            return QGeoCoordinate(30 + point.y() * 1e-5, 120 + point.x() * 1e-5, 20);
+        };
+        return QVariantMap{{"lineId", lineId},
+                           {"from", QVariant::fromValue(coordinate(start))},
+                           {"to", QVariant::fromValue(coordinate(end))},
+                           {"start", start},
+                           {"end", end}};
+    };
+    const auto horizontal = segment(1, QPointF(0, 50), QPointF(200, 50));
+    const auto vertical = segment(2, QPointF(50, 0), QPointF(50, 100));
+    const QVariantList crossing{horizontal, vertical};
+    QTest::newRow("ordinary-intersection")
+        << crossing << QPointF(53, 54) << 6.0 << true << QPointF(50, 50) << QList<int>{0, 1};
+    QTest::newRow("less-than-one-degree") << QVariantList{horizontal, segment(2, QPointF(0, 49.5), QPointF(200, 50.5))}
+                                          << QPointF(101, 49) << 4.0 << true << QPointF(100, 50) << QList<int>{0, 1};
+    QTest::newRow("nearest-intersection")
+        << QVariantList{horizontal, vertical, segment(3, QPointF(55, 0), QPointF(55, 100))} << QPointF(54, 52) << 6.0
+        << true << QPointF(55, 50) << QList<int>{0, 2};
+    QTest::newRow("shared-endpoint") << QVariantList{segment(1, QPointF(0, 50), QPointF(50, 50)),
+                                                     segment(2, QPointF(50, 50), QPointF(50, 100))}
+                                     << QPointF(52, 51) << 6.0 << true << QPointF(50, 50) << QList<int>{0, 1};
+    QTest::newRow("same-drawing-line") << QVariantList{horizontal, segment(1, QPointF(50, 0), QPointF(50, 100))}
+                                       << QPointF(53, 54) << 6.0 << true << QPointF() << QList<int>();
+    QTest::newRow("parallel-lines") << QVariantList{horizontal, segment(2, QPointF(0, 51), QPointF(200, 51))}
+                                    << QPointF(50, 50.5) << 6.0 << true << QPointF() << QList<int>();
+    QTest::newRow("coincident-lines") << QVariantList{horizontal, segment(2, QPointF(150, 50), QPointF(20, 50))}
+                                      << QPointF(50, 50) << 6.0 << true << QPointF() << QList<int>();
+    QTest::newRow("outside-finite-segment") << QVariantList{segment(1, QPointF(0, 50), QPointF(40, 50)), vertical}
+                                            << QPointF(51, 50) << 6.0 << true << QPointF() << QList<int>();
+    QTest::newRow("beyond-capture-radius") << crossing << QPointF(70, 70) << 6.0 << true << QPointF() << QList<int>();
+    QTest::newRow("capture-disabled") << crossing << QPointF(53, 54) << 6.0 << false << QPointF() << QList<int>();
+    QTest::newRow("cleared-or-hidden-lines")
+        << QVariantList() << QPointF(50, 50) << 6.0 << true << QPointF() << QList<int>();
+    auto invalidCoordinate = vertical;
+    invalidCoordinate["from"] = QVariant::fromValue(QGeoCoordinate());
+    auto invalidPoint = vertical;
+    invalidPoint["start"] = QPointF(qQNaN(), 0);
+    auto missingLineId = vertical;
+    missingLineId.remove("lineId");
+    QTest::newRow("invalid-segments") << QVariantList{horizontal,    invalidCoordinate,
+                                                      invalidPoint,  missingLineId,
+                                                      QVariantMap(), segment(3, QPointF(50, 50), QPointF(50, 50))}
+                                      << QPointF(50, 50) << 6.0 << true << QPointF() << QList<int>();
+    QTest::newRow("invalid-pointer") << crossing << QPointF(qQNaN(), 50) << 6.0 << true << QPointF() << QList<int>();
+    QTest::newRow("zero-tolerance") << crossing << QPointF(50, 50) << 0.0 << true << QPointF() << QList<int>();
+    QTest::newRow("non-finite-tolerance")
+        << crossing << QPointF(50, 50) << std::numeric_limits<double>::infinity() << true << QPointF() << QList<int>();
+}
+
+void CaacPlanningToolsTest::_drawingAidIntersections()
+{
+    QFETCH(QVariantList, segments);
+    QFETCH(QPointF, position);
+    QFETCH(double, tolerance);
+    QFETCH(bool, enabled);
+    QFETCH(QPointF, expectedPoint);
+    QFETCH(QList<int>, expectedSegments);
+    auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
+    QVERIFY(plugin);
+    const auto preferences = plugin->planningPreferences();
+    const auto restore = qScopeGuard([&]() { plugin->updatePlanningPreferences(preferences); });
+    QVERIFY(plugin->updatePlanningPreferences({{"intersectionSnap", enabled}}));
+    CaacRouteEditorController editor;
+    const auto result = editor.snapDrawingAidIntersection(position, segments, tolerance);
+    if (expectedSegments.isEmpty()) {
+        QVERIFY(result.isEmpty());
+        return;
+    }
+    QVERIFY(result.value("point").canConvert<QPointF>());
+    QVERIFY(QLineF(result.value("point").toPointF(), expectedPoint).length() < 1e-6);
+    const auto guides = result.value("guides").toList();
+    QCOMPARE(guides.size(), expectedSegments.size());
+    for (int i = 0; i < guides.size(); ++i) {
+        const auto guide = guides[i].toMap();
+        const auto expected = segments[expectedSegments[i]].toMap();
+        QCOMPARE(guide.value("from").value<QGeoCoordinate>(), expected.value("from").value<QGeoCoordinate>());
+        QCOMPARE(guide.value("to").value<QGeoCoordinate>(), expected.value("to").value<QGeoCoordinate>());
+        QCOMPARE(guide.value("kind").toInt(), 0);
     }
 }
 

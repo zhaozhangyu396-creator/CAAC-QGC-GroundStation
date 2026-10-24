@@ -183,7 +183,21 @@ Column {
     property var _dragGuides: []
     function snapDraggedWaypoint(item, coordinate) {
         const point = editorMap.fromCoordinate(coordinate, false)
-        const nearby = editorMap.toCoordinate(Qt.point(point.x + ScreenTools.defaultFontPixelHeight * 0.75, point.y), false)
+        const pixels = ScreenTools.defaultFontPixelHeight * 0.75
+        if (item && item.command === 16) {
+            const capture = editorController.snapDrawingAidIntersection(point, drawingAids.screenSegments(), pixels)
+            if (capture.point !== undefined) {
+                const snapped = editorMap.toCoordinate(capture.point, false)
+                if (snapped && snapped.isValid) {
+                    snapped.altitude = coordinate.altitude
+                    const guides = capture.guides
+                    guides[0].intersection = snapped
+                    _dragGuides = guides
+                    return snapped
+                }
+            }
+        }
+        const nearby = editorMap.toCoordinate(Qt.point(point.x + pixels, point.y), false)
         const tolerance = QGroundControl.corePlugin.routeLegMetrics(coordinate, nearby).distance
         const result = editorController.snapWaypointDrag(item, coordinate, tolerance)
         _dragGuides = result.guides || []

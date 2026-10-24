@@ -80,6 +80,7 @@ class CaacMissionUpdateUITest : public QmlUITestBase
     Q_OBJECT
 private slots:
     void _updateWaypointsDuringFlight();
+    void _returnToUnuploadedLandingPoint();
 };
 
 void CaacDefaultHomeUITest::_missingAltitudeSimulation_data()
@@ -530,6 +531,110 @@ void CaacMissionUpdateUITest::_updateWaypointsDuringFlight()
     QVERIFY(positionUploaded(waypoint));
     QCOMPARE(manager->currentIndex(), previousTarget);
     QCOMPARE(simulation->remainingLoops(), previousLoops);
+}
+
+void CaacMissionUpdateUITest::_returnToUnuploadedLandingPoint()
+{
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    auto* panel = findVisibleItem(_rootItem, QStringLiteral("caacRouteEditor"));
+    QVERIFY(panel);
+    auto* master = panel->property("planMasterController").value<PlanMasterController*>();
+    auto* editor = panel->property("routeController").value<CaacRouteEditorController*>();
+    auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
+    QVERIFY(master && editor && plugin);
+    auto* mission = master->missionController();
+    const QGeoCoordinate home(30, 120, 20);
+    mission->setHomePosition(home);
+    for (const auto bearing : {0.0, 90.0}) {
+        QVERIFY(editor->addWaypoint(home.atDistanceAndAzimuth(200, bearing)));
+        editor->currentItem()->altitude()->setRawValue(2);
+    }
+    auto settings = CaacSimulationController::defaults();
+    settings["takeoffHeight"] = 2.0;
+    settings["verticalSpeed"] = 10.0;
+    settings["yawRate"] = 360.0;
+    QVERIFY(editor->setSimulationSettings(settings));
+    auto* simulation = plugin->simulation();
+    QVERIFY(simulation);
+    const auto stop = qScopeGuard([simulation]() { simulation->stop(); });
+    ignoreLogMessage("Utilities.QGCSensors", QtWarningMsg,
+                     QRegularExpression(QStringLiteral("Failed to connect to pressure backend")));
+    ignoreLogMessage("Utilities.QGCSensors", QtWarningMsg,
+                     QRegularExpression(QStringLiteral("Error Initializing Pressure Sensor")));
+    QVERIFY(simulation->start(master));
+    QTRY_VERIFY_WITH_TIMEOUT(simulation->vehicle() && simulation->vehicle()->isInitialConnectComplete(),
+                             TestTimeout::longMs());
+    QSignalSpy uploaded(simulation, &CaacSimulationController::missionUploaded);
+    QVERIFY(simulation->upload(master));
+    QTRY_COMPARE_WITH_TIMEOUT(uploaded.count(), 1, TestTimeout::longMs());
+    auto* vehicle = simulation->vehicle();
+    auto* manager = vehicle->missionManager();
+    QVERIFY(std::none_of(manager->missionItems().cbegin(), manager->missionItems().cend(),
+                         [](const MissionItem* item) { return item->command() == MAV_CMD_NAV_LAND; }));
+    vehicle->startMission();
+    QTRY_VERIFY_WITH_TIMEOUT(vehicle->airborne() && vehicle->groundSpeed()->rawValue().toDouble() > 1,
+                             TestTimeout::longMs());
+    QVERIFY(editor->addWaypoint(home.atDistanceAndAzimuth(30, 270)));
+    auto* landing = editor->currentItem();
+    QVERIFY(landing && editor->useWaypointAsLanding(landing));
+    QCOMPARE(landing->command(), MAV_CMD_NAV_LAND);
+    QVERIFY(plugin->landingPointNeedsUpload(master));
+    const auto action = [&]() {
+        if (!findVisibleItem(_rootItem, QStringLiteral("caacFlightSettingsPanel"), 0) &&
+            !clickButton(QStringLiteral("caacFlightSettingsButton"))) {
+            return false;
+        }
+        auto* button =
+            findVisibleItemScrolled(QStringLiteral("caacReturnHome"), QStringLiteral("flyViewToolStrip_flickable"));
+        if (!button || !button->isEnabled()) {
+            return false;
+        }
+        QTest::mouseDClick(_window, Qt::LeftButton, Qt::NoModifier,
+                           button->mapToScene(QPointF(button->width() / 2, button->height() / 2)).toPoint());
+        return waitForDialog(QCoreApplication::translate("CaacFlightActionList", "Upload landing point"));
+    };
+    QSignalSpy transfers(manager, &MissionManager::sendComplete);
+    const auto originalMode = vehicle->flightMode();
+    const auto originalPlan = master->saveToJson();
+    QVERIFY(action());
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacPendingLandingUploadMessage")));
+    QVERIFY(rejectDialog());
+    QCOMPARE(transfers.count(), 0);
+    QCOMPARE(uploaded.count(), 1);
+    QCOMPARE(vehicle->flightMode(), originalMode);
+    QCOMPARE(master->saveToJson(), originalPlan);
+
+    QVERIFY(action());
+    landing->setCoordinate(home.atDistanceAndAzimuth(40, 270));
+    QVERIFY(acceptDialog());
+    QVERIFY(dialogVisible(QCoreApplication::translate("CaacFlightActionList", "Upload landing point")));
+    QVERIFY(verifyText(QStringLiteral("caacPendingLandingUploadMessage"),
+                       QCoreApplication::translate("CaacMissionActionDialog",
+                                                   "Aircraft or mission changed. Close this window and select again."),
+                       QStringLiteral("CaacMissionActionDialog")));
+    QCOMPARE(transfers.count(), 0);
+    QCOMPARE(vehicle->flightMode(), originalMode);
+    QVERIFY(rejectDialog());
+
+    const auto destination = landing->coordinate();
+    QVERIFY(action());
+    QVERIFY(acceptDialog());
+    QTRY_COMPARE_WITH_TIMEOUT(transfers.count(), 1, TestTimeout::longMs());
+    QVERIFY(!transfers.last().first().toBool());
+    QTRY_COMPARE_WITH_TIMEOUT(uploaded.count(), 2, TestTimeout::longMs());
+    QVERIFY(std::any_of(manager->missionItems().cbegin(), manager->missionItems().cend(),
+                        [&destination](const MissionItem* item) {
+                            return item->command() == MAV_CMD_NAV_LAND &&
+                                   QGCGeo::geodesicDistance(item->coordinate(), destination) < 0.02;
+                        }));
+    QTRY_VERIFY_WITH_TIMEOUT(!plugin->landingPointNeedsUpload(master), TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(!vehicle->airborne() && !vehicle->armed(), TestTimeout::longMs());
+    QVERIFY(QGCGeo::geodesicDistance(vehicle->coordinate(), destination) < 0.2);
+    QVERIFY(QGCGeo::geodesicDistance(vehicle->coordinate(), home) > 30);
+    QCOMPARE(transfers.count(), 1);
 }
 
 void CaacSimulationUITest::_usbJoystickModeSwitch()
@@ -1798,14 +1903,27 @@ void CaacSimulationUITest::_uploadAndFlightControls()
         }
         return last;
     };
-    step("live altitude change");
+    const auto sourceLegsUploaded = [&]() {
+        auto* legs = mission->simpleFlightPathSegments();
+        if (!legs->count()) {
+            return false;
+        }
+        for (int i = 0; i < legs->count(); ++i) {
+            auto* leg = legs->value<FlightPathSegment*>(i);
+            if (!leg || !leg->uploaded()) {
+                return false;
+            }
+        }
+        return true;
+    };
+    step("height dialog and altitude bridge");
     vehicle->setFlightMode(vehicle->missionFlightMode());
     QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->missionFlightMode(), TestTimeout::mediumMs());
     QTRY_VERIFY_WITH_TIMEOUT(vehicle->groundSpeed()->rawValue().toDouble() > 1, TestTimeout::mediumMs());
     QVERIFY(!plugin->changeCurrentFlightAltitude(nullptr, 4).isEmpty());
     const auto missionBeforeLiveHeight = master->saveToJson();
     QSignalSpy currentHeightUploads(manager, &MissionManager::sendComplete);
-    // Exercise scrolling at the compact desktop size used by Windows runners.
+    // Exercise the height dialog at the compact desktop size used by Windows runners.
     const QSize previousWindowSize = _window->size();
     const QSize previousMinimumSize = _window->minimumSize();
     _window->setMinimumSize(QSize(0, 0));
@@ -1819,31 +1937,28 @@ void CaacSimulationUITest::_uploadAndFlightControls()
             const double targetMeters = unit == UnitsSettings::VerticalDistanceUnitsMeters ? 4.0 : 4.572;
             QVERIFY(doubleClickAction(QStringLiteral("caacModifyWaypointAltitude")));
             step("height dialog opened");
-            auto* currentHeightAction = findVisibleItemScrolled(QStringLiteral("caacChangeFlightAltitude"),
-                                                                QStringLiteral("popupDialog_contentFlickable"));
-            QVERIFY(currentHeightAction && currentHeightAction->isEnabled());
+            QVERIFY(!findItem(_rootItem, QStringLiteral("caacChangeFlightAltitude")));
+            auto* waypointChoice = findVisibleItem(_rootItem, QStringLiteral("caacFlightWaypointChoice"));
+            auto* waypointAltitude = findVisibleItem(_rootItem, QStringLiteral("caacFlightWaypointAltitude"));
+            QVERIFY(waypointChoice && waypointAltitude);
             if (unit == UnitsSettings::VerticalDistanceUnitsMeters) {
                 QCOMPARE(vehicle->flightMode(), vehicle->missionFlightMode());
-                QQmlExpression legacyHeightAllowed(qmlContext(currentHeightAction), currentHeightAction,
+                QQmlExpression legacyHeightAllowed(qmlContext(waypointAltitude), waypointAltitude,
                                                    QStringLiteral("globals.guidedControllerFlyView.showChangeAlt"));
                 QVERIFY(!legacyHeightAllowed.evaluate().toBool());
                 QVERIFY(!legacyHeightAllowed.hasError());
             }
-            QVERIFY(clickButtonScrolled(QStringLiteral("caacChangeFlightAltitude"),
-                                        QStringLiteral("popupDialog_contentFlickable")));
-            auto* liveAltitude = findVisibleItem(_rootItem, QStringLiteral("caacFlightWaypointAltitude"));
-            QVERIFY(liveAltitude);
-            QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacFlightWaypointChoice"), 0));
+            QVERIFY(rejectDialog());
+            QTRY_VERIFY_WITH_TIMEOUT(!findVisibleItem(_rootItem, QStringLiteral("caacFlightWaypointAltitude"), 0),
+                                     TestTimeout::mediumMs());
             mock->clearReceivedMavCommandCounts();
-            QVERIFY(liveAltitude->setProperty("text", QStringLiteral("0")));
-            QVERIFY(acceptDialog());
-            QVERIFY(dialogVisible(QCoreApplication::translate("CaacMissionActionDialog", "Change altitude")));
+            QVERIFY(!plugin->changeCurrentFlightAltitude(vehicle, 0).isEmpty());
             QCOMPARE(mock->receivedMavCommandCount(MAV_CMD_DO_REPOSITION), 0);
-            QVERIFY(liveAltitude->setProperty("text", QString::number(targetMeters)));
             const int targetBeforeHeight = manager->currentIndex();
             const int loopsBeforeHeight = simulation->remainingLoops();
             QSignalSpy altitudeAcknowledged(vehicle, &Vehicle::mavCommandResult);
-            QVERIFY(acceptDialog());
+            const auto heightError = plugin->changeCurrentFlightAltitude(vehicle, targetMeters);
+            QVERIFY2(heightError.isEmpty(), qPrintable(heightError));
             QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("guidedActionConfirmButton"), 0));
             step("live height command sent");
             QTRY_VERIFY_WITH_TIMEOUT(mock->receivedMavCommandCount(MAV_CMD_DO_REPOSITION) > 0, TestTimeout::mediumMs());
@@ -1858,8 +1973,6 @@ void CaacSimulationUITest::_uploadAndFlightControls()
             QTRY_VERIFY_WITH_TIMEOUT(acceptedHeight(), TestTimeout::mediumMs());
             QTRY_VERIFY_WITH_TIMEOUT(std::abs(vehicle->altitudeRelative()->rawValue().toDouble() - targetMeters) < 0.1,
                                      TestTimeout::longMs());
-            QTRY_VERIFY_WITH_TIMEOUT(!findVisibleItem(_rootItem, QStringLiteral("caacFlightWaypointAltitude"), 0),
-                                     TestTimeout::mediumMs());
             QCOMPARE(vehicle->flightMode(), vehicle->pauseFlightMode());
             QCOMPARE(manager->currentIndex(), targetBeforeHeight);
             QCOMPARE(simulation->remainingLoops(), loopsBeforeHeight);
@@ -1872,6 +1985,16 @@ void CaacSimulationUITest::_uploadAndFlightControls()
     step("height edit");
     auto* target = chooseLastWaypoint();
     QVERIFY(target);
+    SimpleMissionItem* sourceTarget = nullptr;
+    for (int i = 1; i < mission->visualItems()->count(); ++i) {
+        auto* item = mission->visualItems()->value<SimpleMissionItem*>(i);
+        if (item && item->command() == MAV_CMD_NAV_WAYPOINT && item->waypointNumber() == 2 &&
+            QGCGeo::geodesicDistance(item->coordinate(), target->coordinate()) < 0.02) {
+            QVERIFY(!sourceTarget);
+            sourceTarget = item;
+        }
+    }
+    QVERIFY(sourceTarget);
     const auto targetSequence = target->sequenceNumber();
     const auto previousAltitude = target->altitude()->rawValue();
     const auto beforeInvalidBulk = flyMaster->saveToJson();
@@ -1907,6 +2030,8 @@ void CaacSimulationUITest::_uploadAndFlightControls()
         }
     }
     QVERIFY(uploadedAltitude);
+    QTRY_COMPARE_WITH_TIMEOUT(sourceTarget->altitude()->rawValue().toDouble(), 3.0, TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(sourceLegsUploaded(), TestTimeout::mediumMs());
     step("jump");
     QVERIFY(doubleClickAction(QStringLiteral("caacJumpWaypoint")));
     QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacFlightWaypointAltitude"), 0));
@@ -1961,6 +2086,16 @@ void CaacSimulationUITest::_uploadAndFlightControls()
         }
     }
     QVERIFY(updatedWaypoints >= 2);
+    int updatedSourceWaypoints = 0;
+    for (int i = 1; i < mission->visualItems()->count(); ++i) {
+        auto* item = mission->visualItems()->value<SimpleMissionItem*>(i);
+        if (item && item->command() == MAV_CMD_NAV_WAYPOINT) {
+            QCOMPARE(item->altitude()->rawValue().toDouble(), 100.0);
+            ++updatedSourceWaypoints;
+        }
+    }
+    QCOMPARE(updatedSourceWaypoints, 2);
+    QTRY_VERIFY_WITH_TIMEOUT(sourceLegsUploaded(), TestTimeout::mediumMs());
     QTRY_VERIFY_WITH_TIMEOUT(vehicle->altitudeRelative()->rawValue().toDouble() > heightBeforeAll + 0.1,
                              TestTimeout::longMs());
     QTRY_VERIFY_WITH_TIMEOUT(std::abs(vehicle->pitch()->rawValue().toDouble()) > 0.1, TestTimeout::mediumMs());

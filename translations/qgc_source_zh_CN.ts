@@ -26918,6 +26918,14 @@ altitude</source>
         <source>Change flight speed</source>
         <translation>更改航速</translation>
     </message>
+    <message>
+      <source>Upload landing point</source>
+      <translation>上传降落点</translation>
+    </message>
+    <message>
+      <source>The landing point has not been uploaded. Upload the current route and return to this landing point?</source>
+      <translation>当前降落点尚未上传。是否上传当前航线并返航至该降落点？</translation>
+    </message>
 </context>
   <context>
     <name>CaacMissionActionDialog</name>
@@ -29605,6 +29613,10 @@ altitude</source>
     <message>
       <source>The waypoint deletion cannot preserve a safe mission target. The mission remains paused.</source>
       <translation>删除这些航点后无法保留安全的任务目标，任务保持暂停。</translation>
+    </message>
+    <message>
+      <source>The planned mission has no valid landing point.</source>
+      <translation>当前航线没有有效的降落点。</translation>
     </message>
 </context>
   <context>

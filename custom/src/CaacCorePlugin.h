@@ -54,10 +54,14 @@ public:
     Q_INVOKABLE void resetFlightDistanceForSimulationRestart(Vehicle* vehicle);
     Q_INVOKABLE QString changeCurrentFlightAltitude(Vehicle* expectedVehicle, double altitude) const;
     Q_INVOKABLE void returnToDesignatedLanding(PlanMasterController* controller, CaacSimulationController* simulation);
+    Q_INVOKABLE bool landingPointNeedsUpload(PlanMasterController* sourcePlan) const;
+    Q_INVOKABLE QString landingPointUploadFingerprint(PlanMasterController* sourcePlan) const;
+    Q_INVOKABLE void uploadAndReturnToDesignatedLanding(PlanMasterController* sourcePlan,
+                                                        CaacSimulationController* simulation);
     Q_INVOKABLE QString updateFlightWaypointAltitude(PlanMasterController* controller, QObject* waypoint,
-                                                     double altitude);
+                                                     double altitude, PlanMasterController* sourcePlan = nullptr);
     Q_INVOKABLE QString updateFlightWaypointAltitudes(PlanMasterController* controller, const QVariantList& waypoints,
-                                                      double altitude);
+                                                      double altitude, PlanMasterController* sourcePlan = nullptr);
     Q_INVOKABLE QString setFlightWaypointSpeeds(PlanMasterController* controller, const QVariantList& selectedWaypoints,
                                                 double speed, bool allWaypoints);
 

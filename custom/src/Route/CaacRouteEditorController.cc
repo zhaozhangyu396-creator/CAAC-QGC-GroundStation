@@ -727,6 +727,73 @@ QVariantMap CaacRouteEditorController::waypointLeg(QObject* object) const
     return result;
 }
 
+QVariantMap CaacRouteEditorController::snapDrawingAidIntersection(const QPointF& position, const QVariantList& segments,
+                                                                  double tolerance) const
+{
+    const auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
+    if (!std::isfinite(position.x()) || !std::isfinite(position.y()) || !std::isfinite(tolerance) || tolerance <= 0 ||
+        (plugin && !plugin->planningPreferences().value(QStringLiteral("intersectionSnap"), true).toBool())) {
+        return {};
+    }
+
+    struct Segment
+    {
+        int lineId;
+        QPointF start;
+        QPointF end;
+        QGeoCoordinate from;
+        QGeoCoordinate to;
+    };
+
+    QList<Segment> lines;
+    for (const auto& value : segments) {
+        const auto segment = value.toMap();
+        bool validId = false;
+        const int id = segment.value(QStringLiteral("lineId")).toInt(&validId);
+        const auto startValue = segment.value(QStringLiteral("start"));
+        const auto endValue = segment.value(QStringLiteral("end"));
+        const auto start = startValue.toPointF();
+        const auto end = endValue.toPointF();
+        const auto from = segment.value(QStringLiteral("from")).value<QGeoCoordinate>();
+        const auto to = segment.value(QStringLiteral("to")).value<QGeoCoordinate>();
+        if (validId && startValue.canConvert<QPointF>() && endValue.canConvert<QPointF>() && std::isfinite(start.x()) &&
+            std::isfinite(start.y()) && std::isfinite(end.x()) && std::isfinite(end.y()) && from.isValid() &&
+            to.isValid() && QLineF(start, end).length() > 1e-6) {
+            lines.append({id, start, end, from, to});
+        }
+    }
+    QVariantMap result;
+    double closest = tolerance;
+    for (int i = 0; i < lines.size(); ++i) {
+        for (int j = i + 1; j < lines.size(); ++j) {
+            const auto& a = lines[i];
+            const auto& b = lines[j];
+            if (a.lineId == b.lineId) {
+                continue;
+            }
+            QPointF intersection;
+            if (QLineF(a.start, a.end).intersects(QLineF(b.start, b.end), &intersection) !=
+                QLineF::BoundedIntersection) {
+                continue;
+            }
+            const double distance = QLineF(position, intersection).length();
+            if (!std::isfinite(distance) || distance > closest) {
+                continue;
+            }
+            closest = distance;
+            result = {{QStringLiteral("point"), intersection},
+                      {QStringLiteral("guides"),
+                       QVariantList{QVariantMap{{QStringLiteral("from"), QVariant::fromValue(a.from)},
+                                                {QStringLiteral("to"), QVariant::fromValue(a.to)},
+                                                {QStringLiteral("kind"), 0}},
+                                    QVariantMap{{QStringLiteral("from"), QVariant::fromValue(b.from)},
+                                                {QStringLiteral("to"), QVariant::fromValue(b.to)},
+                                                {QStringLiteral("kind"), 0}}}}};
+        }
+    }
+    return result;
+}
+
 QVariantMap CaacRouteEditorController::snapWaypointDrag(QObject* object, const QGeoCoordinate& coordinate,
                                                         double tolerance) const
 {

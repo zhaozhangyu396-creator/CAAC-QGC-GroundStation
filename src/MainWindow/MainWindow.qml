@@ -351,7 +351,7 @@ ApplicationWindow {
             _reentrantCloseGuard = true
             _showMessageDialogWorker(mainWindow, qsTr("Unsaved Mission"),
                               qsTr("You have a mission edit in progress which has not been saved/uploaded. If you close you will lose changes. Are you sure you want to close?"),
-                              Dialog.Yes | Dialog.No,
+                              Dialog.Ok | Dialog.Cancel,
                               function() { accepted = true; _closeChecksToSkip |= _skipUnsavedMissionCheckMask; performCloseChecks() },
                               function() { if (!accepted) _reentrantCloseGuard = false },
                               true /* bypassNavigationCheck */)

@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import QtQml.Models
 
 import QGroundControl
@@ -31,12 +32,45 @@ ToolStripActionList {
         && _vehicle.flightMode === _vehicle.pauseFlightMode && (!_simulatedVehicle || _simulation.missionReady)
     property Component _missionDialog: Component { CaacMissionActionDialog { } }
     property Component _speedDialog: Component { CaacFlightSpeedDialog { } }
+    property var _landingUploadPrompt: null
+    property Component _landingUploadDialog: Component {
+        QGCPopupDialog {
+            id: landingDialog
+            property var vehicleAtOpen
+            property var sourcePlanAtOpen
+            property string fingerprintAtOpen
+            property string error: ""
+            title: qsTr("Upload landing point")
+            buttons: Dialog.Ok | Dialog.Cancel
+            onAccepted: {
+                if (!vehicleAtOpen || vehicleAtOpen !== root._vehicle
+                    || sourcePlanAtOpen !== root.returnSourcePlan()
+                    || !fingerprintAtOpen.length
+                    || fingerprintAtOpen !== QGroundControl.corePlugin.landingPointUploadFingerprint(sourcePlanAtOpen)
+                    || !QGroundControl.corePlugin.landingPointNeedsUpload(sourcePlanAtOpen)) {
+                    error = qsTranslate("CaacMissionActionDialog", "Aircraft or mission changed. Close this window and select again.")
+                    preventClose = true
+                    return
+                }
+                QGroundControl.corePlugin.uploadAndReturnToDesignatedLanding(sourcePlanAtOpen, root._simulation)
+            }
+            onClosed: if (root._landingUploadPrompt === landingDialog) { root._landingUploadPrompt = null }
+            QGCLabel {
+                objectName: "caacPendingLandingUploadMessage"
+                width: Math.min(landingDialog.maxContentAvailableWidth, ScreenTools.defaultFontPixelWidth * 55)
+                wrapMode: Text.WordWrap
+                text: landingDialog.error || qsTr("The landing point has not been uploaded. Upload the current route and return to this landing point?")
+            }
+        }
+    }
     property var _pendingVehicle: null
     property bool _pendingAltitude: false
     on_GuidedChanged: disableAutomaticConfirmations()
     Component.onCompleted: disableAutomaticConfirmations()
+    Component.onDestruction: if (_landingUploadPrompt) { _landingUploadPrompt.close() }
     on_VehicleChanged: {
         _pendingVehicle = null
+        if (_landingUploadPrompt) { _landingUploadPrompt.close() }
         if (root._guided && root._guided.confirmDialog && root._guided.guidedValueSlider) { root._guided.closeAll() }
     }
 
@@ -57,6 +91,25 @@ ToolStripActionList {
         if (error.length) {
             _pendingVehicle = null
             QGroundControl.showMessageDialog(mainWindow, qsTr("Waypoint operations"), error)
+        }
+    }
+
+    function returnSourcePlan() {
+        return root._simulatedVehicle ? root._simulation.planningPlan : globals.planMasterControllerPlanView
+    }
+
+    function returnToLanding() {
+        const sourcePlan = root.returnSourcePlan()
+        if (QGroundControl.corePlugin.landingPointNeedsUpload(sourcePlan)) {
+            if (root._landingUploadPrompt) { return }
+            const dialog = root._landingUploadDialog.createObject(mainWindow, {
+                vehicleAtOpen: root._vehicle,
+                sourcePlanAtOpen: sourcePlan,
+                fingerprintAtOpen: QGroundControl.corePlugin.landingPointUploadFingerprint(sourcePlan)
+            })
+            if (dialog) { root._landingUploadPrompt = dialog; dialog.open() }
+        } else {
+            QGroundControl.corePlugin.returnToDesignatedLanding(root._master, root._simulation)
         }
     }
 
@@ -100,7 +153,7 @@ ToolStripActionList {
             onTriggered: {
                 if (enabled) {
                     root._guided.closeAll()
-                    QGroundControl.corePlugin.returnToDesignatedLanding(root._master, root._simulation)
+                    root.returnToLanding()
                 }
             }
         },

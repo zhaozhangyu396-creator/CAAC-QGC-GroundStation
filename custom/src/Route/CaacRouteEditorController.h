@@ -2,6 +2,7 @@
 
 #include <QtCore/QJsonObject>
 #include <QtCore/QObject>
+#include <QtCore/QPointF>
 #include <QtCore/QPointer>
 #include <QtCore/QTimer>
 #include <QtCore/QVariantList>
@@ -68,6 +69,8 @@ public:
                                     bool specifySpeed, double speed);
     Q_INVOKABLE QVariantMap waypointLeg(QObject* item) const;
     Q_INVOKABLE QVariantMap snapWaypointDrag(QObject* item, const QGeoCoordinate& coordinate, double tolerance) const;
+    Q_INVOKABLE QVariantMap snapDrawingAidIntersection(const QPointF& position, const QVariantList& segments,
+                                                       double tolerance) const;
     Q_INVOKABLE QVariantList waypointAngles(bool closed) const;
     Q_INVOKABLE QGeoCoordinate waypointVertexCoordinate(QObject* item, double angle) const;
     Q_INVOKABLE bool applyWaypointRelation(int targetIndex, int referenceIndex, int secondIndex, bool extendedLeg,

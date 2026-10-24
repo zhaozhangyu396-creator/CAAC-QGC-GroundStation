@@ -22,6 +22,7 @@ Item {
         : eightTools.visible ? [Qt.rect(eightTools.x, eightTools.y, eightTools.width, eightTools.height),
             Qt.rect(eightExamControl.x, eightExamControl.y, eightExamControl.width, eightExamControl.height)] : []
     property alias mapToolsContainer: mapToolsLayout
+    readonly property real flightActionsLeft: tools.x + toolbar.width + root._margin
 
     readonly property bool _simulationEmergency: _corePlugin.simulation.emergencyMode
     property Component _emergencyDialog: Component { CaacSimulationEmergencyDialog { } }

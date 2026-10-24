@@ -1,10 +1,12 @@
 #include "CaacCorePlugin.h"
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <utility>
 
 #include <QtCore/QApplicationStatic>
+#include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
 #include <QtCore/QScopeGuard>
 #include <QtCore/QSettings>
@@ -359,6 +361,77 @@ QString CaacCorePlugin::changeCurrentFlightAltitude(Vehicle* expectedVehicle, do
     return {};
 }
 
+bool CaacCorePlugin::landingPointNeedsUpload(PlanMasterController* sourcePlan) const
+{
+    auto* vehicle = MultiVehicleManager::instance()->activeVehicle();
+    auto* mission = sourcePlan ? sourcePlan->missionController() : nullptr;
+    if (!vehicle || !sourcePlan || !mission || sourcePlan->managerVehicle() != vehicle || sourcePlan->offline()) {
+        return false;
+    }
+    const SimpleMissionItem* planned = nullptr;
+    for (int i = 1; i < mission->visualItems()->count(); ++i) {
+        const auto* item = mission->visualItems()->value<SimpleMissionItem*>(i);
+        if (item && (item->command() == MAV_CMD_NAV_LAND || item->command() == MAV_CMD_NAV_VTOL_LAND) &&
+            item->coordinate().isValid() && std::isfinite(item->missionItem().param7())) {
+            planned = item;
+        }
+    }
+    if (!planned) {
+        return false;
+    }
+    const MissionItem* uploaded = nullptr;
+    for (const auto* item : vehicle->missionManager()->missionItems()) {
+        if (item && (item->command() == MAV_CMD_NAV_LAND || item->command() == MAV_CMD_NAV_VTOL_LAND) &&
+            item->coordinate().isValid() && std::isfinite(item->param7())) {
+            uploaded = item;
+        }
+    }
+    const auto& target = planned->missionItem();
+    return !uploaded || uploaded->command() != target.command() || uploaded->frame() != target.frame() ||
+           uploaded->coordinate().distanceTo(target.coordinate()) > 0.02 ||
+           std::abs(uploaded->param7() - target.param7()) > 0.001;
+}
+
+QString CaacCorePlugin::landingPointUploadFingerprint(PlanMasterController* sourcePlan) const
+{
+    return sourcePlan ? QString::fromUtf8(sourcePlan->saveToJson().toJson(QJsonDocument::Compact)) : QString();
+}
+
+void CaacCorePlugin::uploadAndReturnToDesignatedLanding(PlanMasterController* sourcePlan,
+                                                        CaacSimulationController* simulation)
+{
+    auto* vehicle = MultiVehicleManager::instance()->activeVehicle();
+    if (!vehicle) {
+        QGC::showAppMessage(tr("Wait for the aircraft and mission transfer to be ready."));
+        return;
+    }
+    if (!sourcePlan || sourcePlan->managerVehicle() != vehicle || sourcePlan->offline() ||
+        !vehicle->isInitialConnectComplete() || !vehicle->armed() || !vehicle->airborne() ||
+        !vehicle->supports()->guidedMode() || vehicle->vehicleLinkManager()->communicationLost() ||
+        sourcePlan->syncInProgress() || vehicle->flightPlanUpdateInProgress() ||
+        sourcePlan->property("caacRotationPreviewActive").toBool() || _flightAltitudeUpdateTimer ||
+        (_flightReturnController && _flightReturnController->busy())) {
+        QGC::showAppMessage(tr("Wait for the aircraft and mission transfer to be ready."));
+        return;
+    }
+    auto* transaction = new CaacMissionUpdateController(this);
+    _flightReturnController = transaction;
+    connect(transaction, &CaacMissionUpdateController::finished, this,
+            [this, transaction](bool success, const QString& message) {
+                if (_flightReturnController == transaction) {
+                    _flightReturnController.clear();
+                }
+                if (!success && !message.isEmpty()) {
+                    QGC::showAppMessage(message);
+                }
+                transaction->deleteLater();
+            });
+    if (!transaction->uploadAndReturnToLandingPoint(sourcePlan, simulation) && _flightReturnController == transaction) {
+        _flightReturnController.clear();
+        transaction->deleteLater();
+    }
+}
+
 void CaacCorePlugin::returnToDesignatedLanding(PlanMasterController* controller, CaacSimulationController* simulation)
 {
     auto* vehicle = MultiVehicleManager::instance()->activeVehicle();
@@ -404,13 +477,13 @@ void CaacCorePlugin::returnToDesignatedLanding(PlanMasterController* controller,
 }
 
 QString CaacCorePlugin::updateFlightWaypointAltitude(PlanMasterController* controller, QObject* waypoint,
-                                                     double altitude)
+                                                     double altitude, PlanMasterController* sourcePlan)
 {
-    return updateFlightWaypointAltitudes(controller, {QVariant::fromValue(waypoint)}, altitude);
+    return updateFlightWaypointAltitudes(controller, {QVariant::fromValue(waypoint)}, altitude, sourcePlan);
 }
 
 QString CaacCorePlugin::updateFlightWaypointAltitudes(PlanMasterController* controller, const QVariantList& waypoints,
-                                                      double altitude)
+                                                      double altitude, PlanMasterController* sourcePlan)
 {
     if (_flightAltitudeUpdateTimer || (_flightReturnController && _flightReturnController->busy())) {
         return tr("Wait for the aircraft and mission transfer to be ready.");
@@ -455,6 +528,7 @@ QString CaacCorePlugin::updateFlightWaypointAltitudes(PlanMasterController* cont
         _flightAltitudeUpdateTimer = timer;
         const QPointer<Vehicle> aircraft(vehicle);
         const QPointer<PlanMasterController> plan(controller);
+        const QPointer<PlanMasterController> source(sourcePlan);
         connect(MultiVehicleManager::instance(), &MultiVehicleManager::activeVehicleChanged, timer,
                 [timer, aircraft](Vehicle* activeVehicle) {
                     if (!aircraft || activeVehicle != aircraft) {
@@ -469,38 +543,39 @@ QString CaacCorePlugin::updateFlightWaypointAltitudes(PlanMasterController* cont
             QGC::showAppMessage(tr("Wait for the aircraft and mission transfer to be ready."));
             timer->deleteLater();
         });
-        connect(vehicle, &Vehicle::flightModeChanged, timer, [this, timer, aircraft, plan, selected, altitude]() {
-            if (timer->property("uploading").toBool() || !aircraft || !plan ||
-                aircraft != MultiVehicleManager::instance()->activeVehicle() ||
-                aircraft->flightMode() != aircraft->pauseFlightMode()) {
-                return;
-            }
-            timer->setProperty("uploading", true);
-            QVariantList selectedWaypoints;
-            for (const auto& item : selected) {
-                selectedWaypoints.append(QVariant::fromValue(static_cast<QObject*>(item.data())));
-            }
-            connect(
-                aircraft->missionManager(), &MissionManager::sendComplete, timer,
-                [timer, aircraft](bool error) {
-                    if (error) {
-                        QGC::showAppMessage(QCoreApplication::translate("CaacSimulationController",
-                                                                        "Simulation mission upload failed."));
-                    } else if (aircraft && aircraft == MultiVehicleManager::instance()->activeVehicle() &&
-                               aircraft->flightMode() == aircraft->pauseFlightMode()) {
-                        aircraft->startMission();
+        connect(vehicle, &Vehicle::flightModeChanged, timer,
+                [this, timer, aircraft, plan, source, selected, altitude]() {
+                    if (timer->property("uploading").toBool() || !aircraft || !plan ||
+                        aircraft != MultiVehicleManager::instance()->activeVehicle() ||
+                        aircraft->flightMode() != aircraft->pauseFlightMode()) {
+                        return;
                     }
-                    timer->deleteLater();
-                },
-                Qt::SingleShotConnection);
-            _flightAltitudeUpdateTimer.clear();
-            const auto error = updateFlightWaypointAltitudes(plan, selectedWaypoints, altitude);
-            _flightAltitudeUpdateTimer = timer;
-            if (!error.isEmpty()) {
-                QGC::showAppMessage(error);
-                timer->deleteLater();
-            }
-        });
+                    timer->setProperty("uploading", true);
+                    QVariantList selectedWaypoints;
+                    for (const auto& item : selected) {
+                        selectedWaypoints.append(QVariant::fromValue(static_cast<QObject*>(item.data())));
+                    }
+                    connect(
+                        aircraft->missionManager(), &MissionManager::sendComplete, timer,
+                        [timer, aircraft](bool error) {
+                            if (error) {
+                                QGC::showAppMessage(QCoreApplication::translate("CaacSimulationController",
+                                                                                "Simulation mission upload failed."));
+                            } else if (aircraft && aircraft == MultiVehicleManager::instance()->activeVehicle() &&
+                                       aircraft->flightMode() == aircraft->pauseFlightMode()) {
+                                aircraft->startMission();
+                            }
+                            timer->deleteLater();
+                        },
+                        Qt::SingleShotConnection);
+                    _flightAltitudeUpdateTimer.clear();
+                    const auto error = updateFlightWaypointAltitudes(plan, selectedWaypoints, altitude, source);
+                    _flightAltitudeUpdateTimer = timer;
+                    if (!error.isEmpty()) {
+                        QGC::showAppMessage(error);
+                        timer->deleteLater();
+                    }
+                });
         timer->start(60000);
         vehicle->pauseVehicle();
         return {};
@@ -525,8 +600,70 @@ QString CaacCorePlugin::updateFlightWaypointAltitudes(PlanMasterController* cont
             }
         }
     }
+    auto* source = _simulation->ownsVehicle(vehicle) ? _simulation->planningPlan() : sourcePlan;
+    auto* sourceMission = source && source != controller && source->managerVehicle() == vehicle && !source->offline() &&
+                                  !source->syncInProgress() && !source->property("caacRotationPreviewActive").toBool()
+                              ? source->missionController()
+                              : nullptr;
+    const bool sourceDirty = sourceMission && sourceMission->dirty();
+    QList<SimpleMissionItem*> sourceItems;
+    if (sourceMission) {
+        for (auto* item : items) {
+            const int number = _simulation->ownsVehicle(vehicle)
+                                   ? _simulation->waypointNumber(item->sequenceNumber(), item->coordinate())
+                                   : item->waypointNumber();
+            SimpleMissionItem* match = nullptr;
+            for (int i = 1; i < sourceMission->visualItems()->count(); ++i) {
+                auto* candidate = sourceMission->visualItems()->value<SimpleMissionItem*>(i);
+                if (!candidate || candidate->command() != MAV_CMD_NAV_WAYPOINT ||
+                    candidate->waypointNumber() != number ||
+                    candidate->missionItem().frame() != item->missionItem().frame() ||
+                    candidate->coordinate().distanceTo(item->coordinate()) >= 0.02) {
+                    continue;
+                }
+                const double previousAltitude = item->altitude()->rawValue().toDouble();
+                const double plannedAltitude = candidate->altitude()->rawValue().toDouble();
+                const double epsilon = std::max({1.0, std::abs(previousAltitude), std::abs(plannedAltitude)}) *
+                                       std::numeric_limits<float>::epsilon();
+                if (!std::isfinite(plannedAltitude) || std::abs(plannedAltitude - previousAltitude) > epsilon) {
+                    continue;
+                }
+                if (match) {
+                    match = nullptr;
+                    break;
+                }
+                match = candidate;
+            }
+            if (match && !sourceItems.contains(match)) {
+                sourceItems.append(match);
+            }
+        }
+    }
     for (auto* item : items) {
         item->altitude()->setRawValue(altitude);
+    }
+    if (sourceMission) {
+        for (auto* item : sourceItems) {
+            item->altitude()->setRawValue(altitude);
+        }
+        // Bind source aliases to this upload without claiming unrelated local drafts were sent.
+        sourceMission->trackMissionUpload();
+        if (sourceDirty) {
+            sourceMission->setDirty(true);
+        }
+        const QPointer<MissionController> sourceController(sourceMission);
+        const QPointer<PlanMasterController> sourceMaster(source);
+        const QPointer<Vehicle> sourceVehicle(vehicle);
+        connect(
+            vehicle->missionManager(), &MissionManager::sendComplete, sourceMission,
+            [sourceController, sourceMaster, sourceVehicle](bool error) {
+                if (error && sourceController && sourceMaster && sourceVehicle &&
+                    sourceMaster->managerVehicle() == sourceVehicle &&
+                    MultiVehicleManager::instance()->activeVehicle() == sourceVehicle) {
+                    sourceController->setDirty(true);
+                }
+            },
+            Qt::SingleShotConnection);
     }
     mission->sendToVehicle();
     return {};

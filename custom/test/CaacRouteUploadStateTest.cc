@@ -4,6 +4,7 @@
 #include <QtCore/QTemporaryDir>
 #include <QtTest/QSignalSpy>
 
+#include "CaacCorePlugin.h"
 #include "Fact.h"
 #include "FlightPathSegment.h"
 #include "MissionController.h"
@@ -25,6 +26,8 @@ private slots:
     void _localEditsRetainAcknowledgedLegs();
     void _vehicleChangeClearsAcknowledgedLegs();
     void _wireLoopAndSpeedTypesStayAcknowledged();
+    void _flightAltitudeUpdatesRetainAcknowledgedLegs_data();
+    void _flightAltitudeUpdatesRetainAcknowledgedLegs();
 
 private:
     void _preparePlan(PlanMasterController& plan);
@@ -315,6 +318,86 @@ void CaacRouteUploadStateTest::_wireLoopAndSpeedTypesStayAcknowledged()
     QVERIFY(!mission->isRouteSegmentUploaded(fourthCoordinate, secondCoordinate, 8));
     QCOMPARE(sent.count(), 1);
     QVERIFY(manager->missionItemsAreDownloaded());
+}
+
+void CaacRouteUploadStateTest::_flightAltitudeUpdatesRetainAcknowledgedLegs_data()
+{
+    QTest::addColumn<bool>("all");
+    QTest::addColumn<bool>("failed");
+    QTest::addColumn<bool>("draft");
+    QTest::newRow("selected-height") << false << false << false;
+    QTest::newRow("all-heights") << true << false << false;
+    QTest::newRow("rejected-upload") << false << true << false;
+    QTest::newRow("preserve-local-height-draft") << true << false << true;
+}
+
+void CaacRouteUploadStateTest::_flightAltitudeUpdatesRetainAcknowledgedLegs()
+{
+    QFETCH(bool, all);
+    QFETCH(bool, failed);
+    QFETCH(bool, draft);
+    PlanMasterController plan;
+    _preparePlan(plan);
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    auto* mission = plan.missionController();
+    auto* manager = vehicle()->missionManager();
+    QSignalSpy sent(manager, &MissionManager::sendComplete);
+    mission->sendToVehicle();
+    QTRY_COMPARE_WITH_TIMEOUT(sent.count(), 1, TestTimeout::longMs());
+    QVERIFY(!sent.last().first().toBool());
+    QTRY_VERIFY2_WITH_TIMEOUT(_statesMatch(mission, {true, true, true, true}), qPrintable(_stateText(mission)),
+                              TestTimeout::mediumMs());
+
+    PlanMasterController flight;
+    flight.setFlyView(true);
+    flight.start();
+    QTRY_COMPARE_WITH_TIMEOUT(flight.managerVehicle(), vehicle(), TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(!flight.syncInProgress(), TestTimeout::mediumMs());
+    flight.missionController()->showPlanFromManagerVehicle();
+    QVariantList selected;
+    for (int i = 1; i < flight.missionController()->visualItems()->count(); ++i) {
+        auto* item = flight.missionController()->visualItems()->value<SimpleMissionItem*>(i);
+        if (item && item->command() == MAV_CMD_NAV_WAYPOINT && (all || item->waypointNumber() == 2)) {
+            selected.append(QVariant::fromValue(static_cast<QObject*>(item)));
+        }
+    }
+    QCOMPARE(selected.size(), all ? 4 : 1);
+    auto* localThird = mission->visualItems()->value<SimpleMissionItem*>(3);
+    QVERIFY(localThird);
+    if (draft) {
+        localThird->altitude()->setRawValue(55);
+        QVERIFY(mission->dirty());
+    }
+    if (failed) {
+        expectLogMessage("API.QGCApplication.AppMessage", QtDebugMsg,
+                         QRegularExpression(QStringLiteral("任务传输失败|Mission transfer failed")));
+        mockLink()->setMissionItemFailureMode(MockLinkMissionItemHandler::FailWriteFinalAckErrorAck, MAV_MISSION_ERROR);
+    }
+    auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
+    QVERIFY(plugin);
+    QVERIFY(plugin->updateFlightWaypointAltitudes(&flight, selected, 42, &plan).isEmpty());
+    QVERIFY(!mission->uploadConfirmed());
+    QTRY_COMPARE_WITH_TIMEOUT(sent.count(), 2, TestTimeout::longMs());
+    QCOMPARE(sent.last().first().toBool(), failed);
+    if (failed) {
+        verifyExpectedLogMessage();
+    }
+    const QList<bool> expected = failed  ? QList<bool>{true, false, false, true}
+                                 : draft ? QList<bool>{true, true, false, false}
+                                         : QList<bool>{true, true, true, true};
+    QTRY_VERIFY2_WITH_TIMEOUT(_statesMatch(mission, expected), qPrintable(_stateText(mission)),
+                              TestTimeout::mediumMs());
+    for (int i = 1; i <= 4; ++i) {
+        auto* item = mission->visualItems()->value<SimpleMissionItem*>(i);
+        QVERIFY(item);
+        QCOMPARE(item->altitude()->rawValue().toDouble(), draft && i == 3 ? 55.0 : all || i == 2 ? 42.0 : 30.0);
+    }
+    if (draft || failed) {
+        QVERIFY(mission->dirty());
+        QVERIFY(!mission->uploadConfirmed());
+    }
 }
 
 UT_REGISTER_TEST(CaacRouteUploadStateTest, TestLabel::Unit, TestLabel::MissionManager)

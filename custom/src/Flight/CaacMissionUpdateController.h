@@ -6,6 +6,7 @@
 #include <QtCore/QPointer>
 #include <QtCore/QTimer>
 #include <QtCore/QtNumeric>
+#include <QtPositioning/QGeoCoordinate>
 #include <QtQmlIntegration/QtQmlIntegration>
 
 class CaacSimulationController;
@@ -33,6 +34,7 @@ public:
                                   double currentFlightSpeed = qQNaN(), int expectedCurrentSequence = -1);
     Q_INVOKABLE bool updateDeletedWaypoints(PlanMasterController* plan, CaacSimulationController* simulation);
     Q_INVOKABLE bool returnToLandingPoint(PlanMasterController* plan, CaacSimulationController* simulation);
+    Q_INVOKABLE bool uploadAndReturnToLandingPoint(PlanMasterController* plan, CaacSimulationController* simulation);
 
 signals:
     void busyChanged();
@@ -75,8 +77,13 @@ private:
     bool _resumeAfterUpdate = true;
     bool _restoreFlightSpeed = false;
     bool _returningToLanding = false;
+    bool _uploadForLandingReturn = false;
     QString _returnInitialMode;
     QPointer<MissionItem> _landingTarget;
+    QGeoCoordinate _requestedLandingCoordinate;
+    int _requestedLandingCommand = -1;
+    int _requestedLandingFrame = -1;
+    double _requestedLandingAltitude = qQNaN();
     int _flightSpeedType = -1;
     double _runtimeFlightSpeed = qQNaN();
     double _forcedFlightSpeed = qQNaN();

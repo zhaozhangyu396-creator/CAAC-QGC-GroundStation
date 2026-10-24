@@ -218,6 +218,7 @@ Item {
     FlyViewToolBar {
         id:                 toolbar
         guidedValueSlider:  _guidedValueSlider
+        flightActionsLeft: customOverlay.mapToItem(parent, customOverlay.flightActionsLeft, 0).x
         visible:            !QGroundControl.videoManager.fullScreen
         onDisplayPreFlightChecklist: widgetLayer.displayPreFlightChecklist()
     }

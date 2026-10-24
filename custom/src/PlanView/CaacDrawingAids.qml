@@ -29,6 +29,24 @@ Item {
             .concat([{id: ++_nextId, origin: origin, radius: radius, bearing: bearing, axes: axes, kind: kind}])
     }
     function clear() { aids = [] }
+    function linePath(aid) {
+        return [aid.origin.atDistanceAndAzimuth(1000, aid.bearing + 180),
+            aid.origin, aid.origin.atDistanceAndAzimuth(1000, aid.bearing)]
+    }
+    function screenSegments() {
+        if (!showAids || !mapControl) { return [] }
+        const segments = []
+        for (const aid of aids) {
+            if (aid.kind !== "line" || aid.axes || !isFinite(aid.bearing)) { continue }
+            const path = linePath(aid)
+            for (let i = 1; i < path.length; ++i) {
+                segments.push({lineId: aid.id, from: path[i - 1], to: path[i],
+                    start: mapControl.fromCoordinate(path[i - 1], false),
+                    end: mapControl.fromCoordinate(path[i], false)})
+            }
+        }
+        return segments
+    }
     function clearAxes() { aids = aids.filter(aid => !aid.axes) }
     function remove(id) { aids = aids.filter(aid => aid.id !== id) }
     function move(id, coordinate) {
@@ -62,8 +80,7 @@ Item {
                     objectName: "caacAuxiliaryLine"
                     required property real modelData
                     property var attachedMap: null
-                    path: [guide.modelData.origin.atDistanceAndAzimuth(1000, modelData + 180),
-                        guide.modelData.origin, guide.modelData.origin.atDistanceAndAzimuth(1000, modelData)]
+                    path: root.linePath(guide.modelData)
                     visible: root.showAids
                     line.width: ScreenTools.defaultFontPixelWidth * 0.2
                     line.color: QGroundControl.globalPalette.colorYellowGreen

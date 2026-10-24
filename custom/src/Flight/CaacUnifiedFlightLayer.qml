@@ -18,6 +18,7 @@ Item {
     readonly property bool _emergency: QGroundControl.corePlugin.simulation.emergencyMode
     readonly property real telemetryHeight: footer.height + root._toolsMargin * 2
     readonly property var mapToolsContainer: customLayer.item ? customLayer.item.mapToolsContainer : null
+    readonly property real flightActionsLeft: customLayer.item ? customLayer.item.flightActionsLeft : NaN
     QGCPalette { id: qgcPal; colorGroupEnabled: true }
 
     Loader {
