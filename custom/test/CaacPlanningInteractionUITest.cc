@@ -2024,8 +2024,7 @@ void CaacPlanningInteractionUITest::_pointMenusAndOrientation()
     QTRY_VERIFY_WITH_TIMEOUT(QLineF(markerPosition(), middle).length() < 1, TestTimeout::mediumMs());
     QTest::mouseClick(_window, Qt::RightButton, Qt::NoModifier, markerPosition().toPoint());
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacContextDeleteWaypoint")));
-    auto* gotoButton = findVisibleItem(_rootItem, QStringLiteral("caacContextGoto"));
-    QVERIFY(gotoButton && !gotoButton->isEnabled());
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacContextGoto"), 0));
     if (const auto screenshot = qgetenv("CAAC_POINT_MENU_SCREENSHOT"); !screenshot.isEmpty()) {
         QVERIFY(_window->grabWindow().save(QString::fromUtf8(screenshot)));
     }

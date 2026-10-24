@@ -13,7 +13,6 @@ Menu {
     required property var editor
     property var waypoint: null
     readonly property var controller: editor.routeController
-    readonly property var _vehicle: QGroundControl.multiVehicleManager.activeVehicle
     parent: editor.editorMap
     font.pointSize: ScreenTools.menuFontPointSize
     width: ScreenTools.defaultFontPixelWidth * 28
@@ -102,7 +101,8 @@ Menu {
     MenuItem {
         objectName: "caacContextDeleteWaypoint"
         visible: root.waypoint && !root.waypoint.homePosition
-        text: root.waypoint ? qsTr("Delete waypoint %1").arg(root.waypoint.waypointNumber) : qsTr("Delete")
+        text: !root.waypoint ? qsTr("Delete") : root.waypoint.isLandCommand
+            ? qsTr("Delete planned landing point") : qsTr("Delete waypoint %1").arg(root.waypoint.waypointNumber)
         enabled: root.waypoint && (root.waypoint.command === 16 || root.waypoint.isLandCommand) && root.editor.canDeleteWaypoints
         onTriggered: root.editor.removeWaypoint(root.waypoint)
     }
@@ -144,13 +144,6 @@ Menu {
         visible: root.waypoint && !root.waypoint.homePosition
         enabled: root.waypoint && root.waypoint.command === 16
         onTriggered: root.controller.useWaypointAsLanding(root.waypoint)
-    }
-    MenuSeparator { }
-    MenuItem {
-        objectName: "caacContextGoto"
-        text: qsTr("Fly to this point")
-        enabled: root.waypoint && root._vehicle && root._vehicle.armed && root._vehicle.airborne && root._vehicle.supports.guidedMode
-        onTriggered: root.editor.confirmGoto(root.waypoint.coordinate)
     }
     MenuSeparator { }
     MenuItem {

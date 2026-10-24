@@ -57,7 +57,7 @@ private:
     void _finish(bool success, const QString& message);
     void _uploadFailed(const QString& detail = {});
     bool _prepareNative();
-    bool _prepareNativeSpeeds();
+    bool _prepareNativeSpeeds(bool allowAdditions = false);
     void _applySpeed();
     void _restored();
     void _setStage(Stage stage);

@@ -275,7 +275,8 @@ Popup {
                 pointSize: ScreenTools.menuFontPointSize
                 textColor: palette.colorRed
                 Layout.fillWidth: true
-                enabled: root._editable
+                enabled: root.waypoint && (root.waypoint.command === 16 || root.waypoint.isLandCommand)
+                    && root.editor.canDeleteWaypoints
                 text: qsTr("Delete")
                 onClicked: {
                     root.fineTuning = false

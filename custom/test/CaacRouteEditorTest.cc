@@ -176,6 +176,12 @@ void CaacRouteEditorTest::_testWaypointLabelsFollowSpeedCommands()
     QCOMPARE(observedLabel, QCoreApplication::translate("CaacRouteEditorController", "Waypoint %1 · %2")
                                 .arg(second->waypointNumber())
                                 .arg(second->commandName()));
+    labelsChanged.clear();
+    second->setCommand(MAV_CMD_NAV_LAND);
+    QVERIFY(!labelsChanged.isEmpty());
+    QCOMPARE(observedLabel, QCoreApplication::translate("CaacRouteEditorController", "Planned landing point"));
+    second->setCommand(MAV_CMD_NAV_VTOL_LAND);
+    QCOMPARE(label(), QCoreApplication::translate("CaacRouteEditorController", "Planned landing point"));
 }
 
 void CaacRouteEditorTest::_testGeodesicGeometry_data()

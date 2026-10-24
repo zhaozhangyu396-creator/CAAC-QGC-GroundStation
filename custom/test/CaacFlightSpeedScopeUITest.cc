@@ -28,8 +28,11 @@ class CaacFlightSpeedScopeUITest : public QmlUITestBase
     Q_OBJECT
 
 private slots:
+    void _scopedUpdatesPreserveFlightProgress_data();
     void _scopedUpdatesPreserveFlightProgress();
     void _selectedDepartureIncludesCurrentLeg();
+    void _insertsSpeedsWithSelectedStart_data();
+    void _insertsSpeedsWithSelectedStart();
 
 private:
     bool _openSpeedDialog();
@@ -56,8 +59,16 @@ bool CaacFlightSpeedScopeUITest::_triggerFlightAction(const QString& name)
     return true;
 }
 
+void CaacFlightSpeedScopeUITest::_scopedUpdatesPreserveFlightProgress_data()
+{
+    QTest::addColumn<bool>("specifiedWaypointSpeeds");
+    QTest::newRow("existing-waypoint-speed-sections") << true;
+    QTest::newRow("insert-waypoint-speed-sections") << false;
+}
+
 void CaacFlightSpeedScopeUITest::_scopedUpdatesPreserveFlightProgress()
 {
+    QFETCH(bool, specifiedWaypointSpeeds);
     startUI();
     if (QTest::currentTestFailed()) {
         return;
@@ -85,7 +96,7 @@ void CaacFlightSpeedScopeUITest::_scopedUpdatesPreserveFlightProgress()
         QVERIFY(item && item->speedSection());
         item->altitude()->setRawValue(2);
         item->speedSection()->flightSpeed()->setRawValue(5);
-        item->speedSection()->setSpecifyFlightSpeed(true);
+        item->speedSection()->setSpecifyFlightSpeed(specifiedWaypointSpeeds);
     }
     QVERIFY(editor->setMissionFlightSpeed(true, 5));
     auto* first = mission->visualItems()->value<SimpleMissionItem*>(1);
@@ -447,6 +458,98 @@ void CaacFlightSpeedScopeUITest::_selectedDepartureIncludesCurrentLeg()
     for (int i = 1; i <= 2; ++i) {
         QCOMPARE(mission->visualItems()->value<SimpleMissionItem*>(i)->specifiedFlightSpeed(), 5.0);
     }
+}
+
+void CaacFlightSpeedScopeUITest::_insertsSpeedsWithSelectedStart_data()
+{
+    QTest::addColumn<bool>("allWaypoints");
+    QTest::newRow("selected-waypoint-open-loop") << false;
+    QTest::newRow("all-waypoints-open-loop") << true;
+}
+
+void CaacFlightSpeedScopeUITest::_insertsSpeedsWithSelectedStart()
+{
+    QFETCH(bool, allWaypoints);
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    QVERIFY(QMetaObject::invokeMethod(_window, "showPlanView"));
+    auto* plan = findVisibleItem(_rootItem, QStringLiteral("mainView_plan"));
+    auto* panel = findVisibleItem(_rootItem, QStringLiteral("caacRouteEditor"));
+    QVERIFY(plan && panel);
+    auto* master = plan->property("_planMasterController").value<PlanMasterController*>();
+    auto* editor = panel->property("routeController").value<CaacRouteEditorController*>();
+    auto* plugin = qobject_cast<CaacCorePlugin*>(QGCCorePlugin::instance());
+    QVERIFY(master && editor && plugin);
+    master->removeAll();
+    auto* mission = master->missionController();
+    const QGeoCoordinate home(30, 120, 20);
+    mission->setHomePosition(home);
+    for (const double bearing : {0.0, 90.0, 180.0}) {
+        QVERIFY(editor->addWaypoint(QGCGeo::geodesicDestination(home, bearing, 600)));
+        editor->currentItem()->altitude()->setRawValue(2);
+        QVERIFY(!editor->currentItem()->speedSection()->specifyFlightSpeed());
+    }
+    auto* selected = mission->visualItems()->value<SimpleMissionItem*>(2);
+    QVERIFY(selected);
+    const auto selectedCoordinate = selected->coordinate();
+    QVERIFY(editor->setMissionFlightSpeed(true, 5));
+    auto settings = CaacSimulationController::defaults();
+    settings["takeoffHeight"] = 2.0;
+    settings["verticalSpeed"] = 10.0;
+    settings["startSequence"] = selected->sequenceNumber();
+    settings["loopMode"] = 1;
+    settings["loopCount"] = 2;
+    settings["endBehavior"] = 2;
+    QVERIFY(editor->setSimulationSettings(settings));
+    panel->setProperty("activePanel", -1);
+    auto* simulation = plugin->simulation();
+    QVERIFY(simulation);
+    const auto stop = qScopeGuard([simulation]() { simulation->stop(); });
+    ignoreLogMessage("Utilities.QGCSensors", QtWarningMsg,
+                     QRegularExpression(QStringLiteral("Failed to connect to pressure backend$")));
+    ignoreLogMessage("Utilities.QGCSensors", QtWarningMsg,
+                     QRegularExpression(QStringLiteral("Error Initializing Pressure Sensor$")));
+    QVERIFY(simulation->start(master));
+    QTRY_VERIFY_WITH_TIMEOUT(simulation->vehicle() && simulation->vehicle()->isInitialConnectComplete(),
+                             TestTimeout::longMs());
+    QSignalSpy uploads(simulation, &CaacSimulationController::missionUploaded);
+    QVERIFY(simulation->upload(master));
+    QTRY_COMPARE_WITH_TIMEOUT(uploads.count(), 1, TestTimeout::longMs());
+    auto* vehicle = simulation->vehicle();
+    auto* manager = vehicle->missionManager();
+    const auto targetingSelected = [&]() {
+        const int index = manager->currentIndex();
+        const auto& items = manager->missionItems();
+        return index >= 0 && index < items.size() && items.at(index)->command() == MAV_CMD_NAV_WAYPOINT &&
+               items.at(index)->coordinate().distanceTo(selectedCoordinate) < 0.1;
+    };
+    vehicle->startMission();
+    QTRY_VERIFY_WITH_TIMEOUT(vehicle->airborne() && targetingSelected(), TestTimeout::longMs());
+    const int loops = simulation->remainingLoops();
+    QVERIFY(_openSpeedDialog());
+    auto* scope = findVisibleItem(_rootItem, QStringLiteral("caacFlightSpeedScope"));
+    auto* speed = findVisibleItem(_rootItem, QStringLiteral("caacFlightSpeedValue"));
+    auto* waypoint = findItem(_rootItem, QStringLiteral("caacFlightSpeedWaypoint"));
+    QVERIFY(scope && speed && waypoint);
+    QVERIFY(scope->setProperty("currentIndex", allWaypoints ? 2 : 1));
+    QVERIFY(waypoint->setProperty("currentIndex", 1));
+    QVERIFY(speed->setProperty("text", QStringLiteral("6")));
+    QQmlExpression transaction(qmlContext(speed), speed, QStringLiteral("update"));
+    QPointer<CaacMissionUpdateController> update =
+        qobject_cast<CaacMissionUpdateController*>(transaction.evaluate().value<QObject*>());
+    QVERIFY(!transaction.hasError() && update);
+    QSignalSpy finished(update, &CaacMissionUpdateController::finished);
+    QVERIFY(acceptDialog());
+    QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, TestTimeout::longMs());
+    QVERIFY2(finished.first().first().toBool(), qPrintable(finished.first().at(1).toString()));
+    QCOMPARE(uploads.count(), 2);
+    QCOMPARE(vehicle->flightMode(), vehicle->missionFlightMode());
+    QVERIFY(targetingSelected());
+    QCOMPARE(simulation->remainingLoops(), loops);
+    QCOMPARE(selected->specifiedFlightSpeed(), 6.0);
+    QCOMPARE(simulation->currentMissionDetails().value("speed").toDouble(), allWaypoints ? 6.0 : 5.0);
 }
 
 UT_REGISTER_TEST(CaacFlightSpeedScopeUITest, TestLabel::Integration, TestLabel::MissionManager)

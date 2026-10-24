@@ -409,6 +409,7 @@ Item {
         y: control.mapToItem(parent, 0, control.height).y + control._margins
         width: flightActions.width + control._margins * 2
         height: flightActions.height + control._margins * 2
+            + (flightActionsHint.visible ? flightActionsHint.height + control._margins : 0)
         radius: ScreenTools.defaultBorderRadius
         color: qgcPal.window
         z: QGroundControl.zOrderWidgets + 20
@@ -423,12 +424,25 @@ Item {
             maxWidth: Math.min(Math.max(0, control.parent.width - (isFinite(control.flightActionsLeft)
                 ? control._flightPanelLeft + control._margins * 3 : control._margins * 4)),
                 ScreenTools.defaultFontPixelHeight * 16)
-            maxHeight: Math.max(0, control.parent.height - parent.y - control._margins * 3)
+            maxHeight: Math.max(0, control.parent.height - parent.y - control._margins * 3
+                - (flightActionsHint.visible ? flightActionsHint.height + control._margins : 0))
             roundButtonHeight: ScreenTools.defaultFontPixelHeight * 3.9
             roundButtonMaximumDiameter: ScreenTools.defaultFontPixelHeight * 2.3
             compactLabels: true
             onActionTriggered: { if (!QGroundControl.corePlugin.directMissionItemEditing) { control.flightSettingsExpanded = false } }
             onDisplayPreFlightChecklist: control.displayPreFlightChecklist()
+        }
+        QGCLabel {
+            id: flightActionsHint
+            objectName: "caacFlightActionsConfirmationHint"
+            visible: QGroundControl.corePlugin.directMissionItemEditing
+            x: control._margins
+            y: flightActions.y + flightActions.height + control._margins
+            width: flightActions.width
+            font.pointSize: ScreenTools.smallFontPointSize
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.WordWrap
+            text: qsTr("Double-click with the left mouse button to confirm actions in this panel!")
         }
     }
 

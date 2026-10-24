@@ -232,6 +232,12 @@ set(CUSTOM_LIBRARIES
     PARENT_SCOPE
 )
 qt_add_resources(
+    ${CMAKE_PROJECT_NAME} caac_mission_images
+    PREFIX "/qmlimages"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/assets"
+    FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/MapPlannedLanding.svg
+)
+qt_add_resources(
     ${CMAKE_PROJECT_NAME} caac_calibration_images
     PREFIX "/CAAC/Calibration"
     BASE "${CMAKE_CURRENT_SOURCE_DIR}/assets/calibration"

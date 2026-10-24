@@ -16,7 +16,9 @@ MapQuickItem {
     property bool interactive: true
 
     readonly property bool _isCurrentItem: missionItem ? missionItem.isCurrentItem || missionItem.hasCurrentChildItem : false
-    readonly property bool _usesAbbreviation: missionItem ? missionItem.abbreviation !== "" : false
+    readonly property bool _isPlannedLanding: QGroundControl.corePlugin.directMissionItemEditing && missionItem
+        && missionItem.isSimpleItem && missionItem.isLandCommand
+    readonly property bool _usesAbbreviation: _isPlannedLanding || (missionItem ? missionItem.abbreviation !== "" : false)
     readonly property int _displaySequenceNumber: {
         if (!missionItem) { return -1 }
         if (!QGroundControl.corePlugin.directMissionItemEditing) { return missionItem.sequenceNumber }
@@ -55,14 +57,15 @@ MapQuickItem {
             id:                 _label
             objectName:         "missionItemMapLabel_" + _item.missionItem.sequenceNumber
             checked:            _item._isCurrentItem
-            label:              _item.missionItem.abbreviation
+            plannedLanding:     _item._isPlannedLanding
+            label:              _item._isPlannedLanding ? qsTr("Planned landing point") : _item.missionItem.abbreviation
             index:              _item._usesAbbreviation ? -1 : _item._displaySequenceNumber
             indicatorSubText:   _item._isGrouped ? "…" : ""
             small:              !_item._isGrouped && !_item._isCurrentItem
             medium:             _item._isGrouped && !_item._isCurrentItem
             gimbalYaw:          missionItem.missionGimbalYaw
             vehicleYaw:         missionItem.missionVehicleYaw
-            showGimbalYaw:      !_item._isGrouped && !isNaN(_item.missionItem.missionGimbalYaw)
+            showGimbalYaw:      !_item._isPlannedLanding && !_item._isGrouped && !isNaN(_item.missionItem.missionGimbalYaw)
             highlightSelected:  true
             enabled:            _item.interactive
             onClicked:          _item.activate()

@@ -57,11 +57,16 @@ inline SpeedUpdateMapping speedUpdateMapping(const Mission& previous, const Miss
         result.newToOld.insert(newAnchors[i], oldAnchors[i]);
         result.jumpTargetToNew.insert(oldAnchors[i], newAnchors[i]);
     }
+    QMap<int, int> insertedSpeedEntries;
     for (int gap = 0; gap <= oldAnchors.size(); ++gap) {
         const int oldBegin = gap == 0 ? 0 : oldAnchors[gap - 1] + 1;
         const int newBegin = gap == 0 ? 0 : newAnchors[gap - 1] + 1;
         const int oldEnd = gap < oldAnchors.size() ? oldAnchors[gap] : previous.size();
         const int newEnd = gap < newAnchors.size() ? newAnchors[gap] : updated.size();
+        // Generated loops enter new speed commands before the same navigation target.
+        if (gap < oldAnchors.size() && oldBegin == oldEnd && newBegin < newEnd) {
+            insertedSpeedEntries.insert(oldEnd, newBegin);
+        }
         for (int index = oldBegin; index < oldEnd; ++index) {
             if (gap < newAnchors.size()) {
                 result.oldToNew.insert(index, newEnd);
@@ -94,7 +99,9 @@ inline SpeedUpdateMapping speedUpdateMapping(const Mission& previous, const Miss
             if (!std::isfinite(old.param1) || old.param1 != std::floor(old.param1) || old.param1 < 0 ||
                 old.param1 >= previous.size() || !result.jumpTargetToNew.contains(static_cast<int>(old.param1)) ||
                 (validateJumpTargets &&
-                 !equal(item.param1, result.jumpTargetToNew.value(static_cast<int>(old.param1))))) {
+                 !equal(item.param1, result.jumpTargetToNew.value(static_cast<int>(old.param1))) &&
+                 (!insertedSpeedEntries.contains(static_cast<int>(old.param1)) ||
+                  !equal(item.param1, insertedSpeedEntries.value(static_cast<int>(old.param1)))))) {
                 return result;
             }
         } else if (!equal(item.param1, old.param1)) {
@@ -226,6 +233,33 @@ inline SpeedUpdateMapping waypointDeletionMapping(const Mission& previous, const
         const auto item = updated.value(result.oldToNew.value(it.key()));
         if (validateJumpTargets && !equal(item.param1, result.jumpTargetToNew.value(static_cast<int>(it->param1)))) {
             return result;
+        }
+    }
+    result.valid = true;
+    return result;
+}
+
+inline SpeedUpdateMapping waypointAdditionMapping(const Mission& previous, const Mission& updated)
+{
+    SpeedUpdateMapping result;
+    const auto inverse = waypointDeletionMapping(updated, previous);
+    if (!inverse.valid) {
+        return result;
+    }
+    result.oldToNew = inverse.newToOld;
+    for (auto it = result.oldToNew.cbegin(); it != result.oldToNew.cend(); ++it) {
+        result.newToOld.insert(it.value(), it.key());
+    }
+    result.jumpTargetToNew = result.oldToNew;
+    for (auto it = previous.cbegin(); it != previous.cend(); ++it) {
+        if (it->command == MAV_CMD_DO_JUMP) {
+            if (!std::isfinite(it->param1) || it->param1 != std::floor(it->param1) || it->param1 < 0 ||
+                it->param1 >= previous.size()) {
+                return SpeedUpdateMapping();
+            }
+            const auto jump = updated.value(result.oldToNew.value(it.key()));
+            // A new loop entry can precede the retained current target without changing that target.
+            result.jumpTargetToNew.insert(static_cast<int>(it->param1), static_cast<int>(jump.param1));
         }
     }
     result.valid = true;

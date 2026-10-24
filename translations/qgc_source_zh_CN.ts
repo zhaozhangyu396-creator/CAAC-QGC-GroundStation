@@ -5771,6 +5771,10 @@ Click Ok to start the auto-tuning process.
   <context>
     <name>CaacRouteEditor</name>
     <message>
+        <source>Planned landing point</source>
+        <translation>计划降落点</translation>
+    </message>
+    <message>
         <source>Click: center map on takeoff point. Double-click: center map on aircraft.</source>
         <translation>单击：地图居中到起飞点。双击：地图居中到无人机。</translation>
     </message>
@@ -6002,20 +6006,24 @@ Click Ok to start the auto-tuning process.
       <translation>更新航点</translation>
     </message>
     <message>
-      <source>Upload the new waypoint positions? The aircraft will pause, upload, and continue from its previous target waypoint. Cancelling keeps the edits locally.</source>
-      <translation>是否上传新的航点位置？确认后将自动暂停、上传，并从原目标航点继续飞行。取消后仅保留本地编辑。</translation>
+      <source>Upload the updated route and waypoint information? The aircraft will pause for the update. It will resume only if the mission was running; otherwise it will wait for Start mission. Cancelling keeps the edits locally.</source>
+      <translation>是否上传更新后的航线和航点信息？飞行器将暂停并上传。仅在更新前正在执行航线时自动继续；原先悬停或暂停时，将等待“开始航线”命令。取消后仅保留本地编辑。</translation>
     </message>
     <message>
       <source>Upload waypoint deletion</source>
       <translation>上传航点删除结果</translation>
     </message>
     <message>
-      <source>Upload the updated route and waypoint information? The aircraft will pause for the update. It will resume only if the mission was running. Choosing No keeps the edits locally.</source>
-      <translation>是否上传更新后的航线和航点信息？飞行器将暂停以完成更新，仅在更新前任务正在执行时恢复飞行。选择“否”将仅在本地保留修改。</translation>
+      <source>Upload the updated route and waypoint information? The aircraft will pause for the update. It will resume only if the mission was running. Cancelling keeps the edits locally.</source>
+      <translation>是否上传更新后的航线和航点信息？飞行器将暂停以完成更新，仅在更新前任务正在执行时恢复飞行。取消后仅保留本地修改。</translation>
     </message>
 </context>
   <context>
     <name>CaacRouteEditorController</name>
+    <message>
+        <source>Planned landing point</source>
+        <translation>计划降落点</translation>
+    </message>
     <message>
         <source>Add a waypoint before centering the takeoff point.</source>
         <translation>请先添加航点，再将起飞点移至航线中心。</translation>
@@ -9007,6 +9015,10 @@ VTOL</source>
   </context>
   <context>
     <name>FlyViewToolBar</name>
+    <message>
+        <source>Double-click with the left mouse button to confirm actions in this panel!</source>
+        <translation>该功能栏需左键双击确认！</translation>
+    </message>
     <message>
         <source>Connected</source>
         <translation>已连接</translation>
@@ -27506,6 +27518,10 @@ altitude</source>
 <context>
     <name>CaacWaypointMenu</name>
     <message>
+        <source>Delete planned landing point</source>
+        <translation>删除计划降落点</translation>
+    </message>
+    <message>
         <source>Drawing aids</source>
         <translation>辅助作图</translation>
     </message>
@@ -27584,6 +27600,10 @@ altitude</source>
 </context>
 <context>
     <name>CaacWaypointOverlap</name>
+    <message>
+        <source>Planned landing point</source>
+        <translation>计划降落点</translation>
+    </message>
     <message>
         <source>Takeoff point</source>
         <translation>起飞点</translation>
@@ -27932,8 +27952,8 @@ altitude</source>
         <translation>修改所有航点的速度，包括起飞点到首个航点的航段。</translation>
     </message>
     <message>
-        <source>The aircraft will pause, update the mission, and continue from its current target waypoint.</source>
-        <translation>飞行器将先暂停并更新任务，再从原目标航点继续飞行。</translation>
+        <source>The aircraft will pause to update the mission. A running mission will continue from its current target waypoint; a hovering or paused aircraft will wait for Start mission.</source>
+        <translation>飞行器将先暂停并更新任务。正在执行的航线会从原目标航点继续；原先悬停或暂停时，将等待“开始航线”命令。</translation>
     </message>
     <message>
         <source>Updating flight speeds…</source>
@@ -29549,8 +29569,8 @@ altitude</source>
       <translation>暂停期间航线发生变化，任务保持暂停。</translation>
     </message>
     <message>
-      <source>Only waypoint positions can be updated during flight. Pause and upload other mission changes manually.</source>
-      <translation>飞行中仅支持更新航点位置。其他任务变更请暂停后手动上传。</translation>
+      <source>Only waypoint positions and added waypoints can be updated during flight. Pause and upload other mission changes manually.</source>
+      <translation>飞行中支持更新航点位置及新增航点。其他任务变更请暂停后手动上传。</translation>
     </message>
     <message>
       <source>Waypoint upload failed. The mission remains paused.</source>
@@ -29622,8 +29642,8 @@ altitude</source>
   <context>
     <name>CaacSimulationEngine</name>
     <message>
-      <source>Only waypoint positions can be updated during flight. Pause and upload other mission changes manually.</source>
-      <translation>飞行中仅支持更新航点位置。其他任务变更请暂停后手动上传。</translation>
+      <source>Only waypoint positions and added waypoints can be updated during flight. Pause and upload other mission changes manually.</source>
+      <translation>飞行中支持更新航点位置及新增航点。其他任务变更请暂停后手动上传。</translation>
     </message>
     <message>
       <source>Upload error %1: %2</source>
@@ -33913,6 +33933,20 @@ Source: %6 (session %7); destination: %8 (session %9)</source>
     <message>
       <source>Map tile reprojection failed.</source>
       <translation>地图瓦片坐标纠偏失败。</translation>
+    </message>
+  </context>
+  <context>
+    <name>MissionItemIndicator</name>
+    <message>
+        <source>Planned landing point</source>
+        <translation>计划降落点</translation>
+    </message>
+  </context>
+  <context>
+    <name>MissionItemSelectionPanel</name>
+    <message>
+        <source>Planned landing point</source>
+        <translation>计划降落点</translation>
     </message>
   </context>
 </TS>

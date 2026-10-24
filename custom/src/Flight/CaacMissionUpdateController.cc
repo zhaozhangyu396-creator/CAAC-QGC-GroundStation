@@ -205,8 +205,7 @@ bool CaacMissionUpdateController::_update(PlanMasterController* plan, CaacSimula
     _allowDeletions = allowDeletions;
     _returningToLanding = false;
     _landingTarget.clear();
-    _resumeAfterUpdate =
-        (!allowDeletions && !allowSpeedChanges) || vehicle->flightMode() == vehicle->missionFlightMode();
+    _resumeAfterUpdate = vehicle->flightMode() == vehicle->missionFlightMode();
     _restoreFlightSpeed = allowSpeedChanges;
     _forcedFlightSpeed = currentFlightSpeed;
     _expectedCurrentSequence = expectedCurrentSequence;
@@ -232,7 +231,9 @@ bool CaacMissionUpdateController::_prepareNative()
     _pendingItems = MissionController::createMissionItems(_plan->missionController()->visualItems(), this);
     const int offset = _vehicle->firmwarePlugin()->sendHomePositionToVehicle() ? 0 : 1;
     const auto& previous = manager->missionItems();
-    if (_allowDeletions) {
+    const bool allowAdditions =
+        !_allowSpeedChanges && !_allowDeletions && _pendingItems.size() > previous.size() + offset;
+    if (_allowDeletions || allowAdditions) {
         const auto* visualItems = _plan->missionController()->visualItems();
         for (int i = 1; i < visualItems->count(); ++i) {
             const auto* item = visualItems->value<VisualMissionItem*>(i);
@@ -241,8 +242,8 @@ bool CaacMissionUpdateController::_prepareNative()
             }
         }
     }
-    if (_allowSpeedChanges || _allowDeletions) {
-        return _prepareNativeSpeeds();
+    if (_allowSpeedChanges || _allowDeletions || allowAdditions) {
+        return _prepareNativeSpeeds(allowAdditions);
     }
     if (_pendingItems.size() != previous.size() + offset) {
         return false;
@@ -277,7 +278,7 @@ bool CaacMissionUpdateController::_prepareNative()
     return _target >= 0 && _target < previous.size();
 }
 
-bool CaacMissionUpdateController::_prepareNativeSpeeds()
+bool CaacMissionUpdateController::_prepareNativeSpeeds(bool allowAdditions)
 {
     if (!_vehicle || !_plan) {
         return false;
@@ -325,7 +326,10 @@ bool CaacMissionUpdateController::_prepareNativeSpeeds()
     };
     auto oldWire = wireMission(previous, 0);
     const auto newWire = wireMission(_pendingItems, offset);
-    const auto mapUpdate = [this](const auto& oldMission, const auto& newMission) {
+    const auto mapUpdate = [this, allowAdditions](const auto& oldMission, const auto& newMission) {
+        if (allowAdditions) {
+            return CaacMissionUpdateUtils::waypointAdditionMapping(oldMission, newMission);
+        }
         return _allowDeletions ? CaacMissionUpdateUtils::waypointDeletionMapping(oldMission, newMission)
                                : CaacMissionUpdateUtils::speedUpdateMapping(oldMission, newMission);
     };
@@ -526,8 +530,8 @@ void CaacMissionUpdateController::_tick()
                         ? tr("The waypoint deletion cannot preserve a safe mission target. The mission remains paused.")
                     : _allowSpeedChanges
                         ? tr("The mission structure changed. The speed update was cancelled.")
-                        : tr("Only waypoint positions can be updated during flight. Pause and upload other mission "
-                             "changes manually."));
+                        : tr("Only waypoint positions and added waypoints can be updated during flight. Pause and "
+                             "upload other mission changes manually."));
             return;
         }
         auto* manager = _vehicle->missionManager();
@@ -640,7 +644,7 @@ void CaacMissionUpdateController::_uploaded()
     }
     _setStage(Stage::Restoring);
     const int offset = _vehicle->firmwarePlugin()->sendHomePositionToVehicle() ? 0 : 1;
-    if (_simulation && (_allowSpeedChanges || _allowDeletions)) {
+    if (_simulation) {
         _target = _simulation->currentMissionDetails().value(QStringLiteral("sequence"), -1).toInt() - offset;
         if (_target < 0) {
             _finish(false, tr("The mission structure changed. The speed update was cancelled."));

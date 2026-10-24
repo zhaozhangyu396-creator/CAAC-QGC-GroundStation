@@ -149,6 +149,8 @@ add_qgc_test(
     NoSanitizer
     TIMEOUT
     120
+    ENV_MODIFICATION
+    "QGC_TEST_REALTIME_PLAN_TIMEOUTS=set:1"
     ${_caac_ui_env}
 )
 add_qgc_test(

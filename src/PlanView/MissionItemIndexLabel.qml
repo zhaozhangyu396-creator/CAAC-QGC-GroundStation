@@ -19,6 +19,7 @@ Canvas {
     property bool   medium:                 false
     property bool   child:                  false
     property bool   highlightSelected:      false
+    property bool   plannedLanding:         false
     property var    color:                  checked ? "green" : (child ? qgcPal.mapIndicatorChild : qgcPal.mapIndicator)
     property real   anchorPointX:           _height / 2
     property real   anchorPointY:           _height / 2
@@ -37,12 +38,14 @@ Canvas {
     property real   _smallRadius:       _oddCeil((ScreenTools.defaultFontPixelHeight * ScreenTools.smallFontPointRatio) / 2)
     property real   _largeRadius:       _oddCeil(ScreenTools.defaultFontPixelHeight * 0.66)
     property real   _mediumRadius:      _oddCeil(((_smallRadius * 2) + _largeRadius) / 3)
-    property real   _indicatorRadius:   small ? _smallRadius : (medium ? _mediumRadius : _largeRadius)
+    property real   _indicatorRadius:   plannedLanding ? ScreenTools.defaultFontPixelHeight * 0.75
+        : (small ? _smallRadius : (medium ? _mediumRadius : _largeRadius))
     property real   _gimbalRadians:     degreesToRadians(vehicleYaw + gimbalYaw - 90)
     property real   _labelMargin:       2
     property real   _labelRadius:       _indicatorRadius + _labelMargin
     property string _label:             supplementaryLabel !== "" ? supplementaryLabel : (label.length > 1 ? label : "")
-    property string _index:             index === 0 || index === -1 ? label.charAt(0) : (showSequenceNumbers ? index : "")
+    property string _index:             plannedLanding ? "L"
+        : (index === 0 || index === -1 ? label.charAt(0) : (showSequenceNumbers ? index : ""))
 
     onColorChanged:         requestPaint()
     onShowGimbalYawChanged: requestPaint()
@@ -88,7 +91,7 @@ Canvas {
         color:                  "white"
         opacity:                0.5
         radius:                 _labelRadius
-        visible:                _label.length !== 0 && !small
+        visible:                _label.length !== 0 && (!small || root.plannedLanding)
     }
 
     QGCLabel {
@@ -115,6 +118,7 @@ Canvas {
         height:                         width
         color:                          root.color
         radius:                         _indicatorRadius
+        visible:                        !root.plannedLanding
 
         QGCLabel {
             id:                     indexLabel
@@ -143,6 +147,16 @@ Canvas {
             text: root.indicatorSubText
             visible: text !== ""
         }
+    }
+
+    Image {
+        objectName: "plannedLandingIcon"
+        anchors.fill: indicator
+        visible: root.plannedLanding
+        source: root.plannedLanding ? "qrc:///qmlimages/MapPlannedLanding.svg" : ""
+        sourceSize.width: width
+        sourceSize.height: height
+        fillMode: Image.PreserveAspectFit
     }
 
     // Extra circle to indicate selection

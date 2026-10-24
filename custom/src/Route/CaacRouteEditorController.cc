@@ -1514,14 +1514,15 @@ QVariantList CaacRouteEditorController::coordinateItems() const
         auto* item = mission->visualItems()->value<VisualMissionItem*>(i);
         if (item &&
             (i == 0 || (item->isSimpleItem() && item->specifiesCoordinate() && !item->isStandaloneCoordinate()))) {
-            result.append(
-                QVariantMap{{QStringLiteral("index"), i},
-                            {QStringLiteral("command"),
-                             item->isSimpleItem() ? qobject_cast<SimpleMissionItem*>(item)->command() : 0},
-                            {QStringLiteral("label"),
-                             i == 0 ? tr("Planned home")
-                                    : tr("Waypoint %1 · %2").arg(item->waypointNumber()).arg(item->commandName())},
-                            {QStringLiteral("coordinate"), QVariant::fromValue(item->coordinate())}});
+            result.append(QVariantMap{
+                {QStringLiteral("index"), i},
+                {QStringLiteral("command"),
+                 item->isSimpleItem() ? qobject_cast<SimpleMissionItem*>(item)->command() : 0},
+                {QStringLiteral("label"),
+                 i == 0                  ? tr("Planned home")
+                 : item->isLandCommand() ? tr("Planned landing point")
+                                         : tr("Waypoint %1 · %2").arg(item->waypointNumber()).arg(item->commandName())},
+                {QStringLiteral("coordinate"), QVariant::fromValue(item->coordinate())}});
         }
     }
     return result;
@@ -2037,6 +2038,8 @@ void CaacRouteEditorController::_watchItems()
         _itemConnections.append(connect(item, &VisualMissionItem::sequenceNumberChanged, this,
                                         &CaacRouteEditorController::coordinateItemsChanged));
         _itemConnections.append(connect(item, &VisualMissionItem::waypointNumberChanged, this,
+                                        &CaacRouteEditorController::coordinateItemsChanged));
+        _itemConnections.append(connect(item, &VisualMissionItem::isLandCommandChanged, this,
                                         &CaacRouteEditorController::coordinateItemsChanged));
         _itemConnections.append(connect(item, &VisualMissionItem::coordinateChanged, this, [this]() {
             emit coordinateItemsChanged();

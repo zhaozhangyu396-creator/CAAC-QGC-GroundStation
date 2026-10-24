@@ -548,7 +548,7 @@ bool CaacSimulationController::upload(PlanMasterController* plan, bool preserveP
         _uploadPlan.clear();
     }
     const auto previousWaypointOptions = _waypointOptions;
-    if (!_prepareFlightPlan(speedChanges || allowDeletions)) {
+    if (!_prepareFlightPlan(preserveProgress)) {
         return false;
     }
     if (preserveProgress) {
@@ -574,23 +574,23 @@ bool CaacSimulationController::upload(PlanMasterController* plan, bool preserveP
             wireMission.insert(wire.seq, wire);
         }
         qDeleteAll(items);
-        if (speedChanges || allowDeletions) {
-            const auto mapping = allowDeletions
-                                     ? CaacMissionUpdateUtils::waypointDeletionMapping(_engine.mission(), wireMission)
-                                     : CaacMissionUpdateUtils::speedUpdateMapping(_engine.mission(), wireMission);
-            if (mapping.valid) {
-                for (auto it = previousWaypointOptions.cbegin(); it != previousWaypointOptions.cend(); ++it) {
-                    const int sequence = mapping.oldToNew.value(it.key(), -1);
-                    if (sequence >= 0 && (!allowDeletions || mapping.newToOld.value(sequence, -1) == it.key()) &&
-                        !_waypointOptions.contains(sequence)) {
-                        _waypointOptions.insert(sequence, it.value());
-                    }
+        const bool allowAdditions = !speedChanges && !allowDeletions && wireMission.size() > _engine.mission().size();
+        const auto mapping =
+            allowDeletions   ? CaacMissionUpdateUtils::waypointDeletionMapping(_engine.mission(), wireMission)
+            : allowAdditions ? CaacMissionUpdateUtils::waypointAdditionMapping(_engine.mission(), wireMission)
+                             : CaacMissionUpdateUtils::speedUpdateMapping(_engine.mission(), wireMission);
+        if (mapping.valid) {
+            for (auto it = previousWaypointOptions.cbegin(); it != previousWaypointOptions.cend(); ++it) {
+                const int sequence = mapping.oldToNew.value(it.key(), -1);
+                if (sequence >= 0 && (!allowDeletions || mapping.newToOld.value(sequence, -1) == it.key()) &&
+                    !_waypointOptions.contains(sequence)) {
+                    _waypointOptions.insert(sequence, it.value());
                 }
-                for (auto it = _pendingWaypointNumbers.begin(); it != _pendingWaypointNumbers.end(); ++it) {
-                    const int previous = mapping.newToOld.value(it.key() - offset, -1);
-                    if (previous >= 0 && _waypointNumbers.contains(previous + offset)) {
-                        it->number = _waypointNumbers.value(previous + offset).number;
-                    }
+            }
+            for (auto it = _pendingWaypointNumbers.begin(); it != _pendingWaypointNumbers.end(); ++it) {
+                const int previous = mapping.newToOld.value(it.key() - offset, -1);
+                if (previous >= 0 && _waypointNumbers.contains(previous + offset)) {
+                    it->number = _waypointNumbers.value(previous + offset).number;
                 }
             }
         }

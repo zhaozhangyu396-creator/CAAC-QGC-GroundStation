@@ -300,17 +300,6 @@ Column {
     }
     function centerPlannedHome() { editorController.centerHomeOnRoute() }
     function confirmClearWaypoints() { if (root.canDeleteWaypoints) { clearWaypointsFactory.open() } }
-    function confirmGoto(coordinate) {
-        const vehicle = QGroundControl.multiVehicleManager.activeVehicle
-        if (!vehicle || !vehicle.armed || !vehicle.airborne || !vehicle.supports.guidedMode) { return }
-        mainWindow.showFlyView()
-        Qt.callLater(() => {
-            const guided = globals.guidedControllerFlyView
-            if (guided && vehicle === QGroundControl.multiVehicleManager.activeVehicle && guided.confirmDialog) {
-                guided.confirmAction(guided.actionGoto, coordinate)
-            }
-        })
-    }
     QGCPopupDialogFactory {
         id: clearWaypointsFactory
         dialogComponent: Component {
@@ -917,7 +906,7 @@ Column {
                 }
                 QGCLabel {
                     objectName: "caacWaypointNumber_" + card.object.sequenceNumber
-                    text: card.object.waypointNumber
+                    text: card.object.isLandCommand ? "L" : card.object.waypointNumber
                     font.pointSize: ScreenTools.largeFontPointSize
                     font.bold: true
                     color: card._textColor
@@ -928,7 +917,8 @@ Column {
                     spacing: ScreenTools.defaultFontPixelHeight * 0.2
                     QGCLabel {
                         Layout.fillWidth: true
-                        text: card.index === 0 ? qsTr("Planned home") : card.object.commandName
+                        text: card.index === 0 ? qsTr("Planned home")
+                            : card.object.isLandCommand ? qsTr("Planned landing point") : card.object.commandName
                         color: card._textColor
                         elide: Text.ElideRight
                     }
@@ -1054,7 +1044,7 @@ Column {
                 id: deletionDialog
                 objectName: "caacUploadDeletedWaypointsDialog"
                 title: qsTr("Upload waypoint deletion")
-                buttons: Dialog.Yes | Dialog.No
+                buttons: Dialog.Ok | Dialog.Cancel
                 property var vehicleAtOpen: null
                 property var masterAtOpen: null
                 property int revisionAtOpen: -1
@@ -1070,7 +1060,7 @@ Column {
                 QGCLabel {
                     width: Math.min(deletionDialog.maxContentAvailableWidth, ScreenTools.defaultFontPixelWidth * 42)
                     wrapMode: Text.WordWrap
-                    text: qsTr("Upload the updated route and waypoint information? The aircraft will pause for the update. It will resume only if the mission was running. Choosing No keeps the edits locally.")
+                    text: qsTr("Upload the updated route and waypoint information? The aircraft will pause for the update. It will resume only if the mission was running. Cancelling keeps the edits locally.")
                 }
                 onAccepted: {
                     if (sourceCurrent) {
@@ -1094,7 +1084,7 @@ Column {
                 QGCLabel {
                     width: Math.min(updateDialog.maxContentAvailableWidth, ScreenTools.defaultFontPixelWidth * 42)
                     wrapMode: Text.WordWrap
-                    text: qsTr("Upload the new waypoint positions? The aircraft will pause, upload, and continue from its previous target waypoint. Cancelling keeps the edits locally.")
+                    text: qsTr("Upload the updated route and waypoint information? The aircraft will pause for the update. It will resume only if the mission was running; otherwise it will wait for Start mission. Cancelling keeps the edits locally.")
                 }
                 onAccepted: {
                     if (root._managerVehicle === vehicleAtOpen && root.planMasterController === masterAtOpen) {

@@ -186,7 +186,7 @@ QGCPopupDialog {
             Layout.fillWidth: true
             wrapMode: Text.WordWrap
             visible: scope.currentIndex !== 0
-            text: qsTr("The aircraft will pause, update the mission, and continue from its current target waypoint.")
+            text: qsTr("The aircraft will pause to update the mission. A running mission will continue from its current target waypoint; a hovering or paused aircraft will wait for Start mission.")
         }
         QGCLabel {
             Layout.fillWidth: true

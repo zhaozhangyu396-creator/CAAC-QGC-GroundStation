@@ -24,6 +24,7 @@
 #include <QtQml/QQmlApplicationEngine>
 #include <QtQml/QQmlComponent>
 #include <QtQml/QQmlExpression>
+#include <QtQml/QQmlIncubationController>
 #include <QtQuick/QQuickItem>
 #include <QtQuick/QQuickWindow>
 #include <QtTest/QSignalSpy>
@@ -37,6 +38,8 @@
 #include "Fact.h"
 #include "MissionController.h"
 #include "MissionSettingsItem.h"
+#include "MockLink.h"
+#include "MultiVehicleManager.h"
 #include "PlanMasterController.h"
 #include "QGCApplication.h"
 #include "QGCFileDialogController.h"
@@ -47,6 +50,7 @@
 #include "SimpleMissionItem.h"
 #include "SpeedSection.h"
 #include "Vehicle.h"
+#include "VehicleLinkManager.h"
 
 namespace {
 void reportInvalidGeometry(QQuickItem* item, int& remaining)
@@ -144,12 +148,25 @@ private slots:
     void _testMouseEditing();
     void _homeCenterWindowFocus();
     void _planningUtilities();
-    void _deleteLandingFromContextMenu();
+    void _deleteLandingPoint_data();
+    void _deleteLandingPoint();
     void _deleteWaypointsDuringFlight();
 };
 
-void CaacRouteEditorUITest::_deleteLandingFromContextMenu()
+void CaacRouteEditorUITest::_deleteLandingPoint_data()
 {
+    QTest::addColumn<int>("command");
+    QTest::addColumn<bool>("quickPopup");
+    QTest::newRow("land-context-menu") << int(MAV_CMD_NAV_LAND) << false;
+    QTest::newRow("land-quick-popup") << int(MAV_CMD_NAV_LAND) << true;
+    QTest::newRow("vtol-land-context-menu") << int(MAV_CMD_NAV_VTOL_LAND) << false;
+    QTest::newRow("vtol-land-quick-popup") << int(MAV_CMD_NAV_VTOL_LAND) << true;
+}
+
+void CaacRouteEditorUITest::_deleteLandingPoint()
+{
+    QFETCH(int, command);
+    QFETCH(bool, quickPopup);
     startUI();
     if (QTest::currentTestFailed()) {
         return;
@@ -168,7 +185,7 @@ void CaacRouteEditorUITest::_deleteLandingFromContextMenu()
     auto* landing =
         qobject_cast<SimpleMissionItem*>(mission->insertSimpleMissionItem(QGeoCoordinate(30.002, 120), 2, true));
     QVERIFY(landing);
-    landing->setCommand(MAV_CMD_NAV_LAND);
+    landing->setCommand(command);
     landing->altitude()->setRawValue(0);
     map->setProperty("center", QVariant::fromValue(landing->coordinate()));
     map->setProperty("zoomLevel", 16.0);
@@ -183,16 +200,45 @@ void CaacRouteEditorUITest::_deleteLandingFromContextMenu()
     };
     const auto center = map->mapToScene(QPointF(map->width() / 2, map->height() / 2));
     QTRY_VERIFY_WITH_TIMEOUT(QLineF(position(), center).length() < 1, TestTimeout::mediumMs());
-    QTest::mouseClick(_window, Qt::RightButton, Qt::NoModifier, position().toPoint());
-    auto* remove = findVisibleItem(_rootItem, QStringLiteral("caacContextDeleteWaypoint"));
+    auto* landingLabel = findVisibleItem(_rootItem, QStringLiteral("missionItemMapLabel_2"));
+    QVERIFY(landingLabel);
+    QVERIFY(landingLabel->property("plannedLanding").toBool());
+    QCOMPARE(landingLabel->property("_index").toString(), QStringLiteral("L"));
+    QCOMPARE(landingLabel->property("_label").toString(),
+             QCoreApplication::translate("MissionItemIndicator", "Planned landing point"));
+    auto* landingIcon = findVisibleItem(landingLabel, QStringLiteral("plannedLandingIcon"));
+    QVERIFY(landingIcon);
+    QTRY_COMPARE_WITH_TIMEOUT(landingIcon->property("status").toInt(), 1, TestTimeout::mediumMs());
+    QCOMPARE(landingIcon->property("source").toUrl(), QUrl(QStringLiteral("qrc:///qmlimages/MapPlannedLanding.svg")));
+    QQmlExpression homeIconSize(qmlContext(landingLabel), landingLabel,
+                                QStringLiteral("ScreenTools.defaultFontPixelHeight * 1.5"));
+    const double expectedIconSize = homeIconSize.evaluate().toDouble();
+    QVERIFY(!homeIconSize.hasError());
+    QCOMPARE(landingIcon->width(), expectedIconSize);
+    QCOMPARE(landingIcon->height(), expectedIconSize);
+    const auto screenshot = qEnvironmentVariable("CAAC_LANDING_MARKER_SCREENSHOT");
+    if (!screenshot.isEmpty() && command == MAV_CMD_NAV_LAND && quickPopup) {
+        QVERIFY(_window->grabWindow().save(screenshot));
+    }
+    const auto deleteButton =
+        quickPopup ? QStringLiteral("caacWaypointQuickDelete") : QStringLiteral("caacContextDeleteWaypoint");
+    if (quickPopup) {
+        QTest::mouseDClick(_window, Qt::LeftButton, Qt::NoModifier, position().toPoint());
+        auto* confirm = findVisibleItem(_rootItem, QStringLiteral("caacWaypointQuickConfirm"));
+        QVERIFY(confirm && !confirm->isEnabled());
+    } else {
+        QTest::mouseClick(_window, Qt::RightButton, Qt::NoModifier, position().toPoint());
+    }
+    auto* remove = findVisibleItem(_rootItem, deleteButton);
     QVERIFY(remove && remove->isEnabled());
-    QVERIFY(clickButton(QStringLiteral("caacContextDeleteWaypoint")));
+    QVERIFY(clickButton(deleteButton));
     QCOMPARE(mission->visualItems()->count(), 2);
     QVERIFY(!dialogVisible(QCoreApplication::translate("CaacRouteEditor", "Upload waypoint deletion")));
     QCOMPARE(mission->visualItems()->value<SimpleMissionItem*>(1)->command(), int(MAV_CMD_NAV_WAYPOINT));
     QVERIFY(editor->undo());
     QCOMPARE(mission->visualItems()->count(), 3);
-    QVERIFY(mission->visualItems()->value<SimpleMissionItem*>(2)->isLandCommand());
+    QCOMPARE(mission->visualItems()->value<SimpleMissionItem*>(2)->command(), command);
+    QCOMPARE(mission->plannedHomePosition(), QGeoCoordinate(30, 120, 20));
 }
 
 void CaacRouteEditorUITest::_deleteWaypointsDuringFlight()
@@ -234,14 +280,33 @@ void CaacRouteEditorUITest::_deleteWaypointsDuringFlight()
     QVERIFY(editor->setSimulationSettings(settings));
     auto* simulation = plugin->simulation();
     QVERIFY(simulation);
-    const auto stop = qScopeGuard([simulation]() { simulation->stop(); });
+    const auto stop = qScopeGuard([simulation]() {
+        const QPointer<Vehicle> simulationVehicle(simulation->vehicle());
+        const QPointer<MockLink> simulationLink(
+            simulationVehicle
+                ? qobject_cast<MockLink*>(simulationVehicle->vehicleLinkManager()->primaryLink().lock().get())
+                : nullptr);
+        simulation->stop();
+        QVERIFY(waitForDeleted(simulationVehicle, TestTimeout::mediumDuration(), u"route-editor simulation vehicle"));
+        QVERIFY(waitForDeleted(simulationLink, TestTimeout::mediumDuration(), u"route-editor simulation MockLink"));
+        QVERIFY(!MultiVehicleManager::instance()->activeVehicle());
+        std::fputs("CAAC waypoint deletion: simulation actors destroyed\n", stderr);
+    });
     ignoreLogMessage("Utilities.QGCSensors", QtWarningMsg,
                      QRegularExpression(QStringLiteral("Failed to connect to pressure backend")));
     ignoreLogMessage("Utilities.QGCSensors", QtWarningMsg,
                      QRegularExpression(QStringLiteral("Error Initializing Pressure Sensor")));
+    if (auto* incubation = _engine->incubationController()) {
+        QTRY_COMPARE_WITH_TIMEOUT(incubation->incubatingObjectCount(), 0, TestTimeout::mediumMs());
+    }
+    QSignalSpy frame(_window, &QQuickWindow::frameSwapped);
+    _window->update();
+    QVERIFY(frame.wait(TestTimeout::mediumMs()));
+    std::fputs("CAAC waypoint deletion: UI ready; starting simulation\n", stderr);
     QVERIFY(simulation->start(master));
     QTRY_VERIFY_WITH_TIMEOUT(simulation->vehicle() && simulation->vehicle()->isInitialConnectComplete(),
                              TestTimeout::longMs());
+    std::fputs("CAAC waypoint deletion: simulation initial connection complete\n", stderr);
     QSignalSpy uploaded(simulation, &CaacSimulationController::missionUploaded);
     QVERIFY(uploaded.isValid());
     QVERIFY(simulation->upload(master));

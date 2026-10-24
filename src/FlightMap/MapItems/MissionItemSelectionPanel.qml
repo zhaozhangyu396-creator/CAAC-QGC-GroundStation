@@ -54,19 +54,23 @@ DropPanel {
 
                     required property var modelData
 
-                    readonly property bool _usesAbbreviation: modelData.abbreviation !== ""
+                    readonly property bool _isPlannedLanding: QGroundControl.corePlugin.directMissionItemEditing
+                        && modelData.isSimpleItem && modelData.isLandCommand
+                    readonly property bool _usesAbbreviation: _isPlannedLanding || modelData.abbreviation !== ""
                     readonly property int _displaySequenceNumber: {
                         if (!modelData.flyView || !QGroundControl.corePlugin.directMissionItemEditing) { return modelData.sequenceNumber }
                         const simulation = QGroundControl.corePlugin.simulation
                         void simulation.waypointNumberRevision
                         return simulation.waypointNumber(modelData.sequenceNumber, modelData.coordinate)
                     }
-                    readonly property string _supplementaryLabel: !_usesAbbreviation ? "" : `${modelData.abbreviation} (${_displaySequenceNumber})`
+                    readonly property string _supplementaryLabel: _isPlannedLanding ? qsTr("Planned landing point")
+                        : (!_usesAbbreviation ? "" : `${modelData.abbreviation} (${_displaySequenceNumber})`)
 
                     MissionItemIndexLabel {
                         id: itemLabel
                         anchors.centerIn: parent
                         checked: itemDelegate.modelData.isCurrentItem || itemDelegate.modelData.hasCurrentChildItem
+                        plannedLanding: itemDelegate._isPlannedLanding
                         label: itemDelegate.modelData.abbreviation
                         index: itemDelegate._usesAbbreviation ? -1 : itemDelegate._displaySequenceNumber
                         small: false

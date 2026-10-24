@@ -163,10 +163,12 @@ bool CaacSimulationEngine::updateMission(const QMap<uint16_t, mavlink_mission_it
     QMap<int, int> oldToNew;
     QMap<int, int> newToOld;
     int currentSequence = _state.sequence;
-    const bool sequenceChanges = speedChanges || allowDeletions;
+    const bool allowAdditions = !speedChanges && !allowDeletions && mission.size() > _items.size();
+    const bool sequenceChanges = speedChanges || allowDeletions || allowAdditions;
     if (sequenceChanges && same) {
-        const auto mapping = allowDeletions ? CaacMissionUpdateUtils::waypointDeletionMapping(_items, mission)
-                                            : CaacMissionUpdateUtils::speedUpdateMapping(_items, mission);
+        const auto mapping = allowDeletions   ? CaacMissionUpdateUtils::waypointDeletionMapping(_items, mission)
+                             : allowAdditions ? CaacMissionUpdateUtils::waypointAdditionMapping(_items, mission)
+                                              : CaacMissionUpdateUtils::speedUpdateMapping(_items, mission);
         same = mapping.valid;
         oldToNew = mapping.oldToNew;
         newToOld = mapping.newToOld;
@@ -209,9 +211,10 @@ bool CaacSimulationEngine::updateMission(const QMap<uint16_t, mavlink_mission_it
                 "Only waypoint positions and flight speeds can be updated during flight. Pause and upload other "
                 "mission changes manually.");
         } else {
-            error = QCoreApplication::translate("CaacSimulationEngine",
-                                                "Only waypoint positions can be updated during flight. Pause and "
-                                                "upload other mission changes manually.");
+            error = QCoreApplication::translate(
+                "CaacSimulationEngine",
+                "Only waypoint positions and added waypoints can be updated during flight. Pause and "
+                "upload other mission changes manually.");
         }
         return false;
     }
