@@ -484,8 +484,23 @@ bool CaacSimulationController::start(PlanMasterController* plan)
             _preserveUploadFlightSpeed = qQNaN();
             _preserveUploadDeletions = false;
             const auto mission = _link->_missionItemHandler->uploadedMission();
-            const bool normalUpload =
+            bool normalUpload =
                 !preserve && !_uploadSent && _planningPlan && ownsVehicle(_planningPlan->managerVehicle());
+            if (normalUpload) {
+                const auto expected =
+                    MissionController::createMissionItems(_planningPlan->missionController()->visualItems(), this);
+                const int offset = _vehicle->firmwarePlugin()->sendHomePositionToVehicle() ? 0 : 1;
+                normalUpload = mission.size() == expected.size() - offset;
+                for (int i = offset; normalUpload && i < expected.size(); ++i) {
+                    const auto* item = expected[i];
+                    const auto wire = mission.value(i - offset);
+                    const double scale = item->frame() == MAV_FRAME_MISSION ? 1.0 : 1e7;
+                    normalUpload = wire.command == item->command() && wire.frame == item->frame() &&
+                                   wire.x == static_cast<int32_t>(item->param5() * scale) &&
+                                   wire.y == static_cast<int32_t>(item->param6() * scale);
+                }
+                qDeleteAll(expected);
+            }
             auto options = _options;
             auto waypointOptions = _waypointOptions;
             auto numbers = _waypointNumbers;
