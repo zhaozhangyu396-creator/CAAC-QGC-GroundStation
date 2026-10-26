@@ -26,6 +26,33 @@
 #include "SpeedSection.h"
 #include "Vehicle.h"
 
+namespace {
+QVariantMap simulationSettingsForPlan(PlanMasterController* plan)
+{
+    auto settings = plan->property("caacSimulationSettings").toMap();
+    if (settings.isEmpty()) {
+        settings = CaacSimulationController::defaults();
+        const auto* vehicle = plan->controllerVehicle();
+        if (vehicle) {
+            settings["horizontalSpeed"] =
+                vehicle->multiRotor() ? vehicle->defaultHoverSpeed() : vehicle->defaultCruiseSpeed();
+        }
+    }
+    return settings;
+}
+
+CaacSimulationEngine::Options simulationOptions(const QVariantMap& settings)
+{
+    return {.horizontalSpeed = settings.value("horizontalSpeed").toDouble(),
+            .verticalSpeed = settings.value("verticalSpeed").toDouble(),
+            .yawRate = settings.value("yawRate").toDouble(),
+            .windSpeed = settings.value("windSpeed").toDouble(),
+            .windBearing = settings.value("windBearing").toDouble(),
+            .turnMode = settings.value("turnMode").toInt(),
+            .climbMode = settings.value("climbMode").toInt()};
+}
+}  // namespace
+
 CaacSimulationController::CaacSimulationController(QObject* parent)
     : QObject(parent)
 {
@@ -383,6 +410,8 @@ bool CaacSimulationController::start(PlanMasterController* plan)
     _settings = defaults();
     _options = {};
     _engine = {};
+    _uploadedSettings.clear();
+    _uploadedSettingsExplicit = false;
     _holdAltitude = qQNaN();
     _guidedTarget = QGeoCoordinate();
     _uploadSent = false;
@@ -455,18 +484,70 @@ bool CaacSimulationController::start(PlanMasterController* plan)
             _preserveUploadFlightSpeed = qQNaN();
             _preserveUploadDeletions = false;
             const auto mission = _link->_missionItemHandler->uploadedMission();
+            const bool normalUpload =
+                !preserve && !_uploadSent && _planningPlan && ownsVehicle(_planningPlan->managerVehicle());
+            auto options = _options;
+            auto waypointOptions = _waypointOptions;
+            auto numbers = _waypointNumbers;
+            QVariantMap normalSettings;
+            if (normalUpload) {
+                normalSettings = simulationSettingsForPlan(_planningPlan);
+                const auto validation = validateSettings(normalSettings);
+                if (!validation.isEmpty()) {
+                    _setStatus(validation);
+                    emit missionUploadFailed();
+                    return;
+                }
+                options = simulationOptions(normalSettings);
+                waypointOptions.clear();
+                numbers.clear();
+                const int offset = _vehicle->firmwarePlugin()->sendHomePositionToVehicle() ? 0 : 1;
+                const auto* source = _planningPlan->missionController()->visualItems();
+                for (int i = 1; i < source->count(); ++i) {
+                    const auto* item = source->value<SimpleMissionItem*>(i);
+                    if (!item || item->command() != MAV_CMD_NAV_WAYPOINT) {
+                        continue;
+                    }
+                    const int sequence = item->sequenceNumber() - offset;
+                    if (!mission.contains(sequence) || mission.value(sequence).command != MAV_CMD_NAV_WAYPOINT) {
+                        continue;
+                    }
+                    const auto& wire = mission.value(sequence);
+                    if (QGeoCoordinate(wire.x / 1e7, wire.y / 1e7).distanceTo(item->coordinate()) >= 0.02) {
+                        continue;
+                    }
+                    numbers.insert(item->sequenceNumber(), {item->waypointNumber(), item->coordinate()});
+                    const auto settings = item->caacFlightSettings();
+                    if (!settings.isEmpty()) {
+                        waypointOptions.insert(
+                            sequence, {settings.value("verticalSpeed").toDouble(), settings.value("turnMode").toInt(),
+                                       settings.value("climbMode").toInt()});
+                    }
+                }
+            }
             const bool loaded = preserve ? _engine.updateMission(mission, _home, _options, error, _waypointOptions,
                                                                  speedChanges, currentFlightSpeed, allowDeletions)
-                                         : _engine.load(mission, _home, _options, error, _waypointOptions);
+                                         : _engine.load(mission, _home, options, error, waypointOptions);
             if (!loaded) {
                 _uploadSent = false;
                 _setStatus(error);
                 emit missionUploadFailed();
                 return;
             }
+            if (normalUpload) {
+                _settings = normalSettings;
+                _settingsExplicit = !_planningPlan->property("caacSimulationSettings").toMap().isEmpty();
+                _options = options;
+                _waypointOptions = waypointOptions;
+                _waypointNumbers = numbers;
+                ++_waypointNumberRevision;
+                emit waypointNumbersChanged();
+            }
             if (!preserve && (wasLoaded || before.airborne)) {
                 _engine.restoreState(before);
             }
+            _uploadedSettings = _settings;
+            _uploadedSettingsExplicit = _settingsExplicit;
             _missionReady = true;
             emit statusChanged();
         },
@@ -519,11 +600,8 @@ bool CaacSimulationController::upload(PlanMasterController* plan, bool preserveP
     }
     auto* mission = plan->missionController();
     const auto home = mission->plannedHomePosition();
-    auto settings = plan->property("caacSimulationSettings").toMap();
-    const bool settingsExplicit = !settings.isEmpty();
-    if (settings.isEmpty()) {
-        settings = defaults();
-    }
+    const bool settingsExplicit = !plan->property("caacSimulationSettings").toMap().isEmpty();
+    const auto settings = simulationSettingsForPlan(plan);
     const auto validation = validateSettings(settings);
     if (!validation.isEmpty() || !home.isValid() || !std::isfinite(home.altitude()) ||
         std::abs(home.altitude()) > 100000 || mission->readyForSaveState() != VisualMissionItem::ReadyForSave ||
@@ -536,22 +614,10 @@ bool CaacSimulationController::upload(PlanMasterController* plan, bool preserveP
     _settingsExplicit = settingsExplicit;
     _sourceMission = {};
     mission->save(_sourceMission);
-    _options = {.horizontalSpeed = _settings.value("horizontalSpeed").toDouble(),
-                .verticalSpeed = _settings.value("verticalSpeed").toDouble(),
-                .yawRate = _settings.value("yawRate").toDouble(),
-                .windSpeed = _settings.value("windSpeed").toDouble(),
-                .windBearing = _settings.value("windBearing").toDouble(),
-                .turnMode = _settings.value("turnMode").toInt(),
-                .climbMode = _settings.value("climbMode").toInt()};
-    if (_uploadPlan) {
-        _uploadPlan->deleteLater();
-        _uploadPlan.clear();
-    }
+    _options = simulationOptions(_settings);
     const auto previousWaypointOptions = _waypointOptions;
-    if (!_prepareFlightPlan(preserveProgress)) {
-        return false;
-    }
-    if (preserveProgress) {
+    const auto preservesMission = [this, &previousWaypointOptions, speedChanges, currentFlightSpeed, allowDeletions](
+                                      QString& error, bool validateFlowSettings) {
         const auto items = MissionController::createMissionItems(_uploadPlan->missionController()->visualItems(), this);
         QMap<uint16_t, mavlink_mission_item_int_t> wireMission;
         const int offset = _vehicle->firmwarePlugin()->sendHomePositionToVehicle() ? 0 : 1;
@@ -579,6 +645,29 @@ bool CaacSimulationController::upload(PlanMasterController* plan, bool preserveP
             allowDeletions   ? CaacMissionUpdateUtils::waypointDeletionMapping(_engine.mission(), wireMission)
             : allowAdditions ? CaacMissionUpdateUtils::waypointAdditionMapping(_engine.mission(), wireMission)
                              : CaacMissionUpdateUtils::speedUpdateMapping(_engine.mission(), wireMission);
+        if (validateFlowSettings && !_uploadedSettings.isEmpty()) {
+            auto previousSettings = _uploadedSettings;
+            auto pendingSettings = _settings;
+            bool sameSettings = _settingsExplicit == _uploadedSettingsExplicit;
+            for (const auto* key : {"startSequence", "returnSequence"}) {
+                const int oldSequence = previousSettings.value(key).toInt();
+                const int newSequence = pendingSettings.value(key).toInt();
+                sameSettings =
+                    sameSettings &&
+                    (oldSequence > 0 ? mapping.valid && mapping.oldToNew.contains(oldSequence - offset) &&
+                                           mapping.oldToNew.value(oldSequence - offset) + offset == newSequence
+                                     : oldSequence == newSequence);
+                previousSettings.remove(key);
+                pendingSettings.remove(key);
+            }
+            if (!sameSettings || previousSettings != pendingSettings) {
+                error = QCoreApplication::translate(
+                    "CaacSimulationEngine",
+                    "Only waypoint positions and flight speeds can be updated during flight. Pause and upload other "
+                    "mission changes manually.");
+                return false;
+            }
+        }
         if (mapping.valid) {
             for (auto it = previousWaypointOptions.cbegin(); it != previousWaypointOptions.cend(); ++it) {
                 const int sequence = mapping.oldToNew.value(it.key(), -1);
@@ -595,12 +684,29 @@ bool CaacSimulationController::upload(PlanMasterController* plan, bool preserveP
             }
         }
         auto probe = _engine;
-        QString error;
-        if (!probe.updateMission(wireMission, _home, _options, error, _waypointOptions, speedChanges,
-                                 currentFlightSpeed, allowDeletions)) {
-            _setStatus(error);
+        return probe.updateMission(wireMission, _home, _options, error, _waypointOptions, speedChanges,
+                                   currentFlightSpeed, allowDeletions);
+    };
+    bool prepared = false;
+    QString validationError;
+    for (int candidate = 0; candidate < (preserveProgress ? 2 : 1); ++candidate) {
+        if (_uploadPlan) {
+            _uploadPlan->deleteLater();
+            _uploadPlan.clear();
+        }
+        _waypointOptions = previousWaypointOptions;
+        // Match the sent command stream before considering generated takeoff/return commands.
+        if (!_prepareFlightPlan(preserveProgress, !preserveProgress || candidate == 1)) {
             return false;
         }
+        if (!preserveProgress || preservesMission(validationError, candidate == 0)) {
+            prepared = true;
+            break;
+        }
+    }
+    if (!prepared) {
+        _setStatus(validationError);
+        return false;
     }
     _preserveUploadProgress = preserveProgress;
     _preserveUploadSpeedChanges = speedChanges;
@@ -918,7 +1024,7 @@ void CaacSimulationController::_publish()
     }
 }
 
-bool CaacSimulationController::_prepareFlightPlan(bool sequenceChanges)
+bool CaacSimulationController::_prepareFlightPlan(bool sequenceChanges, bool generateFlow)
 {
     _uploadPlan = new PlanMasterController(this);
     _uploadPlan->setProperty("caacSimulationPlanning", true);
@@ -998,7 +1104,7 @@ bool CaacSimulationController::_prepareFlightPlan(bool sequenceChanges)
             }
         }
     };
-    if (existingFlow) {
+    if (existingFlow || !generateFlow) {
         captureNumbers();
         return true;
     }

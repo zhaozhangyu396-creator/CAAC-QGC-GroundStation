@@ -7,6 +7,7 @@
 #include <QtQuick/QQuickWindow>
 #include <QtTest/QSignalSpy>
 
+#include "AppSettings.h"
 #include "CaacCorePlugin.h"
 #include "CaacMissionUpdateController.h"
 #include "CaacRouteEditorController.h"
@@ -19,6 +20,7 @@
 #include "PlanMasterController.h"
 #include "QGCGeo.h"
 #include "QmlUITestBase.h"
+#include "SettingsManager.h"
 #include "SimpleMissionItem.h"
 #include "SpeedSection.h"
 #include "Vehicle.h"
@@ -62,13 +64,22 @@ bool CaacFlightSpeedScopeUITest::_triggerFlightAction(const QString& name)
 void CaacFlightSpeedScopeUITest::_scopedUpdatesPreserveFlightProgress_data()
 {
     QTest::addColumn<bool>("specifiedWaypointSpeeds");
-    QTest::newRow("existing-waypoint-speed-sections") << true;
-    QTest::newRow("insert-waypoint-speed-sections") << false;
+    QTest::addColumn<bool>("allWaypointsFirst");
+    QTest::newRow("existing-waypoint-speed-sections") << true << false;
+    QTest::newRow("raw-upload-selected-waypoint") << false << false;
+    QTest::newRow("raw-upload-all-waypoints") << false << true;
 }
 
 void CaacFlightSpeedScopeUITest::_scopedUpdatesPreserveFlightProgress()
 {
     QFETCH(bool, specifiedWaypointSpeeds);
+    QFETCH(bool, allWaypointsFirst);
+    auto* defaultSpeed = SettingsManager::instance()->appSettings()->offlineEditingHoverSpeed();
+    const auto previousDefaultSpeed = defaultSpeed->rawValue();
+    const auto restoreDefaultSpeed =
+        qScopeGuard([defaultSpeed, previousDefaultSpeed]() { defaultSpeed->setRawValue(previousDefaultSpeed); });
+    const double initialSpeed = specifiedWaypointSpeeds ? 5.0 : 8.0;
+    defaultSpeed->setRawValue(initialSpeed);
     startUI();
     if (QTest::currentTestFailed()) {
         return;
@@ -84,13 +95,16 @@ void CaacFlightSpeedScopeUITest::_scopedUpdatesPreserveFlightProgress()
     QVERIFY(master && editor && plugin);
     master->removeAll();
     auto* mission = master->missionController();
-    const QGeoCoordinate home(30, 120, 20);
-    const auto firstCoordinate = QGCGeo::geodesicDestination(home, 90, 600);
-    const auto fifthCoordinate = QGCGeo::geodesicDestination(firstCoordinate, 0, 400);
+    const QGeoCoordinate home = specifiedWaypointSpeeds
+                                    ? QGeoCoordinate(30, 120, 20)
+                                    : QGeoCoordinate(25.137904838950554, 102.72128132348416, 2062.357);
+    const auto firstCoordinate = QGCGeo::geodesicDestination(home, 90, specifiedWaypointSpeeds ? 600 : 60);
+    const double spacing = specifiedWaypointSpeeds ? 100 : 30;
+    const auto fifthCoordinate = QGCGeo::geodesicDestination(firstCoordinate, 0, spacing * 4);
     mission->setHomePosition(home);
-    for (const auto& coordinate : {firstCoordinate, QGCGeo::geodesicDestination(firstCoordinate, 0, 100),
-                                   QGCGeo::geodesicDestination(firstCoordinate, 0, 200),
-                                   QGCGeo::geodesicDestination(firstCoordinate, 0, 300), fifthCoordinate}) {
+    for (const auto& coordinate : {firstCoordinate, QGCGeo::geodesicDestination(firstCoordinate, 0, spacing),
+                                   QGCGeo::geodesicDestination(firstCoordinate, 0, spacing * 2),
+                                   QGCGeo::geodesicDestination(firstCoordinate, 0, spacing * 3), fifthCoordinate}) {
         QVERIFY(editor->addWaypoint(coordinate));
         auto* item = editor->currentItem();
         QVERIFY(item && item->speedSection());
@@ -98,7 +112,7 @@ void CaacFlightSpeedScopeUITest::_scopedUpdatesPreserveFlightProgress()
         item->speedSection()->flightSpeed()->setRawValue(5);
         item->speedSection()->setSpecifyFlightSpeed(specifiedWaypointSpeeds);
     }
-    QVERIFY(editor->setMissionFlightSpeed(true, 5));
+    QVERIFY(editor->setMissionFlightSpeed(specifiedWaypointSpeeds, initialSpeed));
     auto* first = mission->visualItems()->value<SimpleMissionItem*>(1);
     auto* second = mission->visualItems()->value<SimpleMissionItem*>(2);
     auto* third = mission->visualItems()->value<SimpleMissionItem*>(3);
@@ -107,14 +121,18 @@ void CaacFlightSpeedScopeUITest::_scopedUpdatesPreserveFlightProgress()
     settings["takeoffHeight"] = 2.0;
     settings["verticalSpeed"] = 10.0;
     settings["yawRate"] = 360.0;
-    settings["endBehavior"] = 2;
-    settings["closed"] = true;
-    settings["loopMode"] = 1;
+    settings["endBehavior"] = specifiedWaypointSpeeds ? 2 : 0;
+    settings["closed"] = specifiedWaypointSpeeds;
+    settings["loopMode"] = specifiedWaypointSpeeds ? 1 : 0;
     settings["loopCount"] = 2;
-    QVERIFY(editor->setSimulationSettings(settings));
+    if (specifiedWaypointSpeeds) {
+        QVERIFY(editor->setSimulationSettings(settings));
+    }
     panel->setProperty("activePanel", -1);
-    map->setProperty("center", QVariant::fromValue(QGCGeo::geodesicDestination(home, 90, 300)));
-    map->setProperty("zoomLevel", 16.0);
+    const auto mapCenter = specifiedWaypointSpeeds ? QGCGeo::geodesicDestination(home, 90, 300)
+                                                   : QGCGeo::geodesicDestination(firstCoordinate, 0, spacing * 2);
+    map->setProperty("center", QVariant::fromValue(mapCenter));
+    map->setProperty("zoomLevel", specifiedWaypointSpeeds ? 16.0 : 19.0);
 
     auto* simulation = plugin->simulation();
     QVERIFY(simulation);
@@ -128,10 +146,23 @@ void CaacFlightSpeedScopeUITest::_scopedUpdatesPreserveFlightProgress()
     QTRY_VERIFY_WITH_TIMEOUT(simulation->vehicle() && simulation->vehicle()->isInitialConnectComplete(),
                              TestTimeout::longMs());
     QSignalSpy uploads(simulation, &CaacSimulationController::missionUploaded);
-    QVERIFY(simulation->upload(master));
-    QTRY_COMPARE_WITH_TIMEOUT(uploads.count(), 1, TestTimeout::longMs());
     auto* vehicle = simulation->vehicle();
     auto* manager = vehicle->missionManager();
+    if (specifiedWaypointSpeeds) {
+        QVERIFY(simulation->upload(master));
+        QTRY_COMPARE_WITH_TIMEOUT(uploads.count(), 1, TestTimeout::longMs());
+    } else {
+        QSignalSpy sent(manager, &MissionManager::sendComplete);
+        mission->sendToVehicle();
+        QTRY_COMPARE_WITH_TIMEOUT(sent.count(), 1, TestTimeout::longMs());
+        QVERIFY(!sent.first().first().toBool());
+        QTRY_VERIFY_WITH_TIMEOUT(simulation->missionReady(), TestTimeout::mediumMs());
+        vehicle->guidedModeTakeoff(2);
+        QTRY_VERIFY_WITH_TIMEOUT(vehicle->airborne(), TestTimeout::mediumMs());
+        QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->firmwarePlugin()->pauseFlightMode(),
+                                  TestTimeout::mediumMs());
+    }
+    const int initialUploads = uploads.count();
     vehicle->startMission();
     QTRY_VERIFY_WITH_TIMEOUT(vehicle->airborne() && home.distanceTo(vehicle->coordinate()) > 35, TestTimeout::longMs());
     const auto targetCoordinate = [&]() {
@@ -144,6 +175,19 @@ void CaacFlightSpeedScopeUITest::_scopedUpdatesPreserveFlightProgress()
         return target.isValid() && target.distanceTo(firstCoordinate) < 0.1;
     };
     QTRY_VERIFY_WITH_TIMEOUT(targetingFirst(), TestTimeout::mediumMs());
+    if (!specifiedWaypointSpeeds) {
+        vehicle->pauseVehicle();
+        QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->firmwarePlugin()->pauseFlightMode(),
+                                  TestTimeout::mediumMs());
+    }
+    const auto navigationCommandCount = [manager]() {
+        int count = 0;
+        for (const auto* item : manager->missionItems()) {
+            count += item->command() != MAV_CMD_DO_CHANGE_SPEED;
+        }
+        return count;
+    };
+    const int originalNavigationCommands = navigationCommandCount();
     const auto original = master->saveToJson();
 
     QVERIFY(_openSpeedDialog());
@@ -155,20 +199,21 @@ void CaacFlightSpeedScopeUITest::_scopedUpdatesPreserveFlightProgress()
     QVERIFY(acceptDialog());
     QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacFlightSpeedValue"), 0));
     QCOMPARE(master->saveToJson(), original);
-    QCOMPARE(uploads.count(), 1);
+    QCOMPARE(uploads.count(), initialUploads);
     QVERIFY(speed->setProperty("text", QStringLiteral("8")));
     QVERIFY(rejectDialog());
     QTRY_VERIFY_WITH_TIMEOUT(!findVisibleItem(_rootItem, QStringLiteral("caacFlightSpeedValue"), 0),
                              TestTimeout::mediumMs());
     QCOMPARE(master->saveToJson(), original);
-    QCOMPARE(uploads.count(), 1);
+    QCOMPARE(uploads.count(), initialUploads);
 
     const auto labelText = [&](int index) {
         auto* label = findVisibleItem(map, QStringLiteral("caacRouteLegLabel_%1").arg(index), 0);
         return label ? label->property("legText").toString() : QString();
     };
-    for (int round = 0; round < 3; ++round) {
-        const int scopeIndex = round == 0 ? 1 : 2;
+    const int rounds = specifiedWaypointSpeeds ? 3 : 1;
+    for (int round = 0; round < rounds; ++round) {
+        const int scopeIndex = specifiedWaypointSpeeds ? (round == 0 ? 1 : 2) : (allWaypointsFirst ? 2 : 1);
         const bool sameValueOverride = round == 2;
         if (sameValueOverride) {
             QSignalSpy acknowledged(vehicle, &Vehicle::mavCommandResult);
@@ -195,9 +240,9 @@ void CaacFlightSpeedScopeUITest::_scopedUpdatesPreserveFlightProgress()
             auto* waypoint = findVisibleItem(_rootItem, QStringLiteral("caacFlightSpeedWaypoint"));
             QVERIFY(waypoint);
             QCOMPARE(waypoint->property("count").toInt(), 5);
-            QVERIFY(waypoint->setProperty("currentIndex", 1));
+            QVERIFY(waypoint->setProperty("currentIndex", specifiedWaypointSpeeds ? 1 : 0));
         }
-        const double requestedSpeed = scopeIndex == 1 ? 8 : 6;
+        const double requestedSpeed = !specifiedWaypointSpeeds ? 9 : scopeIndex == 1 ? 8 : 6;
         QVERIFY(speed->setProperty("text", QString::number(requestedSpeed)));
         QQmlExpression transaction(qmlContext(speed), speed, QStringLiteral("update"));
         QPointer<CaacMissionUpdateController> update =
@@ -221,40 +266,86 @@ void CaacFlightSpeedScopeUITest::_scopedUpdatesPreserveFlightProgress()
             QVERIFY(master->saveToJson() != beforeJson);
         }
         QTRY_VERIFY_WITH_TIMEOUT(mission->uploadConfirmed(), TestTimeout::mediumMs());
+        QCOMPARE(navigationCommandCount(), originalNavigationCommands);
+        if (!specifiedWaypointSpeeds) {
+            QCOMPARE(vehicle->flightMode(), vehicle->firmwarePlugin()->pauseFlightMode());
+            QVERIFY(beforePosition.distanceTo(vehicle->coordinate()) < 0.1);
+            QVERIFY(_triggerFlightAction(QStringLiteral("caacStartMission")));
+        }
         QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->missionFlightMode(), TestTimeout::mediumMs());
         QTRY_VERIFY_WITH_TIMEOUT(targetingFirst(), TestTimeout::mediumMs());
         QVERIFY(home.distanceTo(vehicle->coordinate()) >= home.distanceTo(beforePosition) - 0.5);
         QVERIFY(vehicle->airborne() && vehicle->armed());
 
         if (scopeIndex == 1) {
-            QCOMPARE(first->specifiedFlightSpeed(), 5.0);
-            QCOMPARE(second->specifiedFlightSpeed(), 8.0);
-            QCOMPARE(third->specifiedFlightSpeed(), 5.0);
-            QTRY_COMPARE_WITH_TIMEOUT(simulation->currentMissionDetails().value("speed").toDouble(), 5.0,
+            const double firstSpeed = specifiedWaypointSpeeds ? initialSpeed : requestedSpeed;
+            const double secondSpeed = specifiedWaypointSpeeds ? requestedSpeed : initialSpeed;
+            QCOMPARE(first->specifiedFlightSpeed(), firstSpeed);
+            QCOMPARE(second->specifiedFlightSpeed(), secondSpeed);
+            QCOMPARE(third->specifiedFlightSpeed(), initialSpeed);
+            QTRY_COMPARE_WITH_TIMEOUT(simulation->currentMissionDetails().value("speed").toDouble(), initialSpeed,
                                       TestTimeout::mediumMs());
-            QTRY_VERIFY_WITH_TIMEOUT(labelText(0).endsWith(QStringLiteral("5.0 m/s")), TestTimeout::mediumMs());
-            QTRY_VERIFY_WITH_TIMEOUT(labelText(1).endsWith(QStringLiteral("5.0 m/s")), TestTimeout::mediumMs());
-            QTRY_VERIFY_WITH_TIMEOUT(labelText(2).endsWith(QStringLiteral("8.0 m/s")), TestTimeout::mediumMs());
+            const auto initialLabel = QStringLiteral("%1 m/s").arg(initialSpeed, 0, 'f', 1);
+            QTRY_VERIFY_WITH_TIMEOUT(labelText(0).endsWith(initialLabel), TestTimeout::mediumMs());
+            const auto firstLabel = QStringLiteral("%1 m/s").arg(firstSpeed, 0, 'f', 1);
+            const auto secondLabel = QStringLiteral("%1 m/s").arg(secondSpeed, 0, 'f', 1);
+            QTRY_VERIFY_WITH_TIMEOUT(labelText(1).endsWith(firstLabel), TestTimeout::mediumMs());
+            QTRY_VERIFY_WITH_TIMEOUT(labelText(2).endsWith(secondLabel), TestTimeout::mediumMs());
         } else {
             for (auto* item : {first, second, third}) {
-                QCOMPARE(item->specifiedFlightSpeed(), 6.0);
+                QCOMPARE(item->specifiedFlightSpeed(), requestedSpeed);
             }
-            QTRY_COMPARE_WITH_TIMEOUT(simulation->currentMissionDetails().value("speed").toDouble(), 6.0,
+            QTRY_COMPARE_WITH_TIMEOUT(simulation->currentMissionDetails().value("speed").toDouble(), requestedSpeed,
                                       TestTimeout::mediumMs());
             for (int index = 0; index < 3; ++index) {
-                QTRY_VERIFY_WITH_TIMEOUT(labelText(index).endsWith(QStringLiteral("6.0 m/s")), TestTimeout::mediumMs());
+                const auto requestedLabel = QStringLiteral("%1 m/s").arg(requestedSpeed, 0, 'f', 1);
+                QTRY_VERIFY_WITH_TIMEOUT(labelText(index).endsWith(requestedLabel), TestTimeout::mediumMs());
             }
             int speedCommands = 0;
             for (const auto* item : manager->missionItems()) {
                 if (item->command() == MAV_CMD_DO_CHANGE_SPEED && item->param1() < 2) {
-                    QCOMPARE(item->param2(), 6.0);
+                    QCOMPARE(item->param2(), requestedSpeed);
                     ++speedCommands;
                 }
             }
             QVERIFY(speedCommands >= 3);
         }
+        const double expectedSpeed = scopeIndex == 1 ? initialSpeed : requestedSpeed;
+        QTRY_VERIFY_WITH_TIMEOUT(qAbs(vehicle->groundSpeed()->rawValue().toDouble() - expectedSpeed) < 0.2,
+                                 TestTimeout::mediumMs());
     }
 
+    if (!specifiedWaypointSpeeds) {
+        if (!allWaypointsFirst) {
+            QTRY_VERIFY_WITH_TIMEOUT(targetCoordinate().distanceTo(second->coordinate()) < 0.1 &&
+                                         qAbs(vehicle->groundSpeed()->rawValue().toDouble() - 9.0) < 0.2,
+                                     TestTimeout::longMs());
+            QCOMPARE(simulation->currentMissionDetails().value("speed").toDouble(), 9.0);
+        } else {
+            vehicle->pauseVehicle();
+            QTRY_COMPARE_WITH_TIMEOUT(vehicle->flightMode(), vehicle->firmwarePlugin()->pauseFlightMode(),
+                                      TestTimeout::mediumMs());
+            auto changedSettings = CaacSimulationController::defaults();
+            changedSettings["horizontalSpeed"] = initialSpeed;
+            changedSettings["closed"] = true;
+            QVERIFY(master->setProperty("caacSimulationSettings", changedSettings) ||
+                    master->property("caacSimulationSettings").toMap() == changedSettings);
+            QVERIFY(plugin->setFlightWaypointSpeeds(master, {}, 10, true).isEmpty());
+            const int beforeRejectedUploads = uploads.count();
+            for (int attempt = 0; attempt < 2; ++attempt) {
+                CaacMissionUpdateController rejected;
+                QSignalSpy rejectedResult(&rejected, &CaacMissionUpdateController::finished);
+                QVERIFY(rejected.updateSpeeds(master, simulation, 10));
+                QTRY_COMPARE_WITH_TIMEOUT(rejectedResult.count(), 1, TestTimeout::longMs());
+                QVERIFY(!rejectedResult.first().first().toBool());
+                QCOMPARE(uploads.count(), beforeRejectedUploads);
+                QCOMPARE(vehicle->flightMode(), vehicle->firmwarePlugin()->pauseFlightMode());
+                QCOMPARE(simulation->currentMissionDetails().value("speed").toDouble(), 9.0);
+                QVERIFY(!mission->uploadConfirmed());
+            }
+        }
+        return;
+    }
     int fifthSequence = -1;
     for (int index = 0; index < manager->missionItems().size(); ++index) {
         const auto* item = manager->missionItems().at(index);

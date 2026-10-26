@@ -100,7 +100,7 @@ signals:
     void modeSwitchConfigurationChanged();
 
 private:
-    bool _prepareFlightPlan(bool sequenceChanges = false);
+    bool _prepareFlightPlan(bool sequenceChanges = false, bool generateFlow = true);
     void _tick();
     void _publish();
     void _setStatus(const QString& status);
@@ -129,6 +129,7 @@ private:
     QGeoCoordinate _guidedTarget;
     QJsonObject _sourceMission;
     QVariantMap _settings;
+    QVariantMap _uploadedSettings;
     QVariantMap _publishedMissionDetails;
     QTimer _timer;
     QElapsedTimer _elapsed;
@@ -146,6 +147,7 @@ private:
     bool _preserveUploadDeletions = false;
     bool _missionReady = false;
     bool _settingsExplicit = false;
+    bool _uploadedSettingsExplicit = false;
 
     struct WaypointNumber
     {
