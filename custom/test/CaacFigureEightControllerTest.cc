@@ -836,7 +836,8 @@ void CaacFigureEightControllerTest::_headingEvaluation()
     mavlink_msg_attitude_quaternion_encode(vehicle()->id(), vehicle()->compId(), &message, &attitude);
     QVERIFY(QMetaObject::invokeMethod(vehicle(), "_mavlinkMessageReceived", Qt::DirectConnection,
                                       Q_ARG(LinkInterface*, mockLink()), Q_ARG(mavlink_message_t, message)));
-    mavlink_msg_attitude_pack(vehicle()->id(), vehicle()->compId(), &message, 0, 0, 0, std::numbers::pi, 0, 0, 0);
+    mavlink_msg_attitude_pack(vehicle()->id(), vehicle()->compId(), &message, 0, 0, 0, std::numbers::pi_v<float>, 0, 0,
+                              0);
     QVERIFY(QMetaObject::invokeMethod(vehicle(), "_mavlinkMessageReceived", Qt::DirectConnection,
                                       Q_ARG(LinkInterface*, mockLink()), Q_ARG(mavlink_message_t, message)));
     QVERIFY(QMetaObject::invokeMethod(&controller, "_sample", Qt::DirectConnection));
