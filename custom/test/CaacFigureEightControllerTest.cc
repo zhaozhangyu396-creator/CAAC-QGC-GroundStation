@@ -33,13 +33,13 @@ bool takeoffAtExamHeight(Vehicle* vehicle)
     return true;
 }
 
-bool reportSpeed(Vehicle* vehicle, MockLink* link)
+bool reportSpeed(Vehicle* vehicle, MockLink* link, double horizontalSpeed = 0, double verticalSpeed = 0)
 {
     if (!vehicle || !link) {
         return false;
     }
     mavlink_message_t speed{};
-    mavlink_msg_vfr_hud_pack(vehicle->id(), vehicle->compId(), &speed, 0, 0, 0, 0, 0, 0);
+    mavlink_msg_vfr_hud_pack(vehicle->id(), vehicle->compId(), &speed, 0, horizontalSpeed, 0, 0, 0, verticalSpeed);
     return QMetaObject::invokeMethod(vehicle, "_mavlinkMessageReceived", Qt::DirectConnection,
                                      Q_ARG(LinkInterface*, link), Q_ARG(mavlink_message_t, speed));
 }
@@ -69,7 +69,7 @@ bool reportGps(Vehicle* vehicle, MockLink* link, const QGeoCoordinate& coordinat
 }
 
 bool reportPosition(Vehicle* vehicle, MockLink* link, CaacFigureEightController& controller,
-                    const QGeoCoordinate& coordinate)
+                    const QGeoCoordinate& coordinate, double horizontalSpeed = 0, double verticalSpeed = 0)
 {
     if (!vehicle || !link) {
         return false;
@@ -79,7 +79,7 @@ bool reportPosition(Vehicle* vehicle, MockLink* link, CaacFigureEightController&
     mavlink_msg_attitude_pack(vehicle->id(), vehicle->compId(), &attitude, 0, 0, 0, yaw, 0, 0, 0);
     if (!QMetaObject::invokeMethod(vehicle, "_mavlinkMessageReceived", Qt::DirectConnection,
                                    Q_ARG(LinkInterface*, link), Q_ARG(mavlink_message_t, attitude)) ||
-        !reportSpeed(vehicle, link)) {
+        !reportSpeed(vehicle, link, horizontalSpeed, verticalSpeed)) {
         return false;
     }
     const float offset[] = {1, 0, 0, 0};
@@ -99,7 +99,8 @@ bool reportPosition(Vehicle* vehicle, MockLink* link, CaacFigureEightController&
            QMetaObject::invokeMethod(&controller, "_sample", Qt::DirectConnection);
 }
 
-bool reportReferencePosition(Vehicle* vehicle, MockLink* link, CaacFigureEightController& controller, int index)
+bool reportReferencePosition(Vehicle* vehicle, MockLink* link, CaacFigureEightController& controller, int index,
+                             double speed = 0)
 {
     if (!vehicle) {
         return false;
@@ -112,7 +113,41 @@ bool reportReferencePosition(Vehicle* vehicle, MockLink* link, CaacFigureEightCo
     const auto next = path[std::min(qsizetype(index + 1), path.size() - 1)].value<QGeoCoordinate>();
     const double heading = QGCGeo::geodesicAzimuth(previous, next) + (controller.standard() == 2 ? 180 : 0);
     vehicle->heading()->setRawValue(std::fmod(heading, 360));
-    return reportPosition(vehicle, link, controller, path[index].value<QGeoCoordinate>());
+    return reportPosition(vehicle, link, controller, path[index].value<QGeoCoordinate>(), speed);
+}
+
+bool reportTakeoffReference(Vehicle* vehicle, MockLink* link)
+{
+    if (!vehicle || !link) {
+        return false;
+    }
+    const auto centre = vehicle->coordinate();
+    const auto takeoff = QGCGeo::geodesicDestination(centre, 180, 8);
+    const auto baseMode = vehicle->baseMode();
+    const auto customMode = vehicle->customMode();
+    const auto receive = [vehicle, link](const mavlink_message_t& message) {
+        return QMetaObject::invokeMethod(vehicle, "_mavlinkMessageReceived", Qt::DirectConnection,
+                                         Q_ARG(LinkInterface*, link), Q_ARG(mavlink_message_t, message));
+    };
+    const auto reportArmed = [&](bool armed) {
+        mavlink_message_t message{};
+        const auto mode =
+            static_cast<uint8_t>((baseMode & ~MAV_MODE_FLAG_SAFETY_ARMED) | (armed ? MAV_MODE_FLAG_SAFETY_ARMED : 0));
+        mavlink_msg_heartbeat_pack(vehicle->id(), vehicle->compId(), &message, MAV_TYPE_QUADROTOR,
+                                   vehicle->firmwareType(), mode, customMode, MAV_STATE_ACTIVE);
+        return receive(message);
+    };
+    const auto reportCoordinate = [&](const QGeoCoordinate& coordinate) {
+        mavlink_message_t message{};
+        mavlink_msg_global_position_int_pack(
+            vehicle->id(), vehicle->compId(), &message, 0, qRound64(coordinate.latitude() * 1e7),
+            qRound64(coordinate.longitude() * 1e7), qRound64(vehicle->altitudeAMSL()->rawValue().toDouble() * 1000),
+            qRound64(vehicle->altitudeRelative()->rawValue().toDouble() * 1000), 0, 0, 0, 0);
+        return receive(message);
+    };
+    link->setVehicleAttitudeOverrideDeg(0, 0, 0);
+    vehicle->heading()->setRawValue(0);
+    return reportArmed(false) && reportCoordinate(takeoff) && reportArmed(true) && reportCoordinate(centre);
 }
 }  // namespace
 
@@ -133,6 +168,8 @@ private slots:
     void _manualSessionDoesNotChangeMission();
     void _phasesAndVoice();
     void _centreQualification();
+    void _eightStartsEitherSide_data();
+    void _eightStartsEitherSide();
     void _headingEvaluation();
     void _voiceResources();
 
@@ -479,6 +516,7 @@ void CaacFigureEightControllerTest::_manualSessionDoesNotChangeMission()
     QTRY_VERIFY_WITH_TIMEOUT(vehicle()->airborne(), TestTimeout::mediumMs());
     QTRY_VERIFY_WITH_TIMEOUT(std::abs(vehicle()->altitudeRelative()->rawValue().toDouble() - 1.75) < 0.01,
                              TestTimeout::mediumMs());
+    QVERIFY(reportTakeoffReference(vehicle(), mockLink()));
     CaacFigureEightController controller;
     QTimer speedTelemetry;
     connect(&speedTelemetry, &QTimer::timeout, this, [this]() { reportSpeed(vehicle(), mockLink()); });
@@ -577,6 +615,7 @@ void CaacFigureEightControllerTest::_phasesAndVoice()
     QVERIFY(takeoffAtExamHeight(vehicle()));
     QTRY_VERIFY_WITH_TIMEOUT(vehicle()->airborne(), TestTimeout::mediumMs());
     mockLink()->setVehicleAttitudeOverrideDeg(0, 0, 0);
+    QVERIFY(reportTakeoffReference(vehicle(), mockLink()));
     CaacFigureEightController controller;
     controller.setExerciseMode(1);
     const auto centre = vehicle()->coordinate();
@@ -595,7 +634,7 @@ void CaacFigureEightControllerTest::_phasesAndVoice()
     QCOMPARE(speech.size(), 0);
     QVERIFY(controller.start());
     QCOMPARE(controller.phase(), QStringLiteral("中心筒就位"));
-    QCOMPARE(controller.lastAnnouncement(), QStringLiteral("请将无人机飞至中心筒上方，保持一点五米高度"));
+    QCOMPARE(controller.lastAnnouncement(), QStringLiteral("请将无人机飞至中心筒上方一点五米处，并保持对位悬停。"));
     QTRY_COMPARE_WITH_TIMEOUT(controller.phase(), QStringLiteral("原地自旋"), TestTimeout::longMs());
     const auto turnTo = [&](double heading) {
         mockLink()->setVehicleAttitudeOverrideDeg(0, 0, heading);
@@ -611,9 +650,12 @@ void CaacFigureEightControllerTest::_phasesAndVoice()
         return true;
     };
     QVERIFY(finishTurn(1));
-    QVERIFY(!controller.running());
-    QVERIFY(controller.lastAnnouncement().contains(QStringLiteral("少于 5 秒")));
+    QVERIFY(controller.running());
+    QCOMPARE(controller.attemptNumber(), 2);
+    QCOMPARE(controller.attemptLimit(), 3);
+    QVERIFY(controller.lastAttemptFailure().contains(QStringLiteral("少于 5 秒")));
     QCOMPARE(speech.size(), 0);
+    controller.stop();
     controller.setVoiceEnabled(true);
     controller.testVoice();
     QCOMPARE(speech.last()[0].toString(), QStringLiteral("ready"));
@@ -631,14 +673,20 @@ void CaacFigureEightControllerTest::_phasesAndVoice()
     QVERIFY(controller.running());
     QVERIFY(controller.spinPassed());
     QCOMPARE(controller.phase(), QStringLiteral("八字飞行"));
-    QCOMPARE(speech.last()[0].toString(), QStringLiteral("figure_eight"));
+    QCOMPARE(speech.last()[0].toString(), QStringLiteral("spin_completed"));
+    QCOMPARE(controller.lastAnnouncement(), QStringLiteral("自旋完成，可以开始水平八字飞行。"));
+    QVERIFY(controller.awaitingFigureEight());
 
     vehicle()->altitudeRelative()->setRawValue(3.0);
     QVERIFY(reportPosition(vehicle(), mockLink(), controller, centre));
+    QCOMPARE(controller.attemptNumber(), 1);
+    QVERIFY(controller.awaitingFigureEight());
+    QVERIFY(reportReferencePosition(vehicle(), mockLink(), controller, 4));
     QCOMPARE(controller.attemptNumber(), 2);
     QCOMPARE(controller.phase(), QStringLiteral("中心筒就位"));
     QVERIFY(controller.spinPassed());
     QCOMPARE(speech.last()[0].toString(), QStringLiteral("retry"));
+    QCOMPARE(speech[speech.size() - 2][0].toString(), QStringLiteral("altitude"));
     QVERIFY(controller.lastAttemptFailure().contains(QStringLiteral("高度偏差")));
     vehicle()->altitudeRelative()->setRawValue(1.75);
     QVERIFY(reportPosition(vehicle(), mockLink(), controller, centre));
@@ -647,7 +695,7 @@ void CaacFigureEightControllerTest::_phasesAndVoice()
 
     vehicle()->heading()->setRawValue(180);
     const auto reference = controller.referencePath();
-    QVERIFY(reportPosition(vehicle(), mockLink(), controller, reference[1].value<QGeoCoordinate>()));
+    QVERIFY(reportPosition(vehicle(), mockLink(), controller, reference[4].value<QGeoCoordinate>()));
     QCOMPARE(controller.attemptNumber(), 3);
     QCOMPARE(controller.phase(), QStringLiteral("中心筒就位"));
     QVERIFY(controller.spinPassed());
@@ -679,7 +727,7 @@ void CaacFigureEightControllerTest::_phasesAndVoice()
     }
     QVERIFY(!controller.running());
     QCOMPARE(controller.attemptNumber(), 3);
-    QCOMPARE(speech.last()[0].toString(), QStringLiteral("failed"));
+    QCOMPARE(speech.last()[0].toString(), QStringLiteral("spin_too_fast"));
     QVERIFY(controller.status().contains(QStringLiteral("3 次机会已用完")));
     CaacFigureEightController restored;
     QCOMPARE(restored.exerciseMode(), 2);
@@ -699,11 +747,17 @@ void CaacFigureEightControllerTest::_centreQualification()
                                  QGCGeo::geodesicDestination(centre, 90, 12)));
     QGeoCoordinate reportedCoordinate = centre;
     double reportedHeight = 0;
-    QTimer telemetry;
-    connect(&telemetry, &QTimer::timeout, this, [&]() {
+    double reportedHeading = 0;
+    double reportedSpeed = 0;
+    double reportedClimb = 0;
+    const auto report = [&]() {
+        mockLink()->setVehicleAttitudeOverrideDeg(0, 0, reportedHeading);
+        vehicle()->heading()->setRawValue(reportedHeading);
         vehicle()->altitudeRelative()->setRawValue(reportedHeight);
-        reportPosition(vehicle(), mockLink(), controller, reportedCoordinate);
-    });
+        return reportPosition(vehicle(), mockLink(), controller, reportedCoordinate, reportedSpeed, reportedClimb);
+    };
+    QTimer telemetry;
+    connect(&telemetry, &QTimer::timeout, this, [&]() { report(); });
     telemetry.start(100);
     QTRY_VERIFY_WITH_TIMEOUT(controller.running() || controller.start(), TestTimeout::mediumMs());
     QCOMPARE(controller.phase(), QStringLiteral("中心筒就位"));
@@ -711,31 +765,108 @@ void CaacFigureEightControllerTest::_centreQualification()
     _ignoreMissingPressureBackend();
     QVERIFY(takeoffAtExamHeight(vehicle()));
     QTRY_VERIFY_WITH_TIMEOUT(vehicle()->airborne(), TestTimeout::mediumMs());
-    const auto report = [&]() {
-        vehicle()->altitudeRelative()->setRawValue(reportedHeight);
-        return reportPosition(vehicle(), mockLink(), controller, reportedCoordinate);
+    QVERIFY(reportTakeoffReference(vehicle(), mockLink()));
+    const auto rejected = [&]() {
+        return report() && controller.phase() == QStringLiteral("中心筒就位") &&
+               controller.metrics().value(QStringLiteral("hoverStableSeconds")).toDouble() == 0 &&
+               !controller.metrics().value(QStringLiteral("positioningPending")).toStringList().isEmpty();
     };
-    for (const double height : {1.49, 2.01}) {
-        reportedHeight = height;
-        QVERIFY(report());
-        QCOMPARE(controller.metrics().value(QStringLiteral("hoverStableSeconds")).toDouble(), 0.0);
-        QCOMPARE(controller.phase(), QStringLiteral("中心筒就位"));
-    }
+    reportedHeight = 1.49;
+    QVERIFY(rejected());
+    reportedHeight = 2.32;
+    reportedCoordinate = QGCGeo::geodesicDestination(centre, 90, 1.02);
+    QVERIFY(rejected());
+    reportedCoordinate = centre;
+    reportedHeading = 31;
+    QVERIFY(rejected());
+    reportedHeading = 329;
+    QVERIFY(rejected());
+    reportedHeading = 0;
+    reportedSpeed = 0.31;
+    QVERIFY(rejected());
+    reportedSpeed = 0;
+    reportedClimb = 0.31;
+    QVERIFY(rejected());
+    reportedClimb = -0.31;
+    QVERIFY(rejected());
+    reportedClimb = 0;
     reportedHeight = 1.5;
     QVERIFY(report());
     QTRY_VERIFY_WITH_TIMEOUT(controller.metrics().value(QStringLiteral("hoverStableSeconds")).toDouble() >= 1,
                              TestTimeout::mediumMs());
-    reportedCoordinate = QGCGeo::geodesicDestination(centre, 90, 3);
+    reportedCoordinate = QGCGeo::geodesicDestination(centre, 90, 1.02);
     QVERIFY(report());
     QCOMPARE(controller.metrics().value(QStringLiteral("hoverStableSeconds")).toDouble(), 0.0);
     QCOMPARE(controller.phase(), QStringLiteral("中心筒就位"));
     reportedCoordinate = centre;
-    reportedHeight = 2.0;
+    // The recording shows a stationary aircraft at 2.32 m: there must be no 2 m upper bound.
+    reportedHeight = 2.32;
+    reportedHeading = 30;
     QVERIFY(report());
     QTRY_COMPARE_WITH_TIMEOUT(controller.phase(), QStringLiteral("八字飞行"), TestTimeout::longMs());
     QVERIFY(controller.metrics().value(QStringLiteral("elapsed")).toDouble() >= 4);
     QCOMPARE(controller.attemptNumber(), 1);
     controller.stop();
+}
+
+void CaacFigureEightControllerTest::_eightStartsEitherSide_data()
+{
+    QTest::addColumn<int>("standard");
+    QTest::addColumn<bool>("rightFirst");
+    for (const int standard : {0, 1, 2}) {
+        for (const bool right : {false, true}) {
+            QTest::newRow(
+                qPrintable(QStringLiteral("category-%1-%2-first").arg(standard).arg(right ? "right" : "left")))
+                << standard << right;
+        }
+    }
+}
+
+void CaacFigureEightControllerTest::_eightStartsEitherSide()
+{
+    QFETCH(int, standard);
+    QFETCH(bool, rightFirst);
+    QSettings().remove(QStringLiteral("CAAC/FigureEight"));
+    _connectMockLink();
+    QVERIFY(vehicle());
+    QVERIFY(waitForInitialConnect());
+    _ignoreMissingPressureBackend();
+    QVERIFY(takeoffAtExamHeight(vehicle()));
+    QTRY_VERIFY_WITH_TIMEOUT(vehicle()->airborne(), TestTimeout::mediumMs());
+    QVERIFY(reportTakeoffReference(vehicle(), mockLink()));
+    CaacFigureEightController controller;
+    controller.setStandard(standard);
+    QCOMPARE(controller.attemptLimit(), 3);
+    QVERIFY(controller.setLimits({{QStringLiteral("speedEnabled"), true}, {QStringLiteral("minSpeed"), 0.5}}));
+    const auto centre = vehicle()->coordinate();
+    QVERIFY(controller.setPoints(QGCGeo::geodesicDestination(centre, 270, 12),
+                                 QGCGeo::geodesicDestination(centre, 90, 12)));
+    QTimer speedTelemetry;
+    connect(&speedTelemetry, &QTimer::timeout, this, [this]() { reportSpeed(vehicle(), mockLink()); });
+    speedTelemetry.start(100);
+    QTRY_VERIFY_WITH_TIMEOUT(controller.running() || controller.start(), TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(controller.phase(), QStringLiteral("八字飞行"), TestTimeout::longMs());
+    QVERIFY(controller.awaitingFigureEight());
+    vehicle()->altitudeRelative()->setRawValue(4.0);
+    vehicle()->heading()->setRawValue(180);
+    QVERIFY(reportPosition(vehicle(), mockLink(), controller, centre, 0));
+    QVERIFY(controller.running());
+    QVERIFY(controller.awaitingFigureEight());
+    QCOMPARE(controller.metrics().value(QStringLiteral("violationSamples")).toInt(), 0);
+    vehicle()->altitudeRelative()->setRawValue(1.75);
+    for (int step = 1; step <= 240; ++step) {
+        const int index = ((rightFirst ? 120 : 0) + step - 1) % 240 + 1;
+        QVERIFY(reportReferencePosition(vehicle(), mockLink(), controller, index, 1.0));
+        if (step <= 3) {
+            QVERIFY(controller.awaitingFigureEight());
+        } else if (step < 240) {
+            QVERIFY(!controller.awaitingFigureEight());
+            QVERIFY2(controller.running(), qPrintable(controller.status()));
+        }
+    }
+    QVERIFY(!controller.running());
+    QCOMPARE(controller.metrics().value(QStringLiteral("completedLaps")).toInt(), 1);
+    QCOMPARE(controller.lastAnnouncement(), QStringLiteral("考试成功。"));
 }
 
 void CaacFigureEightControllerTest::_headingEvaluation()
@@ -747,6 +878,7 @@ void CaacFigureEightControllerTest::_headingEvaluation()
     _ignoreMissingPressureBackend();
     QVERIFY(takeoffAtExamHeight(vehicle()));
     QTRY_VERIFY_WITH_TIMEOUT(vehicle()->airborne(), TestTimeout::mediumMs());
+    QVERIFY(reportTakeoffReference(vehicle(), mockLink()));
     CaacFigureEightController controller;
     QTimer speedTelemetry;
     connect(&speedTelemetry, &QTimer::timeout, this, [this]() { reportSpeed(vehicle(), mockLink()); });
@@ -766,6 +898,8 @@ void CaacFigureEightControllerTest::_headingEvaluation()
                     2);
         }
         QVERIFY(reportPosition(vehicle(), mockLink(), controller, origin));
+        mockLink()->setVehicleAttitudeOverrideDeg(0, 0, 0);
+        vehicle()->heading()->setRawValue(0);
         QTRY_VERIFY_WITH_TIMEOUT(controller.running() || controller.start(), TestTimeout::mediumMs());
         QTRY_COMPARE_WITH_TIMEOUT(controller.phase(), QStringLiteral("八字飞行"), TestTimeout::longMs());
         for (int i = 1; i < path.size(); ++i) {
@@ -806,25 +940,29 @@ void CaacFigureEightControllerTest::_headingEvaluation()
                                       {QStringLiteral("minSpeed"), highSpeed ? 0.0 : 1.0},
                                       {QStringLiteral("maxSpeed"), highSpeed ? 1.0 : 3.0}}));
         QVERIFY(reportPosition(vehicle(), mockLink(), controller, origin));
+        vehicle()->heading()->setRawValue(0);
         QVERIFY(controller.start());
         QTRY_COMPARE_WITH_TIMEOUT(controller.phase(), QStringLiteral("八字飞行"), TestTimeout::longMs());
         if (highSpeed) {
-            QVERIFY(reportReferencePosition(vehicle(), mockLink(), controller, 0));
+            QVERIFY(reportReferencePosition(vehicle(), mockLink(), controller, 4));
             vehicle()->groundSpeed()->setRawValue(2.0);
             QVERIFY(QMetaObject::invokeMethod(&controller, "_sample", Qt::DirectConnection));
         } else {
-            QVERIFY(reportReferencePosition(vehicle(), mockLink(), controller, 1));
+            QVERIFY(reportReferencePosition(vehicle(), mockLink(), controller, 4));
         }
-        QVERIFY(!controller.running());
+        QVERIFY(controller.running());
+        QCOMPARE(controller.attemptNumber(), 2);
         QCOMPARE(controller.lastAttemptFailure(), QStringLiteral("自定义速度超限"));
+        controller.stop();
     }
 
     controller.setStandard(0);
     QVERIFY(controller.setLimits({{QStringLiteral("speedEnabled"), false}}));
     QVERIFY(reportPosition(vehicle(), mockLink(), controller, origin));
+    vehicle()->heading()->setRawValue(0);
     QVERIFY(controller.start());
     QTRY_COMPARE_WITH_TIMEOUT(controller.phase(), QStringLiteral("八字飞行"), TestTimeout::longMs());
-    QVERIFY(reportReferencePosition(vehicle(), mockLink(), controller, 1));
+    QVERIFY(reportReferencePosition(vehicle(), mockLink(), controller, 4));
     const double ideal = controller.metrics().value(QStringLiteral("idealHeading")).toDouble();
     const double yaw = (ideal + 5.5 - 45) * std::numbers::pi / 180;
     mavlink_attitude_quaternion_t attitude{};
@@ -865,8 +1003,8 @@ void CaacFigureEightControllerTest::_voiceResources()
         QCOMPARE(QString::fromLatin1(QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex()),
                  clip.value(QStringLiteral("sha256")).toString());
     }
-    for (const auto& id :
-         {"ready", "positioning", "spin", "spin_reverse", "figure_eight", "completed", "retry", "failed"}) {
+    for (const auto& id : {"ready", "positioning", "spin", "spin_reverse", "spin_completed", "spin_timeout",
+                           "figure_eight", "completed", "retry", "failed"}) {
         QVERIFY(ids.contains(QString::fromLatin1(id)));
     }
 }

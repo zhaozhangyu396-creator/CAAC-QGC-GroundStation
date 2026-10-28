@@ -266,6 +266,8 @@ qt_add_resources(
           ${CMAKE_CURRENT_SOURCE_DIR}/assets/exam-audio/ready.wav
           ${CMAKE_CURRENT_SOURCE_DIR}/assets/exam-audio/spin.wav
           ${CMAKE_CURRENT_SOURCE_DIR}/assets/exam-audio/spin_reverse.wav
+          ${CMAKE_CURRENT_SOURCE_DIR}/assets/exam-audio/spin_completed.wav
+          ${CMAKE_CURRENT_SOURCE_DIR}/assets/exam-audio/spin_timeout.wav
           ${CMAKE_CURRENT_SOURCE_DIR}/assets/exam-audio/figure_eight.wav
           ${CMAKE_CURRENT_SOURCE_DIR}/assets/exam-audio/area.wav
           ${CMAKE_CURRENT_SOURCE_DIR}/assets/exam-audio/speed_high.wav

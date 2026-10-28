@@ -47,6 +47,7 @@ class CaacFigureEightController : public QObject
     Q_PROPERTY(double windFactor READ windFactor NOTIFY windChanged)
     Q_PROPERTY(int exerciseMode READ exerciseMode WRITE setExerciseMode NOTIFY settingsChanged)
     Q_PROPERTY(QString phase READ phase NOTIFY sessionChanged)
+    Q_PROPERTY(bool awaitingFigureEight READ awaitingFigureEight NOTIFY sampleChanged)
     Q_PROPERTY(int attemptNumber READ attemptNumber NOTIFY sessionChanged)
     Q_PROPERTY(int attemptLimit READ attemptLimit NOTIFY settingsChanged)
     Q_PROPERTY(bool spinPassed READ spinPassed NOTIFY sessionChanged)
@@ -140,9 +141,11 @@ public:
     void setExerciseMode(int mode);
     QString phase() const;
 
+    bool awaitingFigureEight() const { return _phase == Phase::FigureEight && !_subjectStarted; }
+
     int attemptNumber() const { return _attemptNumber; }
 
-    int attemptLimit() const { return _exerciseMode == 2 ? 3 : 1; }
+    int attemptLimit() const { return 3; }
 
     bool spinPassed() const { return _spinPassed; }
 
@@ -192,7 +195,7 @@ private:
     void _beginPhase(bool reverseSpin = false);
     void _prepareAttempt();
     void _samplePositioning();
-    void _failAttempt(const QString& reason);
+    void _failAttempt(const QString& reason, const QString& cue);
     void _sampleSpin();
     bool _telemetryReady() const;
     double _nearestProgress(const QGeoCoordinate& coordinate, double& distance, double& heading) const;
@@ -218,6 +221,7 @@ private:
     QGeoCoordinate _pointB;
     QGeoCoordinate _rtkCoordinate;
     QGeoCoordinate _previousPosition;
+    QGeoCoordinate _takeoffPosition;
     QString _status;
     QString _lastError;
     QString _calibrationStatus;

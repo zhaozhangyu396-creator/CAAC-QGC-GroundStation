@@ -181,7 +181,7 @@ QGCPopupDialog {
                 QGCLabel {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
-                    text: qsTr("小型、中型多旋翼标准单圆直径为 12 米；按图示双圆布局，A/B 外侧端点间距为 24 米。")
+                    text: qsTr("附件 2 的小型、中型直升机标准单圆直径为 12 米；按图示双圆布局，A/B 外侧端点间距为 24 米。")
                 }
                 RowLayout {
                     Layout.fillWidth: true
@@ -234,13 +234,13 @@ QGCPopupDialog {
                         : root.controller.standard === 1
                         ? qsTr("超视距：姿态辅助模式下前进水平八字，不使用位置修正辅助，速度无明显变化。")
                         : root.controller.standard === 2
-                        ? qsTr("教员：后退水平八字，航向按运动切线反向评估，速度基本无变化。")
+                        ? qsTr("教员：仅使用手动模式，后退水平八字按机尾方向评价航向，速度基本无变化。")
                         : qsTr("自定义：根据训练需要调整偏差和提醒阈值。")
                 }
                 QGCLabel {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
-                    text: qsTr("默认适用于小型、中型多旋翼，一级风（0–4 米/秒）。切换类别会保留各类别自己的设置。")
+                    text: qsTr("默认参照《民用无人驾驶航空器操控员执照考试管理办法》附件 2（第 14–16 页），适用于小型、中型直升机，一级风（0–4 米/秒）。切换类别会保留各类别自己的设置。")
                 }
                 QGCLabel {
                     Layout.fillWidth: true
@@ -257,7 +257,7 @@ QGCPopupDialog {
                 QGCLabel {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
-                    text: qsTr("开始考试后，先到中心筒上方，在 1.5–2 米高度连续稳定保持 3 秒。偏差或启用的速度限制超限即判本次失败；组合考试有三次机会，已通过的自旋无需重考。")
+                    text: qsTr("开始考试后，先在中心筒半径 1 米内、高度不低于 1.5 米处对尾悬停 3 秒，机尾朝向起飞位置，允许 ±30°。八字可从任意一侧开始，运动离开中心筒范围后评分。偏差或启用的速度限制超限即判本次失败；单项及组合考试均有三次机会，已通过的自旋无需重考。")
                 }
                 QGCLabel { text: qsTr("地面风速来源") }
                 QGCComboBox {
@@ -322,6 +322,16 @@ QGCPopupDialog {
                 id: standardsPage
                 enabled: !root.controller.running
                 spacing: ScreenTools.defaultFontPixelHeight * 0.4
+                QGCLabel {
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    text: qsTr("附件 2 一级风标准：水平偏差 ±2 米，高度偏差 ±1 米；八字航向误差为视距内／超视距 30°、教员 25°；自旋每圈 5–30 秒。下列速度及总时长限制为可选训练设置。")
+                }
+                QGCLabel {
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    text: qsTr("教员应现场复核所用飞行模式、动作及姿态安全性、操纵平顺性、速度变化和部件完好情况。")
+                }
                 GridLayout {
                     columns: 2
                     Layout.fillWidth: true
@@ -422,6 +432,22 @@ QGCPopupDialog {
                     color: palette.warningText
                     wrapMode: Text.WordWrap
                 }
+                QGCLabel {
+                    objectName: "caacFigureEightPositioningPending"
+                    Layout.fillWidth: true
+                    visible: root.controller.running && !!root.controller.metrics.positioningPending
+                    wrapMode: Text.WordWrap
+                    text: root.controller.metrics.positioningPending && root.controller.metrics.positioningPending.length
+                        ? qsTr("等待就位：%1").arg(root.controller.metrics.positioningPending.join("；"))
+                        : qsTr("就位条件已满足，正在确认连续悬停 3 秒。")
+                }
+                QGCLabel {
+                    objectName: "caacFigureEightAwaitDeparture"
+                    Layout.fillWidth: true
+                    visible: root.controller.running && root.controller.awaitingFigureEight
+                    wrapMode: Text.WordWrap
+                    text: qsTr("可从左圆或右圆开始；运动离开中心筒半径 1 米范围后才开始评分。")
+                }
                 GridLayout {
                     columns: 2
                     Layout.fillWidth: true
@@ -431,6 +457,8 @@ QGCPopupDialog {
                             {label: qsTr("中心筒水平距离"), key: "centreDistance", decimals: 2, suffix: qsTr(" 米")},
                             {label: qsTr("当前相对高度"), key: "relativeAltitude", decimals: 2, suffix: qsTr(" 米")},
                             {label: qsTr("连续稳定时间"), key: "hoverStableSeconds", decimals: 1, suffix: qsTr(" 秒")},
+                            {label: qsTr("对尾角度误差"), key: "tailHeadingError", decimals: 1, suffix: "°"},
+                            {label: qsTr("垂直速度"), key: "verticalSpeed", decimals: 2, suffix: qsTr(" 米/秒")},
                             {label: qsTr("测得速度"), key: "speed", decimals: 2, suffix: qsTr(" 米/秒")},
                             {label: qsTr("水平偏差"), key: "horizontalError", decimals: 2, suffix: qsTr(" 米")},
                             {label: qsTr("高度偏差"), key: "altitudeError", decimals: 2, suffix: qsTr(" 米")},
