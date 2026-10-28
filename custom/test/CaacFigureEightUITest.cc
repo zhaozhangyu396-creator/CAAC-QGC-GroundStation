@@ -1,8 +1,10 @@
+#include <algorithm>
 #include <cmath>
 
 #include <QtCore/QJsonDocument>
 #include <QtCore/QRectF>
 #include <QtGui/QImage>
+#include <QtQml/QJSValue>
 #include <QtQuick/QQuickItem>
 #include <QtQuick/QQuickWindow>
 #include <QtTest/QSignalSpy>
@@ -59,10 +61,10 @@ void CaacFigureEightUITest::_independentTrainingDialog()
     QVERIFY(fence);
     const auto normalTools = {"caacMissionDetailsButton", "caacFlightDataButton",      "caacMapSettingsButton",
                               "caacCalculatorButton",     "caacClearTrajectoryButton", "caacPlanningPanelContents",
-                              "caacPlanningPanelToggle"};
-    const auto eightTools = {"caacEightSiteListButton", "caacEightPreferencesButton",     "caacEightStandardsButton",
-                             "caacEightFenceButton",    "caacEightClearTrajectoryButton", "caacEightExamControl",
-                             "caacEightExamTimer",      "caacEightStartExamButton"};
+                              "caacPlanningPanelToggle",  "caacFlightTelemetryBar",    "caacFlightDashboard"};
+    const auto eightTools = {"caacEightSiteListButton", "caacEightPreferencesButton", "caacEightStandardsButton",
+                             "caacEightMonitorButton",  "caacEightFenceButton",       "caacEightClearTrajectoryButton",
+                             "caacEightExamControl",    "caacEightExamTimer",         "caacEightStartExamButton"};
     const auto workspaceToolsMatch = [&](bool training) {
         for (const auto* objectName : normalTools) {
             if (!!findVisibleItem(_rootItem, QString::fromLatin1(objectName), 0) == training) {
@@ -123,6 +125,11 @@ void CaacFigureEightUITest::_independentTrainingDialog()
     QVERIFY(monitorPage);
     QCOMPARE(monitorPage->property("currentIndex").toInt(), 3);
     QVERIFY(rejectDialog());
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacEightMonitorButton"), QStringLiteral("caacEightToolsScroller")));
+    monitorPage = findVisibleItem(_rootItem, QStringLiteral("caacFigureEightPage"));
+    QVERIFY(monitorPage);
+    QCOMPARE(monitorPage->property("currentIndex").toInt(), 3);
+    QVERIFY(rejectDialog());
     QVERIFY(clickButton(QStringLiteral("caacEightSiteListButton")));
     auto* pages = findVisibleItem(_rootItem, QStringLiteral("caacFigureEightPage"));
     QVERIFY(pages);
@@ -145,6 +152,15 @@ void CaacFigureEightUITest::_independentTrainingDialog()
     QVERIFY(calibrationStatus);
     QVERIFY(!calibrationStatus->isVisible());
 
+    auto* flyLayer = findVisibleItem(_rootItem, QStringLiteral("caacFlyLayer"));
+    QVERIFY(flyLayer);
+    auto* map = qobject_cast<QQuickItem*>(flyLayer->property("mapControl").value<QObject*>());
+    QVERIFY(map);
+    QVERIFY(map->isEnabled());
+    const auto mapCenter = map->property("center");
+    const auto mapZoom = map->property("zoomLevel");
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacFigureEightFieldBackground"), 0));
+
     // A disconnected UI cannot capture RTK positions; use a known pair to exercise the generated display.
     QVERIFY(controller->setPoints(home, QGCGeo::geodesicDestination(home, 90, 24)));
     controller->setShowOnMap(true);
@@ -157,13 +173,22 @@ void CaacFigureEightUITest::_independentTrainingDialog()
     auto* reference =
         findVisibleItem(_rootItem, QStringLiteral("caacFigureEightReferencePath"), TestTimeout::mediumMs());
     QVERIFY(reference);
+    auto* background = findVisibleItem(_rootItem, QStringLiteral("caacFigureEightFieldBackground"));
+    QVERIFY(background);
+    QTRY_VERIFY_WITH_TIMEOUT(!map->isEnabled(), TestTimeout::mediumMs());
+    QCOMPARE(map->property("center"), mapCenter);
+    QCOMPARE(map->property("zoomLevel"), mapZoom);
+    const auto displayedPath = [](const QQuickItem* item) {
+        const auto path = item->property("path");
+        return path.metaType() == QMetaType::fromType<QJSValue>() ? path.value<QJSValue>().toVariant().toList()
+                                                                  : path.toList();
+    };
     QTRY_VERIFY_WITH_TIMEOUT(reference->property("visible").toBool(), TestTimeout::mediumMs());
-    QTRY_COMPARE_WITH_TIMEOUT(reference->property("path").value<QList<QGeoCoordinate>>().size(),
-                              controller->referencePath().size(), TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(displayedPath(reference), controller->referencePath(), TestTimeout::mediumMs());
     auto* outerFence = findVisibleItem(_rootItem, QStringLiteral("caacFigureEightOuterFence"));
     QVERIFY(outerFence);
     QVERIFY(fence->path().size() > 3);
-    const auto outerPath = outerFence->property("path").value<QList<QGeoCoordinate>>();
+    const auto outerPath = displayedPath(outerFence);
     QVERIFY(outerPath.size() >= fence->path().size());
     QCOMPARE(outerPath.first(), outerPath.last());
     controller->setShowOnMap(false);
@@ -176,7 +201,7 @@ void CaacFigureEightUITest::_independentTrainingDialog()
     QVERIFY(!outerFence->property("visible").toBool());
     fence->setShowOnMap(true);
     QTRY_VERIFY_WITH_TIMEOUT(outerFence->property("visible").toBool(), TestTimeout::mediumMs());
-    const auto pathBeforeClose = controller->referencePath();
+    auto pathBeforeClose = controller->referencePath();
     QList<QGeoCoordinate> markerCoordinates;
     int markerIndex = 0;
     for (const auto pathIndex : {0, 30, 60, 90, 150, 180, 210}) {
@@ -191,6 +216,47 @@ void CaacFigureEightUITest::_independentTrainingDialog()
     QVERIFY(!findItem(_rootItem, QStringLiteral("caacFigureEightTrainingMarker7")));
     QVERIFY(!findItem(_rootItem, QStringLiteral("caacFigureEightMarkerA")));
     QVERIFY(!findItem(_rootItem, QStringLiteral("caacFigureEightMarkerB")));
+
+    auto* field = findVisibleItem(_rootItem, QStringLiteral("caacFigureEightFieldViewport"));
+    auto* markerA = findVisibleItem(_rootItem, QStringLiteral("caacFigureEightTrainingMarker2"));
+    auto* markerB = findVisibleItem(_rootItem, QStringLiteral("caacFigureEightTrainingMarker5"));
+    auto* upper = findVisibleItem(_rootItem, QStringLiteral("caacFigureEightTrainingMarker1"));
+    auto* lower = findVisibleItem(_rootItem, QStringLiteral("caacFigureEightTrainingMarker3"));
+    QVERIFY(field && markerA && markerB && upper && lower);
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacFigureEightPointLabel0")));
+    QVERIFY(findVisibleItem(_rootItem, QStringLiteral("caacFigureEightPointLabel1")));
+    const auto center = [](QQuickItem* item) {
+        return item->mapToItem(item->parentItem(), item->boundingRect().center());
+    };
+    const auto horizontalField = [&]() {
+        const auto a = center(markerA);
+        const auto b = center(markerB);
+        const auto diameter = std::abs(center(lower).y() - center(upper).y());
+        return a.x() < b.x() && std::abs(a.y() - b.y()) < 1 && std::abs((a.x() + b.x()) / 2 - field->width() / 2) < 1 &&
+               std::abs(a.y() - field->height() / 2) < 1 && std::abs((b.x() - a.x()) / 2 - diameter) < 1 &&
+               b.x() - a.x() > std::min(field->width() * 0.45, field->height() * 0.65);
+    };
+    // Different geographic bearings must produce the same centered, undistorted horizontal figure eight.
+    for (const double bearing : {0.0, 35.0, 180.0, 270.0, 90.0}) {
+        QVERIFY(controller->setPoints(home, QGCGeo::geodesicDestination(home, bearing, 24)));
+        QTRY_VERIFY2_WITH_TIMEOUT(
+            horizontalField(),
+            qPrintable(QStringLiteral("bearing %1, field %2 x %3, A (%4, %5), B (%6, %7), vertical diameter %8")
+                           .arg(bearing)
+                           .arg(field->width())
+                           .arg(field->height())
+                           .arg(center(markerA).x())
+                           .arg(center(markerA).y())
+                           .arg(center(markerB).x())
+                           .arg(center(markerB).y())
+                           .arg(center(lower).y() - center(upper).y())),
+            TestTimeout::mediumMs());
+        for (int index = 0; index < 7; ++index) {
+            auto* marker = findVisibleItem(_rootItem, QStringLiteral("caacFigureEightTrainingMarker%1").arg(index));
+            QVERIFY(marker);
+            QVERIFY(field->boundingRect().contains(marker->mapRectToItem(field, marker->boundingRect())));
+        }
+    }
 
     for (int category = 0; category < 3; ++category) {
         QVERIFY(pages->setProperty("currentIndex", 1));
@@ -207,6 +273,7 @@ void CaacFigureEightUITest::_independentTrainingDialog()
         QTRY_COMPARE_WITH_TIMEOUT(heading->property("text").toDouble(), category == 2 ? 25.0 : 30.0,
                                   TestTimeout::mediumMs());
     }
+    pathBeforeClose = controller->referencePath();
     auto* horizontal = findVisibleItemScrolled(QStringLiteral("caacFigureEightLimit_horizontal"), scroller);
     QVERIFY(horizontal);
     QVERIFY(horizontal->setProperty("text", QStringLiteral("2.5")));
@@ -250,8 +317,7 @@ void CaacFigureEightUITest::_independentTrainingDialog()
     QVERIFY(QMetaObject::invokeMethod(fenceMargin, "editingFinished"));
     QTRY_COMPARE_WITH_TIMEOUT(fence->margin(), 4.0, TestTimeout::mediumMs());
     QTRY_VERIFY_WITH_TIMEOUT(fence->path() != fenceBeforeMargin, TestTimeout::mediumMs());
-    QTRY_VERIFY_WITH_TIMEOUT(outerFence->property("path").value<QList<QGeoCoordinate>>() != outerPath,
-                             TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(displayedPath(outerFence) != outerPath, TestTimeout::mediumMs());
     QVERIFY(findVisibleItemScrolled(QStringLiteral("caacFigureEightFenceShowOnMap"), scroller));
     auto* applyFence = findVisibleItemScrolled(QStringLiteral("caacFigureEightFenceApply"), scroller);
     QVERIFY(applyFence);
@@ -325,6 +391,8 @@ void CaacFigureEightUITest::_independentTrainingDialog()
         if (filename.endsWith(QStringLiteral(".png"))) {
             filename.chop(4);
         }
+        _window->resize(1600, 900);
+        QTRY_VERIFY_WITH_TIMEOUT(horizontalField(), TestTimeout::mediumMs());
         QSignalSpy rendered(_window, &QQuickWindow::frameSwapped);
         _window->requestUpdate();
         QTRY_VERIFY_WITH_TIMEOUT(rendered.count() > 0, TestTimeout::mediumMs());
@@ -339,6 +407,10 @@ void CaacFigureEightUITest::_independentTrainingDialog()
     QTRY_VERIFY_WITH_TIMEOUT(workspaceToolsMatch(false), TestTimeout::mediumMs());
     QTRY_VERIFY_WITH_TIMEOUT(!reference->property("visible").toBool(), TestTimeout::mediumMs());
     QVERIFY(!outerFence->property("visible").toBool());
+    QVERIFY(!background->isVisible());
+    QTRY_VERIFY_WITH_TIMEOUT(map->isEnabled(), TestTimeout::mediumMs());
+    QCOMPARE(map->property("center"), mapCenter);
+    QCOMPARE(map->property("zoomLevel"), mapZoom);
     for (int index = 0; index < 7; ++index) {
         QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacFigureEightTrainingMarker%1").arg(index), 0));
     }

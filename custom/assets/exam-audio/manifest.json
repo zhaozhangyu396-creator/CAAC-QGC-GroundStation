@@ -32,27 +32,33 @@
     },
     {
       "id": "spin",
-      "text": "开始原地自旋",
+      "text": "可以开始原地自旋。",
       "file": "spin.wav",
-      "durationSeconds": 1.992018,
-      "byteSize": 87926,
-      "sha256": "cefc1e45400c6b56b5d635270d7864519920d4c017a99d73e938fcfb96c7e940"
+      "durationSeconds": 1.590567,
+      "byteSize": 70222,
+      "sha256": "512d3ce009b913b972cc846c5cbb59e5c51fabc9ed5a35a57e0a048737bf7986",
+      "generatedAtUtc": "2026-10-28T03:41:30.743023+00:00",
+      "synthesisId": "melo-tts-20261028"
     },
     {
       "id": "spin_reverse",
-      "text": "开始反向原地自旋",
+      "text": "可以开始反向原地自旋。",
       "file": "spin_reverse.wav",
-      "durationSeconds": 2.424036,
-      "byteSize": 106978,
-      "sha256": "f72715be977188afbe876aef4ca53c5e89f076c455cb81f1f6e5ccc995130a38"
+      "durationSeconds": 1.927256,
+      "byteSize": 85070,
+      "sha256": "4815263a1eda19e1caeb471779d7c7910a97fd36c1140034647c795dc67a4245",
+      "generatedAtUtc": "2026-10-28T03:41:32.191752+00:00",
+      "synthesisId": "melo-tts-20261028"
     },
     {
       "id": "figure_eight",
-      "text": "开始八字飞行",
+      "text": "可以开始水平八字飞行。",
       "file": "figure_eight.wav",
-      "durationSeconds": 2.04,
-      "byteSize": 90042,
-      "sha256": "c61690c0cfa996462679974a9db3013c862ff286008b7131caee62e7780f8fce"
+      "durationSeconds": 1.927256,
+      "byteSize": 85070,
+      "sha256": "d114c12925cfabc9b66d401f1360e221377fc811c41726ae9d2408fbb7d9a96e",
+      "generatedAtUtc": "2026-10-28T03:41:34.829727+00:00",
+      "synthesisId": "melo-tts-20261028"
     },
     {
       "id": "area",
@@ -104,11 +110,13 @@
     },
     {
       "id": "completed",
-      "text": "考试科目完成",
+      "text": "考试成功。",
       "file": "completed.wav",
-      "durationSeconds": 2.016009,
-      "byteSize": 88984,
-      "sha256": "21cb3b447d07326536bb266ba6136f69f9f8862eea8f403e14b4803641ccfccd"
+      "durationSeconds": 1.033288,
+      "byteSize": 45646,
+      "sha256": "f6a4a30d5a994540c9eefd18221a0ff4e65dfd7db3228ecf22fd03a3d3ed8cf3",
+      "generatedAtUtc": "2026-10-28T03:41:36.095409+00:00",
+      "synthesisId": "melo-tts-20261028"
     },
     {
       "id": "stopped",
@@ -141,6 +149,50 @@
       "durationSeconds": 3.144036,
       "byteSize": 138730,
       "sha256": "f056cca9b1d59d50f522e4a8521129e577aa4890f51983024f25df3c64e5bd67"
+    },
+    {
+      "id": "positioning",
+      "text": "请将无人机飞至中心筒上方，保持一点五米高度。",
+      "file": "positioning.wav",
+      "durationSeconds": 3.935782,
+      "byteSize": 173646,
+      "sha256": "71e429d6233ab65a53201b5d28b7810ba277543fbd97c8474d4d902e6595d6a4",
+      "generatedAtUtc": "2026-10-28T03:41:28.461788+00:00",
+      "synthesisId": "melo-tts-20261028"
+    },
+    {
+      "id": "retry",
+      "text": "本次考试未通过，请返回中心筒上方，在一点五米至两米高度稳定悬停三秒后重试。",
+      "file": "retry.wav",
+      "durationSeconds": 6.142222,
+      "byteSize": 270950,
+      "sha256": "56bde0bf4389beac6b45b5aecbb75a65f749ff7f9bb5c3a46054987d864d8d0a",
+      "generatedAtUtc": "2026-10-28T03:41:41.622824+00:00",
+      "synthesisId": "melo-tts-20261028"
+    },
+    {
+      "id": "failed",
+      "text": "考试未通过。",
+      "file": "failed.wav",
+      "durationSeconds": 1.219048,
+      "byteSize": 53838,
+      "sha256": "880e7db52e96cbd44f7a0b5fc5ada3cc677e774443e24ae7e7ea6bd301eb3815",
+      "generatedAtUtc": "2026-10-28T03:41:42.712451+00:00",
+      "synthesisId": "melo-tts-20261028"
+    }
+  ],
+  "additionalSynthesis": [
+    {
+      "id": "melo-tts-20261028",
+      "provider": "MeloTTS via sherpa-onnx offline synthesis",
+      "voice": "MeloTTS Chinese/English single female speaker",
+      "synthetic": true,
+      "source": "https://github.com/myshell-ai/MeloTTS",
+      "modelSource": "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-melo-tts-zh_en.tar.bz2",
+      "modelArchiveSha256": "e58351ed7149f290a54534538badd4077cdbe6fddc964b24d0bee870415d1514",
+      "license": "MIT",
+      "licenseFile": "MeloTTS-LICENSE.txt",
+      "inference": "CPU; sherpa-onnx 2.0.1; no runtime TTS model bundled"
     }
   ]
 }

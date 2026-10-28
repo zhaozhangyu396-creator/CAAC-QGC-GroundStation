@@ -173,7 +173,7 @@ if(WIN32)
 endif()
 
 add_qgc_test(CaacSimulationEngineTest LABELS Unit MissionManager)
-add_qgc_test(CaacFigureEightControllerTest LABELS Unit Vehicle)
+add_qgc_test(CaacFigureEightControllerTest LABELS Unit Vehicle Slow)
 add_qgc_test(CaacFigureEightFenceControllerTest LABELS Unit Vehicle)
 add_qgc_test(CaacFigureEightFenceGeometryTest LABELS Unit MissionManager)
 add_qgc_test(

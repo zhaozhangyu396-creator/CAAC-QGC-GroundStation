@@ -748,6 +748,7 @@ Item {
         }
 
         MapScale {
+            visible: !_root._figureEightView
             anchors.margins: _toolsMargin
             anchors.left: editorMap.directMissionItemEditing ? undefined : toolStrip.right
             anchors.right: editorMap.directMissionItemEditing

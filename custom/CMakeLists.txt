@@ -259,6 +259,10 @@ qt_add_resources(
     PREFIX "/CAAC/ExamAudio"
     BASE "${CMAKE_CURRENT_SOURCE_DIR}/assets/exam-audio"
     FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/exam-audio/manifest.json
+          ${CMAKE_CURRENT_SOURCE_DIR}/assets/exam-audio/MeloTTS-LICENSE.txt
+          ${CMAKE_CURRENT_SOURCE_DIR}/assets/exam-audio/positioning.wav
+          ${CMAKE_CURRENT_SOURCE_DIR}/assets/exam-audio/retry.wav
+          ${CMAKE_CURRENT_SOURCE_DIR}/assets/exam-audio/failed.wav
           ${CMAKE_CURRENT_SOURCE_DIR}/assets/exam-audio/ready.wav
           ${CMAKE_CURRENT_SOURCE_DIR}/assets/exam-audio/spin.wav
           ${CMAKE_CURRENT_SOURCE_DIR}/assets/exam-audio/spin_reverse.wav

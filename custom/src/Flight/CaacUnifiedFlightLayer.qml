@@ -16,7 +16,8 @@ Item {
     property real planningNavigationHeight: 0
     readonly property real _toolsMargin: ScreenTools.defaultFontPixelWidth * 0.75
     readonly property bool _emergency: QGroundControl.corePlugin.simulation.emergencyMode
-    readonly property real telemetryHeight: footer.height + root._toolsMargin * 2
+    readonly property bool _figureEightView: QGroundControl.corePlugin.figureEight.viewActive
+    readonly property real telemetryHeight: footer.visible ? footer.height + root._toolsMargin * 2 : 0
     readonly property var mapToolsContainer: customLayer.item ? customLayer.item.mapToolsContainer : null
     readonly property real flightActionsLeft: customLayer.item ? customLayer.item.flightActionsLeft : NaN
     QGCPalette { id: qgcPal; colorGroupEnabled: true }
@@ -42,14 +43,14 @@ Item {
         x: (root.width - (root.planningPaneExpanded ? root.planningPanelWidth : 0) - width) / 2
         anchors.bottom: parent.bottom
         anchors.bottomMargin: root._toolsMargin
-        visible: !root._emergency
+        visible: !root._emergency && !root._figureEightView
         vehicle: QGroundControl.multiVehicleManager.activeVehicle
         missionController: globals.planMasterControllerFlyView.missionController
     }
     CaacFlightDashboard {
         id: dashboard
         z: -1
-        visible: !root._emergency
+        visible: !root._emergency && !root._figureEightView
         compact: root.planningPaneExpanded
         availableWidth: root.width - (root.planningPaneExpanded ? root.planningPanelWidth : 0)
         topInset: !root.planningPaneExpanded

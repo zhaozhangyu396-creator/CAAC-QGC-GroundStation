@@ -170,10 +170,10 @@ QGCPopupDialog {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
                     text: root.controller.referencePath.length
-                        ? qsTr("已自动在地图上生成八字训练轨迹。A/B 间距 %1 米 · 单圆直径 %2 米。")
+                        ? qsTr("已生成横向八字训练场地视图。A/B 间距 %1 米 · 单圆直径 %2 米。")
                             .arg((QGroundControl.corePlugin.routeLegMetrics(root.controller.pointA, root.controller.pointB).distance).toFixed(2))
                             .arg((QGroundControl.corePlugin.routeLegMetrics(root.controller.pointA, root.controller.pointB).distance / 2).toFixed(2))
-                        : qsTr("两点标定完成后，自动按实际间距和方位在地图上生成八字训练轨迹。")
+                        : qsTr("两点标定完成后，自动按实际间距生成绿色场地视图，A 筒固定在左、B 筒固定在右。")
                 }
                 QGCLabel {
                     Layout.fillWidth: true
@@ -243,6 +243,18 @@ QGCPopupDialog {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
                     text: qsTr("原地自旋每圈 5–30 秒。教员类别先顺时针、再逆时针，随后进入后退八字。")
+                }
+                QGCLabel {
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    text: root.controller.standard === 2
+                        ? qsTr("水平八字：左圆顺时针、右圆逆时针，按机尾方向与当前位置理想切线的夹角评判。")
+                        : qsTr("水平八字：左圆逆时针、右圆顺时针，按机头方向与当前位置理想切线的夹角评判。")
+                }
+                QGCLabel {
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    text: qsTr("开始考试后，先到中心筒上方，在 1.5–2 米高度连续稳定保持 3 秒。偏差或启用的速度限制超限即判本次失败；组合考试有三次机会，已通过的自旋无需重考。")
                 }
                 QGCLabel { text: qsTr("地面风速来源") }
                 QGCComboBox {
@@ -331,7 +343,7 @@ QGCPopupDialog {
                 }
                 RowLayout {
                     Layout.fillWidth: true
-                    QGCLabel { Layout.fillWidth: true; text: qsTr("地图训练走廊半宽（米）") }
+                    QGCLabel { Layout.fillWidth: true; text: qsTr("训练走廊半宽（米）") }
                     QGCTextField {
                         objectName: "caacFigureEightCorridorWidth"
                         Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 12
@@ -347,7 +359,7 @@ QGCPopupDialog {
                 }
                 QGCCheckBox {
                     objectName: "caacFigureEightShowOnMap"
-                    text: qsTr("在地图上显示八字航迹和训练轨迹")
+                    text: qsTr("显示八字航迹和训练轨迹")
                     checked: root.controller.showOnMap
                     onClicked: root.controller.showOnMap = checked
                 }
@@ -383,6 +395,23 @@ QGCPopupDialog {
                 id: monitorPage
                 spacing: ScreenTools.defaultFontPixelHeight * 0.5
                 QGCLabel {
+                    objectName: "caacFigureEightAttempts"
+                    Layout.fillWidth: true
+                    visible: root.controller.attemptNumber > 0
+                    wrapMode: Text.WordWrap
+                    text: qsTr("第 %1 / %2 次机会").arg(root.controller.attemptNumber).arg(root.controller.attemptLimit)
+                        + (root.controller.exerciseMode === 2 && root.controller.spinPassed ? qsTr(" · 自旋已通过，仅需完成八字") : "")
+                    font.bold: true
+                }
+                QGCLabel {
+                    objectName: "caacFigureEightAttemptFailure"
+                    Layout.fillWidth: true
+                    visible: root.controller.lastAttemptFailure.length > 0
+                    wrapMode: Text.WordWrap
+                    text: qsTr("上次未通过原因：%1").arg(root.controller.lastAttemptFailure)
+                    color: palette.warningText
+                }
+                QGCLabel {
                     objectName: "caacFigureEightStartError"
                     Layout.fillWidth: true
                     visible: root.controller.lastError.length > 0
@@ -396,10 +425,15 @@ QGCPopupDialog {
                     Repeater {
                         model: [
                             {label: qsTr("记录时间"), key: "elapsed", decimals: 1, suffix: qsTr(" 秒")},
+                            {label: qsTr("中心筒水平距离"), key: "centreDistance", decimals: 2, suffix: qsTr(" 米")},
+                            {label: qsTr("当前相对高度"), key: "relativeAltitude", decimals: 2, suffix: qsTr(" 米")},
+                            {label: qsTr("连续稳定时间"), key: "hoverStableSeconds", decimals: 1, suffix: qsTr(" 秒")},
                             {label: qsTr("测得速度"), key: "speed", decimals: 2, suffix: qsTr(" 米/秒")},
                             {label: qsTr("水平偏差"), key: "horizontalError", decimals: 2, suffix: qsTr(" 米")},
                             {label: qsTr("高度偏差"), key: "altitudeError", decimals: 2, suffix: qsTr(" 米")},
                             {label: qsTr("航向偏差"), key: "headingError", decimals: 1, suffix: "°"},
+                            {label: qsTr("当前位置理想航向"), key: "idealHeading", decimals: 1, suffix: "°"},
+                            {label: qsTr("评判航向（机头/机尾）"), key: "evaluatedHeading", decimals: 1, suffix: "°"},
                             {label: qsTr("完成圈数"), key: "completedLaps", decimals: 0, suffix: ""},
                             {label: qsTr("自旋角度"), key: "spinAngle", decimals: 1, suffix: "°"},
                             {label: qsTr("超差采样数"), key: "violationSamples", decimals: 0, suffix: ""}
@@ -409,7 +443,7 @@ QGCPopupDialog {
                             required property var modelData
                             Layout.columnSpan: 2
                             Layout.fillWidth: true
-                            QGCLabel { Layout.fillWidth: true; text: metricRow.modelData.label }
+                            QGCLabel { Layout.fillWidth: true; text: metricRow.modelData.label; wrapMode: Text.WordWrap }
                             QGCLabel {
                                 objectName: "caacFigureEightMetric_" + metricRow.modelData.key
                                 text: root.metric(metricRow.modelData.key, metricRow.modelData.decimals, metricRow.modelData.suffix)
@@ -441,7 +475,7 @@ QGCPopupDialog {
                 QGCLabel {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
-                    text: qsTr("飞机起飞并获得有效遥测后开始记录。红线为参考航迹，浅绿色为训练走廊，橙线为实际轨迹；关闭窗口后继续记录。")
+                    text: qsTr("开始考试后按语音提示到中心筒就位。红线为参考航迹，浅绿色为训练走廊，橙线为实际轨迹；关闭窗口后继续考试。")
                 }
             }
 

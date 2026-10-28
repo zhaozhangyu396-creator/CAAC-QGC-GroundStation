@@ -37,7 +37,8 @@ Item {
     readonly property real _panelBottom: !root.planningOverlay && root.occluders
         ? Math.min(root.occluders.bottomRight.y, root.occluders.virtualJoystickRight.y)
         : root.height - Math.max(root.reservedBottomHeight,
-            root.planningOverlay ? ScreenTools.defaultFontPixelHeight * 5 * 1.25 + root._margin * 2 : 0)
+            root.planningOverlay && !root._figureEightView
+                ? ScreenTools.defaultFontPixelHeight * 5 * 1.25 + root._margin * 2 : 0)
 
     function movePanelGroup(delta) {
         const x = Math.max(root._margin, Math.min(tools.x + delta.x, root.width - tools.width - root._margin))
@@ -50,6 +51,12 @@ Item {
 
     CaacFigureEightMap {
         mapControl: root.mapControl
+        visible: root._figureEightView && !root._simulationEmergency
+            && root._corePlugin.figureEight.referencePath.length > 1
+        viewport: Qt.rect(eightTools.x + eightTools.width + root._margin,
+            eightExamControl.y + eightExamControl.height + root._margin,
+            Math.max(0, root.width - eightTools.x - eightTools.width - root._margin * 2),
+            Math.max(0, root._panelBottom - eightExamControl.y - eightExamControl.height - root._margin * 2))
     }
     function selectPanel(button) {
         if (button.checked) {
@@ -448,6 +455,12 @@ Item {
                 onClicked: eightDialogFactory.open({ initialPage: 2 })
             }
             SquareTool {
+                objectName: "caacEightMonitorButton"
+                text: qsTr("训练监测")
+                toolImage: "/InstrumentValueIcons/chart.svg"
+                onClicked: eightDialogFactory.open({ initialPage: 3 })
+            }
+            SquareTool {
                 objectName: "caacEightFenceButton"
                 text: qsTr("电子围栏")
                 toolImage: "/InstrumentValueIcons/shield.svg"
@@ -521,6 +534,14 @@ Item {
                         eightDialogFactory.open({ initialPage: 3 })
                     }
                 }
+            }
+            QGCLabel {
+                objectName: "caacEightAttemptCounter"
+                visible: !!eightExamControl.controller && eightExamControl.controller.attemptNumber > 0
+                    && eightExamControl.controller.attemptLimit > 1
+                text: eightExamControl.controller
+                    ? qsTr("%1/%2").arg(eightExamControl.controller.attemptNumber).arg(eightExamControl.controller.attemptLimit) : ""
+                color: caacPalette.text
             }
         }
     }

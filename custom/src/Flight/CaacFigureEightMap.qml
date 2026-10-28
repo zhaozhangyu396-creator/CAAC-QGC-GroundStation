@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtLocation
 import QtPositioning
 
 import QGroundControl
@@ -11,8 +10,13 @@ Item {
     id: root
 
     required property var mapControl
+    property rect viewport: Qt.rect(0, 0, width, height)
+
+    anchors.fill: parent
+    visible: !!_controller && _controller.viewActive && _referencePath.length > 1
 
     readonly property var _controller: QGroundControl.corePlugin.figureEight
+    readonly property var _vehicle: QGroundControl.multiVehicleManager.activeVehicle
     readonly property var _fence: _controller ? _controller.fence : null
     readonly property var _referencePath: _controller ? _controller.referencePath : []
     readonly property var _recordedPath: _controller ? _controller.recordedPath : []
@@ -21,209 +25,155 @@ Item {
         if (_fence) {
             for (const coordinate of _fence.path) { result.push(coordinate) }
         }
-        if (result.length > 2
-            && (result[0].latitude !== result[result.length - 1].latitude
-                || result[0].longitude !== result[result.length - 1].longitude)) {
-            result.push(result[0])
-        }
+        if (result.length > 2) { result.push(result[0]) }
         return result
     }
-    readonly property bool _showReference: !!_controller && _controller.viewActive
-        && _controller.showOnMap && _referencePath.length > 1
-    readonly property bool _showRecorded: !!_controller && _controller.viewActive
-        && _controller.showOnMap && _recordedPath.length > 1
-    readonly property bool _showFence: !!_controller && _controller.viewActive
-        && !!_fence && _fence.showOnMap && _fencePath.length > 3
-    property string _siteKey: ""
-    property bool _fitPending: false
-    readonly property real _corridorPixels: {
-        if (!mapControl || !mapControl.mapReady || !_controller || !_controller.pointA.isValid) { return 0 }
-        const zoom = mapControl.zoomLevel
-        const origin = mapControl.fromCoordinate(_controller.pointA, false)
-        const bearing = _controller.pointA.latitude > 0 ? 180 : 0
-        const edge = mapControl.fromCoordinate(_controller.pointA.atDistanceAndAzimuth(_controller.fenceWidth, bearing), false)
-        return isFinite(zoom) ? Math.hypot(origin.x - edge.x, origin.y - edge.y) * 2 : 0
+    readonly property bool _showReference: !!_controller && _controller.showOnMap && _referencePath.length > 1
+    readonly property bool _showRecorded: !!_controller && _controller.showOnMap && _recordedPath.length > 1
+    readonly property bool _showFence: !!_fence && _fence.showOnMap && _fencePath.length > 3
+    readonly property var _origin: _referencePath.length ? _referencePath[0] : QtPositioning.coordinate()
+    readonly property real _siteBearing: _controller && _controller.pointA.isValid && _controller.pointB.isValid
+        ? QGroundControl.corePlugin.routeLegMetrics(_controller.pointA, _controller.pointB).bearing : 90
+    readonly property color _grassColor: Qt.darker(Qt.tint(palette.colorYellowGreen,
+        Qt.alpha(palette.colorGreen, 0.2)), 1.25)
+    readonly property rect _bounds: {
+        const path = _showFence ? _fencePath : _referencePath
+        if (!path.length) { return Qt.rect(-1, -1, 2, 2) }
+        let left = Infinity
+        let right = -Infinity
+        let top = Infinity
+        let bottom = -Infinity
+        for (const coordinate of path) {
+            const point = localPoint(coordinate)
+            left = Math.min(left, point.x)
+            right = Math.max(right, point.x)
+            top = Math.min(top, point.y)
+            bottom = Math.max(bottom, point.y)
+        }
+        const padding = _showFence ? 0 : _controller.fenceWidth
+        return Qt.rect(left - padding, top - padding, right - left + padding * 2, bottom - top + padding * 2)
+    }
+    readonly property real _inset: ScreenTools.defaultFontPixelHeight * 2
+    readonly property real _scale: Math.max(0, Math.min(
+        (field.width - _inset * 2) / Math.max(1, _bounds.width),
+        (field.height - _inset * 2) / Math.max(1, _bounds.height)))
+
+    // Use the same site-relative transform for the reference, telemetry and aircraft heading.
+    function localPoint(coordinate) {
+        if (!_origin.isValid || !coordinate.isValid) { return Qt.point(0, 0) }
+        const metrics = QGroundControl.corePlugin.routeLegMetrics(_origin, coordinate)
+        if (!isFinite(metrics.distance) || !isFinite(metrics.bearing)) { return Qt.point(0, 0) }
+        const angle = (metrics.bearing - _siteBearing) * Math.PI / 180
+        return Qt.point(metrics.distance * Math.cos(angle), metrics.distance * Math.sin(angle))
     }
 
-    function attach(item) {
-        if (!item || item.attachedMap === mapControl) {
-            return
-        }
-        if (item.attachedMap) {
-            item.attachedMap.removeMapItem(item)
-            item.attachedMap = null
-        }
-        if (mapControl) {
-            mapControl.addMapItem(item)
-            item.attachedMap = mapControl
-        }
-    }
-
-    function updateSite() {
-        const key = _referencePath.length > 1
-            ? [_controller.pointA.latitude, _controller.pointA.longitude,
-                _controller.pointB.latitude, _controller.pointB.longitude].join(",") : ""
-        if (key !== _siteKey) {
-            _siteKey = key
-            _fitPending = key.length > 0
-            Qt.callLater(fitTrainingSite)
-        }
-    }
-
-    function fitTrainingSite() {
-        if (!_fitPending || (!_showReference && !_showFence) || !visible || !mapControl || mapControl.mapReady === false
-            || !mapControl.visible || mapControl.width <= 0 || mapControl.height <= 0) {
-            return
-        }
-        const fitPath = _showFence ? _fencePath : _referencePath
-        const origin = fitPath[0]
-        let north = -90
-        let south = 90
-        let east = -180
-        let west = 180
-        for (const coordinate of fitPath) {
-            // Unwrap around the field, so a date-line crossing stays a local view.
-            const longitude = (coordinate.longitude - origin.longitude + 540) % 360 - 180
-            north = Math.max(north, coordinate.latitude)
-            south = Math.min(south, coordinate.latitude)
-            east = Math.max(east, longitude)
-            west = Math.min(west, longitude)
-        }
-        const latitudePadding = Math.max((north - south) / 4, _controller.fenceWidth / 111320)
-        const longitudePadding = Math.max((east - west) / 4,
-            latitudePadding / Math.max(0.001, Math.cos(origin.latitude * Math.PI / 180)))
-        const topLeft = QtPositioning.coordinate(Math.min(90, north + latitudePadding),
-            (origin.longitude + west - longitudePadding + 540) % 360 - 180)
-        const bottomRight = QtPositioning.coordinate(Math.max(-90, south - latitudePadding),
-            (origin.longitude + east + longitudePadding + 540) % 360 - 180)
-        const region = QtPositioning.rectangle(topLeft, bottomRight)
-        // Release FlyViewMap's initial saved-position binding before fitting changes its center internally.
-        mapControl.center = region.center
-        mapControl.setVisibleRegion(region)
-        _fitPending = false
-    }
-
-    onMapControlChanged: {
-        attach(outerFenceLine)
-        attach(corridorLine)
-        attach(referenceLine)
-        attach(recordedLine)
-        for (let i = 0; markers && i < markers.count; ++i) {
-            attach(markers.objectAt(i))
-        }
-        _fitPending = _referencePath.length > 1
-        Qt.callLater(fitTrainingSite)
-    }
-
-    onVisibleChanged: if (visible) { Qt.callLater(fitTrainingSite) }
-    on_ShowFenceChanged: {
-        if (_showFence) {
-            _fitPending = true
-            Qt.callLater(fitTrainingSite)
-        }
+    function project(coordinate) {
+        const point = localPoint(coordinate)
+        return Qt.point(field.width / 2 + (point.x - _bounds.x - _bounds.width / 2) * _scale,
+            field.height / 2 + (point.y - _bounds.y - _bounds.height / 2) * _scale)
     }
 
     QGCPalette { id: palette; colorGroupEnabled: true }
 
-    MapPolyline {
-        id: outerFenceLine
-
-        property var attachedMap: null
-
-        objectName: "caacFigureEightOuterFence"
-        visible: root._showFence
-        path: root._fencePath
-        line.width: ScreenTools.defaultFontPixelWidth * 0.35
-        line.color: root._fence && root._fence.applied ? palette.colorGreen : palette.colorBlue
-        z: QGroundControl.zOrderWaypointLines + 1
-
-        Component.onCompleted: root.attach(outerFenceLine)
-        Component.onDestruction: {
-            if (attachedMap) { attachedMap.removeMapItem(outerFenceLine) }
-        }
+    // Cover the map's tiles and unrelated mission items while keeping flight widgets above the field.
+    Rectangle {
+        objectName: "caacFigureEightFieldBackground"
+        parent: root.mapControl || root
+        anchors.fill: parent
+        visible: root.visible
+        color: root._grassColor
+        z: QGroundControl.zOrderTopMost
     }
 
-    MapPolyline {
-        id: corridorLine
-        property var attachedMap: null
-        objectName: "caacFigureEightTrainingCorridor"
-        visible: root._showReference && root._corridorPixels > 0
-        path: root._referencePath
-        line.width: Math.max(ScreenTools.defaultFontPixelWidth * 0.4, root._corridorPixels)
-        line.color: Qt.tint(palette.colorGreen,
-            Qt.rgba(palette.mapWidgetBorderLight.r, palette.mapWidgetBorderLight.g,
-                palette.mapWidgetBorderLight.b, 0.65))
-        opacity: 0.65
-        z: QGroundControl.zOrderWaypointLines + 2
-        Component.onCompleted: root.attach(corridorLine)
-        Component.onDestruction: {
-            if (attachedMap) { attachedMap.removeMapItem(corridorLine) }
-        }
+    Binding {
+        target: root.mapControl
+        property: "enabled"
+        when: root.visible && !!root.mapControl
+        value: false
+        restoreMode: Binding.RestoreBindingOrValue
     }
 
-    MapPolyline {
-        id: referenceLine
+    Item {
+        id: field
+        objectName: "caacFigureEightFieldViewport"
+        x: root.viewport.x
+        y: root.viewport.y
+        width: Math.max(0, root.viewport.width)
+        height: Math.max(0, root.viewport.height)
+        clip: true
 
-        property var attachedMap: null
-
-        objectName: "caacFigureEightReferencePath"
-        visible: root._showReference
-        path: root._referencePath
-        line.width: ScreenTools.defaultFontPixelWidth * 0.4
-        line.color: palette.colorRed
-        z: QGroundControl.zOrderWaypointLines + 3
-
-        Component.onCompleted: root.attach(referenceLine)
-        Component.onDestruction: {
-            if (attachedMap) {
-                attachedMap.removeMapItem(referenceLine)
+        component TrainingLine: Canvas {
+            id: trainingLine
+            property var path: []
+            property real strokeWidth: ScreenTools.defaultFontPixelWidth * 0.4
+            property color strokeColor: palette.colorRed
+            readonly property var pixels: path.map(coordinate => root.project(coordinate))
+            anchors.fill: parent
+            onPixelsChanged: requestPaint()
+            onStrokeWidthChanged: requestPaint()
+            onStrokeColorChanged: requestPaint()
+            onVisibleChanged: if (visible) { requestPaint() }
+            onPaint: {
+                const ctx = getContext("2d")
+                ctx.reset()
+                if (pixels.length < 2) { return }
+                ctx.beginPath()
+                ctx.moveTo(pixels[0].x, pixels[0].y)
+                for (let i = 1; i < pixels.length; ++i) { ctx.lineTo(pixels[i].x, pixels[i].y) }
+                ctx.strokeStyle = strokeColor
+                ctx.lineWidth = strokeWidth
+                ctx.lineJoin = "round"
+                ctx.lineCap = "round"
+                ctx.stroke()
             }
         }
-    }
 
-    MapPolyline {
-        id: recordedLine
-
-        property var attachedMap: null
-
-        objectName: "caacFigureEightRecordedPath"
-        visible: root._showRecorded
-        path: root._recordedPath
-        line.width: ScreenTools.defaultFontPixelWidth * 0.3
-        line.color: palette.colorOrange
-        z: QGroundControl.zOrderWaypointLines + 4
-
-        Component.onCompleted: root.attach(recordedLine)
-        Component.onDestruction: {
-            if (attachedMap) {
-                attachedMap.removeMapItem(recordedLine)
-            }
+        TrainingLine {
+            objectName: "caacFigureEightOuterFence"
+            visible: root._showFence
+            path: root._fencePath
+            strokeWidth: ScreenTools.defaultFontPixelWidth * 0.35
+            strokeColor: root._fence && root._fence.applied ? palette.colorGreen : palette.colorBlue
         }
-    }
 
-    Instantiator {
-        id: markers
+        TrainingLine {
+            objectName: "caacFigureEightTrainingCorridor"
+            visible: root._showReference
+            path: root._referencePath
+            strokeWidth: Math.max(ScreenTools.defaultFontPixelWidth * 0.4,
+                root._controller.fenceWidth * root._scale * 2)
+            strokeColor: Qt.tint(palette.colorGreen, Qt.alpha(palette.mapWidgetBorderLight, 0.65))
+            opacity: 0.8
+        }
 
-        // Four quarter points on each circle share the tangent point at sample zero.
-        model: [0, 30, 60, 90, 150, 180, 210]
+        TrainingLine {
+            objectName: "caacFigureEightReferencePath"
+            visible: root._showReference
+            path: root._referencePath
+        }
 
-        delegate: MapQuickItem {
-            id: marker
+        TrainingLine {
+            objectName: "caacFigureEightRecordedPath"
+            visible: root._showRecorded
+            path: root._recordedPath
+            strokeWidth: ScreenTools.defaultFontPixelWidth * 0.3
+            strokeColor: palette.colorOrange
+        }
 
-            required property int modelData
-            required property int index
-            property var attachedMap: null
-
-            objectName: "caacFigureEightTrainingMarker" + index
-            coordinate: root._referencePath.length > modelData
-                ? root._referencePath[modelData] : QtPositioning.coordinate()
-            visible: root._showReference && coordinate.isValid
-            z: QGroundControl.zOrderMapItems + 4
-            anchorPoint: Qt.point(symbol.width / 2, symbol.height / 2)
-
-            sourceItem: Rectangle {
-                id: symbol
-
+        Repeater {
+            // Four quarter points on each circle share the tangent point at sample zero.
+            model: [0, 30, 60, 90, 150, 180, 210]
+            delegate: Rectangle {
+                id: marker
+                required property int modelData
+                required property int index
+                readonly property var coordinate: root._referencePath.length > modelData
+                    ? root._referencePath[modelData] : QtPositioning.coordinate()
+                readonly property point position: root.project(coordinate)
+                objectName: "caacFigureEightTrainingMarker" + index
+                visible: root._showReference && coordinate.isValid
+                x: position.x - width / 2
+                y: position.y - height / 2
                 width: ScreenTools.defaultFontPixelHeight * 0.85
                 height: width
                 radius: width / 2
@@ -231,44 +181,61 @@ Item {
                 border.color: palette.mapWidgetBorderLight
                 border.width: ScreenTools.defaultFontPixelWidth * 0.2
             }
+        }
 
-            Component.onCompleted: root.attach(marker)
-            Component.onDestruction: {
-                if (attachedMap) {
-                    attachedMap.removeMapItem(marker)
+        Repeater {
+            model: [qsTr("A筒"), qsTr("B筒")]
+            delegate: Rectangle {
+                id: markerLabel
+                required property int index
+                required property string modelData
+                readonly property point position: root.project(index === 0
+                    ? root._controller.pointA : root._controller.pointB)
+                objectName: "caacFigureEightPointLabel" + index
+                visible: root._showReference
+                x: Math.max(0, Math.min(field.width - width, position.x - width / 2))
+                y: Math.max(0, position.y - height - ScreenTools.defaultFontPixelHeight)
+                width: markerText.implicitWidth + ScreenTools.defaultFontPixelWidth * 4
+                height: markerText.implicitHeight + ScreenTools.defaultFontPixelHeight
+                radius: ScreenTools.defaultBorderRadius
+                color: Qt.alpha(palette.mapWidgetBorderDark, 0.78)
+                QGCLabel {
+                    id: markerText
+                    anchors.centerIn: parent
+                    text: markerLabel.modelData
+                    color: palette.mapWidgetBorderLight
+                    font.pointSize: ScreenTools.largeFontPointSize
+                    font.bold: true
                 }
             }
         }
-    }
 
-    Connections {
-        target: root._controller
-        function onSiteChanged() { root.updateSite() }
-        function onSettingsChanged() { Qt.callLater(root.fitTrainingSite) }
-        function onViewActiveChanged() {
-            if (root._controller.viewActive) {
-                root._fitPending = root._referencePath.length > 1
-                Qt.callLater(root.fitTrainingSite)
-            }
+        Image {
+            objectName: "caacFigureEightAircraft"
+            readonly property var coordinate: root._vehicle ? root._vehicle.coordinate : QtPositioning.coordinate()
+            readonly property point position: root.project(coordinate)
+            visible: !!root._vehicle && coordinate.isValid
+            x: position.x - width / 2
+            y: position.y - height / 2
+            width: ScreenTools.defaultFontPixelHeight * 2
+            height: width
+            source: root._vehicle ? root._vehicle.vehicleImageOpaque : ""
+            sourceSize.width: width
+            fillMode: Image.PreserveAspectFit
+            mipmap: true
+            rotation: root._vehicle && isFinite(root._vehicle.heading.rawValue)
+                ? root._vehicle.heading.rawValue - root._siteBearing + 90 : 0
+        }
+
+        QGCLabel {
+            objectName: "caacFigureEightTakeoffLabel"
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: ScreenTools.defaultFontPixelHeight * 0.25
+            visible: root._showReference
+            text: qsTr("起飞位置")
+            color: palette.mapWidgetBorderLight
+            font.pointSize: ScreenTools.largeFontPointSize
         }
     }
-
-    Connections {
-        target: root._fence
-        function onGeometryChanged() {
-            root._fitPending = root._referencePath.length > 1
-            Qt.callLater(root.fitTrainingSite)
-        }
-    }
-
-    Connections {
-        target: root.mapControl
-        ignoreUnknownSignals: true
-        function onMapReadyChanged() { Qt.callLater(root.fitTrainingSite) }
-        function onVisibleChanged() { Qt.callLater(root.fitTrainingSite) }
-        function onWidthChanged() { Qt.callLater(root.fitTrainingSite) }
-        function onHeightChanged() { Qt.callLater(root.fitTrainingSite) }
-    }
-
-    Component.onCompleted: updateSite()
 }

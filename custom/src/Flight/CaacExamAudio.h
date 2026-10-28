@@ -27,8 +27,8 @@ private:
     void _syncVolume();
     void _startCue(const QString& id, const QString& text, const QElapsedTimer& warningSince);
     void _playLoaded();
-    void _playQueuedWarning();
-    void _clearQueuedWarning();
+    void _playQueuedCue();
+    void _clearQueuedCue();
     void _reportError(const QString& id, const QString& text);
     static int _priority(const QString& id);
 
@@ -36,13 +36,13 @@ private:
     QPointer<Fact> _mutedFact;
     QSoundEffect* _effect = nullptr;
     QElapsedTimer _pendingSince;
-    QElapsedTimer _currentWarningSince;
-    QElapsedTimer _queuedWarningSince;
+    QElapsedTimer _currentCueSince;
+    QElapsedTimer _queuedCueSince;
     QSet<QString> _reportedErrors;
     QString _currentId;
     QString _currentText;
-    QString _queuedWarningId;
-    QString _queuedWarningText;
+    QString _queuedCueId;
+    QString _queuedCueText;
     bool _pending = false;
     bool _changingCue = false;
 };

@@ -1,11 +1,9 @@
 #pragma once
 
 #include <QtCore/QElapsedTimer>
-#include <QtCore/QHash>
 #include <QtCore/QMap>
 #include <QtCore/QObject>
 #include <QtCore/QPointer>
-#include <QtCore/QSet>
 #include <QtCore/QTimer>
 #include <QtCore/QVariantList>
 #include <QtCore/QVariantMap>
@@ -49,6 +47,10 @@ class CaacFigureEightController : public QObject
     Q_PROPERTY(double windFactor READ windFactor NOTIFY windChanged)
     Q_PROPERTY(int exerciseMode READ exerciseMode WRITE setExerciseMode NOTIFY settingsChanged)
     Q_PROPERTY(QString phase READ phase NOTIFY sessionChanged)
+    Q_PROPERTY(int attemptNumber READ attemptNumber NOTIFY sessionChanged)
+    Q_PROPERTY(int attemptLimit READ attemptLimit NOTIFY settingsChanged)
+    Q_PROPERTY(bool spinPassed READ spinPassed NOTIFY sessionChanged)
+    Q_PROPERTY(QString lastAttemptFailure READ lastAttemptFailure NOTIFY sessionChanged)
     Q_PROPERTY(QString lastAnnouncement READ lastAnnouncement NOTIFY announcementChanged)
     Q_PROPERTY(bool voiceEnabled READ voiceEnabled WRITE setVoiceEnabled NOTIFY settingsChanged)
 
@@ -138,6 +140,14 @@ public:
     void setExerciseMode(int mode);
     QString phase() const;
 
+    int attemptNumber() const { return _attemptNumber; }
+
+    int attemptLimit() const { return _exerciseMode == 2 ? 3 : 1; }
+
+    bool spinPassed() const { return _spinPassed; }
+
+    QString lastAttemptFailure() const { return _lastAttemptFailure; }
+
     QString lastAnnouncement() const { return _lastAnnouncement; }
 
     bool voiceEnabled() const { return _voiceEnabled; }
@@ -145,7 +155,8 @@ public:
     void setVoiceEnabled(bool enabled);
     Q_INVOKABLE void testVoice();
 
-    static QList<QGeoCoordinate> referenceCoordinates(const QGeoCoordinate& pointA, const QGeoCoordinate& pointB);
+    static QList<QGeoCoordinate> referenceCoordinates(const QGeoCoordinate& pointA, const QGeoCoordinate& pointB,
+                                                      bool instructor = false);
 
 signals:
     void settingsChanged();
@@ -179,8 +190,10 @@ private:
     void _updateReady();
     void _announce(const QString& id, const QString& text);
     void _beginPhase(bool reverseSpin = false);
+    void _prepareAttempt();
+    void _samplePositioning();
+    void _failAttempt(const QString& reason);
     void _sampleSpin();
-    void _updateAlarms(double horizontalError, double altitudeError, double headingError, double speed);
     bool _telemetryReady() const;
     double _nearestProgress(const QGeoCoordinate& coordinate, double& distance, double& heading) const;
     static QVariantMap _defaults(int standard);
@@ -223,6 +236,8 @@ private:
     int _completedLaps = 0;
     qint64 _lastPosition = -1;
     qint64 _lastAttitude = -1;
+    double _headingDegrees = qQNaN();
+    bool _usingAttitudeQuaternion = false;
     qint64 _lastSpeed = -1;
     qint64 _lastGpsFix = -1;
     int _gpsFixType = 0;
@@ -237,6 +252,7 @@ private:
     enum class Phase
     {
         Idle,
+        Positioning,
         Spin,
         ReverseSpin,
         FigureEight,
@@ -248,12 +264,12 @@ private:
     bool _readyAnnounced = false;
     QString _lastAnnouncement;
     QElapsedTimer _phaseClock;
-    QGeoCoordinate _spinAnchor;
+    QElapsedTimer _hoverSince;
+    QGeoCoordinate _phaseAnchor;
     double _spinLastHeading = 0;
     double _spinAngle = 0;
-    QString _alarmCandidate;
-    QElapsedTimer _alarmCandidateClock;
-    QHash<QString, qint64> _alarmLastAnnounced;
-    qint64 _lastAlarm = -6000;
-    bool _hadActiveAlarms = false;
+    int _attemptNumber = 0;
+    bool _spinPassed = false;
+    bool _subjectStarted = false;
+    QString _lastAttemptFailure;
 };
