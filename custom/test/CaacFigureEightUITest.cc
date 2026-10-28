@@ -137,6 +137,54 @@ void CaacFigureEightUITest::_independentTrainingDialog()
     QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacFlightSettingsPanel"), 0));
     QCOMPARE(master->saveToJson(), routeBefore);
 
+    auto* dialogFrame = findVisibleItem(_rootItem, QStringLiteral("popupDialog_frame"));
+    auto* dialogScroller = findVisibleItem(_rootItem, QStringLiteral("popupDialog_contentFlickable"));
+    auto* preview = findVisibleItem(_rootItem, QStringLiteral("caacFigureEightPreview"));
+    QVERIFY(dialogFrame && dialogScroller && preview);
+    const auto dialogBounds = [&]() { return dialogFrame->mapRectToScene(dialogFrame->boundingRect()); };
+    const auto resizeDialog = [&](int edges, const QPoint& delta) {
+        auto* handle = findVisibleItem(_rootItem, QStringLiteral("popupDialog_resizeHandle_%1").arg(edges));
+        if (!handle) {
+            return false;
+        }
+        const auto start = handle->mapToScene(handle->boundingRect().center()).toPoint();
+        QTest::mousePress(_window, Qt::LeftButton, Qt::NoModifier, start);
+        QTest::mouseMove(_window, start + delta);
+        QTest::mouseRelease(_window, Qt::LeftButton, Qt::NoModifier, start + delta);
+        return true;
+    };
+    const auto originalFrame = dialogBounds();
+    QVERIFY(resizeDialog(Qt::RightEdge | Qt::BottomEdge, QPoint(-90, -80)));
+    QTRY_VERIFY_WITH_TIMEOUT(dialogBounds().width() < originalFrame.width() - 50, TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(dialogBounds().height() < originalFrame.height() - 50, TestTimeout::mediumMs());
+    QVERIFY(std::abs(dialogBounds().left() - originalFrame.left()) < 2);
+    QVERIFY(std::abs(dialogBounds().top() - originalFrame.top()) < 2);
+    const auto shrunkFrame = dialogBounds();
+    QVERIFY(resizeDialog(Qt::LeftEdge, QPoint(35, 0)));
+    QTRY_VERIFY_WITH_TIMEOUT(dialogBounds().width() < shrunkFrame.width() - 20, TestTimeout::mediumMs());
+    QVERIFY(std::abs(dialogBounds().right() - shrunkFrame.right()) < 2);
+    const auto narrowFrame = dialogBounds();
+    QVERIFY(resizeDialog(Qt::TopEdge, QPoint(0, 25)));
+    QTRY_VERIFY_WITH_TIMEOUT(dialogBounds().height() < narrowFrame.height() - 15, TestTimeout::mediumMs());
+    QVERIFY(std::abs(dialogBounds().bottom() - narrowFrame.bottom()) < 2);
+    QVERIFY(resizeDialog(Qt::RightEdge | Qt::BottomEdge, QPoint(100, 65)));
+    QTRY_VERIFY_WITH_TIMEOUT(dialogBounds().width() > narrowFrame.width() + 70, TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(dialogScroller->property("contentWidth").toReal() <= dialogScroller->width() + 1,
+                             TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(std::abs(preview->width() / preview->height() - 480.0 / 327) < 0.01,
+                             TestTimeout::mediumMs());
+    QVERIFY(preview->height() < dialogScroller->height() * 0.4);
+    const auto resizedFrame = dialogBounds();
+    QVERIFY(QRectF(0, 0, _window->width(), _window->height()).contains(resizedFrame));
+    for (int page = 0; page < 5; ++page) {
+        QVERIFY(pages->setProperty("currentIndex", page));
+        QTRY_VERIFY_WITH_TIMEOUT(std::abs(dialogBounds().width() - resizedFrame.width()) < 1, TestTimeout::mediumMs());
+        QTRY_VERIFY_WITH_TIMEOUT(std::abs(dialogBounds().height() - resizedFrame.height()) < 1, TestTimeout::mediumMs());
+        QTRY_VERIFY_WITH_TIMEOUT(dialogScroller->property("contentWidth").toReal() <= dialogScroller->width() + 1,
+                                 TestTimeout::mediumMs());
+    }
+    QVERIFY(pages->setProperty("currentIndex", 0));
+
     const auto scroller = QStringLiteral("popupDialog_contentFlickable");
     const auto toolsScroller = QStringLiteral("caacEightToolsScroller");
     for (const auto* objectName : {"caacFigureEightALatitude", "caacFigureEightALongitude", "caacFigureEightBLatitude",

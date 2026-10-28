@@ -13,6 +13,8 @@ QGCPopupDialog {
     title: qsTr("八字飞行 · %1").arg(root.pageNames[Math.max(0, pages.currentIndex)])
     buttons: Dialog.Close
     closeOnOutsideClick: true
+    resizable: true
+    preferredDialogWidth: Math.min(maxContentAvailableWidth, ScreenTools.defaultFontPixelWidth * 92) * 0.8
 
     property int initialPage: 0
     readonly property var pageNames: [qsTr("场地列表"), qsTr("考试偏好"), qsTr("标准设置"), qsTr("训练监测"), qsTr("电子围栏")]
@@ -64,7 +66,7 @@ QGCPopupDialog {
 
     ColumnLayout {
         id: dialogLayout
-        width: Math.min(root.maxContentAvailableWidth, ScreenTools.defaultFontPixelWidth * 92) * 0.8
+        width: root.dialogContentWidth
         spacing: ScreenTools.defaultFontPixelHeight * 0.5
 
         RowLayout {
@@ -85,8 +87,9 @@ QGCPopupDialog {
         CaacFigureEightIllustration {
             objectName: "caacFigureEightPreview"
             Layout.alignment: Qt.AlignHCenter
-            Layout.preferredWidth: Math.min(dialogLayout.width, ScreenTools.defaultFontPixelHeight * 24)
-            Layout.preferredHeight: Layout.preferredWidth * 327 / 480
+            Layout.preferredHeight: Math.min(root.dialogContentHeight * 0.36,
+                Math.min(dialogLayout.width, ScreenTools.defaultFontPixelHeight * 24) * 327 / 480)
+            Layout.preferredWidth: Layout.preferredHeight * 480 / 327
         }
 
         QGCComboBox {
@@ -268,7 +271,7 @@ QGCPopupDialog {
                 RowLayout {
                     Layout.fillWidth: true
                     visible: root.controller.windSource === 0
-                    QGCLabel { Layout.fillWidth: true; text: qsTr("手动地面风速（米/秒）") }
+                    QGCLabel { Layout.fillWidth: true; text: qsTr("手动地面风速（米/秒）"); wrapMode: Text.WordWrap }
                     QGCTextField {
                         objectName: "caacFigureEightManualWind"
                         Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 12
@@ -343,7 +346,7 @@ QGCPopupDialog {
                 }
                 RowLayout {
                     Layout.fillWidth: true
-                    QGCLabel { Layout.fillWidth: true; text: qsTr("训练走廊半宽（米）") }
+                    QGCLabel { Layout.fillWidth: true; text: qsTr("训练走廊半宽（米）"); wrapMode: Text.WordWrap }
                     QGCTextField {
                         objectName: "caacFigureEightCorridorWidth"
                         Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 12
@@ -489,7 +492,7 @@ QGCPopupDialog {
                 }
                 RowLayout {
                     Layout.fillWidth: true
-                    QGCLabel { Layout.fillWidth: true; text: qsTr("走廊外边界至围栏的距离（米）") }
+                    QGCLabel { Layout.fillWidth: true; text: qsTr("走廊外边界至围栏的距离（米）"); wrapMode: Text.WordWrap }
                     QGCTextField {
                         objectName: "caacFigureEightFenceMargin"
                         Layout.preferredWidth: ScreenTools.defaultFontPixelWidth * 12

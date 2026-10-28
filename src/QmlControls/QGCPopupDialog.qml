@@ -54,6 +54,14 @@ Popup {
     property bool   closeOnOutsideClick:    false
     property bool   draggable: true
     property point  _dragOffset: Qt.point(0, 0)
+    property bool   resizable: false
+    property real   preferredDialogWidth: maxContentAvailableWidth * 0.8
+    property real   preferredDialogHeight: maxContentAvailableHeight * 0.85
+    property real   minimumDialogWidth: ScreenTools.defaultFontPixelWidth * 44
+    property real   minimumDialogHeight: ScreenTools.defaultFontPixelHeight * 8
+    readonly property real dialogContentWidth: contentFlickable.width
+    readonly property real dialogContentHeight: contentFlickable.height
+    property size   _resizedSize: Qt.size(0, 0)
 
     property real maxContentAvailableWidth:    mainWindow.width - _contentMargin * 6
     property real maxContentAvailableHeight:   mainWindow.height - titleRowLayout.height - _contentMargin * 7
@@ -104,6 +112,7 @@ Popup {
 
     onAboutToShow: {
         _dragOffset = Qt.point(0, 0)
+        _resizedSize = Qt.size(0, 0)
         _previousValidationErrorCount = globals.validationErrorCount
         setupDialogButtons(buttons)
     }
@@ -211,6 +220,7 @@ Popup {
     }
 
     Rectangle {
+        id: dialogFrame
         x:              mainLayout.x - _contentMargin
         y:              mainLayout.y - _contentMargin
         width:          mainLayout.width + _contentMargin * 2
@@ -286,17 +296,25 @@ Popup {
         }
 
         Rectangle {
+            id: contentFrame
             Layout.fillWidth:       true
-            Layout.preferredWidth:  Math.min(maxAvailableWidth, totalContentWidth)
-            Layout.preferredHeight: Math.min(maxAvailableHeight, totalContentHeight)
+            Layout.preferredWidth: root.resizable
+                ? Math.min(maxAvailableWidth, Math.max(minimumWidth, root._resizedSize.width || root.preferredDialogWidth))
+                : Math.min(maxAvailableWidth, totalContentWidth)
+            Layout.preferredHeight: root.resizable
+                ? Math.min(maxAvailableHeight, Math.max(minimumHeight, root._resizedSize.height || root.preferredDialogHeight))
+                : Math.min(maxAvailableHeight, totalContentHeight)
             color:                  _qgcPal.window
 
+            readonly property real minimumWidth: Math.max(root.headerMinWidth, root.minimumDialogWidth)
+            readonly property real minimumHeight: root.minimumDialogHeight
             property real totalContentWidth:    dialogContentParent.childrenRect.width + _contentMargin * 2
             property real totalContentHeight:   dialogContentParent.childrenRect.height + _contentMargin * 2
             property real maxAvailableWidth:    mainWindow.width - _contentMargin * 4
             property real maxAvailableHeight:   mainWindow.height - titleRowLayout.height - _contentMargin * 5
 
             QGCFlickable {
+                id: contentFlickable
                 objectName: "popupDialog_contentFlickable"
                 anchors.margins:    _contentMargin
                 anchors.fill:       parent
@@ -314,6 +332,76 @@ Popup {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    Repeater {
+        model: root.resizable ? [Qt.LeftEdge, Qt.RightEdge, Qt.TopEdge, Qt.BottomEdge,
+            Qt.LeftEdge | Qt.TopEdge, Qt.RightEdge | Qt.TopEdge,
+            Qt.LeftEdge | Qt.BottomEdge, Qt.RightEdge | Qt.BottomEdge] : []
+
+        delegate: MouseArea {
+            id: resizeHandle
+            required property int modelData
+            readonly property bool leftEdge: (modelData & Qt.LeftEdge) !== 0
+            readonly property bool rightEdge: (modelData & Qt.RightEdge) !== 0
+            readonly property bool topEdge: (modelData & Qt.TopEdge) !== 0
+            readonly property bool bottomEdge: (modelData & Qt.BottomEdge) !== 0
+            readonly property bool corner: (leftEdge || rightEdge) && (topEdge || bottomEdge)
+            readonly property real grip: Math.max(10, root._contentMargin)
+            property point pressPosition
+            property rect initialFrame
+            property real headerHeight
+
+            objectName: "popupDialog_resizeHandle_" + modelData
+            x: leftEdge ? dialogFrame.x - grip / 2
+                : rightEdge ? dialogFrame.x + dialogFrame.width - grip / 2 : dialogFrame.x + grip / 2
+            y: topEdge ? dialogFrame.y - grip / 2
+                : bottomEdge ? dialogFrame.y + dialogFrame.height - grip / 2 : dialogFrame.y + grip / 2
+            width: leftEdge || rightEdge ? grip : dialogFrame.width - grip
+            height: topEdge || bottomEdge ? grip : dialogFrame.height - grip
+            z: 100
+            acceptedButtons: Qt.LeftButton
+            preventStealing: true
+            cursorShape: corner ? (leftEdge === topEdge ? Qt.SizeFDiagCursor : Qt.SizeBDiagCursor)
+                : leftEdge || rightEdge ? Qt.SizeHorCursor : Qt.SizeVerCursor
+
+            onPressed: (mouse) => {
+                pressPosition = mapToItem(root.contentItem, mouse.x, mouse.y)
+                initialFrame = Qt.rect(mainLayout.x, mainLayout.y, mainLayout.width, mainLayout.height)
+                headerHeight = mainLayout.height - contentFrame.height
+            }
+            onPositionChanged: (mouse) => {
+                if (!pressed) { return }
+                const position = mapToItem(root.contentItem, mouse.x, mouse.y)
+                const dx = position.x - pressPosition.x
+                const dy = position.y - pressPosition.y
+                const margin = root._contentMargin
+                const minWidth = Math.min(contentFrame.minimumWidth, contentFrame.maxAvailableWidth)
+                const minHeight = Math.min(contentFrame.minimumHeight, contentFrame.maxAvailableHeight) + headerHeight
+                let left = initialFrame.x
+                let top = initialFrame.y
+                let right = left + initialFrame.width
+                let bottom = top + initialFrame.height
+                const maxWidth = contentFrame.maxAvailableWidth
+                const maxHeight = contentFrame.maxAvailableHeight + headerHeight
+                if (leftEdge) { left = Math.max(margin, right - maxWidth, Math.min(left + dx, right - minWidth)) }
+                if (rightEdge) { right = Math.min(root.contentItem.width - margin, left + maxWidth, Math.max(right + dx, left + minWidth)) }
+                if (topEdge) { top = Math.max(margin, bottom - maxHeight, Math.min(top + dy, bottom - minHeight)) }
+                if (bottomEdge) { bottom = Math.min(root.contentItem.height - margin, top + maxHeight, Math.max(bottom + dy, top + minHeight)) }
+                root._resizedSize = Qt.size(right - left, bottom - top - headerHeight)
+                root._dragOffset = Qt.point((left + right - root.contentItem.width) / 2,
+                    (top + bottom - root.contentItem.height) / 2)
+            }
+
+            Text {
+                anchors.right: parent.horizontalCenter
+                anchors.bottom: parent.verticalCenter
+                visible: resizeHandle.rightEdge && resizeHandle.bottomEdge
+                text: "◢"
+                color: root._qgcPal.text
+                font.pixelSize: resizeHandle.grip
             }
         }
     }
