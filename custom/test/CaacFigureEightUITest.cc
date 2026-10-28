@@ -179,7 +179,8 @@ void CaacFigureEightUITest::_independentTrainingDialog()
     for (int page = 0; page < 5; ++page) {
         QVERIFY(pages->setProperty("currentIndex", page));
         QTRY_VERIFY_WITH_TIMEOUT(std::abs(dialogBounds().width() - resizedFrame.width()) < 1, TestTimeout::mediumMs());
-        QTRY_VERIFY_WITH_TIMEOUT(std::abs(dialogBounds().height() - resizedFrame.height()) < 1, TestTimeout::mediumMs());
+        QTRY_VERIFY_WITH_TIMEOUT(std::abs(dialogBounds().height() - resizedFrame.height()) < 1,
+                                 TestTimeout::mediumMs());
         QTRY_VERIFY_WITH_TIMEOUT(dialogScroller->property("contentWidth").toReal() <= dialogScroller->width() + 1,
                                  TestTimeout::mediumMs());
     }
