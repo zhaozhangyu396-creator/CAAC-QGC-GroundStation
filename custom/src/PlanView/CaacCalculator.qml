@@ -21,6 +21,13 @@ QGCPopupDialog {
     property var knownSides: ({})
     property bool fillingTriangle: false
     readonly property real cardSpacing: ScreenTools.defaultFontPixelWidth
+    readonly property color resultColor: calculatorPalette.globalTheme === QGCPalette.Light
+        ? Qt.darker(calculatorPalette.colorGreen, 1.4) : calculatorPalette.colorGreen
+    readonly property color errorColor: calculatorPalette.globalTheme === QGCPalette.Light
+        ? Qt.darker(calculatorPalette.warningText, 1.25) : Qt.lighter(calculatorPalette.warningText, 1.3)
+    readonly property color angleColor: calculatorPalette.globalTheme === QGCPalette.Light
+        ? Qt.darker(calculatorPalette.colorYellow, 1.8) : calculatorPalette.colorYellow
+    QGCPalette { id: calculatorPalette; colorGroupEnabled: root.enabled }
     readonly property var windDirections: [
         {label: qsTr("Select wind direction"), angle: 0},
         {label: qsTr("NNE · 22.5°"), angle: 22.5}, {label: qsTr("NE · 45°"), angle: 45},
@@ -90,10 +97,10 @@ QGCPopupDialog {
         Layout.minimumWidth: 0
         Layout.alignment: Qt.AlignTop
         implicitHeight: contents.implicitHeight + root.cardSpacing * 2
-        color: "#292c30"
+        color: calculatorPalette.windowShade
         radius: ScreenTools.defaultBorderRadius
         border.width: 1
-        border.color: "#555960"
+        border.color: calculatorPalette.groupBorder
         ColumnLayout {
             id: contents
             x: root.cardSpacing
@@ -106,23 +113,11 @@ QGCPopupDialog {
     component NumberField: QGCTextField {
         Layout.fillWidth: true
         Layout.minimumWidth: 0
-        textColor: "white"
-        selectionColor: "#40a9ff"
-        selectedTextColor: "white"
         rightPadding: leftPadding
-        background: Rectangle {
-            implicitWidth: ScreenTools.implicitTextFieldWidth
-            implicitHeight: ScreenTools.implicitTextFieldHeight
-            radius: ScreenTools.defaultBorderRadius
-            color: "#252c33"
-            border.width: 1
-            border.color: "#505860"
-        }
         validator: DoubleValidator { locale: "C" }
     }
     component CalculateButton: QGCButton {
-        backgroundColor: "#25b86d"
-        textColor: "white"
+        primary: true
         text: qsTr("Calculate")
     }
     component ResultRow: RowLayout {
@@ -136,7 +131,7 @@ QGCPopupDialog {
             Layout.minimumWidth: 0
             wrapMode: Text.WrapAnywhere
             text: resultRow.resultText
-            color: resultRow.valid ? "#3edb86" : "#ffcf6b"
+            color: resultRow.valid ? root.resultColor : root.errorColor
         }
         QGCButton {
             objectName: resultRow.objectName + "Copy"
@@ -275,6 +270,10 @@ QGCPopupDialog {
                     property var solution: root.triangleResult
                     onSolutionChanged: requestPaint()
                     onWidthChanged: requestPaint()
+                    Connections {
+                        target: calculatorPalette
+                        function onPaletteChanged() { triangleCanvas.requestPaint() }
+                    }
                     onPaint: {
                         const ctx = getContext("2d")
                         ctx.reset()
@@ -283,16 +282,16 @@ QGCPopupDialog {
                         const b = solution && solution.ok ? solution.b : 4
                         const scale = Math.min((width - margin * 2) / b, (height - margin * 2) / a)
                         const left = margin, bottom = height - margin, right = left + b * scale, top = bottom - a * scale
-                        ctx.strokeStyle = "#28bb73"
+                        ctx.strokeStyle = root.resultColor
                         ctx.lineWidth = 2
                         ctx.beginPath(); ctx.moveTo(left, top); ctx.lineTo(left, bottom); ctx.lineTo(right, bottom); ctx.closePath(); ctx.stroke()
                         ctx.font = Math.max(10, ScreenTools.defaultFontPixelHeight * 0.55) + 'px "' + ScreenTools.normalFontFamily + '"'
-                        ctx.fillStyle = "white"
+                        ctx.fillStyle = calculatorPalette.text
                         ctx.textAlign = "center"
                         ctx.fillText(solution && solution.ok ? "a = " + root.formatted(a) : "a", left - margin * 0.45, (top + bottom) / 2)
                         ctx.fillText(solution && solution.ok ? "b = " + root.formatted(b) : "b", (left + right) / 2, bottom + margin * 0.65)
                         ctx.fillText(solution && solution.ok ? "c = " + root.formatted(solution.c) : "c", (left + right) / 2 + margin * 0.35, (top + bottom) / 2)
-                        ctx.fillStyle = "#ffd53c"
+                        ctx.fillStyle = root.angleColor
                         ctx.fillText("90°", left + margin * 0.35, bottom - margin * 0.2)
                         ctx.fillText(solution && solution.ok ? root.formatted(solution.theta) + "°" : "θ", right - margin * 0.4, bottom - margin * 0.2)
                         ctx.fillText(solution && solution.ok ? root.formatted(solution.phi) + "°" : "φ", left + margin * 0.4, top + margin * 0.25)

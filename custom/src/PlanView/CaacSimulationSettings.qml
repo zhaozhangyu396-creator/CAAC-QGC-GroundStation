@@ -27,9 +27,10 @@ ColumnLayout {
         return settings
     }
     function updatePreview() {
-        if (_previewReady) { editor.simulationPreviewSettings = visible ? _previewValues : null }
+        if (_previewReady) { editor.simulationPreviewSettings = visible || draftDirty ? _previewValues : null }
     }
     on_PreviewValuesChanged: updatePreview()
+    onDraftDirtyChanged: updatePreview()
     onVisibleChanged: updatePreview()
     Component.onCompleted: { _previewReady = true; updatePreview() }
     Component.onDestruction: editor.simulationPreviewSettings = null

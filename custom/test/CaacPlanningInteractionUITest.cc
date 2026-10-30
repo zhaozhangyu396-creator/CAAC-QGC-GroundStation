@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <memory>
 #include <utility>
 
@@ -42,6 +43,7 @@
 #include "PlanMasterController.h"
 #include "QGCFencePolygon.h"
 #include "QGCGeo.h"
+#include "QGCPalette.h"
 #include "QGroundControlQmlGlobal.h"
 #include "QmlUITestBase.h"
 #include "RemoteIDSettings.h"
@@ -60,6 +62,7 @@ private slots:
     void _homePreviewInsertion();
     void _dragSnappingAndRelations();
     void _synchronizeBasicsUI();
+    void _waypointCardDetails();
     void _calculatorUI();
     void _preferencesUI();
     void _newSettingsPages();
@@ -1164,6 +1167,72 @@ void CaacPlanningInteractionUITest::_calculatorUI()
                                 QStringLiteral("popupDialog_contentFlickable")));
     QVERIFY(triangle->property("valid").toBool());
     QVERIFY(std::abs(b->property("text").toDouble() - std::sqrt(4224)) < 1e-8);
+    const auto originalTheme = QGCPalette::globalTheme();
+    const auto restoreTheme = qScopeGuard([originalTheme]() { QGCPalette::setGlobalTheme(originalTheme); });
+    const auto luminance = [](const QColor& color) {
+        const auto linear = [](double channel) {
+            return channel <= 0.04045 ? channel / 12.92 : std::pow((channel + 0.055) / 1.055, 2.4);
+        };
+        return 0.2126 * linear(color.redF()) + 0.7152 * linear(color.greenF()) + 0.0722 * linear(color.blueF());
+    };
+    QVERIFY(wind->setProperty("text", QStringLiteral("361")));
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacCalculatorWindCalculate"),
+                                QStringLiteral("popupDialog_contentFlickable")));
+    auto* calculatorContents = findVisibleItem(_rootItem, QStringLiteral("popupDialog_contentFlickable"));
+    QVERIFY(calculatorContents);
+    for (const auto theme : {QGCPalette::Light, QGCPalette::Dark}) {
+        QGCPalette::setGlobalTheme(theme);
+        QSignalSpy frame(_window, &QQuickWindow::frameSwapped);
+        _window->update();
+        QTRY_VERIFY_WITH_TIMEOUT(!frame.isEmpty(), TestTimeout::mediumMs());
+        int checkedTextItems = 0;
+        QList<QQuickItem*> items = calculatorContents->childItems();
+        for (qsizetype index = 0; index < items.size(); ++index) {
+            auto* item = items[index];
+            items.append(item->childItems());
+            if (!item->isVisible() || item->property("text").toString().isEmpty() ||
+                !item->property("color").canConvert<QColor>()) {
+                continue;
+            }
+            const QColor foreground = item->property("color").value<QColor>();
+            QColor background;
+            for (auto* ancestor = item; ancestor && !background.isValid(); ancestor = ancestor->parentItem()) {
+                if (auto* surface = ancestor->property("background").value<QQuickItem*>()) {
+                    const QColor color = surface->property("color").value<QColor>();
+                    if (color.isValid() && color.alphaF() == 1) {
+                        background = color;
+                    }
+                }
+                if (!background.isValid() && ancestor != item && !ancestor->property("text").isValid()) {
+                    const QColor color = ancestor->property("color").value<QColor>();
+                    if (color.isValid() && color.alphaF() == 1) {
+                        background = color;
+                    }
+                }
+            }
+            if (!background.isValid()) {
+                continue;
+            }
+            const double foregroundLuminance = luminance(foreground);
+            const double backgroundLuminance = luminance(background);
+            const double contrast = (std::max(foregroundLuminance, backgroundLuminance) + 0.05) /
+                                    (std::min(foregroundLuminance, backgroundLuminance) + 0.05);
+            QVERIFY2(contrast >= 4.5,
+                     qPrintable(QStringLiteral("Calculator text '%1': %2 on %3, contrast %4, theme %5")
+                                    .arg(item->property("text").toString(), foreground.name(), background.name())
+                                    .arg(contrast)
+                                    .arg(theme)));
+            ++checkedTextItems;
+        }
+        QVERIFY(checkedTextItems >= 18);
+        if (const auto preview = qgetenv("CAAC_CALCULATOR_THEME_PREVIEW"); !preview.isEmpty()) {
+            auto* scroller = findVisibleItem(_rootItem, QStringLiteral("popupDialog_contentFlickable"));
+            QVERIFY(scroller && scroller->setProperty("contentY", 0));
+            QVERIFY(_window->grabWindow().save(QString::fromUtf8(preview) + (theme == QGCPalette::Light
+                                                                                 ? QStringLiteral("-light.png")
+                                                                                 : QStringLiteral("-dark.png"))));
+        }
+    }
     if (const auto image = qgetenv("CAAC_CALCULATOR_PREVIEW"); !image.isEmpty()) {
         auto* scroller = findVisibleItem(_rootItem, QStringLiteral("popupDialog_contentFlickable"));
         QVERIFY(scroller && scroller->setProperty("contentY", 0));
@@ -1262,6 +1331,69 @@ void CaacPlanningInteractionUITest::_homePreviewInsertion()
     }
 }
 
+void CaacPlanningInteractionUITest::_waypointCardDetails()
+{
+    startUI();
+    if (QTest::currentTestFailed()) {
+        return;
+    }
+    auto* plan = findVisibleItem(_rootItem, QStringLiteral("mainView_plan"));
+    auto* panel = findVisibleItem(_rootItem, QStringLiteral("caacRouteEditor"));
+    QVERIFY(plan && panel);
+    auto* master = plan->property("_planMasterController").value<PlanMasterController*>();
+    auto* editor = panel->property("routeController").value<CaacRouteEditorController*>();
+    QVERIFY(master && editor);
+    const QGeoCoordinate home(30, 120, 20);
+    master->missionController()->setHomePosition(home);
+    QVERIFY(editor->addWaypoint(QGCGeo::geodesicDestination(home, 90, 100)));
+    QVERIFY(editor->addWaypoint(QGCGeo::geodesicDestination(home, 0, 100)));
+    auto* point = master->missionController()->visualItems()->value<SimpleMissionItem*>(1);
+    QVERIFY(point);
+    QVERIFY(clickButton(QStringLiteral("caacWaypointListButton")));
+    const auto field = [this](const char* name) {
+        return findVisibleItemScrolled(QString::fromLatin1(name), QStringLiteral("caacWaypointList"));
+    };
+    auto* bearing = field("caacWaypointBearing_1");
+    auto* heading = field("caacWaypointHeading_1");
+    auto* turn = field("caacWaypointTurn_1");
+    auto* hold = field("caacWaypointHold_1");
+    QVERIFY(bearing && heading && turn && hold);
+    QTRY_COMPARE_WITH_TIMEOUT(bearing->property("value").toString(), QStringLiteral("90°"), TestTimeout::mediumMs());
+    QCOMPARE(heading->property("value").toString(), QCoreApplication::translate("CaacRouteEditor", "None"));
+    auto settings = editor->simulationSettings();
+    settings["turnMode"] = 3;
+    settings["specifyYaw"] = true;
+    settings["yaw"] = 45.0;
+    settings["holdSeconds"] = 4.0;
+    QVERIFY(editor->setSimulationSettings(settings));
+    QTRY_COMPARE_WITH_TIMEOUT(heading->property("value").toString(), QStringLiteral("45°"), TestTimeout::mediumMs());
+    QCOMPARE(turn->property("value").toString(), QCoreApplication::translate("CaacRouteEditor", "No turn"));
+    QVERIFY(hold->property("value").toString().startsWith(QStringLiteral("4.0")));
+    point->missionItem().setParam4(-90);
+    point->missionItem().setParam1(2.5);
+    QVERIFY(point->setCaacFlightSettings({{"verticalSpeed", 2.0}, {"turnMode", 0}, {"climbMode", 1}}));
+    QTRY_COMPARE_WITH_TIMEOUT(heading->property("value").toString(), QStringLiteral("270°"), TestTimeout::mediumMs());
+    QTRY_COMPARE_WITH_TIMEOUT(turn->property("value").toString(),
+                              QCoreApplication::translate("CaacRouteEditor", "Point"), TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(hold->property("value").toString().startsWith(QStringLiteral("2.5")),
+                             TestTimeout::mediumMs());
+    point->missionItem().setParam1(3.5);
+    QTRY_VERIFY_WITH_TIMEOUT(hold->property("value").toString().startsWith(QStringLiteral("3.5")),
+                             TestTimeout::mediumMs());
+    point->setCoordinate(QGCGeo::geodesicDestination(home, 180, 100));
+    QTRY_COMPARE_WITH_TIMEOUT(bearing->property("value").toString(), QStringLiteral("180°"), TestTimeout::mediumMs());
+    QCOMPARE(heading->property("value").toString(), QStringLiteral("270°"));
+    point->missionItem().setParam4(std::numeric_limits<double>::quiet_NaN());
+    QVERIFY(point->setCaacFlightSettings({}));
+    QTRY_COMPARE_WITH_TIMEOUT(heading->property("value").toString(), QStringLiteral("45°"), TestTimeout::mediumMs());
+    if (const auto image = qgetenv("CAAC_WAYPOINT_CARD_PREVIEW"); !image.isEmpty()) {
+        QSignalSpy frame(_window, &QQuickWindow::frameSwapped);
+        _window->update();
+        QTRY_VERIFY_WITH_TIMEOUT(!frame.isEmpty(), TestTimeout::mediumMs());
+        QVERIFY(_window->grabWindow().save(QString::fromUtf8(image)));
+    }
+}
+
 void CaacPlanningInteractionUITest::_synchronizeBasicsUI()
 {
     startUI();
@@ -1292,6 +1424,32 @@ void CaacPlanningInteractionUITest::_synchronizeBasicsUI()
         QGroundControlQmlGlobal::AltitudeFrameAbsolute);
     editor->clearHistory();
     const auto original = master->saveToJson();
+    QVERIFY(clickButton(QStringLiteral("caacGlobalSettingsButton")));
+    const auto savedSimulationSettings = editor->simulationSettings();
+    const auto closureCount = [panel]() {
+        int count = 0;
+        for (const auto& segment : panel->property("simulationPreviewSegments").toList()) {
+            if (segment.toMap().value(QStringLiteral("kind")).toString() == QStringLiteral("closure")) {
+                ++count;
+            }
+        }
+        return count;
+    };
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacSimClosedRoute"), QStringLiteral("caacGlobalSettingsScroller")));
+    QTRY_COMPARE_WITH_TIMEOUT(closureCount(), 1, TestTimeout::mediumMs());
+    QVERIFY(clickButton(QStringLiteral("caacGlobalSettingsButton")));
+    QVERIFY(!findVisibleItem(_rootItem, QStringLiteral("caacGlobalSettingsPanel"), 0));
+    QTRY_COMPARE_WITH_TIMEOUT(closureCount(), 1, TestTimeout::mediumMs());
+    QCOMPARE(editor->simulationSettings(), savedSimulationSettings);
+    QCOMPARE(master->saveToJson(), original);
+    QVERIFY(clickButton(QStringLiteral("caacGlobalSettingsButton")));
+    auto* closed =
+        findVisibleItemScrolled(QStringLiteral("caacSimClosedRoute"), QStringLiteral("caacGlobalSettingsScroller"));
+    QVERIFY(closed && closed->property("checked").toBool());
+    QVERIFY(clickButtonScrolled(QStringLiteral("caacSimClosedRoute"), QStringLiteral("caacGlobalSettingsScroller")));
+    QTRY_COMPARE_WITH_TIMEOUT(closureCount(), 0, TestTimeout::mediumMs());
+    QVERIFY(clickButton(QStringLiteral("caacGlobalSettingsButton")));
+    QTRY_COMPARE_WITH_TIMEOUT(closureCount(), 0, TestTimeout::mediumMs());
     QVERIFY(clickButton(QStringLiteral("caacGlobalSettingsButton")));
     auto* homeAltitude =
         findVisibleItemScrolled(QStringLiteral("caacHomeAltitude"), QStringLiteral("caacGlobalSettingsScroller"));

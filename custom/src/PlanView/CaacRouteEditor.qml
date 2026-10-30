@@ -877,6 +877,23 @@ Column {
             readonly property var _leg: editorController.coordinateItems.length > 0
                 ? editorController.waypointLeg(object) : ({})
             readonly property var _speed: index > 0 && object.isSimpleItem ? object.speedSection : null
+            readonly property var _localSettings: index > 0 && object.command === 16 ? object.caacFlightSettings : ({})
+            readonly property bool _inheritsGlobalSettings: Object.keys(_localSettings).length === 0
+            readonly property var _flightSettings: Object.assign({}, root.simulationPreviewSettings || editorController.simulationSettings, _localSettings)
+            property int _holdRevision: 0
+            readonly property var _advanced: {
+                void _holdRevision
+                void _localSettings
+                void object.specifiedVehicleYaw
+                return editorController.waypointAdvancedProperties(object)
+            }
+            readonly property bool _holdingTurn: _flightSettings.turnMode === 0 || _flightSettings.turnMode === 3
+            readonly property real _holdSeconds: _advanced.supported
+                ? (_inheritsGlobalSettings && _holdingTurn && _advanced.holdSeconds === 0
+                    ? _flightSettings.holdSeconds : _advanced.holdSeconds) : NaN
+            readonly property real _heading: isFinite(object.specifiedVehicleYaw) ? object.specifiedVehicleYaw
+                : _advanced.supported && _inheritsGlobalSettings && _holdingTurn && _flightSettings.specifyYaw
+                    ? _flightSettings.yaw : NaN
             readonly property bool _batchSelected: root.selectedWaypointItems.indexOf(object) >= 0
             objectName: "caacWaypointCard_" + object.sequenceNumber
             width: waypointList.width
@@ -885,6 +902,21 @@ Column {
             radius: ScreenTools.defaultBorderRadius
             color: _batchSelected || object.isCurrentItem ? dragPalette.buttonHighlight : dragPalette.windowShade
             readonly property color _textColor: _batchSelected || object.isCurrentItem ? dragPalette.buttonHighlightText : dragPalette.text
+
+            Connections {
+                target: card.object
+                function onAdditionalTimeDelayChanged() { ++card._holdRevision }
+            }
+            component SummaryField: QGCLabel {
+                property string caption
+                property string value
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                color: card._textColor
+                font.pointSize: ScreenTools.smallFontPointSize
+                text: caption + " " + value
+                wrapMode: Text.WordWrap
+            }
 
             MouseArea {
                 anchors.fill: parent
@@ -917,29 +949,56 @@ Column {
                     spacing: ScreenTools.defaultFontPixelHeight * 0.2
                     QGCLabel {
                         Layout.fillWidth: true
+                        visible: card.index === 0 || card.object.command !== 16
                         text: card.index === 0 ? qsTr("Planned home")
                             : card.object.isLandCommand ? qsTr("Planned landing point") : card.object.commandName
                         color: card._textColor
                         elide: Text.ElideRight
                     }
-                    QGCLabel {
+                    GridLayout {
                         Layout.fillWidth: true
                         visible: card.index > 0
-                        font.pointSize: ScreenTools.smallFontPointSize
-                        color: card._textColor
-                        text: card.index > 0 ? qsTr("Altitude: %1 m · Speed: %2").arg(card.object.altitude.rawValue.toFixed(1))
-                            .arg(card._speed && card._speed.specifyFlightSpeed
-                                ? qsTr("%1 m/s").arg(card._speed.flightSpeed.rawValue.toFixed(1)) : qsTr("Default")) : ""
-                        wrapMode: Text.WordWrap
+                        columns: width >= ScreenTools.defaultFontPixelWidth * 34 ? 3 : 2
+                        uniformCellWidths: true
+                        columnSpacing: ScreenTools.defaultFontPixelWidth
+                        rowSpacing: ScreenTools.defaultFontPixelHeight * 0.2
+                        SummaryField {
+                            caption: qsTr("Altitude")
+                            value: card.index > 0 ? qsTr("%1 m").arg(card.object.altitude.rawValue.toFixed(1)) : "—"
+                        }
+                        SummaryField {
+                            objectName: "caacWaypointHeading_" + card.object.sequenceNumber
+                            caption: qsTr("Heading")
+                            value: isFinite(card._heading) ? qsTr("%1°").arg(((card._heading % 360 + 360) % 360).toFixed(0)) : qsTr("None")
+                        }
+                        SummaryField {
+                            caption: qsTr("Speed")
+                            value: card._speed && card._speed.specifyFlightSpeed
+                                ? qsTr("%1 m/s").arg(card._speed.flightSpeed.rawValue.toFixed(1)) : qsTr("Default")
+                        }
+                        SummaryField {
+                            objectName: "caacWaypointTurn_" + card.object.sequenceNumber
+                            caption: qsTr("Turn")
+                            value: card._advanced.supported
+                                ? [qsTr("Point"), qsTr("Coordinated"), qsTr("Adaptive"), qsTr("No turn")][card._flightSettings.turnMode] : "—"
+                        }
+                        SummaryField {
+                            objectName: "caacWaypointHold_" + card.object.sequenceNumber
+                            caption: qsTr("Hold")
+                            value: isFinite(card._holdSeconds) ? qsTr("%1 s").arg(card._holdSeconds.toFixed(1)) : "—"
+                        }
+                        SummaryField {
+                            objectName: "caacWaypointBearing_" + card.object.sequenceNumber
+                            caption: qsTr("Bearing")
+                            value: card._leg.bearing !== undefined ? qsTr("%1°").arg(card._leg.bearing.toFixed(0)) : "—"
+                        }
                     }
                     QGCLabel {
                         Layout.fillWidth: true
                         visible: card._leg.distance !== undefined
                         font.pointSize: ScreenTools.smallFontPointSize
                         color: card._textColor
-                        text: card._leg.distance !== undefined ? qsTr("Distance: %1 m · Angle: %2")
-                            .arg(card._leg.distance.toFixed(1)).arg(card._leg.angle !== undefined
-                                ? qsTr("%1°").arg(card._leg.angle.toFixed(0)) : "—") : ""
+                        text: card._leg.distance !== undefined ? qsTr("Distance: %1 m").arg(card._leg.distance.toFixed(1)) : ""
                         wrapMode: Text.WordWrap
                     }
                 }

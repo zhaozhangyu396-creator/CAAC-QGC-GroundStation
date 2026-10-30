@@ -6017,6 +6017,62 @@ Click Ok to start the auto-tuning process.
       <source>Upload the updated route and waypoint information? The aircraft will pause for the update. It will resume only if the mission was running. Cancelling keeps the edits locally.</source>
       <translation>是否上传更新后的航线和航点信息？飞行器将暂停以完成更新，仅在更新前任务正在执行时恢复飞行。取消后仅保留本地修改。</translation>
     </message>
+    <message>
+        <source>Altitude</source>
+        <translation>高度</translation>
+    </message>
+    <message>
+        <source>Heading</source>
+        <translation>机头朝向</translation>
+    </message>
+    <message>
+        <source>Speed</source>
+        <translation>速度</translation>
+    </message>
+    <message>
+        <source>Turn</source>
+        <translation>转弯</translation>
+    </message>
+    <message>
+        <source>Hold</source>
+        <translation>停留</translation>
+    </message>
+    <message>
+        <source>Bearing</source>
+        <translation>方位角</translation>
+    </message>
+    <message>
+        <source>None</source>
+        <translation>无</translation>
+    </message>
+    <message>
+        <source>Point</source>
+        <translation>定点</translation>
+    </message>
+    <message>
+        <source>Coordinated</source>
+        <translation>协调</translation>
+    </message>
+    <message>
+        <source>Adaptive</source>
+        <translation>自适应</translation>
+    </message>
+    <message>
+        <source>No turn</source>
+        <translation>不转弯</translation>
+    </message>
+    <message>
+        <source>%1 m</source>
+        <translation>%1 米</translation>
+    </message>
+    <message>
+        <source>%1 s</source>
+        <translation>%1 秒</translation>
+    </message>
+    <message>
+        <source>Distance: %1 m</source>
+        <translation>距离：%1 米</translation>
+    </message>
 </context>
   <context>
     <name>CaacRouteEditorController</name>
