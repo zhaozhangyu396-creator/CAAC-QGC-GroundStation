@@ -17,7 +17,7 @@ if (-not (Test-Path -LiteralPath $redist)) { throw "MSVC runtime missing: $redis
 Copy-Item -Path (Join-Path $redist '*.dll') -Destination (Join-Path $stage 'bin') -Force
 
 $sourceArchive = Join-Path $output 'CaacCalculator-1.0.0-source.zip'
-git archive --format=zip "--output=$sourceArchive" HEAD custom/tools/calculator custom/src/PlanView/CaacCalculatorMath.js LICENSE-GPL LICENSE-APACHE
+git archive --format=zip "--output=$sourceArchive" HEAD custom/tools/calculator custom/src/PlanView/CaacCalculatorMath.js deploy/windows/read-shortcut.ps1 LICENSE-GPL LICENSE-APACHE
 if ($LASTEXITCODE -ne 0) { throw 'Source archive failed' }
 New-Item -ItemType Directory -Force -Path (Join-Path $stage 'source') | Out-Null
 Copy-Item -LiteralPath $sourceArchive -Destination (Join-Path $stage 'source')
@@ -90,7 +90,7 @@ foreach ($directory in Get-ChildItem -LiteralPath $stage -Recurse -Directory | S
 $deletions | Set-Content -LiteralPath $manifest -Encoding utf8
 $installer = Join-Path $output 'FeihuCalculator-1.0.0-Windows-x64-Setup.exe'
 $compiler = Join-Path ${env:ProgramFiles(x86)} 'NSIS/makensis.exe'
-& $compiler "/DPAYLOAD=$stage" "/DOUTPUT=$installer" "/DDELETE_MANIFEST=$manifest" (Join-Path $source 'installer.nsi')
+& $compiler /INPUTCHARSET UTF8 "/DPAYLOAD=$stage" "/DOUTPUT=$installer" "/DDELETE_MANIFEST=$manifest" (Join-Path $source 'installer.nsi')
 if ($LASTEXITCODE -ne 0) { throw 'NSIS packaging failed' }
 
 # Exercise the actual installer in a path containing spaces and Chinese characters.
@@ -103,9 +103,13 @@ try {
     if ((Get-FileHash -LiteralPath $installedBinary -Algorithm SHA256).Hash -cne $binaryHash) {
         throw 'Installed executable does not match deployed executable'
     }
-    $shell = New-Object -ComObject WScript.Shell
+    . (Join-Path $source '../../../deploy/windows/read-shortcut.ps1')
     $shortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) '飞虎角度计算器.lnk'
-    if ($shell.CreateShortcut($shortcut).TargetPath -ne $installedBinary) { throw 'Desktop shortcut target mismatch' }
+    if (-not (Test-Path -LiteralPath $shortcut)) { throw "Desktop shortcut missing: $shortcut" }
+    $shortcutData = [QgcWindowsShortcut]::Read($shortcut)
+    if ($shortcutData.TargetPath -ne $installedBinary) {
+        throw "Desktop shortcut target mismatch: actual=$($shortcutData.TargetPath), expected=$installedBinary"
+    }
     $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
     $env:QT_PLUGIN_PATH = $null
     $env:QT_QPA_PLATFORM = 'offscreen'
