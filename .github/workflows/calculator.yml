@@ -43,6 +43,7 @@ jobs:
           host: windows
           arch: win64_msvc2022_64
           archives: qtbase qtdeclarative
+          aqt-source: 'git+https://github.com/miurahr/aqtinstall.git@8d961e61720b3c06583517fbc68d57ec0a4e9f95'
       - name: Configure MSVC
         uses: ilammy/msvc-dev-cmd@v1
         with:

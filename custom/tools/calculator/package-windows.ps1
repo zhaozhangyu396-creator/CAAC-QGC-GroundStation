@@ -107,6 +107,7 @@ try {
     $shortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) '飞虎角度计算器.lnk'
     if ($shell.CreateShortcut($shortcut).TargetPath -ne $installedBinary) { throw 'Desktop shortcut target mismatch' }
     $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
+    $env:QT_PLUGIN_PATH = $null
     $env:QT_QPA_PLATFORM = 'offscreen'
     $smoke = Start-Process -FilePath $installedBinary -ArgumentList '--smoke-test' -Wait -PassThru
     if ($smoke.ExitCode -ne 0) { throw 'Installed calculator startup failed without SDK paths' }
@@ -117,6 +118,7 @@ try {
 } finally {
     $env:PATH = $savedPath
     $env:QT_QPA_PLATFORM = $savedPlatform
+    $env:QT_PLUGIN_PATH = $savedPlugins
     $uninstaller = Join-Path $installed 'Uninstall.exe'
     if (Test-Path -LiteralPath $uninstaller) {
         $uninstall = Start-Process -FilePath $uninstaller -ArgumentList '/S', "_?=$installed" -Wait -PassThru
