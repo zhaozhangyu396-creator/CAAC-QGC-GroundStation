@@ -25,3 +25,6 @@ ctest --test-dir build/calculator -C Release --output-on-failure -L Unit
 
 计算引擎在编译时直接嵌入 `custom/src/PlanView/CaacCalculatorMath.js`，与地面站使用同一份公式。
 发行包附带源代码压缩包和开源许可，详见 `NOTICE_zh-CN.txt`。
+
+内置字体覆盖工具界面文字，无需依赖系统中文字体。维护界面文字后，可安装 `fonttools` 并运行
+`python custom/tools/calculator/make_font.py /path/to/NotoSansCJK-Regular.ttc` 重新生成字体子集。

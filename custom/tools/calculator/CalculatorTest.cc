@@ -25,6 +25,7 @@ private slots:
     void calculations();
     void invalidInputs_data();
     void invalidInputs();
+    void bundledFont();
     void standaloneWorkflow();
 };
 
@@ -106,6 +107,16 @@ void CalculatorTest::invalidInputs()
     const auto result = engine.calculate(function, arguments);
     QVERIFY(!result.value(QStringLiteral("ok")).toBool());
     QCOMPARE(result.value(QStringLiteral("error")).toString(), error);
+}
+
+void CalculatorTest::bundledFont()
+{
+    CalculatorWindow window;
+    QVERIFY(window.isReady());
+    const QFontMetrics metrics(window.font());
+    for (const QChar character : QStringLiteral("飞虎角度计算器风向时间三角函数直角斜边复制结果0123456789θφ°～")) {
+        QVERIFY2(metrics.inFont(character), qPrintable(QStringLiteral("Missing glyph: %1").arg(character)));
+    }
 }
 
 void CalculatorTest::standaloneWorkflow()

@@ -21,5 +21,6 @@ private:
     void _addTrianglePage();
 
     CalculatorEngine _engine;
+    bool _fontReady = false;
     QTabWidget* _tabs = nullptr;
 };

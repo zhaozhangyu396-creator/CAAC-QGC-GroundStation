@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
     if (!window.isReady()) {
         if (!parser.isSet(smokeTest)) {
             QMessageBox::critical(nullptr, QStringLiteral("启动失败"),
-                                  QStringLiteral("无法加载计算模块，请重新安装。"));
+                                  QStringLiteral("无法加载程序资源，请重新安装。"));
         }
         return 1;
     }

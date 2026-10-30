@@ -30,6 +30,11 @@ qt_add_resources(
 )
 
 qt_add_executable(CaacCalculator main.cc)
+qt_add_resources(
+    CalculatorCore calculator_font
+    PREFIX "/calculator"
+    FILES CalculatorSans.otf
+)
 target_link_libraries(CaacCalculator PRIVATE CalculatorCore)
 target_compile_definitions(CaacCalculator PRIVATE CAAC_CALCULATOR_VERSION="${PROJECT_VERSION}")
 if(MSVC)
@@ -56,6 +61,7 @@ endif()
 install(TARGETS CaacCalculator RUNTIME DESTINATION bin)
 install(FILES README.md NOTICE_zh-CN.txt DESTINATION .)
 install(FILES ../../../LICENSE-GPL ../../../LICENSE-APACHE DESTINATION licenses)
+install(FILES FONT-LICENSE.txt DESTINATION licenses)
 if(WIN32)
     qt_generate_deploy_app_script(
         TARGET

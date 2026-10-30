@@ -11,3 +11,6 @@
 本工具动态链接 Qt 6（The Qt Company 及贡献者）。Qt 使用其适用的开源许可。
 Qt 的许可及第三方声明位于 licenses/qt。Qt 对应源码可从 https://download.qt.io/archive/qt/ 下载。
 Qt 动态链接库可在保持 ABI 兼容的前提下替换。程序不包含地面站的激活功能。
+
+内置字体 Feihu Calculator Sans 为 Noto Sans CJK SC 2.004 的改名子集，按 SIL OFL 1.1 许可分发。
+字体版权及许可全文位于 licenses/FONT-LICENSE.txt。

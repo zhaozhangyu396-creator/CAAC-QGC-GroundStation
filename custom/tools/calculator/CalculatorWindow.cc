@@ -6,6 +6,7 @@
 #include <memory>
 
 #include <QtGui/QClipboard>
+#include <QtGui/QFontDatabase>
 #include <QtGui/QPainter>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QCheckBox>
@@ -205,7 +206,14 @@ private:
 CalculatorWindow::CalculatorWindow(QWidget* parent)
     : QWidget(parent)
 {
+    Q_INIT_RESOURCE(calculator_font);
+    static const int FONT_ID = QFontDatabase::addApplicationFont(QStringLiteral(":/calculator/CalculatorSans.otf"));
+    const QStringList families = QFontDatabase::applicationFontFamilies(FONT_ID);
     QFont applicationFont = font();
+    _fontReady = !families.isEmpty();
+    if (_fontReady) {
+        applicationFont.setFamily(families.first());
+    }
     applicationFont.setPointSizeF(std::max(11.0, applicationFont.pointSizeF()));
     setFont(applicationFont);
     setWindowTitle(tr("飞虎角度计算器"));
@@ -235,7 +243,7 @@ CalculatorWindow::CalculatorWindow(QWidget* parent)
 
 bool CalculatorWindow::isReady() const
 {
-    return _engine.isReady();
+    return _engine.isReady() && _fontReady;
 }
 
 void CalculatorWindow::_addWindPage()
