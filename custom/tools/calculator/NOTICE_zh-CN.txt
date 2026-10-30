@@ -1,0 +1,13 @@
+飞虎角度计算器 1.0.0
+
+本工具从 CAAC-QGC-GroundStation 的角度计算器提取，使用同一份计算代码。
+发行二进制及本项目代码按 GNU GPL v3 分发，许可全文位于 licenses/LICENSE-GPL。
+项目源代码另可按 Apache 2.0 使用，全文位于 licenses/LICENSE-APACHE。
+
+源码仓库：https://github.com/zhaozhangyu396-creator/CAAC-QGC-GroundStation
+源码目录：custom/tools/calculator
+对应版本的完整工具源码随下载包一并提供在 CaacCalculator-1.0.0-source.zip 中。
+
+本工具动态链接 Qt 6（The Qt Company 及贡献者）。Qt 使用其适用的开源许可。
+Qt 的许可及第三方声明位于 licenses/qt。Qt 对应源码可从 https://download.qt.io/archive/qt/ 下载。
+Qt 动态链接库可在保持 ABI 兼容的前提下替换。程序不包含地面站的激活功能。
