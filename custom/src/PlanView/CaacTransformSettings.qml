@@ -99,6 +99,26 @@ ColumnLayout {
         }
     }
     Card {
+        title: qsTr("Rotation around a waypoint")
+        QGCLabel { text: qsTr("Centre") }
+        PointSelector { id: center; objectName: "caacRotateCenter" }
+        QGCLabel { text: qsTr("Angle (degrees)") }
+        NumberField { id: angle; objectName: "caacRotateAngle"; text: "0" }
+        QGCCheckBox { id: rotateHome; objectName: "caacRotateIncludeHome"; text: qsTr("Include H point") }
+        QGCButton {
+            objectName: "caacRotateApply"
+            Layout.fillWidth: true
+            text: qsTr("Rotate")
+            primary: true
+            onClicked: {
+                const selected = root.point(center)
+                if (selected) {
+                    root.routeController.rotateRouteAround(selected.coordinate, root.number(angle.text), rotateHome.checked)
+                }
+            }
+        }
+    }
+    Card {
         title: qsTr("Route translation")
         QGCLabel { text: qsTr("Reference point") }
         PointSelector { id: reference; objectName: "caacTranslateReference" }
@@ -175,26 +195,6 @@ ColumnLayout {
                         opacity: modelData.bearing < 0 ? 0 : 1
                         enabled: modelData.bearing >= 0
                         onClicked: root.routeController.moveRouteBy(modelData.bearing, root.number(distance.text), translateHome.checked)
-                    }
-                }
-            }
-        }
-        Card {
-            title: qsTr("Rotation around a waypoint")
-            QGCLabel { text: qsTr("Centre") }
-            PointSelector { id: center; objectName: "caacRotateCenter" }
-            QGCLabel { text: qsTr("Angle (degrees)") }
-            NumberField { id: angle; objectName: "caacRotateAngle"; text: "0" }
-            QGCCheckBox { id: rotateHome; objectName: "caacRotateIncludeHome"; text: qsTr("Include H point") }
-            QGCButton {
-                objectName: "caacRotateApply"
-                Layout.fillWidth: true
-                text: qsTr("Rotate")
-                primary: true
-                onClicked: {
-                    const selected = root.point(center)
-                    if (selected) {
-                        root.routeController.rotateRouteAround(selected.coordinate, root.number(angle.text), rotateHome.checked)
                     }
                 }
             }
