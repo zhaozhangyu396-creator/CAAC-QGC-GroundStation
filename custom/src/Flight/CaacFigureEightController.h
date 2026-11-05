@@ -240,8 +240,8 @@ private:
     int _completedLaps = 0;
     qint64 _lastPosition = -1;
     qint64 _lastAttitude = -1;
+    qint64 _lastAttitudeQuaternion = -1;
     double _headingDegrees = qQNaN();
-    bool _usingAttitudeQuaternion = false;
     qint64 _lastSpeed = -1;
     qint64 _lastGpsFix = -1;
     int _gpsFixType = 0;

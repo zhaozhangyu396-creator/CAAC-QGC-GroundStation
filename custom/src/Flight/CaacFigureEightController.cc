@@ -26,11 +26,14 @@ constexpr int POINTS_PER_CIRCLE = 120;
 constexpr int MAX_SITES = 200;
 constexpr int MAX_RECORDED_POINTS = 18000;
 constexpr qint64 TELEMETRY_TIMEOUT_MS = 3000;
+// Resume live Euler data before quaternion freshness can end the session.
+constexpr qint64 ATTITUDE_QUATERNION_PREFERENCE_MS = TELEMETRY_TIMEOUT_MS / 2;
 constexpr qint64 CENTRE_HOLD_MS = 3000;
 constexpr double CENTRE_MIN_HEIGHT = 1.5;
 constexpr double CENTRE_RADIUS = 1.0;
 constexpr double CENTRE_HEADING_TOLERANCE = 30.0;
-constexpr double HOVER_MAX_SPEED = 0.3;
+// VFR_HUD encodes both speeds as floats, including the 0.3 m/s boundary.
+constexpr float HOVER_MAX_SPEED = 0.3f;
 // Product freshness window for a future ground-sensor adapter; the exam standard specifies no transport timeout.
 constexpr qint64 WIND_TIMEOUT_MS = 10000;
 constexpr auto SETTINGS_GROUP = "CAAC/FigureEight";
@@ -918,9 +921,8 @@ void CaacFigureEightController::_setVehicle(Vehicle* vehicle)
     }
     _calibrationVehicle.clear();
     _vehicle = vehicle;
-    _lastPosition = _lastAttitude = _lastSpeed = -1;
+    _lastPosition = _lastAttitude = _lastAttitudeQuaternion = _lastSpeed = -1;
     _headingDegrees = qQNaN();
-    _usingAttitudeQuaternion = false;
     _lastGpsFix = -1;
     _gpsFixType = GPS_FIX_TYPE_NO_GPS;
     _rtkCoordinate = {};
@@ -940,7 +942,9 @@ void CaacFigureEightController::_setVehicle(Vehicle* vehicle)
                 if (position.lat != 0 || position.lon != 0) {
                     _lastPosition = now;
                 }
-            } else if (message.msgid == MAVLINK_MSG_ID_ATTITUDE && !_usingAttitudeQuaternion) {
+            } else if (message.msgid == MAVLINK_MSG_ID_ATTITUDE &&
+                       (_lastAttitudeQuaternion < 0 ||
+                        now - _lastAttitudeQuaternion >= ATTITUDE_QUATERNION_PREFERENCE_MS)) {
                 mavlink_attitude_t attitude{};
                 mavlink_msg_attitude_decode(&message, &attitude);
                 if (std::isfinite(attitude.yaw)) {
@@ -966,8 +970,7 @@ void CaacFigureEightController::_setVehicle(Vehicle* vehicle)
                 mavlink_quaternion_to_euler(q, &roll, &pitch, &yaw);
                 if (std::isfinite(yaw)) {
                     _headingDegrees = std::fmod(wrappedDifference(yaw * 180 / std::numbers::pi) + 360, 360);
-                    _usingAttitudeQuaternion = true;
-                    _lastAttitude = now;
+                    _lastAttitude = _lastAttitudeQuaternion = now;
                 }
             } else if (message.msgid == MAVLINK_MSG_ID_VFR_HUD) {
                 _lastSpeed = now;

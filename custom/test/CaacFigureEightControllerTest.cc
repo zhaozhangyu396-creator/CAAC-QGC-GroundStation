@@ -69,7 +69,8 @@ bool reportGps(Vehicle* vehicle, MockLink* link, const QGeoCoordinate& coordinat
 }
 
 bool reportPosition(Vehicle* vehicle, MockLink* link, CaacFigureEightController& controller,
-                    const QGeoCoordinate& coordinate, double horizontalSpeed = 0, double verticalSpeed = 0)
+                    const QGeoCoordinate& coordinate, double horizontalSpeed = 0, double verticalSpeed = 0,
+                    bool quaternionStream = true)
 {
     if (!vehicle || !link) {
         return false;
@@ -82,12 +83,14 @@ bool reportPosition(Vehicle* vehicle, MockLink* link, CaacFigureEightController&
         !reportSpeed(vehicle, link, horizontalSpeed, verticalSpeed)) {
         return false;
     }
-    const float offset[] = {1, 0, 0, 0};
-    mavlink_msg_attitude_quaternion_pack(vehicle->id(), vehicle->compId(), &attitude, 0, std::cos(yaw / 2), 0, 0,
-                                         std::sin(yaw / 2), 0, 0, 0, offset);
-    if (!QMetaObject::invokeMethod(vehicle, "_mavlinkMessageReceived", Qt::DirectConnection,
-                                   Q_ARG(LinkInterface*, link), Q_ARG(mavlink_message_t, attitude))) {
-        return false;
+    if (quaternionStream) {
+        const float offset[] = {1, 0, 0, 0};
+        mavlink_msg_attitude_quaternion_pack(vehicle->id(), vehicle->compId(), &attitude, 0, std::cos(yaw / 2), 0, 0,
+                                             std::sin(yaw / 2), 0, 0, 0, offset);
+        if (!QMetaObject::invokeMethod(vehicle, "_mavlinkMessageReceived", Qt::DirectConnection,
+                                       Q_ARG(LinkInterface*, link), Q_ARG(mavlink_message_t, attitude))) {
+            return false;
+        }
     }
     mavlink_message_t position{};
     mavlink_msg_global_position_int_pack(
@@ -167,6 +170,7 @@ private slots:
     void _rtkCalibrationFreshnessAndVehicleSwitch();
     void _manualSessionDoesNotChangeMission();
     void _phasesAndVoice();
+    void _centreQualification_data();
     void _centreQualification();
     void _eightStartsEitherSide_data();
     void _eightStartsEitherSide();
@@ -734,8 +738,23 @@ void CaacFigureEightControllerTest::_phasesAndVoice()
     QVERIFY(restored.voiceEnabled());
 }
 
+void CaacFigureEightControllerTest::_centreQualification_data()
+{
+    QTest::addColumn<bool>("quaternionStream");
+    QTest::addColumn<double>("qualifiedHeight");
+    QTest::addColumn<double>("qualifiedSpeed");
+    QTest::addColumn<double>("qualifiedClimb");
+    QTest::newRow("speed-and-climb-at-0.3mps") << true << 1.5 << 0.3 << 0.3;
+    QTest::newRow("speed-and-descent-above-2m") << true << 2.32 << 0.3 << -0.3;
+    QTest::newRow("euler-after-quaternion-at-1.5m") << false << 1.5 << 0.0 << 0.0;
+}
+
 void CaacFigureEightControllerTest::_centreQualification()
 {
+    QFETCH(bool, quaternionStream);
+    QFETCH(double, qualifiedHeight);
+    QFETCH(double, qualifiedSpeed);
+    QFETCH(double, qualifiedClimb);
     QSettings().remove(QStringLiteral("CAAC/FigureEight"));
     _connectMockLink();
     QVERIFY(vehicle());
@@ -750,11 +769,28 @@ void CaacFigureEightControllerTest::_centreQualification()
     double reportedHeading = 0;
     double reportedSpeed = 0;
     double reportedClimb = 0;
+    bool reportQuaternion = true;
+    bool reportTelemetry = true;
+    int eulerSamples = 0;
     const auto report = [&]() {
+        if (!quaternionStream) {
+            mavlink_message_t heartbeat{};
+            mavlink_msg_heartbeat_pack(vehicle()->id(), vehicle()->compId(), &heartbeat, MAV_TYPE_QUADROTOR,
+                                       vehicle()->firmwareType(), vehicle()->baseMode(), vehicle()->customMode(),
+                                       MAV_STATE_ACTIVE);
+            vehicle()->vehicleLinkManager()->mavlinkMessageReceived(mockLink(), heartbeat);
+        }
+        if (!reportTelemetry) {
+            return true;
+        }
         mockLink()->setVehicleAttitudeOverrideDeg(0, 0, reportedHeading);
         vehicle()->heading()->setRawValue(reportedHeading);
         vehicle()->altitudeRelative()->setRawValue(reportedHeight);
-        return reportPosition(vehicle(), mockLink(), controller, reportedCoordinate, reportedSpeed, reportedClimb);
+        if (!reportQuaternion) {
+            ++eulerSamples;
+        }
+        return reportPosition(vehicle(), mockLink(), controller, reportedCoordinate, reportedSpeed, reportedClimb,
+                              reportQuaternion);
     };
     QTimer telemetry;
     connect(&telemetry, &QTimer::timeout, this, [&]() { report(); });
@@ -798,14 +834,32 @@ void CaacFigureEightControllerTest::_centreQualification()
     QVERIFY(report());
     QCOMPARE(controller.metrics().value(QStringLiteral("hoverStableSeconds")).toDouble(), 0.0);
     QCOMPARE(controller.phase(), QStringLiteral("中心筒就位"));
+    if (!quaternionStream) {
+        mockLink()->setCommLost(true);
+        reportQuaternion = false;
+        QTRY_VERIFY_WITH_TIMEOUT(eulerSamples >= 10, TestTimeout::mediumMs());
+        QVERIFY2(controller.running(), qPrintable(controller.status()));
+    }
     reportedCoordinate = centre;
-    // The recording shows a stationary aircraft at 2.32 m: there must be no 2 m upper bound.
-    reportedHeight = 2.32;
+    reportedHeight = qualifiedHeight;
     reportedHeading = 30;
+    reportedSpeed = qualifiedSpeed;
+    reportedClimb = qualifiedClimb;
     QVERIFY(report());
-    QTRY_COMPARE_WITH_TIMEOUT(controller.phase(), QStringLiteral("八字飞行"), TestTimeout::longMs());
+    const auto pending = controller.metrics().value(QStringLiteral("positioningPending")).toStringList();
+    QVERIFY2(pending.isEmpty(), qPrintable(pending.join(QStringLiteral("; "))));
+    QTRY_VERIFY_WITH_TIMEOUT(!controller.running() || controller.phase() == QStringLiteral("八字飞行"),
+                             TestTimeout::mediumMs());
+    QVERIFY2(controller.running(), qPrintable(controller.status()));
+    QCOMPARE(controller.phase(), QStringLiteral("八字飞行"));
     QVERIFY(controller.metrics().value(QStringLiteral("elapsed")).toDouble() >= 4);
     QCOMPARE(controller.attemptNumber(), 1);
+    if (!quaternionStream) {
+        reportTelemetry = false;
+        QTRY_VERIFY_WITH_TIMEOUT(!controller.running(), TestTimeout::mediumMs());
+        QVERIFY(controller.status().contains(QStringLiteral("遥测")));
+        QVERIFY(!controller.metrics().value(QStringLiteral("telemetryValid")).toBool());
+    }
     controller.stop();
 }
 
