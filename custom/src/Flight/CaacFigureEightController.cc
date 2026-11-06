@@ -31,7 +31,8 @@ constexpr qint64 ATTITUDE_QUATERNION_PREFERENCE_MS = TELEMETRY_TIMEOUT_MS / 2;
 constexpr qint64 CENTRE_HOLD_MS = 3000;
 constexpr double CENTRE_MIN_HEIGHT = 1.5;
 constexpr double CENTRE_RADIUS = 1.0;
-constexpr double CENTRE_HEADING_TOLERANCE = 30.0;
+constexpr double CENTRE_HEADING_TOLERANCE = 15.0;
+constexpr float MIN_FIGURE_EIGHT_SPEED = 0.3f;
 // VFR_HUD encodes both speeds as floats, including the 0.3 m/s boundary.
 constexpr float HOVER_MAX_SPEED = 0.3f;
 // Product freshness window for a future ground-sensor adapter; the exam standard specifies no transport timeout.
@@ -659,8 +660,10 @@ void CaacFigureEightController::_beginPhase(bool reverseSpin)
         double heading = 0;
         _previousProgress = _nearestProgress(_vehicle->coordinate(), distance, heading);
         _status = tr("可以从左圆或右圆开始水平八字飞行，运动离开中心筒半径 1 米范围后开始评分。");
-        _announce(spinCompleted ? QStringLiteral("spin_completed") : QStringLiteral("figure_eight"),
-                  spinCompleted ? tr("自旋完成，可以开始水平八字飞行。") : tr("可以开始水平八字飞行。"));
+        if (spinCompleted) {
+            _announce(QStringLiteral("spin_completed"), tr("自旋考试通过。"));
+        }
+        _announce(QStringLiteral("figure_eight"), tr("可以开始水平八字飞行。"));
     } else {
         _phaseAnchor = _reference.first();
         _spinLastHeading = _headingDegrees;
@@ -688,8 +691,8 @@ void CaacFigureEightController::_prepareAttempt()
     _violationSamples = 0;
     emit alarmsCleared();
     _status =
-        tr("请在中心筒半径 1 米范围内、高度不低于 1.5 米处对尾悬停 3 秒。机尾朝向起飞位置，允许 "
-           "±30°；水平和垂直速度均不超过 0.3 米/秒。");
+        tr("请在中心筒半径 1 米范围内、高度不低于 1.5 米处悬停 3 秒。机头沿 AB 中垂线朝向背离起飞位置的一侧，允许 "
+           "±15°；水平和垂直速度均不超过 0.3 米/秒。");
     _announce(_attemptNumber > 1 ? QStringLiteral("retry") : QStringLiteral("positioning"),
               _attemptNumber > 1 ? tr("请返回中心筒上方，在不低于一点五米的高度对尾悬停三秒后重试。")
                                  : tr("请将无人机飞至中心筒上方一点五米处，并保持对位悬停。"));
@@ -706,9 +709,16 @@ void CaacFigureEightController::_samplePositioning()
     const double distance = QGCGeo::geodesicDistance(_reference.first(), coordinate);
     const double speed = _vehicle->groundSpeed()->rawValue().toDouble();
     const double verticalSpeed = _vehicle->climbRate()->rawValue().toDouble();
-    const bool takeoffValid =
-        _takeoffPosition.isValid() && QGCGeo::geodesicDistance(_takeoffPosition, coordinate) >= 0.5;
-    const double idealHeading = takeoffValid ? QGCGeo::geodesicAzimuth(_takeoffPosition, coordinate) : qQNaN();
+    const auto centre = _reference.first();
+    const bool takeoffValid = _takeoffPosition.isValid() && QGCGeo::geodesicDistance(_takeoffPosition, centre) >= 0.5;
+    double idealHeading = qQNaN();
+    if (takeoffValid) {
+        idealHeading = std::fmod(QGCGeo::geodesicAzimuth(_pointA, _pointB) + 90, 360);
+        const double awayFromTakeoff = QGCGeo::geodesicAzimuth(_takeoffPosition, centre);
+        if (std::abs(wrappedDifference(idealHeading - awayFromTakeoff)) > 90) {
+            idealHeading = std::fmod(idealHeading + 180, 360);
+        }
+    }
     const double headingError = std::abs(wrappedDifference(_headingDegrees - idealHeading));
     QStringList pending;
     if (!_vehicle->armed() || !_vehicle->airborne()) {
@@ -723,7 +733,7 @@ void CaacFigureEightController::_samplePositioning()
     if (!takeoffValid) {
         pending.append(tr("当前位置距起飞位置过近，无法确定对尾方向"));
     } else if (headingError > CENTRE_HEADING_TOLERANCE + 1e-4) {  // MAVLink yaw is a float in radians.
-        pending.append(tr("请将机尾朝向起飞位置，角度误差不超过 30°"));
+        pending.append(tr("请沿 AB 中垂线背向起飞位置，机头航向误差不超过 15°"));
     }
     if (speed > HOVER_MAX_SPEED || !std::isfinite(verticalSpeed) || std::abs(verticalSpeed) > HOVER_MAX_SPEED) {
         pending.append(tr("请保持悬停，水平和垂直速度均不超过 0.3 米/秒"));
@@ -776,13 +786,13 @@ void CaacFigureEightController::_samplePositioning()
 void CaacFigureEightController::_failAttempt(const QString& reason, const QString& cue)
 {
     _lastAttemptFailure = reason;
+    emit alarmsCleared();
+    _announce(cue, tr("%1，本次考试未通过。").arg(reason));
     if (_attemptNumber < attemptLimit()) {
-        emit alarmsCleared();
-        _announce(cue, tr("%1，本次考试未通过。").arg(reason));
         ++_attemptNumber;
         _prepareAttempt();
     } else {
-        _finish(tr("%1 考试未通过，%2 次机会已用完。").arg(reason).arg(attemptLimit()), cue);
+        _finish(tr("%1 考试未通过，%2 次机会已用完。").arg(reason).arg(attemptLimit()), QStringLiteral("failed"));
     }
 }
 
@@ -1250,12 +1260,14 @@ void CaacFigureEightController::_sample()
                     tr("高度偏差超限"), QStringLiteral("altitude"));
     recordViolation(_subjectStarted && headingError > appliedLimits.value(QStringLiteral("heading")).toDouble(),
                     tr("航向偏差超限"), QStringLiteral("heading"));
-    if (_subjectStarted && _limits.value(QStringLiteral("speedEnabled")).toBool()) {
-        recordViolation(speed < _limits.value(QStringLiteral("minSpeed")).toDouble() ||
-                            speed > _limits.value(QStringLiteral("maxSpeed")).toDouble(),
+    recordViolation(_subjectStarted && speed < MIN_FIGURE_EIGHT_SPEED, tr("八字飞行速度低于 0.3 米/秒"),
+                    QStringLiteral("speed_low"));
+    if (_subjectStarted && speed >= MIN_FIGURE_EIGHT_SPEED && _limits.value(QStringLiteral("speedEnabled")).toBool()) {
+        recordViolation(speed < _limits.value(QStringLiteral("minSpeed")).toFloat() ||
+                            speed > _limits.value(QStringLiteral("maxSpeed")).toFloat(),
                         tr("自定义速度超限"),
-                        speed < _limits.value(QStringLiteral("minSpeed")).toDouble() ? QStringLiteral("speed_low")
-                                                                                     : QStringLiteral("speed_high"));
+                        speed < _limits.value(QStringLiteral("minSpeed")).toFloat() ? QStringLiteral("speed_low")
+                                                                                    : QStringLiteral("speed_high"));
     }
     const bool timedOut = _subjectStarted && _limits.value(QStringLiteral("durationEnabled")).toBool() &&
                           _phaseClock.elapsed() / 1000.0 > _limits.value(QStringLiteral("maxDuration")).toDouble();
@@ -1297,7 +1309,7 @@ void CaacFigureEightController::_sample()
     if (sampleViolated) {
         _failAttempt(_violations.join(tr("、")), failureCue);
     } else if (_completedLaps > 0) {
-        _finish(tr("考试成功。"), QStringLiteral("completed"));
+        _finish(tr("考试通过。"), QStringLiteral("completed"));
     }
 }
 
@@ -1395,7 +1407,7 @@ void CaacFigureEightController::_sampleSpin()
             _beginPhase();
         } else {
             _spinPassed = true;
-            _finish(tr("考试成功。"), QStringLiteral("completed"));
+            _finish(tr("自旋考试通过。"), QStringLiteral("spin_completed"));
         }
     }
 }
@@ -1407,7 +1419,7 @@ void CaacFigureEightController::_finish(const QString& message, const QString& c
     _phase = Phase::Finished;
     emit alarmsCleared();
     _status = message;
-    _announce(cue, message);
+    _announce(cue, cue == QStringLiteral("failed") ? tr("考试失败，三次机会已用完。") : message);
     emit sessionChanged();
 }
 

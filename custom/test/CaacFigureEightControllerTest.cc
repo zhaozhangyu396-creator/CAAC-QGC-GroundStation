@@ -12,6 +12,7 @@
 #include <QtCore/QTemporaryDir>
 #include <QtTest/QSignalSpy>
 
+#include "CaacExamAudio.h"
 #include "CaacFigureEightController.h"
 #include "LinkInterface.h"
 #include "MissionManager.h"
@@ -103,7 +104,7 @@ bool reportPosition(Vehicle* vehicle, MockLink* link, CaacFigureEightController&
 }
 
 bool reportReferencePosition(Vehicle* vehicle, MockLink* link, CaacFigureEightController& controller, int index,
-                             double speed = 0)
+                             double speed = 1)
 {
     if (!vehicle) {
         return false;
@@ -175,7 +176,9 @@ private slots:
     void _eightStartsEitherSide_data();
     void _eightStartsEitherSide();
     void _headingEvaluation();
+    void _minimumFigureEightSpeed();
     void _voiceResources();
+    void _voiceQueue();
 
 private:
     void _ignoreMissingPressureBackend();
@@ -677,8 +680,10 @@ void CaacFigureEightControllerTest::_phasesAndVoice()
     QVERIFY(controller.running());
     QVERIFY(controller.spinPassed());
     QCOMPARE(controller.phase(), QStringLiteral("八字飞行"));
-    QCOMPARE(speech.last()[0].toString(), QStringLiteral("spin_completed"));
-    QCOMPARE(controller.lastAnnouncement(), QStringLiteral("自旋完成，可以开始水平八字飞行。"));
+    QCOMPARE(speech[speech.size() - 2][0].toString(), QStringLiteral("spin_completed"));
+    QCOMPARE(speech[speech.size() - 2][1].toString(), QStringLiteral("自旋考试通过。"));
+    QCOMPARE(speech.last()[0].toString(), QStringLiteral("figure_eight"));
+    QCOMPARE(controller.lastAnnouncement(), QStringLiteral("可以开始水平八字飞行。"));
     QVERIFY(controller.awaitingFigureEight());
 
     vehicle()->altitudeRelative()->setRawValue(3.0);
@@ -712,7 +717,7 @@ void CaacFigureEightControllerTest::_phasesAndVoice()
     QVERIFY(!controller.running());
     QCOMPARE(controller.metrics().value(QStringLiteral("completedLaps")).toInt(), 1);
     QCOMPARE(speech.last()[0].toString(), QStringLiteral("completed"));
-    QCOMPARE(controller.lastAnnouncement(), QStringLiteral("考试成功。"));
+    QCOMPARE(controller.lastAnnouncement(), QStringLiteral("考试通过。"));
     QCOMPARE(controller.attemptNumber(), 3);
     int spinPrompts = 0;
     for (const auto& cue : speech) {
@@ -731,11 +736,30 @@ void CaacFigureEightControllerTest::_phasesAndVoice()
     }
     QVERIFY(!controller.running());
     QCOMPARE(controller.attemptNumber(), 3);
-    QCOMPARE(speech.last()[0].toString(), QStringLiteral("spin_too_fast"));
+    QCOMPARE(speech.last()[0].toString(), QStringLiteral("failed"));
+    QCOMPARE(speech[speech.size() - 2][0].toString(), QStringLiteral("spin_too_fast"));
+    QCOMPARE(controller.lastAnnouncement(), QStringLiteral("考试失败，三次机会已用完。"));
     QVERIFY(controller.status().contains(QStringLiteral("3 次机会已用完")));
+    controller.setExerciseMode(1);
+    QVERIFY(controller.setLimits({{QStringLiteral("speedEnabled"), true},
+                                  {QStringLiteral("minSpeed"), 0.1},
+                                  {QStringLiteral("maxSpeed"), 0.2}}));
+    QVERIFY(controller.start());
+    QVERIFY(turnTo(0));
+    QTRY_COMPARE_WITH_TIMEOUT(controller.phase(), QStringLiteral("原地自旋"), TestTimeout::longMs());
+    QVERIFY(turnTo(30));
+    QTRY_VERIFY_WITH_TIMEOUT(controller.metrics().value(QStringLiteral("phaseElapsed")).toDouble() >= 5.1,
+                             TestTimeout::longMs());
+    QVERIFY(finishTurn(2));
+    QVERIFY(!controller.running());
+    QVERIFY(controller.spinPassed());
+    QCOMPARE(speech.last()[0].toString(), QStringLiteral("spin_completed"));
+    QCOMPARE(controller.lastAnnouncement(), QStringLiteral("自旋考试通过。"));
+    controller.setExerciseMode(2);
     CaacFigureEightController restored;
     QCOMPARE(restored.exerciseMode(), 2);
     QVERIFY(restored.voiceEnabled());
+    QCOMPARE(restored.limits().value(QStringLiteral("maxSpeed")).toDouble(), 0.2);
 }
 
 void CaacFigureEightControllerTest::_centreQualification_data()
@@ -744,9 +768,12 @@ void CaacFigureEightControllerTest::_centreQualification_data()
     QTest::addColumn<double>("qualifiedHeight");
     QTest::addColumn<double>("qualifiedSpeed");
     QTest::addColumn<double>("qualifiedClimb");
-    QTest::newRow("speed-and-climb-at-0.3mps") << true << 1.5 << 0.3 << 0.3;
-    QTest::newRow("speed-and-descent-above-2m") << true << 2.32 << 0.3 << -0.3;
-    QTest::newRow("euler-after-quaternion-at-1.5m") << false << 1.5 << 0.0 << 0.0;
+    QTest::addColumn<double>("siteBearing");
+    QTest::addColumn<int>("exerciseMode");
+    QTest::newRow("spin-normal-80-speed-and-climb-at-0.3mps") << true << 1.5 << 0.3 << 0.3 << 170.0 << 1;
+    QTest::newRow("eight-normal-80-speed-and-climb-at-0.3mps") << true << 1.5 << 0.3 << 0.3 << 170.0 << 0;
+    QTest::newRow("normal-350-speed-and-descent-above-2m") << true << 2.32 << 0.3 << -0.3 << 80.0 << 0;
+    QTest::newRow("normal-0-euler-after-quaternion-at-1.5m") << false << 1.5 << 0.0 << 0.0 << 90.0 << 2;
 }
 
 void CaacFigureEightControllerTest::_centreQualification()
@@ -755,18 +782,22 @@ void CaacFigureEightControllerTest::_centreQualification()
     QFETCH(double, qualifiedHeight);
     QFETCH(double, qualifiedSpeed);
     QFETCH(double, qualifiedClimb);
+    QFETCH(double, siteBearing);
+    QFETCH(int, exerciseMode);
     QSettings().remove(QStringLiteral("CAAC/FigureEight"));
     _connectMockLink();
     QVERIFY(vehicle());
     QVERIFY(waitForInitialConnect());
     QTRY_VERIFY_WITH_TIMEOUT(vehicle()->coordinate().isValid(), TestTimeout::mediumMs());
     CaacFigureEightController controller;
+    controller.setExerciseMode(exerciseMode);
     const auto centre = vehicle()->coordinate();
-    QVERIFY(controller.setPoints(QGCGeo::geodesicDestination(centre, 270, 12),
-                                 QGCGeo::geodesicDestination(centre, 90, 12)));
+    QVERIFY(controller.setPoints(QGCGeo::geodesicDestination(centre, siteBearing + 180, 12),
+                                 QGCGeo::geodesicDestination(centre, siteBearing, 12)));
+    const double idealHeading = std::fmod(siteBearing + 270, 360);
     QGeoCoordinate reportedCoordinate = centre;
     double reportedHeight = 0;
-    double reportedHeading = 0;
+    double reportedHeading = idealHeading;
     double reportedSpeed = 0;
     double reportedClimb = 0;
     bool reportQuaternion = true;
@@ -813,11 +844,13 @@ void CaacFigureEightControllerTest::_centreQualification()
     reportedCoordinate = QGCGeo::geodesicDestination(centre, 90, 1.02);
     QVERIFY(rejected());
     reportedCoordinate = centre;
-    reportedHeading = 31;
+    reportedHeading = std::fmod(idealHeading + 16, 360);
     QVERIFY(rejected());
-    reportedHeading = 329;
+    reportedHeading = std::fmod(idealHeading + 344, 360);
     QVERIFY(rejected());
-    reportedHeading = 0;
+    reportedHeading = std::fmod(idealHeading + 180, 360);
+    QVERIFY(rejected());
+    reportedHeading = idealHeading;
     reportedSpeed = 0.31;
     QVERIFY(rejected());
     reportedSpeed = 0;
@@ -828,6 +861,14 @@ void CaacFigureEightControllerTest::_centreQualification()
     reportedClimb = 0;
     reportedHeight = 1.5;
     QVERIFY(report());
+    QVERIFY(std::abs(std::remainder(
+                controller.metrics().value(QStringLiteral("idealHeading")).toDouble() - idealHeading, 360)) < 0.01);
+    const double fieldHeading = controller.metrics().value(QStringLiteral("idealHeading")).toDouble();
+    reportedCoordinate = QGCGeo::geodesicDestination(centre, idealHeading + 90, 0.5);
+    QVERIFY(report());
+    QVERIFY(std::abs(std::remainder(
+                controller.metrics().value(QStringLiteral("idealHeading")).toDouble() - idealHeading, 360)) < 0.01);
+    reportedCoordinate = centre;
     QTRY_VERIFY_WITH_TIMEOUT(controller.metrics().value(QStringLiteral("hoverStableSeconds")).toDouble() >= 1,
                              TestTimeout::mediumMs());
     reportedCoordinate = QGCGeo::geodesicDestination(centre, 90, 1.02);
@@ -842,16 +883,23 @@ void CaacFigureEightControllerTest::_centreQualification()
     }
     reportedCoordinate = centre;
     reportedHeight = qualifiedHeight;
-    reportedHeading = 30;
+    reportedHeading = std::fmod(fieldHeading + 345, 360);
+    QVERIFY(report());
+    QVERIFY(controller.metrics().value(QStringLiteral("positioningPending")).toStringList().isEmpty());
+    reportedHeading = std::fmod(fieldHeading + 15, 360);
     reportedSpeed = qualifiedSpeed;
     reportedClimb = qualifiedClimb;
     QVERIFY(report());
     const auto pending = controller.metrics().value(QStringLiteral("positioningPending")).toStringList();
-    QVERIFY2(pending.isEmpty(), qPrintable(pending.join(QStringLiteral("; "))));
-    QTRY_VERIFY_WITH_TIMEOUT(!controller.running() || controller.phase() == QStringLiteral("八字飞行"),
-                             TestTimeout::mediumMs());
+    const auto qualificationDetails = [&]() {
+        return QJsonDocument::fromVariant(controller.metrics()).toJson(QJsonDocument::Compact);
+    };
+    QVERIFY2(pending.isEmpty(), qualificationDetails().constData());
+    const auto qualifiedPhase = exerciseMode == 0 ? QStringLiteral("八字飞行") : QStringLiteral("原地自旋");
+    QTRY_VERIFY2_WITH_TIMEOUT(!controller.running() || controller.phase() == qualifiedPhase,
+                              qualificationDetails().constData(), TestTimeout::mediumMs());
     QVERIFY2(controller.running(), qPrintable(controller.status()));
-    QCOMPARE(controller.phase(), QStringLiteral("八字飞行"));
+    QCOMPARE(controller.phase(), qualifiedPhase);
     QVERIFY(controller.metrics().value(QStringLiteral("elapsed")).toDouble() >= 4);
     QCOMPARE(controller.attemptNumber(), 1);
     if (!quaternionStream) {
@@ -920,7 +968,7 @@ void CaacFigureEightControllerTest::_eightStartsEitherSide()
     }
     QVERIFY(!controller.running());
     QCOMPARE(controller.metrics().value(QStringLiteral("completedLaps")).toInt(), 1);
-    QCOMPARE(controller.lastAnnouncement(), QStringLiteral("考试成功。"));
+    QCOMPARE(controller.lastAnnouncement(), QStringLiteral("考试通过。"));
 }
 
 void CaacFigureEightControllerTest::_headingEvaluation()
@@ -939,9 +987,11 @@ void CaacFigureEightControllerTest::_headingEvaluation()
     speedTelemetry.start(100);
     const auto origin = vehicle()->coordinate();
     const double siteBearings[] = {90, 35, 270};
+    const double alignmentHeadings[] = {0, 305, 0};
     for (const int standard : {0, 1, 2}) {
         controller.setStandard(standard);
         const double bearing = siteBearings[standard];
+        const double alignmentHeading = alignmentHeadings[standard];
         QVERIFY(controller.setPoints(QGCGeo::geodesicDestination(origin, bearing + 180, 12),
                                      QGCGeo::geodesicDestination(origin, bearing, 12)));
         const auto path = controller.referencePath();
@@ -952,8 +1002,8 @@ void CaacFigureEightControllerTest::_headingEvaluation()
                     2);
         }
         QVERIFY(reportPosition(vehicle(), mockLink(), controller, origin));
-        mockLink()->setVehicleAttitudeOverrideDeg(0, 0, 0);
-        vehicle()->heading()->setRawValue(0);
+        mockLink()->setVehicleAttitudeOverrideDeg(0, 0, alignmentHeading);
+        vehicle()->heading()->setRawValue(alignmentHeading);
         QTRY_VERIFY_WITH_TIMEOUT(controller.running() || controller.start(), TestTimeout::mediumMs());
         QTRY_COMPARE_WITH_TIMEOUT(controller.phase(), QStringLiteral("八字飞行"), TestTimeout::longMs());
         for (int i = 1; i < path.size(); ++i) {
@@ -967,7 +1017,7 @@ void CaacFigureEightControllerTest::_headingEvaluation()
                 QGCGeo::geodesicAzimuth(circleCentre, reportedCoordinate) + (clockwise ? 90 : -90) + 360, 360);
             const double bodyHeading = std::fmod(ideal + 15.25 + (standard == 2 ? 180 : 0), 360);
             vehicle()->heading()->setRawValue(bodyHeading);
-            QVERIFY(reportPosition(vehicle(), mockLink(), controller, coordinate));
+            QVERIFY(reportPosition(vehicle(), mockLink(), controller, coordinate, 1));
             const auto metrics = controller.metrics();
             const double measuredIdeal = metrics.value(QStringLiteral("idealHeading")).toDouble();
             // At the shared centre either contiguous circle can supply the tangent after GPS quantization.
@@ -987,14 +1037,16 @@ void CaacFigureEightControllerTest::_headingEvaluation()
             }
         }
         QVERIFY(!controller.running());
-        QCOMPARE(controller.lastAnnouncement(), QStringLiteral("考试成功。"));
+        QCOMPARE(controller.lastAnnouncement(), QStringLiteral("考试通过。"));
     }
     for (const bool highSpeed : {true, false}) {
         QVERIFY(controller.setLimits({{QStringLiteral("speedEnabled"), true},
                                       {QStringLiteral("minSpeed"), highSpeed ? 0.0 : 1.0},
                                       {QStringLiteral("maxSpeed"), highSpeed ? 1.0 : 3.0}}));
         QVERIFY(reportPosition(vehicle(), mockLink(), controller, origin));
-        vehicle()->heading()->setRawValue(0);
+        const double alignmentHeading = alignmentHeadings[2];
+        mockLink()->setVehicleAttitudeOverrideDeg(0, 0, alignmentHeading);
+        vehicle()->heading()->setRawValue(alignmentHeading);
         QVERIFY(controller.start());
         QTRY_COMPARE_WITH_TIMEOUT(controller.phase(), QStringLiteral("八字飞行"), TestTimeout::longMs());
         if (highSpeed) {
@@ -1002,7 +1054,7 @@ void CaacFigureEightControllerTest::_headingEvaluation()
             vehicle()->groundSpeed()->setRawValue(2.0);
             QVERIFY(QMetaObject::invokeMethod(&controller, "_sample", Qt::DirectConnection));
         } else {
-            QVERIFY(reportReferencePosition(vehicle(), mockLink(), controller, 4));
+            QVERIFY(reportReferencePosition(vehicle(), mockLink(), controller, 4, 0.5));
         }
         QVERIFY(controller.running());
         QCOMPARE(controller.attemptNumber(), 2);
@@ -1038,6 +1090,51 @@ void CaacFigureEightControllerTest::_headingEvaluation()
     controller.stop();
 }
 
+void CaacFigureEightControllerTest::_minimumFigureEightSpeed()
+{
+    QSettings().remove(QStringLiteral("CAAC/FigureEight"));
+    _connectMockLink();
+    QVERIFY(vehicle());
+    QVERIFY(waitForInitialConnect());
+    _ignoreMissingPressureBackend();
+    QVERIFY(takeoffAtExamHeight(vehicle()));
+    QTRY_VERIFY_WITH_TIMEOUT(vehicle()->airborne(), TestTimeout::mediumMs());
+    QVERIFY(reportTakeoffReference(vehicle(), mockLink()));
+    CaacFigureEightController controller;
+    const auto centre = vehicle()->coordinate();
+    QVERIFY(controller.setPoints(QGCGeo::geodesicDestination(centre, 270, 12),
+                                 QGCGeo::geodesicDestination(centre, 90, 12)));
+    QTimer speedTelemetry;
+    connect(&speedTelemetry, &QTimer::timeout, this, [this]() { reportSpeed(vehicle(), mockLink()); });
+    speedTelemetry.start(100);
+    QSignalSpy speech(&controller, &CaacFigureEightController::announcementRequested);
+    QVERIFY(controller.setLimits({{QStringLiteral("speedEnabled"), true},
+                                  {QStringLiteral("minSpeed"), 0.1},
+                                  {QStringLiteral("maxSpeed"), 0.3}}));
+    for (const bool customSpeed : {false, true}) {
+        QVERIFY(controller.setLimits({{QStringLiteral("speedEnabled"), customSpeed},
+                                      {QStringLiteral("minSpeed"), 0.1},
+                                      {QStringLiteral("maxSpeed"), 0.3}}));
+        vehicle()->heading()->setRawValue(0);
+        mockLink()->setVehicleAttitudeOverrideDeg(0, 0, 0);
+        QVERIFY(reportPosition(vehicle(), mockLink(), controller, centre));
+        QVERIFY(controller.start());
+        QTRY_COMPARE_WITH_TIMEOUT(controller.phase(), QStringLiteral("八字飞行"), TestTimeout::longMs());
+        QVERIFY(reportPosition(vehicle(), mockLink(), controller, centre, 0));
+        QVERIFY(controller.awaitingFigureEight());
+        QCOMPARE(controller.attemptNumber(), 1);
+        QVERIFY(reportReferencePosition(vehicle(), mockLink(), controller, 4, 0.3));
+        QVERIFY(!controller.awaitingFigureEight());
+        QCOMPARE(controller.attemptNumber(), 1);
+        QVERIFY(reportReferencePosition(vehicle(), mockLink(), controller, 5, 0.299));
+        QCOMPARE(controller.attemptNumber(), 2);
+        QCOMPARE(controller.phase(), QStringLiteral("中心筒就位"));
+        QCOMPARE(speech[speech.size() - 2][0].toString(), QStringLiteral("speed_low"));
+        QVERIFY(controller.lastAttemptFailure().contains(QStringLiteral("0.3")));
+        controller.stop();
+    }
+}
+
 void CaacFigureEightControllerTest::_voiceResources()
 {
     QFile manifest(QStringLiteral(":/CAAC/ExamAudio/manifest.json"));
@@ -1056,11 +1153,60 @@ void CaacFigureEightControllerTest::_voiceResources()
         QCOMPARE(data.size(), clip.value(QStringLiteral("byteSize")).toInteger());
         QCOMPARE(QString::fromLatin1(QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex()),
                  clip.value(QStringLiteral("sha256")).toString());
+        if (id == QStringLiteral("spin_completed")) {
+            QCOMPARE(clip.value(QStringLiteral("text")).toString(), QStringLiteral("自旋考试通过。"));
+        } else if (id == QStringLiteral("completed")) {
+            QCOMPARE(clip.value(QStringLiteral("text")).toString(), QStringLiteral("考试通过。"));
+        } else if (id == QStringLiteral("failed")) {
+            QCOMPARE(clip.value(QStringLiteral("text")).toString(), QStringLiteral("考试失败，三次机会已用完。"));
+        }
     }
     for (const auto& id : {"ready", "positioning", "spin", "spin_reverse", "spin_completed", "spin_timeout",
                            "figure_eight", "completed", "retry", "failed"}) {
         QVERIFY(ids.contains(QString::fromLatin1(id)));
     }
+}
+
+void CaacFigureEightControllerTest::_voiceQueue()
+{
+    CaacExamAudio audio;
+    QElapsedTimer since;
+    since.start();
+    audio._pending = true;
+    audio._currentId = QStringLiteral("positioning");
+    QVERIFY(!audio._deferCue(QStringLiteral("spin_completed"), QStringLiteral("自旋考试通过。"), since));
+    audio._currentId = QStringLiteral("spin_completed");
+    QVERIFY(audio._deferCue(QStringLiteral("figure_eight"), QStringLiteral("可以开始水平八字飞行。"), since));
+    auto next = audio._nextQueuedCue();
+    QVERIFY(next.has_value());
+    QCOMPARE(next->id, QStringLiteral("figure_eight"));
+
+    audio._currentId = QStringLiteral("speed_low");
+    QVERIFY(audio._deferCue(QStringLiteral("failed"), QStringLiteral("考试失败，三次机会已用完。"), since));
+    QVERIFY(audio._deferCue(QStringLiteral("retry"), QStringLiteral("重新就位"), since));
+    QVERIFY(audio._deferCue(QStringLiteral("ready"), QStringLiteral("就绪"), since));
+    audio.clearPendingWarnings();
+    next = audio._nextQueuedCue();
+    QVERIFY(next.has_value());
+    QCOMPARE(next->id, QStringLiteral("failed"));
+    QCOMPARE(next->text, QStringLiteral("考试失败，三次机会已用完。"));
+    QVERIFY(!audio._nextQueuedCue().has_value());
+
+    audio._currentId = QStringLiteral("completed");
+    QVERIFY(audio._deferCue(QStringLiteral("ready"), QStringLiteral("就绪"), since));
+    audio.clearPendingWarnings();
+    QVERIFY(audio._pending);
+    QCOMPARE(audio._currentId, QStringLiteral("completed"));
+    QVERIFY(!audio._nextQueuedCue().has_value());
+    QVERIFY(!CaacExamAudio::_cueExpired(QStringLiteral("completed"), 60000));
+    QVERIFY(!CaacExamAudio::_cueExpired(QStringLiteral("failed"), 60000));
+    QVERIFY(!CaacExamAudio::_cueExpired(QStringLiteral("spin_completed"), 60000));
+    QVERIFY(CaacExamAudio::_cueExpired(QStringLiteral("figure_eight"), 11000));
+    QVERIFY(audio._deferCue(QStringLiteral("failed"), QStringLiteral("最终结果"), since));
+    audio.stop();
+    QVERIFY(!audio._pending);
+    QVERIFY(audio._currentId.isEmpty());
+    QVERIFY(!audio._nextQueuedCue().has_value());
 }
 
 UT_REGISTER_TEST(CaacFigureEightControllerTest, TestLabel::Unit, TestLabel::Vehicle, TestLabel::Slow)

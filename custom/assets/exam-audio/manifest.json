@@ -122,13 +122,13 @@
     },
     {
       "id": "completed",
-      "text": "考试成功。",
+      "text": "考试通过。",
       "file": "completed.wav",
-      "durationSeconds": 1.033288,
-      "byteSize": 45646,
-      "sha256": "f6a4a30d5a994540c9eefd18221a0ff4e65dfd7db3228ecf22fd03a3d3ed8cf3",
-      "generatedAtUtc": "2026-10-28T03:41:36.095409+00:00",
-      "synthesisId": "melo-tts-20261028"
+      "durationSeconds": 1.091338,
+      "byteSize": 48206,
+      "sha256": "f3e9ad1cf721d04fae24d41a6a1c464a81acf0cda9380dc9600e5d8bc60bd123",
+      "generatedAtUtc": "2026-11-06T11:37:22.516375+00:00",
+      "synthesisId": "melo-tts-exam-results-20261106"
     },
     {
       "id": "stopped",
@@ -176,33 +176,33 @@
     },
     {
       "id": "retry",
-      "text": "请返回中心筒上方，在不低于一点五米的高度对尾悬停三秒后重试。",
+      "text": "请返回中心筒上方，沿中垂线背向起飞位置，在不低于一点五米的高度悬停三秒后重试。",
       "file": "retry.wav",
-      "durationSeconds": 5.248345,
-      "byteSize": 231530,
-      "sha256": "39df533d1d7139470d875b07e9fdb70b9228825be2e4d6c7ae9163c634b0af82",
-      "generatedAtUtc": "2026-10-28T10:40:21.861212+00:00",
-      "synthesisId": "melo-tts-centre-20261028"
+      "durationSeconds": 6.956054,
+      "byteSize": 306840,
+      "sha256": "5c834a3c288d3d52fb6d55fe548022e05ff51a95c2c2528c7703a907bd539784",
+      "generatedAtUtc": "2026-11-06T11:37:29.280266+00:00",
+      "synthesisId": "melo-tts-exam-results-20261106"
     },
     {
       "id": "failed",
-      "text": "考试未通过。",
+      "text": "考试失败，三次机会已用完。",
       "file": "failed.wav",
-      "durationSeconds": 1.219048,
-      "byteSize": 53838,
-      "sha256": "880e7db52e96cbd44f7a0b5fc5ada3cc677e774443e24ae7e7ea6bd301eb3815",
-      "generatedAtUtc": "2026-10-28T03:41:42.712451+00:00",
-      "synthesisId": "melo-tts-20261028"
+      "durationSeconds": 2.472925,
+      "byteSize": 109134,
+      "sha256": "6fe2d34b08b7ece7dc9f1f97212fb596afbd8c3632a03199c33ba9156b9d9ea6",
+      "generatedAtUtc": "2026-11-06T11:37:24.336974+00:00",
+      "synthesisId": "melo-tts-exam-results-20261106"
     },
     {
       "id": "spin_completed",
-      "text": "自旋完成，可以开始水平八字飞行，可从左圆或右圆开始。",
+      "text": "自旋考试通过。",
       "file": "spin_completed.wav",
-      "durationSeconds": 4.760091,
-      "byteSize": 209998,
-      "sha256": "decea9ac192c7a7d91872d17a2c6978f1bbdc5f047d855f3d05076a542a0ff7e",
-      "generatedAtUtc": "2026-10-28T10:40:27.543559+00:00",
-      "synthesisId": "melo-tts-centre-20261028"
+      "durationSeconds": 1.462857,
+      "byteSize": 64590,
+      "sha256": "d3cf3f513762ce7e9bfe7d9221a380fdaf1db8c65f91c1f18575f314c03959f5",
+      "generatedAtUtc": "2026-11-06T11:37:21.684625+00:00",
+      "synthesisId": "melo-tts-exam-results-20261106"
     },
     {
       "id": "spin_timeout",
@@ -230,6 +230,18 @@
     },
     {
       "id": "melo-tts-centre-20261028",
+      "provider": "MeloTTS via sherpa-onnx offline synthesis",
+      "voice": "MeloTTS Chinese/English single female speaker",
+      "synthetic": true,
+      "source": "https://github.com/myshell-ai/MeloTTS",
+      "modelSource": "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-melo-tts-zh_en.tar.bz2",
+      "modelArchiveSha256": "e58351ed7149f290a54534538badd4077cdbe6fddc964b24d0bee870415d1514",
+      "license": "MIT",
+      "licenseFile": "MeloTTS-LICENSE.txt",
+      "inference": "CPU; sherpa-onnx 2.0.1; no runtime TTS model bundled"
+    },
+    {
+      "id": "melo-tts-exam-results-20261106",
       "provider": "MeloTTS via sherpa-onnx offline synthesis",
       "voice": "MeloTTS Chinese/English single female speaker",
       "synthetic": true,

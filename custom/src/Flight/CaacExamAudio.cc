@@ -17,7 +17,6 @@
 QGC_LOGGING_CATEGORY(CaacExamAudioLog, "CAAC.ExamAudio")
 
 namespace {
-constexpr qint64 LOAD_EXPIRY_MS = 2000;
 constexpr qint64 WARNING_EXPIRY_MS = 3500;
 constexpr qint64 PHASE_CUE_EXPIRY_MS = 10000;
 }  // namespace
@@ -28,7 +27,10 @@ CaacExamAudio::CaacExamAudio(QObject* parent)
 
 int CaacExamAudio::_priority(const QString& id)
 {
-    if (id == QStringLiteral("completed") || id == QStringLiteral("failed") || id == QStringLiteral("stopped") ||
+    if (id == QStringLiteral("completed") || id == QStringLiteral("failed")) {
+        return 4;
+    }
+    if (id == QStringLiteral("spin_completed") || id == QStringLiteral("stopped") ||
         id == QStringLiteral("telemetry") || id == QStringLiteral("time_up") || id == QStringLiteral("wind") ||
         id == QStringLiteral("spin_too_fast") || id == QStringLiteral("spin_timeout") || id == QStringLiteral("area") ||
         id == QStringLiteral("altitude") || id == QStringLiteral("heading") || id == QStringLiteral("speed_high") ||
@@ -36,11 +38,16 @@ int CaacExamAudio::_priority(const QString& id)
         return 3;
     }
     if (id == QStringLiteral("ready") || id == QStringLiteral("positioning") || id == QStringLiteral("spin") ||
-        id == QStringLiteral("spin_reverse") || id == QStringLiteral("figure_eight") ||
-        id == QStringLiteral("spin_completed") || id == QStringLiteral("retry")) {
+        id == QStringLiteral("spin_reverse") || id == QStringLiteral("figure_eight") || id == QStringLiteral("retry")) {
         return 2;
     }
     return 1;
+}
+
+bool CaacExamAudio::_cueExpired(const QString& id, qint64 elapsed)
+{
+    const int priority = _priority(id);
+    return priority <= 2 && elapsed > (priority == 1 ? WARNING_EXPIRY_MS : PHASE_CUE_EXPIRY_MS);
 }
 
 bool CaacExamAudio::_ensureSettings()
@@ -79,11 +86,19 @@ void CaacExamAudio::_syncVolume()
     const double volume = _volume();
     _effect->setVolume(static_cast<float>(volume));
     if (volume <= 0) {
-        const QScopedValueRollback changing(_changingCue, true);
-        _pending = false;
-        _clearQueuedCue();
-        _currentCueSince.invalidate();
-        _currentId.clear();
+        stop();
+    }
+}
+
+void CaacExamAudio::stop()
+{
+    const QScopedValueRollback changing(_changingCue, true);
+    _pending = false;
+    _clearQueuedCue();
+    _currentCueSince.invalidate();
+    _currentId.clear();
+    _currentText.clear();
+    if (_effect) {
         _effect->stop();
     }
 }
@@ -94,9 +109,8 @@ void CaacExamAudio::_playLoaded()
         return;
     }
     _pending = false;
-    // Late device or sample initialization must not replay a cue after its flight phase has passed.
-    if (_pendingSince.elapsed() > LOAD_EXPIRY_MS || _volume() <= 0 ||
-        (_priority(_currentId) == 1 && _currentCueSince.isValid() && _currentCueSince.elapsed() > WARNING_EXPIRY_MS)) {
+    // Results remain valid across device initialization; obsolete phase cues can expire.
+    if (_volume() <= 0 || (_currentCueSince.isValid() && _cueExpired(_currentId, _currentCueSince.elapsed()))) {
         _playQueuedCue();
         return;
     }
@@ -106,15 +120,13 @@ void CaacExamAudio::_playLoaded()
 
 void CaacExamAudio::_clearQueuedCue()
 {
-    _queuedCueId.clear();
-    _queuedCueText.clear();
-    _queuedCueSince.invalidate();
+    _queuedCues.clear();
 }
 
 void CaacExamAudio::clearPendingWarnings()
 {
-    _clearQueuedCue();
-    if (_pending && _priority(_currentId) == 1) {
+    _queuedCues.removeIf([](const QueuedCue& cue) { return _priority(cue.id) <= 2; });
+    if (_pending && _priority(_currentId) <= 2) {
         const QScopedValueRollback changing(_changingCue, true);
         _pending = false;
         _currentCueSince.invalidate();
@@ -125,20 +137,44 @@ void CaacExamAudio::clearPendingWarnings()
     }
 }
 
+bool CaacExamAudio::_deferCue(const QString& id, const QString& text, const QElapsedTimer& since)
+{
+    const int priority = _priority(id);
+    const bool busy = _pending || (_effect && _effect->isPlaying());
+    const bool replacesRetry = _currentId == QStringLiteral("retry") && id != QStringLiteral("retry") && priority == 2;
+    const bool waitForCurrent = (priority <= 2 && !replacesRetry) || _priority(_currentId) == 4 ||
+                                (id == QStringLiteral("failed") && _priority(_currentId) == 3);
+    const bool queuedResult = !_queuedCues.isEmpty() && _priority(_queuedCues.first().id) > priority;
+    if (!queuedResult && (!busy || !waitForCurrent)) {
+        return false;
+    }
+    _queuedCues.removeIf(
+        [&](const QueuedCue& cue) { return cue.id == id || (priority <= 2 && _priority(cue.id) <= 2); });
+    const auto next = std::find_if(_queuedCues.begin(), _queuedCues.end(),
+                                   [priority](const QueuedCue& cue) { return _priority(cue.id) < priority; });
+    _queuedCues.insert(next, {id, text, since});
+    return true;
+}
+
+std::optional<CaacExamAudio::QueuedCue> CaacExamAudio::_nextQueuedCue()
+{
+    while (!_queuedCues.isEmpty()) {
+        auto cue = _queuedCues.takeFirst();
+        if (cue.since.isValid() && !_cueExpired(cue.id, cue.since.elapsed())) {
+            return cue;
+        }
+    }
+    return std::nullopt;
+}
+
 void CaacExamAudio::_playQueuedCue()
 {
-    if (_changingCue || _pending || !_effect || _effect->isPlaying() || _queuedCueId.isEmpty()) {
+    if (_changingCue || _pending || !_effect || _effect->isPlaying() || _volume() <= 0) {
         return;
     }
-    const auto id = _queuedCueId;
-    const auto text = _queuedCueText;
-    const auto since = _queuedCueSince;
-    _clearQueuedCue();
-    const auto expiry = _priority(id) == 1 ? WARNING_EXPIRY_MS : PHASE_CUE_EXPIRY_MS;
-    if (!since.isValid() || since.elapsed() > expiry || _volume() <= 0) {
-        return;
+    if (const auto cue = _nextQueuedCue()) {
+        _startCue(cue->id, cue->text, cue->since);
     }
-    _startCue(id, text, since);
 }
 
 void CaacExamAudio::_reportError(const QString& id, const QString& text)
@@ -163,27 +199,16 @@ void CaacExamAudio::play(const QString& id, const QString& text)
     if (!CUES.contains(id) || QGC::runningUnitTests() || !_ensureSettings() || _volume() <= 0) {
         return;
     }
-    if (_priority(id) > 1) {
-        _clearQueuedCue();
-    }
-    if (_effect && _pending && _pendingSince.elapsed() > LOAD_EXPIRY_MS) {
-        const QScopedValueRollback changing(_changingCue, true);
-        _pending = false;
-        _effect->stop();
+    if (_priority(id) >= 3) {
+        _queuedCues.removeIf([](const QueuedCue& cue) { return _priority(cue.id) <= 2; });
     }
     QElapsedTimer warningSince;
     warningSince.start();
-    // Let the positioning instruction finish before the next subject's permission cue.
-    const bool replacesRetry =
-        _currentId == QStringLiteral("retry") && id != QStringLiteral("retry") && _priority(id) == 2;
-    if (!replacesRetry && _effect && (_pending || _effect->isPlaying()) &&
-        (_priority(id) == 1 || (_priority(id) == 2 && _priority(_currentId) >= 2))) {
-        _queuedCueId = id;
-        _queuedCueText = text;
-        _queuedCueSince = warningSince;
+    if (_deferCue(id, text, warningSince)) {
+        _playQueuedCue();
         return;
     }
-    _clearQueuedCue();
+    _queuedCues.removeIf([&id](const QueuedCue& cue) { return cue.id == id; });
     _startCue(id, text, warningSince);
 }
 
@@ -225,7 +250,6 @@ void CaacExamAudio::_startCue(const QString& id, const QString& text, const QEla
         _currentText = text;
         _currentCueSince = warningSince;
         _pending = true;
-        _pendingSince.start();
         _syncVolume();
         _effect->setSource(QUrl(QStringLiteral("qrc:/CAAC/ExamAudio/%1.wav").arg(id)));
     }

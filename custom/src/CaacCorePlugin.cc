@@ -87,6 +87,12 @@ CaacCorePlugin::CaacCorePlugin(QObject* parent)
     auto* examAudio = new CaacExamAudio(this);
     connect(_figureEight, &CaacFigureEightController::announcementRequested, examAudio, &CaacExamAudio::play);
     connect(_figureEight, &CaacFigureEightController::alarmsCleared, examAudio, &CaacExamAudio::clearPendingWarnings);
+    connect(_figureEight, &CaacFigureEightController::settingsChanged, examAudio,
+            [controller = _figureEight, examAudio]() {
+                if (!controller->voiceEnabled()) {
+                    examAudio->stop();
+                }
+            });
     const QSettings settings;
     _doubleClickAddWaypoint = settings.value(QStringLiteral("CAAC/Map/DoubleClickAddWaypoint"), true).toBool();
     _dragWaypoints = settings.value(QStringLiteral("CAAC/Map/DragWaypoints"), true).toBool();

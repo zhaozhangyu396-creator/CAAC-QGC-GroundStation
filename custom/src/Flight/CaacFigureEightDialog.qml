@@ -257,7 +257,7 @@ QGCPopupDialog {
                 QGCLabel {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
-                    text: qsTr("开始考试后，先在中心筒半径 1 米内、高度不低于 1.5 米处对尾悬停 3 秒，机尾朝向起飞位置，允许 ±30°。八字可从任意一侧开始，运动离开中心筒范围后评分。偏差或启用的速度限制超限即判本次失败；单项及组合考试均有三次机会，已通过的自旋无需重考。")
+                    text: qsTr("开始考试后，先在中心筒半径 1 米内、高度不低于 1.5 米处悬停 3 秒。机头沿垂直于 AB 的中垂线朝向背离起飞位置的一侧，允许 ±15°。八字可从任意一侧开始，运动离开中心筒范围后评分；评分后速度低于 0.3 米/秒、偏差或额外速度限制超限即判本次失败。每次考试有三次机会，已通过的自旋无需重考。")
                 }
                 QGCLabel { text: qsTr("地面风速来源") }
                 QGCComboBox {
@@ -325,7 +325,7 @@ QGCPopupDialog {
                 QGCLabel {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
-                    text: qsTr("附件 2 一级风标准：水平偏差 ±2 米，高度偏差 ±1 米；八字航向误差为视距内／超视距 30°、教员 25°；自旋每圈 5–30 秒。下列速度及总时长限制为可选训练设置。")
+                    text: qsTr("附件 2 一级风标准：水平偏差 ±2 米，高度偏差 ±1 米；八字飞行中的航向误差为视距内／超视距 30°、教员 25°；自旋每圈 5–30 秒。就位航向另按 AB 中垂线背离起飞位置方向 ±15° 判断。八字评分后的最低速度为 0.3 米/秒，额外速度及总时长限制为可选训练设置。")
                 }
                 QGCLabel {
                     Layout.fillWidth: true
@@ -384,7 +384,7 @@ QGCPopupDialog {
                 }
                 QGCCheckBox {
                     objectName: "caacFigureEightSpeedReminder"
-                    text: qsTr("启用训练速度提醒")
+                    text: qsTr("启用额外速度限制")
                     checked: !!root.limitsDraft.speedEnabled
                     onClicked: root.editLimit("speedEnabled", checked)
                 }
