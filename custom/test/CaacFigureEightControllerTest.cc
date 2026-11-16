@@ -991,8 +991,9 @@ void CaacFigureEightControllerTest::_headingEvaluation()
     connect(&speedTelemetry, &QTimer::timeout, this, [this]() { reportSpeed(vehicle(), mockLink()); });
     speedTelemetry.start(100);
     const auto origin = vehicle()->coordinate();
-    const double siteBearings[] = {90, 35, 270};
-    const double alignmentHeadings[] = {0, 305, 0};
+    // Keep the forward traversal in this test. The opposite takeoff side is covered separately.
+    const double siteBearings[] = {90, 35, 80};
+    const double alignmentHeadings[] = {0, 305, 350};
     for (const int standard : {0, 1, 2}) {
         controller.setStandard(standard);
         const double bearing = siteBearings[standard];
