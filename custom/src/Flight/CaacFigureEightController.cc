@@ -778,6 +778,8 @@ void CaacFigureEightController::_samplePositioning()
     }
     emit sampleChanged();
     if (inPosition && _hoverSince.elapsed() >= CENTRE_HOLD_MS) {
+        const double bearing = QGCGeo::geodesicAzimuth(_pointA, _pointB);
+        _reverseFigureEight = std::abs(wrappedDifference(idealHeading - (bearing - 90))) > 90;
         _baselineAltitude = altitude;
         _beginPhase();
     }
@@ -1208,6 +1210,9 @@ void CaacFigureEightController::_sample()
     double horizontalError = 0;
     double tangentHeading = 0;
     const double progress = _nearestProgress(coordinate, horizontalError, tangentHeading);
+    if (_reverseFigureEight) {
+        tangentHeading = std::fmod(tangentHeading + 180, 360);
+    }
     const double evaluatedHeading = std::fmod(_headingDegrees + (_standard == 2 ? 180 : 0), 360);
     const double headingError = std::abs(wrappedDifference(evaluatedHeading - tangentHeading));
     const double length = _cumulativeLength.last();
@@ -1223,10 +1228,11 @@ void CaacFigureEightController::_sample()
         (QGCGeo::geodesicDistance(_phaseAnchor, coordinate) >= 0.25 || speed > HOVER_MAX_SPEED)) {
         _subjectStarted = true;
         _phaseClock.start();
-        // Both lobes start at the shared centre. Anchor progress to the lobe actually entered.
-        _previousProgress = progress < length / 2 ? 0 : length / 2;
+        // Each direction enters a lobe from a different occurrence of the shared centre.
+        const bool leftCircle = progress < length / 2;
+        _previousProgress = leftCircle != _reverseFigureEight ? 0 : length / 2;
     }
-    const double delta = std::remainder(progress - _previousProgress, length);
+    const double delta = std::remainder(progress - _previousProgress, length) * (_reverseFigureEight ? -1 : 1);
     if (_subjectStarted && horizontalError <= appliedLimits.value(QStringLiteral("horizontal")).toDouble() &&
         std::abs(delta) <= std::max(2.0, movement * 2 + 0.5)) {
         _signedProgress += delta;

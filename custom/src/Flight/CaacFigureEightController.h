@@ -275,5 +275,6 @@ private:
     int _attemptNumber = 0;
     bool _spinPassed = false;
     bool _subjectStarted = false;
+    bool _reverseFigureEight = false;
     QString _lastAttemptFailure;
 };

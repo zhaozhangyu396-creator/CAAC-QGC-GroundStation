@@ -104,7 +104,7 @@ bool reportPosition(Vehicle* vehicle, MockLink* link, CaacFigureEightController&
 }
 
 bool reportReferencePosition(Vehicle* vehicle, MockLink* link, CaacFigureEightController& controller, int index,
-                             double speed = 1)
+                             double speed = 1, bool reverse = false)
 {
     if (!vehicle) {
         return false;
@@ -115,18 +115,19 @@ bool reportReferencePosition(Vehicle* vehicle, MockLink* link, CaacFigureEightCo
     }
     const auto previous = path[std::max(0, index - 1)].value<QGeoCoordinate>();
     const auto next = path[std::min(qsizetype(index + 1), path.size() - 1)].value<QGeoCoordinate>();
-    const double heading = QGCGeo::geodesicAzimuth(previous, next) + (controller.standard() == 2 ? 180 : 0);
+    const double heading = QGCGeo::geodesicAzimuth(previous, next) + ((controller.standard() == 2) != reverse ? 180 : 0);
     vehicle->heading()->setRawValue(std::fmod(heading, 360));
     return reportPosition(vehicle, link, controller, path[index].value<QGeoCoordinate>(), speed);
 }
 
-bool reportTakeoffReference(Vehicle* vehicle, MockLink* link)
+bool reportTakeoffReference(Vehicle* vehicle, MockLink* link, bool reverse = false)
 {
     if (!vehicle || !link) {
         return false;
     }
     const auto centre = vehicle->coordinate();
-    const auto takeoff = QGCGeo::geodesicDestination(centre, 180, 8);
+    const double heading = reverse ? 180 : 0;
+    const auto takeoff = QGCGeo::geodesicDestination(centre, heading + 180, 8);
     const auto baseMode = vehicle->baseMode();
     const auto customMode = vehicle->customMode();
     const auto receive = [vehicle, link](const mavlink_message_t& message) {
@@ -149,8 +150,8 @@ bool reportTakeoffReference(Vehicle* vehicle, MockLink* link)
             qRound64(vehicle->altitudeRelative()->rawValue().toDouble() * 1000), 0, 0, 0, 0);
         return receive(message);
     };
-    link->setVehicleAttitudeOverrideDeg(0, 0, 0);
-    vehicle->heading()->setRawValue(0);
+    link->setVehicleAttitudeOverrideDeg(0, 0, heading);
+    vehicle->heading()->setRawValue(heading);
     return reportArmed(false) && reportCoordinate(takeoff) && reportArmed(true) && reportCoordinate(centre);
 }
 }  // namespace
@@ -915,19 +916,22 @@ void CaacFigureEightControllerTest::_eightStartsEitherSide_data()
 {
     QTest::addColumn<int>("standard");
     QTest::addColumn<bool>("rightFirst");
+    QTest::addColumn<bool>("reverse");
     for (const int standard : {0, 1, 2}) {
         for (const bool right : {false, true}) {
             QTest::newRow(
                 qPrintable(QStringLiteral("category-%1-%2-first").arg(standard).arg(right ? "right" : "left")))
-                << standard << right;
+                << standard << right << false;
         }
     }
+    QTest::newRow("right-first-opposite-takeoff-side") << 0 << true << true;
 }
 
 void CaacFigureEightControllerTest::_eightStartsEitherSide()
 {
     QFETCH(int, standard);
     QFETCH(bool, rightFirst);
+    QFETCH(bool, reverse);
     QSettings().remove(QStringLiteral("CAAC/FigureEight"));
     _connectMockLink();
     QVERIFY(vehicle());
@@ -935,7 +939,7 @@ void CaacFigureEightControllerTest::_eightStartsEitherSide()
     _ignoreMissingPressureBackend();
     QVERIFY(takeoffAtExamHeight(vehicle()));
     QTRY_VERIFY_WITH_TIMEOUT(vehicle()->airborne(), TestTimeout::mediumMs());
-    QVERIFY(reportTakeoffReference(vehicle(), mockLink()));
+    QVERIFY(reportTakeoffReference(vehicle(), mockLink(), reverse));
     CaacFigureEightController controller;
     controller.setStandard(standard);
     QCOMPARE(controller.attemptLimit(), 3);
@@ -950,15 +954,16 @@ void CaacFigureEightControllerTest::_eightStartsEitherSide()
     QTRY_COMPARE_WITH_TIMEOUT(controller.phase(), QStringLiteral("八字飞行"), TestTimeout::longMs());
     QVERIFY(controller.awaitingFigureEight());
     vehicle()->altitudeRelative()->setRawValue(4.0);
-    vehicle()->heading()->setRawValue(180);
+    vehicle()->heading()->setRawValue(reverse ? 0 : 180);
     QVERIFY(reportPosition(vehicle(), mockLink(), controller, centre, 0));
     QVERIFY(controller.running());
     QVERIFY(controller.awaitingFigureEight());
     QCOMPARE(controller.metrics().value(QStringLiteral("violationSamples")).toInt(), 0);
     vehicle()->altitudeRelative()->setRawValue(1.75);
     for (int step = 1; step <= 240; ++step) {
-        const int index = ((rightFirst ? 120 : 0) + step - 1) % 240 + 1;
-        QVERIFY(reportReferencePosition(vehicle(), mockLink(), controller, index, 1.0));
+        const int index = reverse ? ((rightFirst ? 240 : 120) - step + 240) % 240
+                                  : ((rightFirst ? 120 : 0) + step - 1) % 240 + 1;
+        QVERIFY(reportReferencePosition(vehicle(), mockLink(), controller, index, 1.0, reverse));
         if (step <= 3) {
             QVERIFY(controller.awaitingFigureEight());
         } else if (step < 240) {
@@ -1177,9 +1182,22 @@ void CaacFigureEightControllerTest::_voiceQueue()
     QVERIFY(!audio._deferCue(QStringLiteral("spin_completed"), QStringLiteral("自旋考试通过。"), since));
     audio._currentId = QStringLiteral("spin_completed");
     QVERIFY(audio._deferCue(QStringLiteral("figure_eight"), QStringLiteral("可以开始水平八字飞行。"), since));
+    QVERIFY(audio._deferCue(QStringLiteral("telemetry"), QStringLiteral("遥测中断"), since));
     auto next = audio._nextQueuedCue();
     QVERIFY(next.has_value());
+    QCOMPARE(next->id, QStringLiteral("telemetry"));
+    next = audio._nextQueuedCue();
+    QVERIFY(next.has_value());
     QCOMPARE(next->id, QStringLiteral("figure_eight"));
+
+    QVERIFY(audio._deferCue(QStringLiteral("area"), QStringLiteral("水平偏差超限"), since));
+    QVERIFY(audio._deferCue(QStringLiteral("failed"), QStringLiteral("最终结果"), since));
+    next = audio._nextQueuedCue();
+    QVERIFY(next.has_value());
+    QCOMPARE(next->id, QStringLiteral("area"));
+    next = audio._nextQueuedCue();
+    QVERIFY(next.has_value());
+    QCOMPARE(next->id, QStringLiteral("failed"));
 
     audio._currentId = QStringLiteral("speed_low");
     QVERIFY(audio._deferCue(QStringLiteral("failed"), QStringLiteral("考试失败，三次机会已用完。"), since));

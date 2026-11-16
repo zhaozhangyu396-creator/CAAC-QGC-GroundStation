@@ -10,6 +10,7 @@
 
 #include "AppMessages.h"
 #include "AppSettings.h"
+#include "AudioOutput.h"
 #include "Fact.h"
 #include "QGCLoggingCategory.h"
 #include "SettingsManager.h"
@@ -27,12 +28,12 @@ CaacExamAudio::CaacExamAudio(QObject* parent)
 
 int CaacExamAudio::_priority(const QString& id)
 {
-    if (id == QStringLiteral("completed") || id == QStringLiteral("failed")) {
+    if (id == QStringLiteral("completed") || id == QStringLiteral("failed") || id == QStringLiteral("spin_completed")) {
         return 4;
     }
-    if (id == QStringLiteral("spin_completed") || id == QStringLiteral("stopped") ||
-        id == QStringLiteral("telemetry") || id == QStringLiteral("time_up") || id == QStringLiteral("wind") ||
-        id == QStringLiteral("spin_too_fast") || id == QStringLiteral("spin_timeout") || id == QStringLiteral("area") ||
+    if (id == QStringLiteral("stopped") || id == QStringLiteral("telemetry") || id == QStringLiteral("time_up") ||
+        id == QStringLiteral("wind") || id == QStringLiteral("spin_too_fast") ||
+        id == QStringLiteral("spin_timeout") || id == QStringLiteral("area") ||
         id == QStringLiteral("altitude") || id == QStringLiteral("heading") || id == QStringLiteral("speed_high") ||
         id == QStringLiteral("speed_low")) {
         return 3;
@@ -143,6 +144,7 @@ bool CaacExamAudio::_deferCue(const QString& id, const QString& text, const QEla
     const bool busy = _pending || (_effect && _effect->isPlaying());
     const bool replacesRetry = _currentId == QStringLiteral("retry") && id != QStringLiteral("retry") && priority == 2;
     const bool waitForCurrent = (priority <= 2 && !replacesRetry) || _priority(_currentId) == 4 ||
+                                _currentId == QStringLiteral("area") ||
                                 (id == QStringLiteral("failed") && _priority(_currentId) == 3);
     const bool queuedResult = !_queuedCues.isEmpty() && _priority(_queuedCues.first().id) > priority;
     if (!queuedResult && (!busy || !waitForCurrent)) {
@@ -150,8 +152,10 @@ bool CaacExamAudio::_deferCue(const QString& id, const QString& text, const QEla
     }
     _queuedCues.removeIf(
         [&](const QueuedCue& cue) { return cue.id == id || (priority <= 2 && _priority(cue.id) <= 2); });
-    const auto next = std::find_if(_queuedCues.begin(), _queuedCues.end(),
-                                   [priority](const QueuedCue& cue) { return _priority(cue.id) < priority; });
+    const auto next = std::find_if(_queuedCues.begin(), _queuedCues.end(), [&](const QueuedCue& cue) {
+        return _priority(cue.id) < priority &&
+               !(id == QStringLiteral("failed") && cue.id == QStringLiteral("area"));
+    });
     _queuedCues.insert(next, {id, text, since});
     return true;
 }
@@ -179,6 +183,9 @@ void CaacExamAudio::_playQueuedCue()
 
 void CaacExamAudio::_reportError(const QString& id, const QString& text)
 {
+    if (_volume() > 0) {
+        AudioOutput::instance()->say(text);
+    }
     if (_reportedErrors.contains(id)) {
         return;
     }
@@ -252,6 +259,12 @@ void CaacExamAudio::_startCue(const QString& id, const QString& text, const QEla
         _pending = true;
         _syncVolume();
         _effect->setSource(QUrl(QStringLiteral("qrc:/CAAC/ExamAudio/%1.wav").arg(id)));
+    }
+    if (_pending && _effect->status() == QSoundEffect::Error) {
+        _pending = false;
+        _reportError(id, text);
+        _playQueuedCue();
+        return;
     }
     _playLoaded();
 }
