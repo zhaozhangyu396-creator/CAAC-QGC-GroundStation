@@ -120,14 +120,14 @@ bool reportReferencePosition(Vehicle* vehicle, MockLink* link, CaacFigureEightCo
     return reportPosition(vehicle, link, controller, path[index].value<QGeoCoordinate>(), speed);
 }
 
-bool reportTakeoffReference(Vehicle* vehicle, MockLink* link, bool reverse = false)
+bool reportTakeoffReference(Vehicle* vehicle, MockLink* link, bool reverse = false, double distance = 8)
 {
     if (!vehicle || !link) {
         return false;
     }
     const auto centre = vehicle->coordinate();
     const double heading = reverse ? 180 : 0;
-    const auto takeoff = QGCGeo::geodesicDestination(centre, heading + 180, 8);
+    const auto takeoff = QGCGeo::geodesicDestination(centre, heading + 180, distance);
     const auto baseMode = vehicle->baseMode();
     const auto customMode = vehicle->customMode();
     const auto receive = [vehicle, link](const mavlink_message_t& message) {
@@ -176,6 +176,8 @@ private slots:
     void _centreQualification();
     void _eightStartsEitherSide_data();
     void _eightStartsEitherSide();
+    void _rightCircleDeparture_data();
+    void _rightCircleDeparture();
     void _headingEvaluation();
     void _minimumFigureEightSpeed();
     void _voiceResources();
@@ -657,6 +659,11 @@ void CaacFigureEightControllerTest::_phasesAndVoice()
         }
         return true;
     };
+    QVERIFY(turnTo(330));
+    QVERIFY(std::abs(controller.metrics().value(QStringLiteral("spinAngle")).toDouble() + 30) < 0.1);
+    QVERIFY(std::abs(controller.metrics().value(QStringLiteral("evaluatedHeading")).toDouble() - 330) < 0.1);
+    QVERIFY(turnTo(0));
+    QVERIFY(std::abs(controller.metrics().value(QStringLiteral("spinAngle")).toDouble()) < 0.1);
     QVERIFY(finishTurn(1));
     QVERIFY(controller.running());
     QCOMPARE(controller.attemptNumber(), 2);
@@ -677,7 +684,13 @@ void CaacFigureEightControllerTest::_phasesAndVoice()
     QVERIFY(turnTo(30));
     QTRY_VERIFY_WITH_TIMEOUT(controller.metrics().value(QStringLiteral("phaseElapsed")).toDouble() >= 5.1,
                              TestTimeout::longMs());
-    QVERIFY(finishTurn(2));
+    for (int step = 2; step < 12; ++step) {
+        QVERIFY(turnTo(step * 30.0));
+    }
+    QVERIFY(turnTo(354.9));
+    QVERIFY(!controller.spinPassed());
+    QCOMPARE(controller.phase(), QStringLiteral("原地自旋"));
+    QVERIFY(turnTo(355));
     QVERIFY(controller.running());
     QVERIFY(controller.spinPassed());
     QCOMPARE(controller.phase(), QStringLiteral("八字飞行"));
@@ -771,10 +784,12 @@ void CaacFigureEightControllerTest::_centreQualification_data()
     QTest::addColumn<double>("qualifiedClimb");
     QTest::addColumn<double>("siteBearing");
     QTest::addColumn<int>("exerciseMode");
-    QTest::newRow("spin-normal-80-speed-and-climb-at-0.3mps") << true << 1.5 << 0.3 << 0.3 << 170.0 << 1;
-    QTest::newRow("eight-normal-80-speed-and-climb-at-0.3mps") << true << 1.5 << 0.3 << 0.3 << 170.0 << 0;
-    QTest::newRow("normal-350-speed-and-descent-above-2m") << true << 2.32 << 0.3 << -0.3 << 80.0 << 0;
-    QTest::newRow("normal-0-euler-after-quaternion-at-1.5m") << false << 1.5 << 0.0 << 0.0 << 90.0 << 2;
+    QTest::addColumn<double>("takeoffDistance");
+    QTest::newRow("spin-normal-80-speed-and-climb-at-0.3mps") << true << 1.5 << 0.3 << 0.3 << 170.0 << 1 << 8.0;
+    QTest::newRow("eight-normal-80-speed-and-climb-at-0.3mps") << true << 1.5 << 0.3 << 0.3 << 170.0 << 0 << 8.0;
+    QTest::newRow("normal-350-speed-and-descent-above-2m") << true << 2.32 << 0.3 << -0.3 << 80.0 << 0 << 8.0;
+    QTest::newRow("normal-0-euler-after-quaternion-at-1.5m") << false << 1.5 << 0.0 << 0.0 << 90.0 << 2 << 8.0;
+    QTest::newRow("takeoff-too-close-use-field-heading") << true << 1.91 << 0.0 << 0.0 << 170.0 << 0 << 0.2;
 }
 
 void CaacFigureEightControllerTest::_centreQualification()
@@ -785,6 +800,7 @@ void CaacFigureEightControllerTest::_centreQualification()
     QFETCH(double, qualifiedClimb);
     QFETCH(double, siteBearing);
     QFETCH(int, exerciseMode);
+    QFETCH(double, takeoffDistance);
     QSettings().remove(QStringLiteral("CAAC/FigureEight"));
     _connectMockLink();
     QVERIFY(vehicle());
@@ -833,7 +849,7 @@ void CaacFigureEightControllerTest::_centreQualification()
     _ignoreMissingPressureBackend();
     QVERIFY(takeoffAtExamHeight(vehicle()));
     QTRY_VERIFY_WITH_TIMEOUT(vehicle()->airborne(), TestTimeout::mediumMs());
-    QVERIFY(reportTakeoffReference(vehicle(), mockLink()));
+    QVERIFY(reportTakeoffReference(vehicle(), mockLink(), false, takeoffDistance));
     const auto rejected = [&]() {
         return report() && controller.phase() == QStringLiteral("中心筒就位") &&
                controller.metrics().value(QStringLiteral("hoverStableSeconds")).toDouble() == 0 &&
@@ -974,6 +990,72 @@ void CaacFigureEightControllerTest::_eightStartsEitherSide()
     QVERIFY(!controller.running());
     QCOMPARE(controller.metrics().value(QStringLiteral("completedLaps")).toInt(), 1);
     QCOMPARE(controller.lastAnnouncement(), QStringLiteral("考试通过。"));
+}
+
+void CaacFigureEightControllerTest::_rightCircleDeparture_data()
+{
+    QTest::addColumn<bool>("secondTrace");
+    QTest::addColumn<bool>("excessYaw");
+    QTest::newRow("field-departure-1") << false << false;
+    QTest::newRow("field-departure-2") << true << false;
+    QTest::newRow("right-circle-heading-still-scored") << true << true;
+}
+
+void CaacFigureEightControllerTest::_rightCircleDeparture()
+{
+    QFETCH(bool, secondTrace);
+    QFETCH(bool, excessYaw);
+    QSettings().remove(QStringLiteral("CAAC/FigureEight"));
+    _connectMockLink();
+    QVERIFY(vehicle());
+    QVERIFY(waitForInitialConnect());
+    _ignoreMissingPressureBackend();
+    QVERIFY(takeoffAtExamHeight(vehicle()));
+    QTRY_VERIFY_WITH_TIMEOUT(vehicle()->airborne(), TestTimeout::mediumMs());
+    QVERIFY(reportTakeoffReference(vehicle(), mockLink()));
+
+    CaacFigureEightController controller;
+    const auto centre = vehicle()->coordinate();
+    QVERIFY(controller.setPoints(QGCGeo::geodesicDestination(centre, 270, 12.063),
+                                 QGCGeo::geodesicDestination(centre, 90, 12.063)));
+    QTimer speedTelemetry;
+    connect(&speedTelemetry, &QTimer::timeout, this, [this]() { reportSpeed(vehicle(), mockLink()); });
+    speedTelemetry.start(100);
+    QTRY_VERIFY_WITH_TIMEOUT(controller.running() || controller.start(), TestTimeout::mediumMs());
+    QTRY_VERIFY_WITH_TIMEOUT(controller.awaitingFigureEight(), TestTimeout::longMs());
+
+    struct Sample {
+        double range;
+        double azimuth;
+        double yaw;
+    };
+    // Field positions and yaw rotated into the test site's north-facing frame.
+    const QList<Sample> firstTrace{{0.835, -2.06, 0}, {0.975, -2.84, 4.4}, {1.13, -3.11, 9.5},
+                                   {1.289, -2.95, 14}, {1.458, -2.49, 17}, {1.636, -1.83, 21},
+                                   {1.822, -1.04, 24.9}, {2.026, -0.07, 29.3}, {2.225, 0.98, 32.7}};
+    const QList<Sample> nextTrace{{0.794, -40.74, 12.6}, {0.907, -33.78, 13.5}, {1.029, -28.25, 13.7},
+                                  {1.166, -23.61, 14.8}, {1.314, -19.73, 16.3}, {1.481, -16.38, 19.1},
+                                  {1.649, -13.86, 21.9}, {1.826, -11.91, 24.7}, {2.017, -10.15, 27.4},
+                                  {2.201, -8.47, 29.2}, {2.385, -6.74, 30.1}, {2.576, -5.16, 31.1},
+                                  {2.775, -3.74, 32.5}, {2.981, -2.32, 33.3}, {3.202, -0.68, 34.6},
+                                  {3.41, 0.92, 36.2}};
+    const auto& trace = secondTrace ? nextTrace : firstTrace;
+    for (const auto& sample : trace) {
+        vehicle()->heading()->setRawValue(sample.yaw + (excessYaw && sample.range > 1 ? 50 : 0));
+        QVERIFY(reportPosition(vehicle(), mockLink(), controller,
+                               QGCGeo::geodesicDestination(centre, sample.azimuth + 360, sample.range), 0.85));
+        if (sample.range > 1 && excessYaw) {
+            QCOMPARE(controller.attemptNumber(), 2);
+            QCOMPARE(controller.lastAttemptFailure(), QStringLiteral("航向偏差超限"));
+            return;
+        }
+        QCOMPARE(controller.attemptNumber(), 1);
+        if (sample.range > 1) {
+            QVERIFY(!controller.awaitingFigureEight());
+            QVERIFY(controller.metrics().value(QStringLiteral("headingError")).toDouble() < 15);
+        }
+    }
+    controller.stop();
 }
 
 void CaacFigureEightControllerTest::_headingEvaluation()

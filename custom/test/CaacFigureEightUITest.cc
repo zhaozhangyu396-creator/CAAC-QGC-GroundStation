@@ -240,6 +240,16 @@ void CaacFigureEightUITest::_independentTrainingDialog()
     const auto outerPath = displayedPath(outerFence);
     QVERIFY(outerPath.size() >= fence->path().size());
     QCOMPARE(outerPath.first(), outerPath.last());
+    auto* corridor = findVisibleItem(_rootItem, QStringLiteral("caacFigureEightTrainingCorridor"));
+    QVERIFY(corridor);
+    const auto initialLimits = controller->limits();
+    QVERIFY(controller->setLimits({{QStringLiteral("horizontal"), 2.0}}));
+    const double widthAtTwoMetres = corridor->property("strokeWidth").toDouble();
+    QVERIFY(widthAtTwoMetres > 0);
+    QVERIFY(controller->setLimits({{QStringLiteral("horizontal"), 1.0}}));
+    QTRY_VERIFY_WITH_TIMEOUT(std::abs(corridor->property("strokeWidth").toDouble() - widthAtTwoMetres / 2) < 0.01,
+                             TestTimeout::mediumMs());
+    QVERIFY(controller->setLimits(initialLimits));
     controller->setShowOnMap(false);
     QTRY_VERIFY_WITH_TIMEOUT(!reference->property("visible").toBool(), TestTimeout::mediumMs());
     QVERIFY(outerFence->property("visible").toBool());

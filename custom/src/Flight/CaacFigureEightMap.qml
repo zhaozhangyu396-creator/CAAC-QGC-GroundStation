@@ -20,6 +20,7 @@ Item {
     readonly property var _fence: _controller ? _controller.fence : null
     readonly property var _referencePath: _controller ? _controller.referencePath : []
     readonly property var _recordedPath: _controller ? _controller.recordedPath : []
+    readonly property real _horizontalLimit: _controller ? _controller.effectiveLimits.horizontal : 0
     readonly property var _fencePath: {
         const result = []
         if (_fence) {
@@ -37,21 +38,23 @@ Item {
     readonly property color _grassColor: Qt.darker(Qt.tint(palette.colorYellowGreen,
         Qt.alpha(palette.colorGreen, 0.2)), 1.25)
     readonly property rect _bounds: {
-        const path = _showFence ? _fencePath : _referencePath
-        if (!path.length) { return Qt.rect(-1, -1, 2, 2) }
+        if (!_referencePath.length) { return Qt.rect(-1, -1, 2, 2) }
         let left = Infinity
         let right = -Infinity
         let top = Infinity
         let bottom = -Infinity
-        for (const coordinate of path) {
-            const point = localPoint(coordinate)
-            left = Math.min(left, point.x)
-            right = Math.max(right, point.x)
-            top = Math.min(top, point.y)
-            bottom = Math.max(bottom, point.y)
+        function includePath(path, margin) {
+            for (const coordinate of path) {
+                const point = localPoint(coordinate)
+                left = Math.min(left, point.x - margin)
+                right = Math.max(right, point.x + margin)
+                top = Math.min(top, point.y - margin)
+                bottom = Math.max(bottom, point.y + margin)
+            }
         }
-        const padding = _showFence ? 0 : _controller.fenceWidth
-        return Qt.rect(left - padding, top - padding, right - left + padding * 2, bottom - top + padding * 2)
+        includePath(_referencePath, _showReference ? _horizontalLimit : 0)
+        if (_showFence) { includePath(_fencePath, 0) }
+        return Qt.rect(left, top, right - left, bottom - top)
     }
     readonly property real _inset: ScreenTools.defaultFontPixelHeight * 2
     readonly property real _scale: Math.max(0, Math.min(
@@ -140,8 +143,7 @@ Item {
             objectName: "caacFigureEightTrainingCorridor"
             visible: root._showReference
             path: root._referencePath
-            strokeWidth: Math.max(ScreenTools.defaultFontPixelWidth * 0.4,
-                root._controller.fenceWidth * root._scale * 2)
+            strokeWidth: root._horizontalLimit * root._scale * 2
             strokeColor: Qt.tint(palette.colorGreen, Qt.alpha(palette.mapWidgetBorderLight, 0.65))
             opacity: 0.8
         }

@@ -466,7 +466,7 @@ QGCPopupDialog {
                             {label: qsTr("当前位置理想航向"), key: "idealHeading", decimals: 1, suffix: "°"},
                             {label: qsTr("评判航向（机头/机尾）"), key: "evaluatedHeading", decimals: 1, suffix: "°"},
                             {label: qsTr("完成圈数"), key: "completedLaps", decimals: 0, suffix: ""},
-                            {label: qsTr("自旋角度"), key: "spinAngle", decimals: 1, suffix: "°"},
+                            {label: qsTr("自旋角度（反向为负）"), key: "spinAngle", decimals: 1, suffix: "°"},
                             {label: qsTr("超差采样数"), key: "violationSamples", decimals: 0, suffix: ""}
                         ]
                         delegate: RowLayout {

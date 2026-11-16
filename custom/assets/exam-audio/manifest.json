@@ -176,11 +176,11 @@
     },
     {
       "id": "retry",
-      "text": "请返回中心筒上方，沿中垂线背向起飞位置，在不低于一点五米的高度悬停三秒后重试。",
+      "text": "请返回中心筒上方，在不低于一点五米的高度悬停三秒后重试。",
       "file": "retry.wav",
-      "durationSeconds": 6.956054,
-      "byteSize": 306840,
-      "sha256": "5c834a3c288d3d52fb6d55fe548022e05ff51a95c2c2528c7703a907bd539784",
+      "durationSeconds": 4.956054,
+      "byteSize": 218606,
+      "sha256": "2cf24babaf5d1d9e8da7f1bba33cced920d51e70972035dbecf7bbff497a2830",
       "generatedAtUtc": "2026-11-06T11:37:29.280266+00:00",
       "synthesisId": "melo-tts-exam-results-20261106"
     },

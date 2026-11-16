@@ -198,7 +198,7 @@ private:
     void _failAttempt(const QString& reason, const QString& cue);
     void _sampleSpin();
     bool _telemetryReady() const;
-    double _nearestProgress(const QGeoCoordinate& coordinate, double& distance, double& heading) const;
+    double _nearestProgress(const QGeoCoordinate& coordinate, double& distance, double& heading, int circle = -1) const;
     static QVariantMap _defaults(int standard);
     static bool _validSite(const QVariantMap& site);
 
@@ -270,11 +270,13 @@ private:
     QElapsedTimer _phaseClock;
     QElapsedTimer _hoverSince;
     QGeoCoordinate _phaseAnchor;
+    QGeoCoordinate _departureCourseOrigin;
     double _spinLastHeading = 0;
     double _spinAngle = 0;
     int _attemptNumber = 0;
     bool _spinPassed = false;
     bool _subjectStarted = false;
     bool _reverseFigureEight = false;
+    int _departureCircle = -1;
     QString _lastAttemptFailure;
 };

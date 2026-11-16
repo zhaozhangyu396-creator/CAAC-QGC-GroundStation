@@ -31,7 +31,9 @@ constexpr qint64 ATTITUDE_QUATERNION_PREFERENCE_MS = TELEMETRY_TIMEOUT_MS / 2;
 constexpr qint64 CENTRE_HOLD_MS = 3000;
 constexpr double CENTRE_MIN_HEIGHT = 1.5;
 constexpr double CENTRE_RADIUS = 1.0;
+constexpr double TAKEOFF_SIDE_MIN_OFFSET = 0.5;
 constexpr double CENTRE_HEADING_TOLERANCE = 15.0;
+constexpr double SPIN_PASS_ANGLE = 355.0;
 constexpr float MIN_FIGURE_EIGHT_SPEED = 0.3f;
 // VFR_HUD encodes both speeds as floats, including the 0.3 m/s boundary.
 constexpr float HOVER_MAX_SPEED = 0.3f;
@@ -650,9 +652,11 @@ void CaacFigureEightController::_beginPhase(bool reverseSpin)
     }
     _phaseClock.invalidate();
     _subjectStarted = false;
+    _departureCircle = -1;
     emit alarmsCleared();
     _previousPosition = _vehicle->coordinate();
     _phaseAnchor = _previousPosition;
+    _departureCourseOrigin = _previousPosition;
     _lastSample = _sessionClock.elapsed();
     if (_phase == Phase::FigureEight) {
         _previousProgress = 0;
@@ -694,7 +698,7 @@ void CaacFigureEightController::_prepareAttempt()
         tr("请在中心筒半径 1 米范围内、高度不低于 1.5 米处悬停 3 秒。机头沿 AB 中垂线朝向背离起飞位置的一侧，允许 "
            "±15°；水平和垂直速度均不超过 0.3 米/秒。");
     _announce(_attemptNumber > 1 ? QStringLiteral("retry") : QStringLiteral("positioning"),
-              _attemptNumber > 1 ? tr("请返回中心筒上方，在不低于一点五米的高度对尾悬停三秒后重试。")
+              _attemptNumber > 1 ? tr("请返回中心筒上方，在不低于一点五米的高度悬停三秒后重试。")
                                  : tr("请将无人机飞至中心筒上方一点五米处，并保持对位悬停。"));
     emit sessionChanged();
 }
@@ -710,13 +714,18 @@ void CaacFigureEightController::_samplePositioning()
     const double speed = _vehicle->groundSpeed()->rawValue().toDouble();
     const double verticalSpeed = _vehicle->climbRate()->rawValue().toDouble();
     const auto centre = _reference.first();
-    const bool takeoffValid = _takeoffPosition.isValid() && QGCGeo::geodesicDistance(_takeoffPosition, centre) >= 0.5;
-    double idealHeading = qQNaN();
-    if (takeoffValid) {
-        idealHeading = std::fmod(QGCGeo::geodesicAzimuth(_pointA, _pointB) + 90, 360);
-        const double awayFromTakeoff = QGCGeo::geodesicAzimuth(_takeoffPosition, centre);
-        if (std::abs(wrappedDifference(idealHeading - awayFromTakeoff)) > 90) {
-            idealHeading = std::fmod(idealHeading + 180, 360);
+    // The field diagram marks takeoff on the AB + 90° side. Use that layout if telemetry cannot establish a side.
+    const double bearing = QGCGeo::geodesicAzimuth(_pointA, _pointB);
+    double idealHeading = std::fmod(bearing + 270, 360);
+    if (_takeoffPosition.isValid()) {
+        const double takeoffDistance = QGCGeo::geodesicDistance(centre, _takeoffPosition);
+        if (takeoffDistance >= TAKEOFF_SIDE_MIN_OFFSET) {
+            const double takeoffBearing = QGCGeo::geodesicAzimuth(centre, _takeoffPosition);
+            const double angle = wrappedDifference(takeoffBearing - idealHeading) * std::numbers::pi / 180;
+            const double takeoffOffset = takeoffDistance * std::cos(angle);
+            if (takeoffOffset >= TAKEOFF_SIDE_MIN_OFFSET) {
+                idealHeading = std::fmod(idealHeading + 180, 360);
+            }
         }
     }
     const double headingError = std::abs(wrappedDifference(_headingDegrees - idealHeading));
@@ -730,9 +739,7 @@ void CaacFigureEightController::_samplePositioning()
     if (altitude < CENTRE_MIN_HEIGHT) {
         pending.append(tr("请保持高度不低于 1.5 米"));
     }
-    if (!takeoffValid) {
-        pending.append(tr("当前位置距起飞位置过近，无法确定对尾方向"));
-    } else if (headingError > CENTRE_HEADING_TOLERANCE + 1e-4) {  // MAVLink yaw is a float in radians.
+    if (headingError > CENTRE_HEADING_TOLERANCE + 1e-4) {  // MAVLink yaw is a float in radians.
         pending.append(tr("请沿 AB 中垂线背向起飞位置，机头航向误差不超过 15°"));
     }
     if (speed > HOVER_MAX_SPEED || !std::isfinite(verticalSpeed) || std::abs(verticalSpeed) > HOVER_MAX_SPEED) {
@@ -778,7 +785,6 @@ void CaacFigureEightController::_samplePositioning()
     }
     emit sampleChanged();
     if (inPosition && _hoverSince.elapsed() >= CENTRE_HOLD_MS) {
-        const double bearing = QGCGeo::geodesicAzimuth(_pointA, _pointB);
         _reverseFigureEight = std::abs(wrappedDifference(idealHeading - (bearing - 90))) > 90;
         _baselineAltitude = altitude;
         _beginPhase();
@@ -1128,14 +1134,16 @@ void CaacFigureEightController::clearRecording()
     emit sessionChanged();
 }
 
-double CaacFigureEightController::_nearestProgress(const QGeoCoordinate& coordinate, double& distance,
-                                                   double& heading) const
+double CaacFigureEightController::_nearestProgress(const QGeoCoordinate& coordinate, double& distance, double& heading,
+                                                   int circle) const
 {
     distance = std::numeric_limits<double>::infinity();
     heading = 0;
     double result = 0;
     int nearestCircle = 0;
-    for (int i = 1; i < _reference.size(); ++i) {
+    const int first = circle == 1 ? POINTS_PER_CIRCLE + 1 : 1;
+    const qsizetype end = circle == 0 ? POINTS_PER_CIRCLE + 1 : _reference.size();
+    for (int i = first; i < end; ++i) {
         double north = 0;
         double east = 0;
         double down = 0;
@@ -1168,6 +1176,9 @@ double CaacFigureEightController::_nearestProgress(const QGeoCoordinate& coordin
             const bool clockwise = _standard == 2 ? nearestCircle == 0 : nearestCircle == 1;
             heading = std::fmod(QGCGeo::geodesicAzimuth(centre, coordinate) + (clockwise ? 90 : -90) + 360, 360);
         }
+    }
+    if (_reverseFigureEight) {
+        heading = std::fmod(heading + 180, 360);
     }
     return result;
 }
@@ -1207,14 +1218,6 @@ void CaacFigureEightController::_sample()
     const double speed = _vehicle->groundSpeed()->rawValue().toDouble();
     const auto appliedLimits = effectiveLimits();
     const double altitudeError = std::abs(_vehicle->altitudeRelative()->rawValue().toDouble() - _baselineAltitude);
-    double horizontalError = 0;
-    double tangentHeading = 0;
-    const double progress = _nearestProgress(coordinate, horizontalError, tangentHeading);
-    if (_reverseFigureEight) {
-        tangentHeading = std::fmod(tangentHeading + 180, 360);
-    }
-    const double evaluatedHeading = std::fmod(_headingDegrees + (_standard == 2 ? 180 : 0), 360);
-    const double headingError = std::abs(wrappedDifference(evaluatedHeading - tangentHeading));
     const double length = _cumulativeLength.last();
     const double movement = QGCGeo::geodesicDistance(_previousPosition, coordinate);
     const double centreDistance = QGCGeo::geodesicDistance(_reference.first(), coordinate);
@@ -1224,8 +1227,47 @@ void CaacFigureEightController::_sample()
         _finish(tr("位置遥测发生跳变，训练记录已结束，未判定完成。"), QStringLiteral("telemetry"));
         return;
     }
-    if (!_subjectStarted && centreDistance > CENTRE_RADIUS &&
-        (QGCGeo::geodesicDistance(_phaseAnchor, coordinate) >= 0.25 || speed > HOVER_MAX_SPEED)) {
+    const double departureDistance = QGCGeo::geodesicDistance(_phaseAnchor, coordinate);
+    const double horizontalLimit = appliedLimits.value(QStringLiteral("horizontal")).toDouble();
+    const double evaluatedHeading = std::fmod(_headingDegrees + (_standard == 2 ? 180 : 0), 360);
+    const bool starting = !_subjectStarted && centreDistance > CENTRE_RADIUS &&
+                          (departureDistance >= 0.25 || speed > HOVER_MAX_SPEED);
+    if (!_subjectStarted && movement >= 0.05) {
+        _departureCourseOrigin = _previousPosition;
+    }
+    const double junctionRadius = std::max(2 * CENTRE_RADIUS, QGCGeo::geodesicDistance(_pointA, _pointB) / 4);
+    if (centreDistance > junctionRadius) {
+        _departureCircle = -1;
+    } else if (starting && QGCGeo::geodesicDistance(_departureCourseOrigin, coordinate) >= 0.05) {
+        // Both circles may contain the departure. Compare travel and aircraft directions before choosing a lobe.
+        double leftDistance = 0;
+        double rightDistance = 0;
+        double leftHeading = 0;
+        double rightHeading = 0;
+        _nearestProgress(coordinate, leftDistance, leftHeading, 0);
+        _nearestProgress(coordinate, rightDistance, rightHeading, 1);
+        if (leftDistance <= horizontalLimit && rightDistance <= horizontalLimit) {
+            const double course = QGCGeo::geodesicAzimuth(_departureCourseOrigin, coordinate);
+            const double leftCourseError = std::abs(wrappedDifference(course - leftHeading));
+            const double rightCourseError = std::abs(wrappedDifference(course - rightHeading));
+            const double leftError = leftCourseError + std::abs(wrappedDifference(evaluatedHeading - leftHeading));
+            const double rightError = rightCourseError + std::abs(wrappedDifference(evaluatedHeading - rightHeading));
+            if (leftError < rightError - 0.001 && leftCourseError < 90) {
+                _departureCircle = 0;
+            } else if (rightError < leftError - 0.001 && rightCourseError < 90) {
+                _departureCircle = 1;
+            }
+        }
+    }
+    double horizontalError = 0;
+    double tangentHeading = 0;
+    double progress = _nearestProgress(coordinate, horizontalError, tangentHeading, _departureCircle);
+    if (_departureCircle >= 0 && horizontalError > horizontalLimit) {
+        _departureCircle = -1;
+        progress = _nearestProgress(coordinate, horizontalError, tangentHeading);
+    }
+    const double headingError = std::abs(wrappedDifference(evaluatedHeading - tangentHeading));
+    if (starting) {
         _subjectStarted = true;
         _phaseClock.start();
         // Each direction enters a lobe from a different occurrence of the shared centre.
@@ -1233,7 +1275,7 @@ void CaacFigureEightController::_sample()
         _previousProgress = leftCircle != _reverseFigureEight ? 0 : length / 2;
     }
     const double delta = std::remainder(progress - _previousProgress, length) * (_reverseFigureEight ? -1 : 1);
-    if (_subjectStarted && horizontalError <= appliedLimits.value(QStringLiteral("horizontal")).toDouble() &&
+    if (_subjectStarted && horizontalError <= horizontalLimit &&
         std::abs(delta) <= std::max(2.0, movement * 2 + 0.5)) {
         _signedProgress += delta;
     } else {
@@ -1260,7 +1302,7 @@ void CaacFigureEightController::_sample()
             failureCue = cue;
         }
     };
-    recordViolation(_subjectStarted && horizontalError > appliedLimits.value(QStringLiteral("horizontal")).toDouble(),
+    recordViolation(_subjectStarted && horizontalError > horizontalLimit,
                     tr("水平偏差超限"), QStringLiteral("area"));
     recordViolation(_subjectStarted && altitudeError > appliedLimits.value(QStringLiteral("vertical")).toDouble(),
                     tr("高度偏差超限"), QStringLiteral("altitude"));
@@ -1374,10 +1416,11 @@ void CaacFigureEightController::_sampleSpin()
                 {QStringLiteral("relativeAltitude"), _vehicle->altitudeRelative()->rawValue().toDouble()},
                 {QStringLiteral("centreDistance"), QGCGeo::geodesicDistance(_reference.first(), coordinate)},
                 {QStringLiteral("hoverStableSeconds"), 3.0},
-                {QStringLiteral("spinAngle"), std::max(0.0, _spinAngle)},
+                {QStringLiteral("spinAngle"), _spinAngle},
                 {QStringLiteral("altitudeError"), altitudeError},
                 {QStringLiteral("horizontalError"), horizontalError},
                 {QStringLiteral("headingError"), 0.0},
+                {QStringLiteral("evaluatedHeading"), heading},
                 {QStringLiteral("speed"), speed},
                 {QStringLiteral("completedLaps"), 0},
                 {QStringLiteral("violations"), _violations},
@@ -1403,7 +1446,7 @@ void CaacFigureEightController::_sampleSpin()
         _failAttempt(_violations.join(tr("、")), failureCue);
     } else if (phaseElapsed > 30) {
         _failAttempt(tr("原地自旋已超过 30 秒。"), QStringLiteral("spin_timeout"));
-    } else if (_spinAngle >= 359.5) {
+    } else if (_spinAngle >= SPIN_PASS_ANGLE - 1e-4) {  // MAVLink yaw is a float in radians.
         if (phaseElapsed < 5) {
             _failAttempt(tr("原地自旋少于 5 秒，请降低转速后重新开始。"), QStringLiteral("spin_too_fast"));
         } else if (_standard == 2 && _phase == Phase::Spin) {
