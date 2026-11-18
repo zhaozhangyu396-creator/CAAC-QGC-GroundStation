@@ -493,6 +493,9 @@ QList<QGeoCoordinate> CaacFigureEightController::referenceCoordinates(const QGeo
 void CaacFigureEightController::_rebuildPath()
 {
     _reference = referenceCoordinates(_pointA, _pointB, _standard == 2);
+    // A is on the left, B on the right and the takeoff marker below the centre on the field map.
+    _fieldAlignmentHeading =
+        _reference.isEmpty() ? qQNaN() : std::fmod(QGCGeo::geodesicAzimuth(_pointA, _pointB) + 270, 360);
     _cumulativeLength = {0};
     for (int i = 1; i < _reference.size(); ++i) {
         _cumulativeLength.append(_cumulativeLength.last() + QGCGeo::geodesicDistance(_reference[i - 1], _reference[i]));
@@ -714,10 +717,9 @@ void CaacFigureEightController::_samplePositioning()
     const double speed = _vehicle->groundSpeed()->rawValue().toDouble();
     const double verticalSpeed = _vehicle->climbRate()->rawValue().toDouble();
     const auto centre = _reference.first();
-    // The field diagram marks takeoff on the AB + 90° side. Use that layout if telemetry cannot establish a side.
-    const double bearing = QGCGeo::geodesicAzimuth(_pointA, _pointB);
-    double idealHeading = std::fmod(bearing + 270, 360);
-    if (_takeoffPosition.isValid()) {
+    double idealHeading = _fieldAlignmentHeading;
+    // Standalone figure-eight practice supports flying the course from either takeoff side.
+    if (_exerciseMode == 0 && _takeoffPosition.isValid()) {
         const double takeoffDistance = QGCGeo::geodesicDistance(centre, _takeoffPosition);
         if (takeoffDistance >= TAKEOFF_SIDE_MIN_OFFSET) {
             const double takeoffBearing = QGCGeo::geodesicAzimuth(centre, _takeoffPosition);
@@ -785,7 +787,7 @@ void CaacFigureEightController::_samplePositioning()
     }
     emit sampleChanged();
     if (inPosition && _hoverSince.elapsed() >= CENTRE_HOLD_MS) {
-        _reverseFigureEight = std::abs(wrappedDifference(idealHeading - (bearing - 90))) > 90;
+        _reverseFigureEight = std::abs(wrappedDifference(idealHeading - _fieldAlignmentHeading)) > 90;
         _baselineAltitude = altitude;
         _beginPhase();
     }
@@ -1419,7 +1421,8 @@ void CaacFigureEightController::_sampleSpin()
                 {QStringLiteral("spinAngle"), _spinAngle},
                 {QStringLiteral("altitudeError"), altitudeError},
                 {QStringLiteral("horizontalError"), horizontalError},
-                {QStringLiteral("headingError"), 0.0},
+                {QStringLiteral("headingError"), std::abs(wrappedDifference(heading - _fieldAlignmentHeading))},
+                {QStringLiteral("idealHeading"), _fieldAlignmentHeading},
                 {QStringLiteral("evaluatedHeading"), heading},
                 {QStringLiteral("speed"), speed},
                 {QStringLiteral("completedLaps"), 0},

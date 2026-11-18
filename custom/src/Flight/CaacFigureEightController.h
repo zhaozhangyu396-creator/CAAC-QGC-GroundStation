@@ -233,6 +233,7 @@ private:
     bool _calibrationReady = false;
     double _fenceWidth = 1.2;
     double _baselineAltitude = 0;
+    double _fieldAlignmentHeading = qQNaN();
     double _previousProgress = 0;
     double _signedProgress = 0;
     double _travelDistance = 0;

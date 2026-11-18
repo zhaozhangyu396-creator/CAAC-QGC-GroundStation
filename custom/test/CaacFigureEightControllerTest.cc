@@ -664,6 +664,11 @@ void CaacFigureEightControllerTest::_phasesAndVoice()
     QVERIFY(std::abs(controller.metrics().value(QStringLiteral("evaluatedHeading")).toDouble() - 330) < 0.1);
     QVERIFY(turnTo(0));
     QVERIFY(std::abs(controller.metrics().value(QStringLiteral("spinAngle")).toDouble()) < 0.1);
+    for (const int heading : {60, 120, 180, 120, 60, 0}) {
+        QVERIFY(turnTo(heading));
+        QVERIFY(std::abs(controller.metrics().value(QStringLiteral("headingError")).toDouble() - heading) < 0.1);
+        QCOMPARE(controller.phase(), QStringLiteral("原地自旋"));
+    }
     QVERIFY(finishTurn(1));
     QVERIFY(controller.running());
     QCOMPARE(controller.attemptNumber(), 2);
@@ -790,6 +795,8 @@ void CaacFigureEightControllerTest::_centreQualification_data()
     QTest::newRow("normal-350-speed-and-descent-above-2m") << true << 2.32 << 0.3 << -0.3 << 80.0 << 0 << 8.0;
     QTest::newRow("normal-0-euler-after-quaternion-at-1.5m") << false << 1.5 << 0.0 << 0.0 << 90.0 << 2 << 8.0;
     QTest::newRow("takeoff-too-close-use-field-heading") << true << 1.91 << 0.0 << 0.0 << 170.0 << 0 << 0.2;
+    QTest::newRow("spin-arming-point-opposite-map-marker") << true << 2.28 << 0.08 << 0.0 << 270.0 << 1 << 8.0;
+    QTest::newRow("combined-arming-point-opposite-map-marker") << true << 2.28 << 0.08 << 0.0 << 270.0 << 2 << 8.0;
 }
 
 void CaacFigureEightControllerTest::_centreQualification()
@@ -867,6 +874,12 @@ void CaacFigureEightControllerTest::_centreQualification()
     QVERIFY(rejected());
     reportedHeading = std::fmod(idealHeading + 180, 360);
     QVERIFY(rejected());
+    QVERIFY(std::abs(controller.metrics().value(QStringLiteral("headingError")).toDouble() - 180) < 0.01);
+    if (siteBearing == 270) {
+        QTest::qWait(3200);  // Keep sending the reversed heading for longer than the qualification hold.
+        QVERIFY(rejected());
+        QCOMPARE(controller.attemptNumber(), 1);
+    }
     reportedHeading = idealHeading;
     reportedSpeed = 0.31;
     QVERIFY(rejected());
