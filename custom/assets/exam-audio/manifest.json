@@ -176,12 +176,12 @@
     },
     {
       "id": "retry",
-      "text": "请返回中心筒上方，在不低于一点五米的高度悬停三秒后重试。",
+      "text": "请返回中心筒上方，在不低于一点五米的高度悬停一秒后重试。",
       "file": "retry.wav",
-      "durationSeconds": 4.956054,
-      "byteSize": 218606,
-      "sha256": "2cf24babaf5d1d9e8da7f1bba33cced920d51e70972035dbecf7bbff497a2830",
-      "generatedAtUtc": "2026-11-06T11:37:29.280266+00:00",
+      "durationSeconds": 5.14322,
+      "byteSize": 226894,
+      "sha256": "b70ad88189a2910193b2e16afd8331c498868b2eb661ced28c1a4caf32e30509",
+      "generatedAtUtc": "2026-11-18T08:32:00.290942+00:00",
       "synthesisId": "melo-tts-exam-results-20261106"
     },
     {

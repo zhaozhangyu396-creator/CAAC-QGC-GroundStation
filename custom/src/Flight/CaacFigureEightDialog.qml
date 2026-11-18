@@ -257,7 +257,7 @@ QGCPopupDialog {
                 QGCLabel {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
-                    text: qsTr("开始考试后，先在中心筒半径 1 米内、高度不低于 1.5 米处悬停 3 秒。机头沿垂直于 AB 的中垂线朝向背离起飞位置的一侧，允许 ±15°。八字可从任意一侧开始，运动离开中心筒范围后评分；评分后速度低于 0.3 米/秒、偏差或额外速度限制超限即判本次失败。每次考试有三次机会，已通过的自旋无需重考。")
+                    text: qsTr("开始考试后，先在中心筒半径 1 米内、高度不低于 1.5 米处悬停 1 秒。机头沿垂直于 AB 的中垂线朝向背离起飞位置的一侧，允许 ±15°。八字可从任意一侧开始，运动离开中心筒范围后评分；评分后速度低于 0.3 米/秒、偏差或额外速度限制超限即判本次失败。每次考试有三次机会，已通过的自旋无需重考。")
                 }
                 QGCLabel { text: qsTr("地面风速来源") }
                 QGCComboBox {
@@ -439,7 +439,7 @@ QGCPopupDialog {
                     wrapMode: Text.WordWrap
                     text: root.controller.metrics.positioningPending && root.controller.metrics.positioningPending.length
                         ? qsTr("等待就位：%1").arg(root.controller.metrics.positioningPending.join("；"))
-                        : qsTr("就位条件已满足，正在确认连续悬停 3 秒。")
+                        : qsTr("就位条件已满足，正在确认连续悬停 1 秒。")
                 }
                 QGCLabel {
                     objectName: "caacFigureEightAwaitDeparture"

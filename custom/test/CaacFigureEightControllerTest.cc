@@ -876,7 +876,7 @@ void CaacFigureEightControllerTest::_centreQualification()
     QVERIFY(rejected());
     QVERIFY(std::abs(controller.metrics().value(QStringLiteral("headingError")).toDouble() - 180) < 0.01);
     if (siteBearing == 270) {
-        QTest::qWait(3200);  // Keep sending the reversed heading for longer than the qualification hold.
+        QTest::qWait(1200);  // Keep sending the reversed heading for longer than the qualification hold.
         QVERIFY(rejected());
         QCOMPARE(controller.attemptNumber(), 1);
     }
@@ -899,7 +899,7 @@ void CaacFigureEightControllerTest::_centreQualification()
     QVERIFY(std::abs(std::remainder(
                 controller.metrics().value(QStringLiteral("idealHeading")).toDouble() - idealHeading, 360)) < 0.01);
     reportedCoordinate = centre;
-    QTRY_VERIFY_WITH_TIMEOUT(controller.metrics().value(QStringLiteral("hoverStableSeconds")).toDouble() >= 1,
+    QTRY_VERIFY_WITH_TIMEOUT(controller.metrics().value(QStringLiteral("hoverStableSeconds")).toDouble() >= 0.4,
                              TestTimeout::mediumMs());
     reportedCoordinate = QGCGeo::geodesicDestination(centre, 90, 1.02);
     QVERIFY(report());
@@ -914,6 +914,8 @@ void CaacFigureEightControllerTest::_centreQualification()
     reportedCoordinate = centre;
     reportedHeight = qualifiedHeight;
     reportedHeading = std::fmod(fieldHeading + 345, 360);
+    QElapsedTimer qualificationHold;
+    qualificationHold.start();
     QVERIFY(report());
     QVERIFY(controller.metrics().value(QStringLiteral("positioningPending")).toStringList().isEmpty());
     reportedHeading = std::fmod(fieldHeading + 15, 360);
@@ -927,10 +929,11 @@ void CaacFigureEightControllerTest::_centreQualification()
     QVERIFY2(pending.isEmpty(), qualificationDetails().constData());
     const auto qualifiedPhase = exerciseMode == 0 ? QStringLiteral("八字飞行") : QStringLiteral("原地自旋");
     QTRY_VERIFY2_WITH_TIMEOUT(!controller.running() || controller.phase() == qualifiedPhase,
-                              qualificationDetails().constData(), TestTimeout::mediumMs());
+                              qualificationDetails().constData(), 2000);
     QVERIFY2(controller.running(), qPrintable(controller.status()));
     QCOMPARE(controller.phase(), qualifiedPhase);
-    QVERIFY(controller.metrics().value(QStringLiteral("elapsed")).toDouble() >= 4);
+    QVERIFY(qualificationHold.elapsed() >= 1000);
+    QCOMPARE(controller.metrics().value(QStringLiteral("hoverStableSeconds")).toDouble(), 1.0);
     QCOMPARE(controller.attemptNumber(), 1);
     if (!quaternionStream) {
         reportTelemetry = false;

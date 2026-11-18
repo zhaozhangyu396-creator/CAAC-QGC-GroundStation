@@ -28,7 +28,7 @@ constexpr int MAX_RECORDED_POINTS = 18000;
 constexpr qint64 TELEMETRY_TIMEOUT_MS = 3000;
 // Resume live Euler data before quaternion freshness can end the session.
 constexpr qint64 ATTITUDE_QUATERNION_PREFERENCE_MS = TELEMETRY_TIMEOUT_MS / 2;
-constexpr qint64 CENTRE_HOLD_MS = 3000;
+constexpr int CENTRE_HOLD_SECONDS = 1;
 constexpr double CENTRE_MIN_HEIGHT = 1.5;
 constexpr double CENTRE_RADIUS = 1.0;
 constexpr double TAKEOFF_SIDE_MIN_OFFSET = 0.5;
@@ -698,10 +698,10 @@ void CaacFigureEightController::_prepareAttempt()
     _violationSamples = 0;
     emit alarmsCleared();
     _status =
-        tr("请在中心筒半径 1 米范围内、高度不低于 1.5 米处悬停 3 秒。机头沿 AB 中垂线朝向背离起飞位置的一侧，允许 "
+        tr("请在中心筒半径 1 米范围内、高度不低于 1.5 米处悬停 1 秒。机头沿 AB 中垂线朝向背离起飞位置的一侧，允许 "
            "±15°；水平和垂直速度均不超过 0.3 米/秒。");
     _announce(_attemptNumber > 1 ? QStringLiteral("retry") : QStringLiteral("positioning"),
-              _attemptNumber > 1 ? tr("请返回中心筒上方，在不低于一点五米的高度悬停三秒后重试。")
+              _attemptNumber > 1 ? tr("请返回中心筒上方，在不低于一点五米的高度悬停一秒后重试。")
                                  : tr("请将无人机飞至中心筒上方一点五米处，并保持对位悬停。"));
     emit sessionChanged();
 }
@@ -757,7 +757,7 @@ void CaacFigureEightController::_samplePositioning()
     const double stableSeconds = _hoverSince.isValid() ? _hoverSince.elapsed() / 1000.0 : 0;
     _metrics = {{QStringLiteral("elapsed"), now / 1000.0},
                 {QStringLiteral("centreDistance"), distance},
-                {QStringLiteral("hoverStableSeconds"), std::min(3.0, stableSeconds)},
+                {QStringLiteral("hoverStableSeconds"), std::min<double>(CENTRE_HOLD_SECONDS, stableSeconds)},
                 {QStringLiteral("relativeAltitude"), altitude},
                 {QStringLiteral("positioningPending"), pending},
                 {QStringLiteral("idealHeading"), idealHeading},
@@ -786,7 +786,7 @@ void CaacFigureEightController::_samplePositioning()
         _lastRecorded = now;
     }
     emit sampleChanged();
-    if (inPosition && _hoverSince.elapsed() >= CENTRE_HOLD_MS) {
+    if (inPosition && stableSeconds >= CENTRE_HOLD_SECONDS) {
         _reverseFigureEight = std::abs(wrappedDifference(idealHeading - _fieldAlignmentHeading)) > 90;
         _baselineAltitude = altitude;
         _beginPhase();
@@ -1329,7 +1329,7 @@ void CaacFigureEightController::_sample()
                 {QStringLiteral("relativeAltitude"), _vehicle->altitudeRelative()->rawValue().toDouble()},
                 {QStringLiteral("centreDistance"), centreDistance},
                 {QStringLiteral("subjectStarted"), _subjectStarted},
-                {QStringLiteral("hoverStableSeconds"), 3.0},
+                {QStringLiteral("hoverStableSeconds"), CENTRE_HOLD_SECONDS},
                 {QStringLiteral("altitudeError"), altitudeError},
                 {QStringLiteral("horizontalError"), horizontalError},
                 {QStringLiteral("headingError"), headingError},
@@ -1417,7 +1417,7 @@ void CaacFigureEightController::_sampleSpin()
                 {QStringLiteral("phaseElapsed"), phaseElapsed},
                 {QStringLiteral("relativeAltitude"), _vehicle->altitudeRelative()->rawValue().toDouble()},
                 {QStringLiteral("centreDistance"), QGCGeo::geodesicDistance(_reference.first(), coordinate)},
-                {QStringLiteral("hoverStableSeconds"), 3.0},
+                {QStringLiteral("hoverStableSeconds"), CENTRE_HOLD_SECONDS},
                 {QStringLiteral("spinAngle"), _spinAngle},
                 {QStringLiteral("altitudeError"), altitudeError},
                 {QStringLiteral("horizontalError"), horizontalError},
