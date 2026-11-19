@@ -828,13 +828,30 @@ void CaacFigureEightControllerTest::_spinDirections()
         vehicle()->heading()->setRawValue(heading);
         return reportPosition(vehicle(), mockLink(), controller, centre);
     };
+    // Replay a single telemetry stream during the timed hold. Mixing queued mock
+    // attitudes with the injected samples can replay the pre-turn heading.
+    const auto holdHeading = [&](double heading) {
+        const auto phase = controller.phase();
+        const auto attempt = controller.attemptNumber();
+        QElapsedTimer timer;
+        timer.start();
+        do {
+            if (!turnTo(heading) || !controller.running() || controller.phase() != phase ||
+                controller.attemptNumber() != attempt) {
+                return false;
+            }
+            if (controller.metrics().value(QStringLiteral("phaseElapsed")).toDouble() >= 5.1) {
+                return true;
+            }
+            QTest::qSleep(100);
+        } while (timer.elapsed() < 9000);
+        return false;
+    };
     if (standard != 2) {
         QVERIFY(turnTo(0));
         QTRY_VERIFY_WITH_TIMEOUT(controller.running() || controller.start(), 6000);
         QTRY_COMPARE_WITH_TIMEOUT(controller.phase(), QStringLiteral("原地自旋"), 9000);
-        QVERIFY(turnTo(300));
-        QTRY_VERIFY_WITH_TIMEOUT(controller.metrics().value(QStringLiteral("phaseElapsed")).toDouble() >= 5.1,
-                                 9000);
+        QVERIFY2(holdHeading(300), qPrintable(controller.status() + controller.lastAttemptFailure()));
         for (const double heading : {300.0, 270.0, 210.0, 150.0, 90.0, 30.0, 5.1}) {
             QVERIFY(turnTo(heading));
             QVERIFY(controller.running());
@@ -857,15 +874,14 @@ void CaacFigureEightControllerTest::_spinDirections()
         }
         return;
     }
-    const auto turnInstructorTo = [&](double heading) {
-        return turnTo(mode == 1 ? heading : std::fmod(360.0 - heading, 360.0));
+    const auto instructorHeading = [mode](double heading) {
+        return mode == 1 ? heading : std::fmod(360.0 - heading, 360.0);
     };
+    const auto turnInstructorTo = [&](double heading) { return turnTo(instructorHeading(heading)); };
     QVERIFY(turnInstructorTo(0));
     QTRY_VERIFY_WITH_TIMEOUT(controller.running() || controller.start(), 6000);
     QTRY_COMPARE_WITH_TIMEOUT(controller.phase(), QStringLiteral("原地自旋"), 9000);
-    QVERIFY(turnInstructorTo(30));
-    QTRY_VERIFY_WITH_TIMEOUT(controller.metrics().value(QStringLiteral("phaseElapsed")).toDouble() >= 5.1,
-                             9000);
+    QVERIFY2(holdHeading(instructorHeading(30)), qPrintable(controller.status() + controller.lastAttemptFailure()));
     for (const int heading : {90, 150, 210, 270, 330, 355}) {
         QVERIFY(turnInstructorTo(heading));
     }
@@ -884,17 +900,15 @@ void CaacFigureEightControllerTest::_spinDirections()
         QCOMPARE(speech[speech.size() - 2][0].toString(), QStringLiteral("spin_reversal"));
         QVERIFY(turnInstructorTo(0));
         QTRY_COMPARE_WITH_TIMEOUT(controller.phase(), QStringLiteral("原地自旋"), 9000);
-        QVERIFY(turnInstructorTo(30));
-        QTRY_VERIFY_WITH_TIMEOUT(controller.metrics().value(QStringLiteral("phaseElapsed")).toDouble() >= 5.1,
-                                 9000);
+        QVERIFY2(holdHeading(instructorHeading(30)), qPrintable(controller.status() + controller.lastAttemptFailure()));
         for (int step = 2; step <= 12; ++step) {
             QVERIFY(turnInstructorTo(std::fmod(step * 30.0, 360)));
         }
         QCOMPARE(controller.phase(), QStringLiteral("反向原地自旋"));
         QVERIFY(turnInstructorTo(348));
     }
-    QTRY_VERIFY_WITH_TIMEOUT(controller.metrics().value(QStringLiteral("phaseElapsed")).toDouble() >= 5.1,
-                             9000);
+    QVERIFY2(holdHeading(instructorHeading(mode == 1 ? 348.0 : 352.9)),
+             qPrintable(controller.status() + controller.lastAttemptFailure()));
     for (const double heading : {300.0, 240.0, 180.0, 120.0, 60.0, 5.1}) {
         QVERIFY(turnInstructorTo(heading));
     }
