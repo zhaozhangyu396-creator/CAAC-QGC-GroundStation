@@ -275,6 +275,7 @@ private:
     QGeoCoordinate _departureCourseOrigin;
     double _spinLastHeading = 0;
     double _spinAngle = 0;
+    double _spinExtremeAngle = 0;
     int _attemptNumber = 0;
     bool _spinPassed = false;
     bool _subjectStarted = false;

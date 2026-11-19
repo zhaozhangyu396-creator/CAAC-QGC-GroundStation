@@ -213,6 +213,16 @@
       "sha256": "becfc255dca5d77488e507e5cd5dbedd7742c57281b676bd35399fc2befccea9",
       "generatedAtUtc": "2026-10-28T10:40:42.936505+00:00",
       "synthesisId": "melo-tts-centre-20261028"
+    },
+    {
+      "id": "spin_reversal",
+      "text": "自旋中途回转，本次考试未通过。",
+      "file": "spin_reversal.wav",
+      "durationSeconds": 2.437324,
+      "byteSize": 107564,
+      "sha256": "55bf813a0a109310e58ec2f4cc7bd86cdc23680bd7e6324d2bd5d3a579f31c2e",
+      "generatedAtUtc": "2026-11-19T08:05:14.115359+00:00",
+      "synthesisId": "melo-tts-exam-results-20261106"
     }
   ],
   "additionalSynthesis": [

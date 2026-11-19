@@ -34,6 +34,7 @@ constexpr double CENTRE_RADIUS = 1.0;
 constexpr double TAKEOFF_SIDE_MIN_OFFSET = 0.5;
 constexpr double CENTRE_HEADING_TOLERANCE = 15.0;
 constexpr double SPIN_PASS_ANGLE = 355.0;
+constexpr double SPIN_YAW_EPSILON = 1e-4;  // MAVLink yaw is transmitted as a float in radians.
 constexpr float MIN_FIGURE_EIGHT_SPEED = 0.3f;
 // VFR_HUD encodes both speeds as floats, including the 0.3 m/s boundary.
 constexpr float HOVER_MAX_SPEED = 0.3f;
@@ -675,6 +676,7 @@ void CaacFigureEightController::_beginPhase(bool reverseSpin)
         _phaseAnchor = _reference.first();
         _spinLastHeading = _headingDegrees;
         _spinAngle = 0;
+        _spinExtremeAngle = 0;
         if (_allowsEitherSpinDirection()) {
             _status = tr("请任选顺时针或逆时针原地自旋，净转角达到 355 度，用时 5 至 30 秒。");
         } else {
@@ -1386,7 +1388,12 @@ void CaacFigureEightController::_sampleSpin()
     _spinLastHeading = heading;
     if (!_subjectStarted && std::abs(_spinAngle) >= 3) {
         _subjectStarted = true;
+        _spinExtremeAngle = _spinAngle;
         _phaseClock.start();
+    }
+    if (_subjectStarted) {
+        _spinExtremeAngle = _spinExtremeAngle < 0 ? std::min(_spinExtremeAngle, _spinAngle)
+                                                  : std::max(_spinExtremeAngle, _spinAngle);
     }
     const double phaseElapsed = _subjectStarted ? _phaseClock.elapsed() / 1000.0 : 0;
     const double horizontalError = QGCGeo::geodesicDistance(_phaseAnchor, coordinate);
@@ -1405,6 +1412,8 @@ void CaacFigureEightController::_sampleSpin()
             }
         }
     };
+    violation(_subjectStarted && std::abs(_spinAngle - _spinExtremeAngle) > SPIN_YAW_EPSILON,
+              tr("自旋中途回转"), QStringLiteral("spin_reversal"));
     violation(horizontalError > appliedLimits.value(QStringLiteral("horizontal")).toDouble(), tr("水平偏差超限"),
               QStringLiteral("area"));
     violation(altitudeError > appliedLimits.value(QStringLiteral("vertical")).toDouble(), tr("高度偏差超限"),
@@ -1454,7 +1463,7 @@ void CaacFigureEightController::_sampleSpin()
         _failAttempt(_violations.join(tr("、")), failureCue);
     } else if (phaseElapsed > 30) {
         _failAttempt(tr("原地自旋已超过 30 秒。"), QStringLiteral("spin_timeout"));
-    } else if (scoringAngle >= SPIN_PASS_ANGLE - 1e-4) {  // MAVLink yaw is a float in radians.
+    } else if (scoringAngle >= SPIN_PASS_ANGLE - SPIN_YAW_EPSILON) {
         if (phaseElapsed < 5) {
             _failAttempt(tr("原地自旋少于 5 秒，请降低转速后重新开始。"), QStringLiteral("spin_too_fast"));
         } else if (_standard == 2 && _phase == Phase::Spin) {

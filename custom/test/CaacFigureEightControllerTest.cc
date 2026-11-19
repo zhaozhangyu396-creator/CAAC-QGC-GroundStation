@@ -662,24 +662,28 @@ void CaacFigureEightControllerTest::_phasesAndVoice()
     QVERIFY(turnTo(330));
     QVERIFY(std::abs(controller.metrics().value(QStringLiteral("spinAngle")).toDouble() + 30) < 0.1);
     QVERIFY(std::abs(controller.metrics().value(QStringLiteral("evaluatedHeading")).toDouble() - 330) < 0.1);
+    QVERIFY(turnTo(330.25));
+    QCOMPARE(controller.attemptNumber(), 2);
+    QCOMPARE(controller.lastAttemptFailure(), QStringLiteral("自旋中途回转"));
     QVERIFY(turnTo(0));
-    QVERIFY(std::abs(controller.metrics().value(QStringLiteral("spinAngle")).toDouble()) < 0.1);
-    for (const int heading : {60, 120, 180, 120, 60, 0}) {
+    QTRY_COMPARE_WITH_TIMEOUT(controller.phase(), QStringLiteral("原地自旋"), TestTimeout::longMs());
+    for (const int heading : {60, 120, 180}) {
         QVERIFY(turnTo(heading));
         QVERIFY(std::abs(controller.metrics().value(QStringLiteral("headingError")).toDouble() - heading) < 0.1);
         QCOMPARE(controller.phase(), QStringLiteral("原地自旋"));
     }
-    QVERIFY(finishTurn(1));
+    QVERIFY(turnTo(179.75));
     QVERIFY(controller.running());
-    QCOMPARE(controller.attemptNumber(), 2);
+    QCOMPARE(controller.attemptNumber(), 3);
     QCOMPARE(controller.attemptLimit(), 3);
-    QVERIFY(controller.lastAttemptFailure().contains(QStringLiteral("少于 5 秒")));
+    QCOMPARE(controller.lastAttemptFailure(), QStringLiteral("自旋中途回转"));
     QCOMPARE(speech.size(), 0);
     controller.stop();
     controller.setVoiceEnabled(true);
     controller.testVoice();
     QCOMPARE(speech.last()[0].toString(), QStringLiteral("ready"));
     controller.setExerciseMode(2);
+    QVERIFY(turnTo(0));
     QVERIFY(controller.start());
     QCOMPARE(speech.last()[0].toString(), QStringLiteral("positioning"));
     QCOMPARE(controller.attemptNumber(), 1);
@@ -774,7 +778,7 @@ void CaacFigureEightControllerTest::_phasesAndVoice()
     QVERIFY(controller.spinPassed());
     QCOMPARE(speech.last()[0].toString(), QStringLiteral("spin_completed"));
     QCOMPARE(controller.lastAnnouncement(), QStringLiteral("自旋考试通过。"));
-    // Both pilot categories can choose counterclockwise. Retracing part of the turn cancels that angle.
+    // Both pilot categories can complete an uninterrupted counterclockwise turn.
     for (const int standard : {0, 1}) {
         controller.setStandard(standard);
         QVERIFY(turnTo(0));
@@ -783,7 +787,7 @@ void CaacFigureEightControllerTest::_phasesAndVoice()
         QVERIFY(turnTo(300));
         QTRY_VERIFY_WITH_TIMEOUT(controller.metrics().value(QStringLiteral("phaseElapsed")).toDouble() >= 5.1,
                                  TestTimeout::longMs());
-        for (const double heading : {330.0, 270.0, 210.0, 150.0, 90.0, 30.0, 5.1}) {
+        for (const double heading : {300.0, 270.0, 210.0, 150.0, 90.0, 30.0, 5.1}) {
             QVERIFY(turnTo(heading));
             QVERIFY(controller.running());
             QVERIFY(!controller.spinPassed());
@@ -798,6 +802,24 @@ void CaacFigureEightControllerTest::_phasesAndVoice()
         QCOMPARE(speech.last()[1].toString(), QStringLiteral("自旋考试通过。"));
         QVERIFY(controller.metrics().value(QStringLiteral("progress")).toDouble() > 0.99999);
     }
+    controller.setStandard(2);
+    QVERIFY(turnTo(0));
+    QVERIFY(controller.start());
+    QTRY_COMPARE_WITH_TIMEOUT(controller.phase(), QStringLiteral("原地自旋"), TestTimeout::longMs());
+    QVERIFY(turnTo(30));
+    QTRY_VERIFY_WITH_TIMEOUT(controller.metrics().value(QStringLiteral("phaseElapsed")).toDouble() >= 5.1,
+                             TestTimeout::longMs());
+    QVERIFY(finishTurn(2));
+    QCOMPARE(controller.phase(), QStringLiteral("反向原地自旋"));
+    QVERIFY(turnTo(359));  // Cross north in the newly prescribed direction.
+    QVERIFY(turnTo(348));
+    QCOMPARE(controller.attemptNumber(), 1);
+    QVERIFY(turnTo(349));
+    QCOMPARE(controller.attemptNumber(), 2);
+    QCOMPARE(controller.lastAttemptFailure(), QStringLiteral("自旋中途回转"));
+    QCOMPARE(speech[speech.size() - 2][0].toString(), QStringLiteral("spin_reversal"));
+    QCOMPARE(speech.last()[0].toString(), QStringLiteral("retry"));
+    controller.stop();
     controller.setStandard(0);
     controller.setExerciseMode(2);
     CaacFigureEightController restored;
@@ -1290,7 +1312,7 @@ void CaacFigureEightControllerTest::_voiceResources()
             QCOMPARE(clip.value(QStringLiteral("text")).toString(), QStringLiteral("考试失败，三次机会已用完。"));
         }
     }
-    for (const auto& id : {"ready", "positioning", "spin", "spin_reverse", "spin_completed", "spin_timeout",
+    for (const auto& id : {"ready", "positioning", "spin", "spin_reverse", "spin_completed", "spin_timeout", "spin_reversal",
                            "figure_eight", "completed", "retry", "failed"}) {
         QVERIFY(ids.contains(QString::fromLatin1(id)));
     }
