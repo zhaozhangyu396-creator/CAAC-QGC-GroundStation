@@ -34,6 +34,7 @@ constexpr double CENTRE_RADIUS = 1.0;
 constexpr double TAKEOFF_SIDE_MIN_OFFSET = 0.5;
 constexpr double CENTRE_HEADING_TOLERANCE = 15.0;
 constexpr double SPIN_PASS_ANGLE = 355.0;
+constexpr double INSTRUCTOR_REVERSAL_ANGLE = 5.0;
 constexpr double SPIN_YAW_EPSILON = 1e-4;  // MAVLink yaw is transmitted as a float in radians.
 constexpr float MIN_FIGURE_EIGHT_SPEED = 0.3f;
 // VFR_HUD encodes both speeds as floats, including the 0.3 m/s boundary.
@@ -648,6 +649,7 @@ void CaacFigureEightController::_beginPhase(bool reverseSpin)
     }
     const bool spinCompleted = _phase == Phase::Spin || _phase == Phase::ReverseSpin;
     if (reverseSpin) {
+        _returnSpinSign = _spinAngle > 0 ? -1 : 1;
         _phase = Phase::ReverseSpin;
     } else if (_phase == Phase::Spin || _phase == Phase::ReverseSpin) {
         _phase = Phase::FigureEight;
@@ -677,14 +679,18 @@ void CaacFigureEightController::_beginPhase(bool reverseSpin)
         _spinLastHeading = _headingDegrees;
         _spinAngle = 0;
         _spinExtremeAngle = 0;
-        if (_allowsEitherSpinDirection()) {
-            _status = tr("请任选顺时针或逆时针原地自旋，净转角达到 355 度，用时 5 至 30 秒。");
+        _metrics[QStringLiteral("spinAngle")] = 0.0;
+        _metrics[QStringLiteral("phaseElapsed")] = 0.0;
+        _metrics[QStringLiteral("progress")] = 0.0;
+        if (_phase == Phase::ReverseSpin) {
+            const bool clockwise = _returnSpinSign > 0;
+            _status = clockwise ? tr("第一圈完成，请开始顺时针原地自旋。") : tr("第一圈完成，请开始逆时针原地自旋。");
+            _announce(clockwise ? QStringLiteral("spin_reverse_cw") : QStringLiteral("spin_reverse"), _status);
         } else {
-            _status = _phase == Phase::ReverseSpin ? tr("请手动逆时针完成 360 度原地自旋，用时 5 至 30 秒。")
+            _status = _allowsEitherSpinDirection() ? tr("请任选顺时针或逆时针原地自旋，净转角达到 355 度，用时 5 至 30 秒。")
                                                    : tr("请手动顺时针完成 360 度原地自旋，用时 5 至 30 秒。");
+            _announce(QStringLiteral("spin"), tr("可以开始原地自旋"));
         }
-        _announce(_phase == Phase::ReverseSpin ? QStringLiteral("spin_reverse") : QStringLiteral("spin"),
-                  _phase == Phase::ReverseSpin ? tr("可以开始反向原地自旋") : tr("可以开始原地自旋"));
     }
     _metrics.remove(QStringLiteral("positioningPending"));
     emit sampleChanged();
@@ -1383,7 +1389,11 @@ void CaacFigureEightController::_sampleSpin()
         _finish(tr("自旋航向遥测发生跳变，训练记录已结束。"), QStringLiteral("telemetry"));
         return;
     }
-    _spinAngle += change * (_phase == Phase::ReverseSpin ? -1 : 1);
+    _spinAngle += change * (_phase == Phase::ReverseSpin ? _returnSpinSign : 1);
+    if (_phase == Phase::ReverseSpin && !_subjectStarted) {
+        // Discard first-circle overshoot until the required return motion begins.
+        _spinAngle = std::max(0.0, _spinAngle);
+    }
     const double scoringAngle = _allowsEitherSpinDirection() ? std::abs(_spinAngle) : _spinAngle;
     _spinLastHeading = heading;
     if (!_subjectStarted && std::abs(_spinAngle) >= 3) {
@@ -1412,7 +1422,10 @@ void CaacFigureEightController::_sampleSpin()
             }
         }
     };
-    violation(_subjectStarted && std::abs(_spinAngle - _spinExtremeAngle) > SPIN_YAW_EPSILON,
+    const double retreat = std::abs(_spinAngle - _spinExtremeAngle);
+    const bool reversed = _standard == 2 ? retreat >= INSTRUCTOR_REVERSAL_ANGLE - SPIN_YAW_EPSILON
+                                         : retreat > SPIN_YAW_EPSILON;
+    violation(_subjectStarted && reversed,
               tr("自旋中途回转"), QStringLiteral("spin_reversal"));
     violation(horizontalError > appliedLimits.value(QStringLiteral("horizontal")).toDouble(), tr("水平偏差超限"),
               QStringLiteral("area"));

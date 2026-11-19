@@ -197,7 +197,10 @@ private:
     void _samplePositioning();
     void _failAttempt(const QString& reason, const QString& cue);
     void _sampleSpin();
-    bool _allowsEitherSpinDirection() const { return _exerciseMode == 1 && (_standard == 0 || _standard == 1); }
+    bool _allowsEitherSpinDirection() const
+    {
+        return _standard == 0 || _standard == 1 || (_standard == 2 && _phase == Phase::Spin);
+    }
     bool _telemetryReady() const;
     double _nearestProgress(const QGeoCoordinate& coordinate, double& distance, double& heading, int circle = -1) const;
     static QVariantMap _defaults(int standard);
@@ -276,6 +279,7 @@ private:
     double _spinLastHeading = 0;
     double _spinAngle = 0;
     double _spinExtremeAngle = 0;
+    int _returnSpinSign = -1;
     int _attemptNumber = 0;
     bool _spinPassed = false;
     bool _subjectStarted = false;

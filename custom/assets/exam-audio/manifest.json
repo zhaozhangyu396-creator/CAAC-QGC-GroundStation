@@ -42,13 +42,13 @@
     },
     {
       "id": "spin_reverse",
-      "text": "可以开始反向原地自旋。",
+      "text": "第一圈完成，请开始逆时针原地自旋。",
       "file": "spin_reverse.wav",
-      "durationSeconds": 1.927256,
-      "byteSize": 85070,
-      "sha256": "4815263a1eda19e1caeb471779d7c7910a97fd36c1140034647c795dc67a4245",
-      "generatedAtUtc": "2026-10-28T03:41:32.191752+00:00",
-      "synthesisId": "melo-tts-20261028"
+      "durationSeconds": 2.962902,
+      "byteSize": 130742,
+      "sha256": "1186a41d3611d9fcf8d15139f9616496516f3a7ba54a35074a035fefb04ae941",
+      "generatedAtUtc": "2026-11-19T09:52:03.685280+00:00",
+      "synthesisId": "melo-tts-exam-results-20261106"
     },
     {
       "id": "figure_eight",
@@ -222,6 +222,16 @@
       "byteSize": 107564,
       "sha256": "55bf813a0a109310e58ec2f4cc7bd86cdc23680bd7e6324d2bd5d3a579f31c2e",
       "generatedAtUtc": "2026-11-19T08:05:14.115359+00:00",
+      "synthesisId": "melo-tts-exam-results-20261106"
+    },
+    {
+      "id": "spin_reverse_cw",
+      "text": "第一圈完成，请开始顺时针原地自旋。",
+      "file": "spin_reverse_cw.wav",
+      "durationSeconds": 3.239184,
+      "byteSize": 142926,
+      "sha256": "3a0cf1ac2fde088eb66a9d34c26a789c947c0c393d2482d79933d7e2962ace6c",
+      "generatedAtUtc": "2026-11-19T09:52:04.768299+00:00",
       "synthesisId": "melo-tts-exam-results-20261106"
     }
   ],

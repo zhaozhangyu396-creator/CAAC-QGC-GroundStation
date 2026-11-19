@@ -39,7 +39,8 @@ int CaacExamAudio::_priority(const QString& id)
         return 3;
     }
     if (id == QStringLiteral("ready") || id == QStringLiteral("positioning") || id == QStringLiteral("spin") ||
-        id == QStringLiteral("spin_reverse") || id == QStringLiteral("figure_eight") || id == QStringLiteral("retry")) {
+        id == QStringLiteral("spin_reverse") || id == QStringLiteral("spin_reverse_cw") ||
+        id == QStringLiteral("figure_eight") || id == QStringLiteral("retry")) {
         return 2;
     }
     return 1;
@@ -202,7 +203,8 @@ void CaacExamAudio::play(const QString& id, const QString& text)
         QStringLiteral("altitude"),       QStringLiteral("completed"),   QStringLiteral("stopped"),
         QStringLiteral("telemetry"),      QStringLiteral("wind"),        QStringLiteral("spin_too_fast"),
         QStringLiteral("positioning"),    QStringLiteral("retry"),       QStringLiteral("failed"),
-        QStringLiteral("spin_completed"), QStringLiteral("spin_timeout"), QStringLiteral("spin_reversal")};
+        QStringLiteral("spin_completed"), QStringLiteral("spin_timeout"), QStringLiteral("spin_reversal"),
+        QStringLiteral("spin_reverse_cw")};
     if (!CUES.contains(id) || QGC::runningUnitTests() || !_ensureSettings() || _volume() <= 0) {
         return;
     }

@@ -246,7 +246,7 @@ QGCPopupDialog {
                 QGCLabel {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
-                    text: qsTr("原地自旋每圈 5–30 秒，同一圈内中途回转即判本次失败。视距内、超视距驾驶员参加单项原地自旋时，可任选顺时针或逆时针，沿同一方向转满 355° 通过角度判定。教员先顺时针、再逆时针。")
+                    text: qsTr("原地自旋每圈 5–30 秒，沿规定方向转满 355° 通过角度判定。视距内、超视距的单项自旋及自旋＋八字均可任选起转方向，中途回转即判本次失败。教员第一圈任选方向，第二圈必须反向，每圈从已转到的最远角度回退达到 5° 判本次失败。")
                 }
                 QGCLabel {
                     Layout.fillWidth: true
