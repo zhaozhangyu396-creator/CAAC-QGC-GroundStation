@@ -79,7 +79,8 @@ QGCPopupDialog {
             }
             QGCLabel {
                 objectName: "caacFigureEightSessionState"
-                text: root.controller.phase
+                text: !root.controller.running && root.controller.exerciseMode === 1 && root.controller.spinPassed
+                    ? root.controller.status : root.controller.phase
                 color: root.controller.running ? palette.colorGreen : palette.text
             }
         }
@@ -245,7 +246,7 @@ QGCPopupDialog {
                 QGCLabel {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
-                    text: qsTr("原地自旋每圈 5–30 秒。教员类别先顺时针、再逆时针，随后进入后退八字。")
+                    text: qsTr("原地自旋每圈 5–30 秒。视距内、超视距驾驶员参加单项原地自旋时，可任选顺时针或逆时针，净转角达到 355° 通过角度判定。教员先顺时针、再逆时针。")
                 }
                 QGCLabel {
                     Layout.fillWidth: true

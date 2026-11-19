@@ -774,6 +774,31 @@ void CaacFigureEightControllerTest::_phasesAndVoice()
     QVERIFY(controller.spinPassed());
     QCOMPARE(speech.last()[0].toString(), QStringLiteral("spin_completed"));
     QCOMPARE(controller.lastAnnouncement(), QStringLiteral("自旋考试通过。"));
+    // Both pilot categories can choose counterclockwise. Retracing part of the turn cancels that angle.
+    for (const int standard : {0, 1}) {
+        controller.setStandard(standard);
+        QVERIFY(turnTo(0));
+        QVERIFY(controller.start());
+        QTRY_COMPARE_WITH_TIMEOUT(controller.phase(), QStringLiteral("原地自旋"), TestTimeout::longMs());
+        QVERIFY(turnTo(300));
+        QTRY_VERIFY_WITH_TIMEOUT(controller.metrics().value(QStringLiteral("phaseElapsed")).toDouble() >= 5.1,
+                                 TestTimeout::longMs());
+        for (const double heading : {330.0, 270.0, 210.0, 150.0, 90.0, 30.0, 5.1}) {
+            QVERIFY(turnTo(heading));
+            QVERIFY(controller.running());
+            QVERIFY(!controller.spinPassed());
+        }
+        QVERIFY(std::abs(controller.metrics().value(QStringLiteral("spinAngle")).toDouble() + 354.9) < 0.01);
+        const auto cuesBeforePass = speech.size();
+        QVERIFY(turnTo(5));
+        QVERIFY(controller.spinPassed());
+        QVERIFY(!controller.running());
+        QCOMPARE(speech.size(), cuesBeforePass + 1);
+        QCOMPARE(speech.last()[0].toString(), QStringLiteral("spin_completed"));
+        QCOMPARE(speech.last()[1].toString(), QStringLiteral("自旋考试通过。"));
+        QVERIFY(controller.metrics().value(QStringLiteral("progress")).toDouble() > 0.99999);
+    }
+    controller.setStandard(0);
     controller.setExerciseMode(2);
     CaacFigureEightController restored;
     QCOMPARE(restored.exerciseMode(), 2);
