@@ -172,6 +172,8 @@ private slots:
     void _rtkCalibrationFreshnessAndVehicleSwitch();
     void _manualSessionDoesNotChangeMission();
     void _phasesAndVoice();
+    void _spinDirections_data();
+    void _spinDirections();
     void _centreQualification_data();
     void _centreQualification();
     void _eightStartsEitherSide_data();
@@ -778,99 +780,136 @@ void CaacFigureEightControllerTest::_phasesAndVoice()
     QVERIFY(controller.spinPassed());
     QCOMPARE(speech.last()[0].toString(), QStringLiteral("spin_completed"));
     QCOMPARE(controller.lastAnnouncement(), QStringLiteral("自旋考试通过。"));
-    for (const int mode : {1, 2}) {
-        controller.setExerciseMode(mode);
-        for (const int standard : {0, 1}) {
-            controller.setStandard(standard);
-            QVERIFY(turnTo(0));
-            QVERIFY(controller.start());
-            QTRY_COMPARE_WITH_TIMEOUT(controller.phase(), QStringLiteral("原地自旋"), TestTimeout::longMs());
-            QVERIFY(turnTo(300));
-            QTRY_VERIFY_WITH_TIMEOUT(controller.metrics().value(QStringLiteral("phaseElapsed")).toDouble() >= 5.1,
-                                     TestTimeout::longMs());
-            for (const double heading : {300.0, 270.0, 210.0, 150.0, 90.0, 30.0, 5.1}) {
-                QVERIFY(turnTo(heading));
-                QVERIFY(controller.running());
-                QVERIFY(!controller.spinPassed());
-            }
-            QVERIFY(std::abs(controller.metrics().value(QStringLiteral("spinAngle")).toDouble() + 354.9) < 0.01);
-            const auto cuesBeforePass = speech.size();
-            QVERIFY(turnTo(5));
-            QVERIFY(controller.spinPassed());
-            QCOMPARE(controller.running(), mode == 2);
-            QCOMPARE(speech.size(), cuesBeforePass + (mode == 2 ? 2 : 1));
-            QCOMPARE(speech[cuesBeforePass][0].toString(), QStringLiteral("spin_completed"));
-            QCOMPARE(speech[cuesBeforePass][1].toString(), QStringLiteral("自旋考试通过。"));
-            if (mode == 2) {
-                QCOMPARE(controller.phase(), QStringLiteral("八字飞行"));
-                QCOMPARE(speech.last()[0].toString(), QStringLiteral("figure_eight"));
-                controller.stop();
-            } else {
-                QVERIFY(controller.metrics().value(QStringLiteral("progress")).toDouble() > 0.99999);
-            }
-        }
-    }
-    controller.setStandard(2);
-    for (const int mode : {1, 2}) {
-        controller.setExerciseMode(mode);
-        const auto turnInstructorTo = [&](double heading) {
-            return turnTo(mode == 1 ? heading : std::fmod(360.0 - heading, 360.0));
-        };
-        QVERIFY(turnInstructorTo(0));
-        QVERIFY(controller.start());
-        QTRY_COMPARE_WITH_TIMEOUT(controller.phase(), QStringLiteral("原地自旋"), TestTimeout::longMs());
-        QVERIFY(turnInstructorTo(30));
-        QTRY_VERIFY_WITH_TIMEOUT(controller.metrics().value(QStringLiteral("phaseElapsed")).toDouble() >= 5.1,
-                                 TestTimeout::longMs());
-        for (const int heading : {90, 150, 210, 270, 330, 355}) {
-            QVERIFY(turnInstructorTo(heading));
-        }
-        QCOMPARE(controller.phase(), QStringLiteral("反向原地自旋"));
-        QCOMPARE(speech.last()[0].toString(), mode == 1 ? QStringLiteral("spin_reverse") : QStringLiteral("spin_reverse_cw"));
-        QVERIFY(turnInstructorTo(0));  // The aircraft continues in the first direction past the 355-degree pass threshold.
-        QCOMPARE(controller.metrics().value(QStringLiteral("phaseElapsed")).toDouble(), 0.0);
-        QVERIFY(turnInstructorTo(348));
-        QVERIFY(turnInstructorTo(350));
-        QVERIFY(turnInstructorTo(352.9));
-        QCOMPARE(controller.attemptNumber(), 1);
-        if (mode == 1) {
-            QVERIFY(turnInstructorTo(353));  // A five-degree retreat accumulated over several samples.
-            QCOMPARE(controller.attemptNumber(), 2);
-            QCOMPARE(controller.lastAttemptFailure(), QStringLiteral("自旋中途回转"));
-            QCOMPARE(speech[speech.size() - 2][0].toString(), QStringLiteral("spin_reversal"));
-            QVERIFY(turnInstructorTo(0));
-            QTRY_COMPARE_WITH_TIMEOUT(controller.phase(), QStringLiteral("原地自旋"), TestTimeout::longMs());
-            QVERIFY(turnInstructorTo(30));
-            QTRY_VERIFY_WITH_TIMEOUT(controller.metrics().value(QStringLiteral("phaseElapsed")).toDouble() >= 5.1,
-                                     TestTimeout::longMs());
-            QVERIFY(finishTurn(2));
-            QCOMPARE(controller.phase(), QStringLiteral("反向原地自旋"));
-            QVERIFY(turnInstructorTo(348));
-        }
-        QTRY_VERIFY_WITH_TIMEOUT(controller.metrics().value(QStringLiteral("phaseElapsed")).toDouble() >= 5.1,
-                                 TestTimeout::longMs());
-        for (const double heading : {300.0, 240.0, 180.0, 120.0, 60.0, 5.1}) {
-            QVERIFY(turnInstructorTo(heading));
-        }
-        QVERIFY(!controller.spinPassed());
-        const auto beforePass = speech.size();
-        QVERIFY(turnInstructorTo(5));
-        QVERIFY(controller.spinPassed());
-        QVERIFY(speech.size() > beforePass);
-        QCOMPARE(speech[beforePass][0].toString(), QStringLiteral("spin_completed"));
-        QCOMPARE(controller.running(), mode == 2);
-        if (mode == 2) {
-            QCOMPARE(controller.phase(), QStringLiteral("八字飞行"));
-            QCOMPARE(speech.last()[0].toString(), QStringLiteral("figure_eight"));
-            controller.stop();
-        }
-    }
-    controller.setStandard(0);
     controller.setExerciseMode(2);
     CaacFigureEightController restored;
     QCOMPARE(restored.exerciseMode(), 2);
     QVERIFY(restored.voiceEnabled());
     QCOMPARE(restored.limits().value(QStringLiteral("maxSpeed")).toDouble(), 0.2);
+}
+
+
+void CaacFigureEightControllerTest::_spinDirections_data()
+{
+    QTest::addColumn<int>("standard");
+    QTest::addColumn<int>("mode");
+    QTest::newRow("vlos-single-ccw") << 0 << 1;
+    QTest::newRow("bvlos-single-ccw") << 1 << 1;
+    QTest::newRow("vlos-combined-ccw") << 0 << 2;
+    QTest::newRow("bvlos-combined-ccw") << 1 << 2;
+    QTest::newRow("instructor-cw-then-ccw") << 2 << 1;
+    QTest::newRow("instructor-ccw-then-cw-combined") << 2 << 2;
+}
+
+void CaacFigureEightControllerTest::_spinDirections()
+{
+    QFETCH(int, standard);
+    QFETCH(int, mode);
+    QSettings().remove(QStringLiteral("CAAC/FigureEight"));
+    _connectMockLink();
+    QVERIFY(vehicle());
+    QVERIFY(waitForInitialConnect());
+    _ignoreMissingPressureBackend();
+    QVERIFY(takeoffAtExamHeight(vehicle()));
+    QTRY_VERIFY_WITH_TIMEOUT(vehicle()->airborne(), TestTimeout::mediumMs());
+    QVERIFY(reportTakeoffReference(vehicle(), mockLink()));
+    CaacFigureEightController controller;
+    controller.setStandard(standard);
+    controller.setExerciseMode(mode);
+    controller.setVoiceEnabled(true);
+    const auto centre = vehicle()->coordinate();
+    QVERIFY(controller.setPoints(QGCGeo::geodesicDestination(centre, 270, 12),
+                                 QGCGeo::geodesicDestination(centre, 90, 12)));
+    QTimer speedTelemetry;
+    connect(&speedTelemetry, &QTimer::timeout, this, [this]() { reportSpeed(vehicle(), mockLink()); });
+    speedTelemetry.start(100);
+    QSignalSpy speech(&controller, &CaacFigureEightController::announcementRequested);
+    const auto turnTo = [&](double heading) {
+        mockLink()->setVehicleAttitudeOverrideDeg(0, 0, heading);
+        vehicle()->heading()->setRawValue(heading);
+        return reportPosition(vehicle(), mockLink(), controller, centre);
+    };
+    if (standard != 2) {
+        QVERIFY(turnTo(0));
+        QTRY_VERIFY_WITH_TIMEOUT(controller.running() || controller.start(), 6000);
+        QTRY_COMPARE_WITH_TIMEOUT(controller.phase(), QStringLiteral("原地自旋"), 9000);
+        QVERIFY(turnTo(300));
+        QTRY_VERIFY_WITH_TIMEOUT(controller.metrics().value(QStringLiteral("phaseElapsed")).toDouble() >= 5.1,
+                                 9000);
+        for (const double heading : {300.0, 270.0, 210.0, 150.0, 90.0, 30.0, 5.1}) {
+            QVERIFY(turnTo(heading));
+            QVERIFY(controller.running());
+            QVERIFY(!controller.spinPassed());
+        }
+        QVERIFY(std::abs(controller.metrics().value(QStringLiteral("spinAngle")).toDouble() + 354.9) < 0.01);
+        const auto cuesBeforePass = speech.size();
+        QVERIFY(turnTo(5));
+        QVERIFY(controller.spinPassed());
+        QCOMPARE(controller.running(), mode == 2);
+        QCOMPARE(speech.size(), cuesBeforePass + (mode == 2 ? 2 : 1));
+        QCOMPARE(speech[cuesBeforePass][0].toString(), QStringLiteral("spin_completed"));
+        QCOMPARE(speech[cuesBeforePass][1].toString(), QStringLiteral("自旋考试通过。"));
+        if (mode == 2) {
+            QCOMPARE(controller.phase(), QStringLiteral("八字飞行"));
+            QCOMPARE(speech.last()[0].toString(), QStringLiteral("figure_eight"));
+            controller.stop();
+        } else {
+            QVERIFY(controller.metrics().value(QStringLiteral("progress")).toDouble() > 0.99999);
+        }
+        return;
+    }
+    const auto turnInstructorTo = [&](double heading) {
+        return turnTo(mode == 1 ? heading : std::fmod(360.0 - heading, 360.0));
+    };
+    QVERIFY(turnInstructorTo(0));
+    QTRY_VERIFY_WITH_TIMEOUT(controller.running() || controller.start(), 6000);
+    QTRY_COMPARE_WITH_TIMEOUT(controller.phase(), QStringLiteral("原地自旋"), 9000);
+    QVERIFY(turnInstructorTo(30));
+    QTRY_VERIFY_WITH_TIMEOUT(controller.metrics().value(QStringLiteral("phaseElapsed")).toDouble() >= 5.1,
+                             9000);
+    for (const int heading : {90, 150, 210, 270, 330, 355}) {
+        QVERIFY(turnInstructorTo(heading));
+    }
+    QCOMPARE(controller.phase(), QStringLiteral("反向原地自旋"));
+    QCOMPARE(speech.last()[0].toString(), mode == 1 ? QStringLiteral("spin_reverse") : QStringLiteral("spin_reverse_cw"));
+    QVERIFY(turnInstructorTo(0));  // The aircraft continues in the first direction past the 355-degree pass threshold.
+    QCOMPARE(controller.metrics().value(QStringLiteral("phaseElapsed")).toDouble(), 0.0);
+    QVERIFY(turnInstructorTo(348));
+    QVERIFY(turnInstructorTo(350));
+    QVERIFY(turnInstructorTo(352.9));
+    QCOMPARE(controller.attemptNumber(), 1);
+    if (mode == 1) {
+        QVERIFY(turnInstructorTo(353));  // A five-degree retreat accumulated over several samples.
+        QCOMPARE(controller.attemptNumber(), 2);
+        QCOMPARE(controller.lastAttemptFailure(), QStringLiteral("自旋中途回转"));
+        QCOMPARE(speech[speech.size() - 2][0].toString(), QStringLiteral("spin_reversal"));
+        QVERIFY(turnInstructorTo(0));
+        QTRY_COMPARE_WITH_TIMEOUT(controller.phase(), QStringLiteral("原地自旋"), 9000);
+        QVERIFY(turnInstructorTo(30));
+        QTRY_VERIFY_WITH_TIMEOUT(controller.metrics().value(QStringLiteral("phaseElapsed")).toDouble() >= 5.1,
+                                 9000);
+        for (int step = 2; step <= 12; ++step) {
+            QVERIFY(turnInstructorTo(std::fmod(step * 30.0, 360)));
+        }
+        QCOMPARE(controller.phase(), QStringLiteral("反向原地自旋"));
+        QVERIFY(turnInstructorTo(348));
+    }
+    QTRY_VERIFY_WITH_TIMEOUT(controller.metrics().value(QStringLiteral("phaseElapsed")).toDouble() >= 5.1,
+                             9000);
+    for (const double heading : {300.0, 240.0, 180.0, 120.0, 60.0, 5.1}) {
+        QVERIFY(turnInstructorTo(heading));
+    }
+    QVERIFY(!controller.spinPassed());
+    const auto beforePass = speech.size();
+    QVERIFY(turnInstructorTo(5));
+    QVERIFY(controller.spinPassed());
+    QVERIFY(speech.size() > beforePass);
+    QCOMPARE(speech[beforePass][0].toString(), QStringLiteral("spin_completed"));
+    QCOMPARE(controller.running(), mode == 2);
+    if (mode == 2) {
+        QCOMPARE(controller.phase(), QStringLiteral("八字飞行"));
+        QCOMPARE(speech.last()[0].toString(), QStringLiteral("figure_eight"));
+        controller.stop();
+    }
 }
 
 void CaacFigureEightControllerTest::_centreQualification_data()

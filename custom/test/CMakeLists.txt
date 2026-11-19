@@ -175,7 +175,8 @@ if(WIN32)
 endif()
 
 add_qgc_test(CaacSimulationEngineTest LABELS Unit MissionManager)
-add_qgc_test(CaacFigureEightControllerTest LABELS Unit Vehicle Slow)
+# Spin qualification cases exercise the real one-second hover and five-second minimum turn.
+add_qgc_test(CaacFigureEightControllerTest LABELS Unit Vehicle Slow TIMEOUT 300)
 add_qgc_test(CaacFigureEightFenceControllerTest LABELS Unit Vehicle)
 add_qgc_test(CaacFigureEightFenceGeometryTest LABELS Unit MissionManager)
 add_qgc_test(
