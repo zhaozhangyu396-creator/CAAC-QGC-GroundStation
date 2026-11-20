@@ -252,7 +252,7 @@ QGCPopupDialog {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
                     text: root.controller.standard === 2
-                        ? qsTr("水平八字：左圆顺时针、右圆逆时针，按机尾方向与当前位置理想切线的夹角评判。")
+                        ? qsTr("教员水平八字：机尾朝起飞位置，直接后退出筒。可先飞左圆或右圆。图示方向为左圆顺时针、右圆逆时针。按机尾与航线切线的夹角评价航向，机头朝前飞行判本次未通过。")
                         : qsTr("水平八字：左圆逆时针、右圆顺时针，按机头方向与当前位置理想切线的夹角评判。")
                 }
                 QGCLabel {

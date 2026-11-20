@@ -1094,14 +1094,20 @@ void CaacFigureEightControllerTest::_eightStartsEitherSide_data()
     QTest::addColumn<int>("standard");
     QTest::addColumn<bool>("rightFirst");
     QTest::addColumn<bool>("reverse");
+    QTest::addColumn<QString>("directionFault");
     for (const int standard : {0, 1, 2}) {
         for (const bool right : {false, true}) {
             QTest::newRow(
                 qPrintable(QStringLiteral("category-%1-%2-first").arg(standard).arg(right ? "right" : "left")))
-                << standard << right << false;
+                << standard << right << false << QString();
         }
     }
-    QTest::newRow("right-first-opposite-takeoff-side") << 0 << true << true;
+    QTest::newRow("right-first-opposite-takeoff-side") << 0 << true << true << QString();
+    QTest::newRow("instructor-opposite-takeoff-side") << 2 << true << true << QString();
+    QTest::newRow("instructor-left-nose-first-exit") << 2 << false << false << QStringLiteral("noseExit");
+    QTest::newRow("instructor-right-nose-first-exit") << 2 << true << false << QStringLiteral("noseExit");
+    QTest::newRow("instructor-tail-first-wrong-side-exit") << 2 << false << false << QStringLiteral("wrongSide");
+    QTest::newRow("instructor-nose-first-mid-circle") << 2 << true << false << QStringLiteral("midCircle");
 }
 
 void CaacFigureEightControllerTest::_eightStartsEitherSide()
@@ -1109,6 +1115,7 @@ void CaacFigureEightControllerTest::_eightStartsEitherSide()
     QFETCH(int, standard);
     QFETCH(bool, rightFirst);
     QFETCH(bool, reverse);
+    QFETCH(QString, directionFault);
     QSettings().remove(QStringLiteral("CAAC/FigureEight"));
     _connectMockLink();
     QVERIFY(vehicle());
@@ -1121,6 +1128,10 @@ void CaacFigureEightControllerTest::_eightStartsEitherSide()
     controller.setStandard(standard);
     QCOMPARE(controller.attemptLimit(), 3);
     QVERIFY(controller.setLimits({{QStringLiteral("speedEnabled"), true}, {QStringLiteral("minSpeed"), 0.5}}));
+    if (!directionFault.isEmpty()) {
+        // A permissive tangent limit must never authorize nose-first flight.
+        QVERIFY(controller.setLimits({{QStringLiteral("heading"), 180.0}}));
+    }
     const auto centre = vehicle()->coordinate();
     QVERIFY(controller.setPoints(QGCGeo::geodesicDestination(centre, 270, 12),
                                  QGCGeo::geodesicDestination(centre, 90, 12)));
@@ -1140,6 +1151,28 @@ void CaacFigureEightControllerTest::_eightStartsEitherSide()
     for (int step = 1; step <= 240; ++step) {
         const int index = reverse ? ((rightFirst ? 240 : 120) - step + 240) % 240
                                   : ((rightFirst ? 120 : 0) + step - 1) % 240 + 1;
+        if ((step == 4 && directionFault == QStringLiteral("noseExit")) ||
+            (step == 18 && directionFault == QStringLiteral("midCircle"))) {
+            const auto path = controller.referencePath();
+            const auto from = path[index - 1].value<QGeoCoordinate>();
+            const auto to = path[step == 4 ? index : index - 2].value<QGeoCoordinate>();
+            vehicle()->heading()->setRawValue(QGCGeo::geodesicAzimuth(from, to));
+            QVERIFY(reportPosition(vehicle(), mockLink(), controller, to, 1.0));
+            QCOMPARE(controller.attemptNumber(), 2);
+            QVERIFY2(controller.lastAttemptFailure().contains(QStringLiteral("机头朝前")), qPrintable(controller.status()));
+            return;
+        }
+        if (directionFault == QStringLiteral("wrongSide")) {
+            vehicle()->heading()->setRawValue(180);
+            const auto to = QGCGeo::geodesicDestination(centre, 0, step * 0.31);
+            QVERIFY(reportPosition(vehicle(), mockLink(), controller, to, 1.0));
+            if (step == 4) {
+                QCOMPARE(controller.attemptNumber(), 2);
+                QVERIFY(controller.lastAttemptFailure().contains(QStringLiteral("机尾未朝起飞位置")));
+                return;
+            }
+            continue;
+        }
         QVERIFY(reportReferencePosition(vehicle(), mockLink(), controller, index, 1.0, reverse));
         if (step <= 3) {
             QVERIFY(controller.awaitingFigureEight());

@@ -31,6 +31,7 @@ constexpr qint64 ATTITUDE_QUATERNION_PREFERENCE_MS = TELEMETRY_TIMEOUT_MS / 2;
 constexpr int CENTRE_HOLD_SECONDS = 1;
 constexpr double CENTRE_MIN_HEIGHT = 1.5;
 constexpr double CENTRE_RADIUS = 1.0;
+constexpr double MIN_COURSE_DISTANCE = 0.25;
 constexpr double TAKEOFF_SIDE_MIN_OFFSET = 0.5;
 constexpr double CENTRE_HEADING_TOLERANCE = 15.0;
 constexpr double SPIN_PASS_ANGLE = 355.0;
@@ -663,13 +664,16 @@ void CaacFigureEightController::_beginPhase(bool reverseSpin)
     _previousPosition = _vehicle->coordinate();
     _phaseAnchor = _previousPosition;
     _departureCourseOrigin = _previousPosition;
+    _travelCourseOrigin = _previousPosition;
     _lastSample = _sessionClock.elapsed();
     if (_phase == Phase::FigureEight) {
         _previousProgress = 0;
         double distance = 0;
         double heading = 0;
         _previousProgress = _nearestProgress(_vehicle->coordinate(), distance, heading);
-        _status = tr("可以从左圆或右圆开始水平八字飞行，运动离开中心筒半径 1 米范围后开始评分。");
+        _status = _standard == 2
+                      ? tr("机尾朝起飞位置，直接后退出筒，可先飞左圆或右圆；出筒后以机头向前飞行判本次未通过。")
+                      : tr("可以从左圆或右圆开始水平八字飞行，运动离开中心筒半径 1 米范围后开始评分。");
         if (spinCompleted) {
             _announce(QStringLiteral("spin_completed"), tr("自旋考试通过。"));
         }
@@ -1246,6 +1250,22 @@ void CaacFigureEightController::_sample()
     const double evaluatedHeading = std::fmod(_headingDegrees + (_standard == 2 ? 180 : 0), 360);
     const bool starting = !_subjectStarted && centreDistance > CENTRE_RADIUS &&
                           (departureDistance >= 0.25 || speed > HOVER_MAX_SPEED);
+    bool noseFirst = false;
+    bool tailAwayAtDeparture = false;
+    if (_standard == 2) {
+        if (starting) {
+            const double takeoffSide = _fieldAlignmentHeading + (_reverseFigureEight ? 0 : 180);
+            tailAwayAtDeparture = std::abs(wrappedDifference(evaluatedHeading - takeoffSide)) > 90;
+        }
+        // Use measured displacement independently of the selected reference circle.
+        // Retain the anchor across repeated fixes and small movements to obtain a usable course.
+        if (QGCGeo::geodesicDistance(_travelCourseOrigin, coordinate) >= MIN_COURSE_DISTANCE) {
+            const double course = QGCGeo::geodesicAzimuth(_travelCourseOrigin, coordinate);
+            noseFirst = (_subjectStarted || starting) && speed >= MIN_FIGURE_EIGHT_SPEED &&
+                        std::abs(wrappedDifference(_headingDegrees - course)) < 90;
+            _travelCourseOrigin = coordinate;
+        }
+    }
     if (!_subjectStarted && movement >= 0.05) {
         _departureCourseOrigin = _previousPosition;
     }
@@ -1320,8 +1340,14 @@ void CaacFigureEightController::_sample()
                     tr("水平偏差超限"), QStringLiteral("area"));
     recordViolation(_subjectStarted && altitudeError > appliedLimits.value(QStringLiteral("vertical")).toDouble(),
                     tr("高度偏差超限"), QStringLiteral("altitude"));
-    recordViolation(_subjectStarted && headingError > appliedLimits.value(QStringLiteral("heading")).toDouble(),
-                    tr("航向偏差超限"), QStringLiteral("heading"));
+    if (noseFirst || tailAwayAtDeparture) {
+        recordViolation(true, noseFirst ? tr("教员八字机头朝前飞行，应以机尾为前进方向")
+                                       : tr("教员八字出筒时机尾未朝起飞位置"),
+                        QStringLiteral("heading"));
+    } else {
+        recordViolation(_subjectStarted && headingError > appliedLimits.value(QStringLiteral("heading")).toDouble(),
+                        tr("航向偏差超限"), QStringLiteral("heading"));
+    }
     recordViolation(_subjectStarted && speed < MIN_FIGURE_EIGHT_SPEED, tr("八字飞行速度低于 0.3 米/秒"),
                     QStringLiteral("speed_low"));
     if (_subjectStarted && speed >= MIN_FIGURE_EIGHT_SPEED && _limits.value(QStringLiteral("speedEnabled")).toBool()) {

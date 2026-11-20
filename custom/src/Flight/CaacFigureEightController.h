@@ -276,6 +276,7 @@ private:
     QElapsedTimer _hoverSince;
     QGeoCoordinate _phaseAnchor;
     QGeoCoordinate _departureCourseOrigin;
+    QGeoCoordinate _travelCourseOrigin;
     double _spinLastHeading = 0;
     double _spinAngle = 0;
     double _spinExtremeAngle = 0;
