@@ -246,7 +246,7 @@ QGCPopupDialog {
                 QGCLabel {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
-                    text: qsTr("原地自旋每圈 5–30 秒，沿规定方向转满 355° 通过角度判定。视距内、超视距的单项自旋及自旋＋八字均可任选起转方向，中途回转即判本次失败。教员第一圈任选方向，第二圈必须反向，每圈从已转到的最远角度回退达到 5° 判本次失败。")
+                    text: qsTr("原地自旋每圈 5–30 秒，沿规定方向转满 355° 通过角度判定。视距内、超视距的单项自旋及自旋＋八字均可任选起转方向，中途回转即判本次失败。教员第一圈任选方向，第二圈必须反向，每圈从已转到的最远角度回退达到 10° 判本次失败。")
                 }
                 QGCLabel {
                     Layout.fillWidth: true
@@ -464,8 +464,8 @@ QGCPopupDialog {
                             {label: qsTr("水平偏差"), key: "horizontalError", decimals: 2, suffix: qsTr(" 米")},
                             {label: qsTr("高度偏差"), key: "altitudeError", decimals: 2, suffix: qsTr(" 米")},
                             {label: qsTr("航向偏差"), key: "headingError", decimals: 1, suffix: "°"},
-                            {label: qsTr("当前位置理想航向"), key: "idealHeading", decimals: 1, suffix: "°"},
-                            {label: qsTr("评判航向（机头/机尾）"), key: "evaluatedHeading", decimals: 1, suffix: "°"},
+                            {label: root.controller.awaitingFigureEight ? qsTr("出筒前理想机头航向") : qsTr("当前位置理想航向"), key: "idealHeading", decimals: 1, suffix: "°"},
+                            {label: root.controller.awaitingFigureEight ? qsTr("当前机头航向") : qsTr("评判航向（机头/机尾）"), key: "evaluatedHeading", decimals: 1, suffix: "°"},
                             {label: qsTr("完成圈数"), key: "completedLaps", decimals: 0, suffix: ""},
                             {label: qsTr("自旋角度（反向为负）"), key: "spinAngle", decimals: 1, suffix: "°"},
                             {label: qsTr("超差采样数"), key: "violationSamples", decimals: 0, suffix: ""}

@@ -32,10 +32,9 @@ constexpr int CENTRE_HOLD_SECONDS = 1;
 constexpr double CENTRE_MIN_HEIGHT = 1.5;
 constexpr double CENTRE_RADIUS = 1.0;
 constexpr double MIN_COURSE_DISTANCE = 0.25;
-constexpr double TAKEOFF_SIDE_MIN_OFFSET = 0.5;
 constexpr double CENTRE_HEADING_TOLERANCE = 15.0;
 constexpr double SPIN_PASS_ANGLE = 355.0;
-constexpr double INSTRUCTOR_REVERSAL_ANGLE = 5.0;
+constexpr double INSTRUCTOR_REVERSAL_ANGLE = 10.0;
 constexpr double SPIN_YAW_EPSILON = 1e-4;  // MAVLink yaw is transmitted as a float in radians.
 constexpr float MIN_FIGURE_EIGHT_SPEED = 0.3f;
 // VFR_HUD encodes both speeds as floats, including the 0.3 m/s boundary.
@@ -671,6 +670,9 @@ void CaacFigureEightController::_beginPhase(bool reverseSpin)
         double distance = 0;
         double heading = 0;
         _previousProgress = _nearestProgress(_vehicle->coordinate(), distance, heading);
+        _metrics[QStringLiteral("idealHeading")] = _fieldAlignmentHeading;
+        _metrics[QStringLiteral("evaluatedHeading")] = _headingDegrees;
+        _metrics[QStringLiteral("headingError")] = std::abs(wrappedDifference(_headingDegrees - _fieldAlignmentHeading));
         _status = _standard == 2
                       ? tr("机尾朝起飞位置，直接后退出筒，可先飞左圆或右圆；出筒后以机头向前飞行判本次未通过。")
                       : tr("可以从左圆或右圆开始水平八字飞行，运动离开中心筒半径 1 米范围后开始评分。");
@@ -732,20 +734,7 @@ void CaacFigureEightController::_samplePositioning()
     const double distance = QGCGeo::geodesicDistance(_reference.first(), coordinate);
     const double speed = _vehicle->groundSpeed()->rawValue().toDouble();
     const double verticalSpeed = _vehicle->climbRate()->rawValue().toDouble();
-    const auto centre = _reference.first();
-    double idealHeading = _fieldAlignmentHeading;
-    // Standalone figure-eight practice supports flying the course from either takeoff side.
-    if (_exerciseMode == 0 && _takeoffPosition.isValid()) {
-        const double takeoffDistance = QGCGeo::geodesicDistance(centre, _takeoffPosition);
-        if (takeoffDistance >= TAKEOFF_SIDE_MIN_OFFSET) {
-            const double takeoffBearing = QGCGeo::geodesicAzimuth(centre, _takeoffPosition);
-            const double angle = wrappedDifference(takeoffBearing - idealHeading) * std::numbers::pi / 180;
-            const double takeoffOffset = takeoffDistance * std::cos(angle);
-            if (takeoffOffset >= TAKEOFF_SIDE_MIN_OFFSET) {
-                idealHeading = std::fmod(idealHeading + 180, 360);
-            }
-        }
-    }
+    const double idealHeading = _fieldAlignmentHeading;
     const double headingError = std::abs(wrappedDifference(_headingDegrees - idealHeading));
     QStringList pending;
     if (!_vehicle->armed() || !_vehicle->airborne()) {
@@ -803,7 +792,6 @@ void CaacFigureEightController::_samplePositioning()
     }
     emit sampleChanged();
     if (inPosition && stableSeconds >= CENTRE_HOLD_SECONDS) {
-        _reverseFigureEight = std::abs(wrappedDifference(idealHeading - _fieldAlignmentHeading)) > 90;
         _baselineAltitude = altitude;
         _beginPhase();
     }
@@ -1024,9 +1012,6 @@ void CaacFigureEightController::_setVehicle(Vehicle* vehicle)
     _vehicleConnections.append(
         connect(vehicle, &Vehicle::airborneChanged, this, &CaacFigureEightController::_updateCalibration));
     _vehicleConnections.append(connect(vehicle, &Vehicle::armedChanged, this, [this](bool armed) {
-        if (_running && _phase == Phase::Positioning && armed) {
-            _takeoffPosition = _vehicle ? _vehicle->armedPosition() : QGeoCoordinate();
-        }
         if (_running && _phase != Phase::Positioning && !armed) {
             _finish(tr("飞行器已上锁，训练记录已结束。"));
         }
@@ -1071,10 +1056,6 @@ bool CaacFigureEightController::start()
         return _fail(tr("请连接飞行器，并等待有效的位置、高度、航向和速度遥测。"));
     }
     clearRecording();
-    _takeoffPosition = _vehicle->armed() ? _vehicle->armedPosition() : _vehicle->coordinate();
-    if (!_takeoffPosition.isValid()) {
-        _takeoffPosition = _vehicle->homePosition();
-    }
     _previousPosition = _vehicle->coordinate();
     _sessionClock.start();
     _lastSample = 0;
@@ -1195,9 +1176,6 @@ double CaacFigureEightController::_nearestProgress(const QGeoCoordinate& coordin
             heading = std::fmod(QGCGeo::geodesicAzimuth(centre, coordinate) + (clockwise ? 90 : -90) + 360, 360);
         }
     }
-    if (_reverseFigureEight) {
-        heading = std::fmod(heading + 180, 360);
-    }
     return result;
 }
 
@@ -1254,7 +1232,7 @@ void CaacFigureEightController::_sample()
     bool tailAwayAtDeparture = false;
     if (_standard == 2) {
         if (starting) {
-            const double takeoffSide = _fieldAlignmentHeading + (_reverseFigureEight ? 0 : 180);
+            const double takeoffSide = _fieldAlignmentHeading + 180;
             tailAwayAtDeparture = std::abs(wrappedDifference(evaluatedHeading - takeoffSide)) > 90;
         }
         // Use measured displacement independently of the selected reference circle.
@@ -1300,15 +1278,18 @@ void CaacFigureEightController::_sample()
         _departureCircle = -1;
         progress = _nearestProgress(coordinate, horizontalError, tangentHeading);
     }
-    const double headingError = std::abs(wrappedDifference(evaluatedHeading - tangentHeading));
     if (starting) {
         _subjectStarted = true;
         _phaseClock.start();
         // Each direction enters a lobe from a different occurrence of the shared centre.
         const bool leftCircle = progress < length / 2;
-        _previousProgress = leftCircle != _reverseFigureEight ? 0 : length / 2;
+        _previousProgress = leftCircle ? 0 : length / 2;
     }
-    const double delta = std::remainder(progress - _previousProgress, length) * (_reverseFigureEight ? -1 : 1);
+    // Until departure, the monitor shows the nose alignment used to qualify at the centre.
+    const double idealHeading = _subjectStarted ? tangentHeading : _fieldAlignmentHeading;
+    const double monitoredHeading = _subjectStarted ? evaluatedHeading : _headingDegrees;
+    const double headingError = std::abs(wrappedDifference(monitoredHeading - idealHeading));
+    const double delta = std::remainder(progress - _previousProgress, length);
     if (_subjectStarted && horizontalError <= horizontalLimit &&
         std::abs(delta) <= std::max(2.0, movement * 2 + 0.5)) {
         _signedProgress += delta;
@@ -1371,8 +1352,8 @@ void CaacFigureEightController::_sample()
                 {QStringLiteral("altitudeError"), altitudeError},
                 {QStringLiteral("horizontalError"), horizontalError},
                 {QStringLiteral("headingError"), headingError},
-                {QStringLiteral("idealHeading"), tangentHeading},
-                {QStringLiteral("evaluatedHeading"), evaluatedHeading},
+                {QStringLiteral("idealHeading"), idealHeading},
+                {QStringLiteral("evaluatedHeading"), monitoredHeading},
                 {QStringLiteral("speed"), speed},
                 {QStringLiteral("completedLaps"), _completedLaps},
                 {QStringLiteral("violations"), _violations},

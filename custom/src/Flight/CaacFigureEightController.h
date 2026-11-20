@@ -225,7 +225,6 @@ private:
     QGeoCoordinate _pointB;
     QGeoCoordinate _rtkCoordinate;
     QGeoCoordinate _previousPosition;
-    QGeoCoordinate _takeoffPosition;
     QString _status;
     QString _lastError;
     QString _calibrationStatus;
@@ -284,7 +283,6 @@ private:
     int _attemptNumber = 0;
     bool _spinPassed = false;
     bool _subjectStarted = false;
-    bool _reverseFigureEight = false;
     int _departureCircle = -1;
     QString _lastAttemptFailure;
 };

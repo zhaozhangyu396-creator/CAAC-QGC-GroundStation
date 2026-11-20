@@ -104,7 +104,7 @@ bool reportPosition(Vehicle* vehicle, MockLink* link, CaacFigureEightController&
 }
 
 bool reportReferencePosition(Vehicle* vehicle, MockLink* link, CaacFigureEightController& controller, int index,
-                             double speed = 1, bool reverse = false)
+                             double speed = 1)
 {
     if (!vehicle) {
         return false;
@@ -115,7 +115,7 @@ bool reportReferencePosition(Vehicle* vehicle, MockLink* link, CaacFigureEightCo
     }
     const auto previous = path[std::max(0, index - 1)].value<QGeoCoordinate>();
     const auto next = path[std::min(qsizetype(index + 1), path.size() - 1)].value<QGeoCoordinate>();
-    const double heading = QGCGeo::geodesicAzimuth(previous, next) + ((controller.standard() == 2) != reverse ? 180 : 0);
+    const double heading = QGCGeo::geodesicAzimuth(previous, next) + (controller.standard() == 2 ? 180 : 0);
     vehicle->heading()->setRawValue(std::fmod(heading, 360));
     return reportPosition(vehicle, link, controller, path[index].value<QGeoCoordinate>(), speed);
 }
@@ -891,10 +891,11 @@ void CaacFigureEightControllerTest::_spinDirections()
     QCOMPARE(controller.metrics().value(QStringLiteral("phaseElapsed")).toDouble(), 0.0);
     QVERIFY(turnInstructorTo(348));
     QVERIFY(turnInstructorTo(350));
-    QVERIFY(turnInstructorTo(352.9));
+    QVERIFY(turnInstructorTo(353));
+    QVERIFY(turnInstructorTo(357.9));
     QCOMPARE(controller.attemptNumber(), 1);
     if (mode == 1) {
-        QVERIFY(turnInstructorTo(353));  // A five-degree retreat accumulated over several samples.
+        QVERIFY(turnInstructorTo(358));  // Ten degrees of retreat from 348 across several samples.
         QCOMPARE(controller.attemptNumber(), 2);
         QCOMPARE(controller.lastAttemptFailure(), QStringLiteral("自旋中途回转"));
         QCOMPARE(speech[speech.size() - 2][0].toString(), QStringLiteral("spin_reversal"));
@@ -907,7 +908,7 @@ void CaacFigureEightControllerTest::_spinDirections()
         QCOMPARE(controller.phase(), QStringLiteral("反向原地自旋"));
         QVERIFY(turnInstructorTo(348));
     }
-    QVERIFY2(holdHeading(instructorHeading(mode == 1 ? 348.0 : 352.9)),
+    QVERIFY2(holdHeading(instructorHeading(mode == 1 ? 348.0 : 357.9)),
              qPrintable(controller.status() + controller.lastAttemptFailure()));
     for (const double heading : {300.0, 240.0, 180.0, 120.0, 60.0, 5.1}) {
         QVERIFY(turnInstructorTo(heading));
@@ -1093,7 +1094,7 @@ void CaacFigureEightControllerTest::_eightStartsEitherSide_data()
 {
     QTest::addColumn<int>("standard");
     QTest::addColumn<bool>("rightFirst");
-    QTest::addColumn<bool>("reverse");
+    QTest::addColumn<bool>("oppositeArmingSide");
     QTest::addColumn<QString>("directionFault");
     for (const int standard : {0, 1, 2}) {
         for (const bool right : {false, true}) {
@@ -1114,7 +1115,7 @@ void CaacFigureEightControllerTest::_eightStartsEitherSide()
 {
     QFETCH(int, standard);
     QFETCH(bool, rightFirst);
-    QFETCH(bool, reverse);
+    QFETCH(bool, oppositeArmingSide);
     QFETCH(QString, directionFault);
     QSettings().remove(QStringLiteral("CAAC/FigureEight"));
     _connectMockLink();
@@ -1123,7 +1124,7 @@ void CaacFigureEightControllerTest::_eightStartsEitherSide()
     _ignoreMissingPressureBackend();
     QVERIFY(takeoffAtExamHeight(vehicle()));
     QTRY_VERIFY_WITH_TIMEOUT(vehicle()->airborne(), TestTimeout::mediumMs());
-    QVERIFY(reportTakeoffReference(vehicle(), mockLink(), reverse));
+    QVERIFY(reportTakeoffReference(vehicle(), mockLink(), oppositeArmingSide));
     CaacFigureEightController controller;
     controller.setStandard(standard);
     QCOMPARE(controller.attemptLimit(), 3);
@@ -1139,18 +1140,33 @@ void CaacFigureEightControllerTest::_eightStartsEitherSide()
     connect(&speedTelemetry, &QTimer::timeout, this, [this]() { reportSpeed(vehicle(), mockLink()); });
     speedTelemetry.start(100);
     QTRY_VERIFY_WITH_TIMEOUT(controller.running() || controller.start(), TestTimeout::mediumMs());
+    if (oppositeArmingSide) {
+        QTest::qWait(1200);
+        QCOMPARE(controller.phase(), QStringLiteral("中心筒就位"));
+        QVERIFY(std::abs(controller.metrics().value(QStringLiteral("headingError")).toDouble() - 180) < 0.05);
+        controller.stop();
+        controller.setStandard(standard == 2 ? 0 : 2);
+        controller.setStandard(standard);
+        QVERIFY(controller.start());
+        QCOMPARE(controller.phase(), QStringLiteral("中心筒就位"));
+        QVERIFY(std::abs(controller.metrics().value(QStringLiteral("headingError")).toDouble() - 180) < 0.05);
+        mockLink()->setVehicleAttitudeOverrideDeg(0, 0, 0);
+        vehicle()->heading()->setRawValue(0);
+        QVERIFY(reportPosition(vehicle(), mockLink(), controller, centre));
+    }
     QTRY_COMPARE_WITH_TIMEOUT(controller.phase(), QStringLiteral("八字飞行"), TestTimeout::longMs());
     QVERIFY(controller.awaitingFigureEight());
     vehicle()->altitudeRelative()->setRawValue(4.0);
-    vehicle()->heading()->setRawValue(reverse ? 0 : 180);
-    QVERIFY(reportPosition(vehicle(), mockLink(), controller, centre, 0));
+    vehicle()->heading()->setRawValue(180);
+    QVERIFY(reportPosition(vehicle(), mockLink(), controller, QGCGeo::geodesicDestination(centre, 90, 0.17), 0));
     QVERIFY(controller.running());
     QVERIFY(controller.awaitingFigureEight());
     QCOMPARE(controller.metrics().value(QStringLiteral("violationSamples")).toInt(), 0);
+    QVERIFY(std::abs(std::remainder(controller.metrics().value(QStringLiteral("idealHeading")).toDouble(), 360)) < 0.05);
+    QVERIFY(std::abs(controller.metrics().value(QStringLiteral("headingError")).toDouble() - 180) < 0.05);
     vehicle()->altitudeRelative()->setRawValue(1.75);
     for (int step = 1; step <= 240; ++step) {
-        const int index = reverse ? ((rightFirst ? 240 : 120) - step + 240) % 240
-                                  : ((rightFirst ? 120 : 0) + step - 1) % 240 + 1;
+        const int index = ((rightFirst ? 120 : 0) + step - 1) % 240 + 1;
         if ((step == 4 && directionFault == QStringLiteral("noseExit")) ||
             (step == 18 && directionFault == QStringLiteral("midCircle"))) {
             const auto path = controller.referencePath();
@@ -1173,7 +1189,7 @@ void CaacFigureEightControllerTest::_eightStartsEitherSide()
             }
             continue;
         }
-        QVERIFY(reportReferencePosition(vehicle(), mockLink(), controller, index, 1.0, reverse));
+        QVERIFY(reportReferencePosition(vehicle(), mockLink(), controller, index));
         if (step <= 3) {
             QVERIFY(controller.awaitingFigureEight());
         } else if (step < 240) {
@@ -1303,7 +1319,10 @@ void CaacFigureEightControllerTest::_headingEvaluation()
             const auto metrics = controller.metrics();
             const double measuredIdeal = metrics.value(QStringLiteral("idealHeading")).toDouble();
             // At the shared centre either contiguous circle can supply the tangent after GPS quantization.
-            if (i % 120 != 0) {
+            const bool waiting = controller.awaitingFigureEight();
+            if (waiting) {
+                QVERIFY(std::abs(std::remainder(measuredIdeal - alignmentHeading, 360)) < 0.01);
+            } else if (i % 120 != 0) {
                 QVERIFY2(std::abs(std::remainder(measuredIdeal - ideal, 360)) < 0.01,
                          qPrintable(QStringLiteral("standard %1, point %2: ideal %3, received %4")
                                         .arg(standard)
@@ -1312,7 +1331,7 @@ void CaacFigureEightControllerTest::_headingEvaluation()
                                         .arg(measuredIdeal)));
             }
             const double expectedError =
-                std::abs(std::remainder(bodyHeading + (standard == 2 ? 180 : 0) - measuredIdeal, 360));
+                std::abs(std::remainder(bodyHeading + (!waiting && standard == 2 ? 180 : 0) - measuredIdeal, 360));
             QVERIFY(std::abs(metrics.value(QStringLiteral("headingError")).toDouble() - expectedError) < 0.01);
             if (i < path.size() - 1) {
                 QVERIFY(controller.running());
